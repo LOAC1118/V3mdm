@@ -570,24 +570,27 @@ async function saveConfig() {
   const errEl = document.getElementById('cfg-err');
   if (!apiKey || !authDomain || !projectId) { showErr(errEl,'Veuillez remplir tous les champs.'); return; }
   try {
-    initFirebase({ apiKey, authDomain, projectId });
-    // Test connexion Firestore
-    await db.collection('_ping').doc('test').set({ ok: true });
-    setConfig({ apiKey, authDomain, projectId });
+    // Init Firebase une seule fois
+    const cfg = { apiKey, authDomain, projectId };
+    initFirebase(cfg);
+    // Test connexion : simple lecture (pas d'écriture pour éviter les conflits)
+    await db.collection('_ping').limit(1).get();
+    setConfig(cfg);
     errEl.style.display = 'none';
     showLoginScreen();
   } catch(e) {
-    showErr(errEl, 'Connexion échouée : ' + (e.message || 'vérifiez vos clés Firebase.'));
+    showErr(errEl, 'Connexion échouée : ' + (e.message || 'vérifiez vos clés Firebase et les règles Firestore.'));
   }
 }
 
 function initFirebase(cfg) {
-  if (firebase.apps.length) firebase.apps.forEach(app => app.delete());
-  const app = firebase.initializeApp(cfg);
+  // Si une app existe déjà, on réutilise — pas de double init
+  if (!firebase.apps.length) {
+    firebase.initializeApp(cfg);
+  }
   auth = firebase.auth();
   db   = firebase.firestore();
-  // Persistance offline
-  db.enablePersistence().catch(()=>{});
+  // Pas de enablePersistence : doit être appelé avant toute opération Firestore
 }
 
 function showConfigHelp() {
