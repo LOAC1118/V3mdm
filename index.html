@@ -437,7 +437,8 @@ textarea{resize:vertical;min-height:80px;}
   <div id="sec-bdc" class="hidden" style="flex-direction:column;height:100%;overflow:hidden;">
     <div style="background:rgba(15,23,42,.7);border-bottom:1px solid var(--border);padding:.55rem 1rem;display:flex;align-items:center;gap:8px;flex-shrink:0;flex-wrap:wrap;">
       <div style="font-family:var(--fdisp);font-size:.9rem;color:var(--white);flex:1;min-width:140px;">🌾 Bon de Commande MDM 2026</div>
-      <button class="btn btn-ghost" style="font-size:.72rem;padding:.3rem .7rem;" onclick="openBdcImport()">📄 Importer</button>
+      <button class="btn btn-ghost" style="font-size:.72rem;padding:.3rem .7rem;" onclick="openBdcImport()">📄 Importer commande</button>
+      <button class="btn btn-ghost" style="font-size:.72rem;padding:.3rem .7rem;color:#fcd34d;border-color:rgba(245,158,11,.3);" onclick="openStockImport()">📦 Mettre à jour stocks</button>
       <button class="btn btn-ghost" style="font-size:.72rem;padding:.3rem .7rem;" onclick="resetBDC()">🗑 Effacer</button>
       <button class="btn btn-primary" style="font-size:.72rem;padding:.3rem .7rem;" onclick="bdcSendOrder()">Envoyer la commande</button>
     </div>
@@ -1224,6 +1225,7 @@ var bdcRemise = 0;
 var bdcSearchMode = 'all';
 var bdcInitDone = false;
 var bdcImportedQtys = {};
+var bdcStockMap = {}; // code -> stock disponible
 
 function bdcActivate() {
   const sec = document.getElementById('sec-bdc');
@@ -1262,7 +1264,7 @@ function buildTable() {
     if (pNet < p.pu_ht) prixCell = '<strong style="color:var(--em400)">'+bdcFmt(pNet)+'</strong> <span style="text-decoration:line-through;color:var(--s700);font-size:10px;">'+bdcFmt(p.pu_ht)+'</span>';
     rows += '<td style="padding:.4rem .55rem;white-space:nowrap;font-weight:500;color:var(--s100);">'+prixCell+'</td>';
     // Stock
-    var stk = (p.stock !== undefined && p.stock !== null) ? p.stock : null;
+    var stk = (bdcStockMap[p.code] !== undefined) ? bdcStockMap[p.code] : ((p.stock !== undefined && p.stock !== null) ? p.stock : null);
     var stkH;
     if (stk===null) stkH='<span style="color:var(--s700)">—</span>';
     else if (stk<=0) stkH='<span style="color:#fca5a5;font-size:.68rem;">⚠ Rupture</span>';
@@ -1454,41 +1456,111 @@ function bdcImportFile(file) {
 }
 
 function bdcParseCSV(text) {
-  var lines=text.split(/\r?\n/).filter(function(l){return l.trim();});
-  if(lines.length<2){bdcShowAlert('Fichier vide ou invalide.','err');return;}
-  var sep=lines[0].includes(';')?';':',';
-  var hdrs=lines[0].split(sep).map(function(h){return h.trim().replace(/["\']/g,'').toLowerCase();});
-  var ci=hdrs.findIndex(function(h){return h.includes('code')||h==='ref';});
-  var qi=hdrs.findIndex(function(h){return h.includes('qte')||h.includes('qty')||h.includes('quantit');});
-  if(ci<0||qi<0){bdcShowAlert("Colonnes 'code' et 'quantite' requises.",'err');return;}
-  var codeMap={};
-  PRODUCTS.forEach(function(p){codeMap[p.code.toUpperCase()]=p;});
-  var results=[];
-  bdcImportedQtys={};
-  for(var i=1;i<lines.length;i++){
-    var cols=lines[i].split(sep).map(function(c){return c.trim().replace(/["\']/g,'');});
-    var code=(cols[ci]||'').toUpperCase();
-    var qty=parseInt(cols[qi])||0;
-    if(!code||!qty) continue;
-    var found=codeMap[code];
-    results.push({code:code,qty:qty,found:!!found,libelle:found?found.libelle:''});
-    if(found&&qty>0) bdcImportedQtys[code]=qty;
+  var lines = text.split(/\r?\n/).filter(function(l){return l.trim();});
+  if (lines.length < 2) { bdcShowAlert('Fichier vide ou invalide.','err'); return; }
+
+  // Détecter le séparateur (virgule ou point-virgule)
+  var sep = lines[0].includes(';') ? ';' : ',';
+
+  // Parser les en-têtes
+  var hdrs = lines[0].split(sep).map(function(h){return h.trim().replace(/["']/g,'').toLowerCase();});
+
+  // Détecter les colonnes disponibles (code, EAN, libellé, quantité)
+  var codeIdx   = hdrs.findIndex(function(h){return h==='code'||h==='ref'||h==='référence'||h==='code article'||h==='codearticle';});
+  var eanIdx    = hdrs.findIndex(function(h){return h==='ean'||h==='gencod'||h==='ean13'||h==='code-barres'||h==='codebarres';});
+  var libIdx    = hdrs.findIndex(function(h){return h.includes('libel')||h.includes('design')||h==='nom'||h==='produit'||h==='article';});
+  var qtyIdx    = hdrs.findIndex(function(h){return h.includes('qte')||h.includes('qty')||h.includes('quantit')||h==='qté'||h==='colis';});
+
+  // Au moins un critère d'identification ET la quantité sont requis
+  if (qtyIdx < 0) { bdcShowAlert("Colonne quantité non trouvée (nommer la colonne : quantite, qte, qty…)",'err'); return; }
+  if (codeIdx < 0 && eanIdx < 0 && libIdx < 0) { bdcShowAlert("Aucune colonne d'identification trouvée (code, EAN ou libellé)",'err'); return; }
+
+  // Construire des index de recherche rapide
+  var byCode = {}, byEan = {}, byLib = [];
+  PRODUCTS.forEach(function(p){
+    byCode[p.code.toUpperCase()] = p;
+    if (p.ean) byEan[String(p.ean).trim()] = p;
+    byLib.push({ libelle: (p.libelle||'').toLowerCase(), p: p });
+  });
+
+  var results = [];
+  bdcImportedQtys = {};
+
+  for (var i = 1; i < lines.length; i++) {
+    var cols = lines[i].split(sep).map(function(c){return c.trim().replace(/["']/g,'');});
+    if (!cols.length || cols.every(function(c){return !c;})) continue;
+
+    var qty = parseInt(cols[qtyIdx]) || 0;
+    if (!qty) continue;
+
+    var found = null;
+    var matchedBy = '';
+    var rawKey = '';
+
+    // 1. Essai par CODE
+    if (!found && codeIdx >= 0 && cols[codeIdx]) {
+      rawKey = cols[codeIdx].toUpperCase();
+      found = byCode[rawKey];
+      if (found) matchedBy = 'code';
+    }
+
+    // 2. Essai par EAN
+    if (!found && eanIdx >= 0 && cols[eanIdx]) {
+      rawKey = cols[eanIdx].trim();
+      found = byEan[rawKey];
+      if (found) matchedBy = 'EAN';
+    }
+
+    // 3. Essai par LIBELLÉ (correspondance exacte puis partielle)
+    if (!found && libIdx >= 0 && cols[libIdx]) {
+      var libSearch = cols[libIdx].toLowerCase().trim();
+      rawKey = cols[libIdx];
+      // Correspondance exacte
+      var exact = byLib.find(function(x){return x.libelle === libSearch;});
+      if (exact) { found = exact.p; matchedBy = 'libellé'; }
+      else {
+        // Correspondance partielle (>= 5 caractères)
+        if (libSearch.length >= 5) {
+          var partial = byLib.find(function(x){return x.libelle.includes(libSearch) || libSearch.includes(x.libelle.slice(0,20));});
+          if (partial) { found = partial.p; matchedBy = 'libellé~'; }
+        }
+      }
+    }
+
+    var displayKey = rawKey || (cols[codeIdx]||cols[eanIdx]||cols[libIdx]||'?');
+    results.push({
+      key: displayKey,
+      qty: qty,
+      found: !!found,
+      matchedBy: matchedBy,
+      libelle: found ? found.libelle : '',
+      code: found ? found.code : ''
+    });
+    if (found && qty > 0) bdcImportedQtys[found.code] = qty;
   }
-  var ok=results.filter(function(r){return r.found;}).length;
-  var nf=results.filter(function(r){return !r.found;}).length;
-  document.getElementById('bdc-import-summary').innerHTML=
+
+  // Afficher les résultats
+  var ok = results.filter(function(r){return r.found;}).length;
+  var nf = results.length - ok;
+
+  document.getElementById('bdc-import-summary').innerHTML =
     '<div style="flex:1;background:rgba(30,41,59,.7);border-radius:6px;padding:.5rem;text-align:center;"><div style="font-size:1.1rem;font-weight:600;color:var(--em400);">'+ok+'</div><div style="font-size:.6rem;color:var(--s600);text-transform:uppercase;">Trouvés</div></div>'+
     '<div style="flex:1;background:rgba(30,41,59,.7);border-radius:6px;padding:.5rem;text-align:center;"><div style="font-size:1.1rem;font-weight:600;color:#fca5a5;">'+nf+'</div><div style="font-size:.6rem;color:var(--s600);text-transform:uppercase;">Introuvables</div></div>'+
     '<div style="flex:1;background:rgba(30,41,59,.7);border-radius:6px;padding:.5rem;text-align:center;"><div style="font-size:1.1rem;font-weight:600;color:var(--white);">'+results.length+'</div><div style="font-size:.6rem;color:var(--s600);text-transform:uppercase;">Lignes</div></div>';
-  document.getElementById('bdc-import-rows').innerHTML=results.slice(0,50).map(function(r){
-    return '<div style="display:flex;align-items:center;gap:8px;padding:.4rem .7rem;border-bottom:1px solid rgba(255,255,255,.04);font-size:.72rem;">'+
-      '<span style="font-family:monospace;color:var(--s500);width:80px;flex-shrink:0;">'+r.code+'</span>'+
-      '<span style="flex:1;color:var(--s300);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+r.libelle+'</span>'+
-      '<span style="font-weight:600;color:var(--s100);width:30px;text-align:right;flex-shrink:0;">'+r.qty+'</span>'+
-      '<span style="width:16px;text-align:center;color:'+(r.found?'var(--em400)':'#fca5a5')+';">'+(r.found?'✓':'✗')+'</span></div>';
+
+  document.getElementById('bdc-import-rows').innerHTML = results.slice(0,80).map(function(r){
+    var matchBadge = r.found
+      ? '<span style="font-size:.58rem;background:rgba(5,150,105,.2);color:var(--em400);border-radius:3px;padding:1px 4px;margin-left:3px;">'+r.matchedBy+'</span>'
+      : '';
+    return '<div style="display:flex;align-items:center;gap:7px;padding:.38rem .7rem;border-bottom:1px solid rgba(255,255,255,.04);font-size:.72rem;">'+
+      '<span style="font-family:monospace;color:var(--s500);width:90px;flex-shrink:0;overflow:hidden;text-overflow:ellipsis;">'+r.key+'</span>'+
+      '<span style="flex:1;color:var(--s300);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+(r.libelle||'— introuvable')+matchBadge+'</span>'+
+      '<span style="font-weight:600;color:var(--s100);width:28px;text-align:right;flex-shrink:0;">'+r.qty+'</span>'+
+      '<span style="width:14px;text-align:center;color:'+(r.found?'var(--em400)':'#fca5a5')+';">'+(r.found?'✓':'✗')+'</span></div>';
   }).join('');
-  document.getElementById('bdc-import-result').style.display='block';
-  if(ok>0){document.getElementById('bdc-import-foot').style.display='flex';}
+
+  document.getElementById('bdc-import-result').style.display = 'block';
+  if (ok > 0) document.getElementById('bdc-import-foot').style.display = 'flex';
 }
 
 function bdcApplyImport() {
@@ -1500,3 +1572,214 @@ function bdcApplyImport() {
 }
 
 </script>
+
+<!-- IMPORT BDC -->
+<div class="modal-bg hidden" id="bdc-import-modal"><div class="modal" style="max-width:500px;">
+  <div class="modal-head"><span class="modal-title">📄 Importer une commande</span><button class="close-btn" onclick="closeBdcImport()">✕</button></div>
+  <div class="modal-body">
+    <div id="bdc-import-drop" style="border:2px dashed rgba(255,255,255,.15);border-radius:9px;padding:1.5rem 1rem;text-align:center;cursor:pointer;transition:all .2s;" onclick="document.getElementById('bdc-import-file').click()" ondragover="bdcImportDrag(event,true)" ondragleave="bdcImportDrag(event,false)" ondrop="bdcImportDrop(event)">
+      <div style="font-size:1.8rem;margin-bottom:.4rem;opacity:.4;">📂</div>
+      <div style="font-size:.84rem;font-weight:500;color:var(--s300);margin-bottom:.2rem;">Glissez votre fichier ici ou cliquez</div>
+      <div style="font-size:.72rem;color:var(--s600);">CSV ou Excel (.xlsx/.xls)</div>
+    </div>
+    <input type="file" id="bdc-import-file" accept=".csv,.xlsx,.xls" style="display:none" onchange="bdcImportFile(this.files[0])">
+    <div id="bdc-import-result" style="display:none;margin-top:.8rem;">
+      <div id="bdc-import-summary" style="display:flex;gap:8px;margin-bottom:.7rem;"></div>
+      <div id="bdc-import-rows" style="max-height:220px;overflow-y:auto;border:1px solid var(--border);border-radius:7px;"></div>
+    </div>
+    <div style="margin-top:.8rem;font-size:.73rem;color:var(--s600);background:rgba(30,41,59,.5);border-radius:6px;padding:.7rem .9rem;line-height:1.75;">
+      <strong style="color:var(--em400)">Identification des produits (au choix) :</strong><br>
+      &bull; <code style="background:rgba(16,185,129,.1);padding:1px 4px;border-radius:3px;color:var(--em400)">code</code> &mdash; code article MDM (ex : QUINOA500)<br>
+      &bull; <code style="background:rgba(16,185,129,.1);padding:1px 4px;border-radius:3px;color:var(--em400)">ean</code> &mdash; code-barres EAN / Gencod<br>
+      &bull; <code style="background:rgba(16,185,129,.1);padding:1px 4px;border-radius:3px;color:var(--em400)">libelle</code> &mdash; d&eacute;signation (correspondance partielle accept&eacute;e)<br>
+      <strong style="color:var(--em400)">Colonne obligatoire :</strong> <code style="background:rgba(16,185,129,.1);padding:1px 4px;border-radius:3px;color:var(--em400)">quantite</code> (ou qte, qty, colis)<br>
+      <span style="color:var(--s700);">S&eacute;parateur virgule ou point-virgule. Colonnes combinables.</span>
+    </div>
+  </div>
+  <div class="modal-foot" id="bdc-import-foot" style="display:none;">
+    <button class="btn btn-ghost" onclick="closeBdcImport()">Annuler</button>
+    <button class="btn btn-primary" onclick="bdcApplyImport()">&#10003; Appliquer les quantit&eacute;s</button>
+  </div>
+</div></div>
+
+
+<!-- IMPORT STOCKS -->
+<div class="modal-bg hidden" id="stock-import-modal"><div class="modal" style="max-width:520px;">
+  <div class="modal-head">
+    <span class="modal-title">📦 Mise à jour des stocks</span>
+    <button class="close-btn" onclick="closeStockImport()">✕</button>
+  </div>
+  <div class="modal-body">
+    <div id="stock-import-drop" style="border:2px dashed rgba(245,158,11,.3);border-radius:9px;padding:1.5rem 1rem;text-align:center;cursor:pointer;transition:all .2s;" onclick="document.getElementById('stock-import-file').click()" ondragover="stockImportDrag(event,true)" ondragleave="stockImportDrag(event,false)" ondrop="stockImportDrop(event)">
+      <div style="font-size:1.8rem;margin-bottom:.4rem;opacity:.5;">📊</div>
+      <div style="font-size:.84rem;font-weight:500;color:var(--s300);margin-bottom:.2rem;">Glissez votre export stock ici ou cliquez</div>
+      <div style="font-size:.72rem;color:var(--s600);">Fichier Excel (.xlsx/.xls) ou CSV</div>
+    </div>
+    <input type="file" id="stock-import-file" accept=".csv,.xlsx,.xls" style="display:none" onchange="stockImportFile(this.files[0])">
+
+    <div id="stock-import-result" style="display:none;margin-top:.9rem;">
+      <div id="stock-import-summary" style="display:flex;gap:8px;margin-bottom:.7rem;"></div>
+      <div style="font-size:.72rem;color:var(--s500);margin-bottom:.4rem;font-weight:600;" id="stock-import-subtitle"></div>
+      <div id="stock-import-rows" style="max-height:220px;overflow-y:auto;border:1px solid var(--border);border-radius:7px;"></div>
+    </div>
+
+    <div style="margin-top:.8rem;font-size:.73rem;color:var(--s600);background:rgba(30,41,59,.5);border-radius:6px;padding:.7rem .9rem;line-height:1.7;">
+      <strong style="color:#fcd34d;">Format attendu (export MDM) :</strong><br>
+      &bull; Colonne <code style="background:rgba(245,158,11,.12);padding:1px 4px;border-radius:3px;color:#fcd34d;">Code article</code> &mdash; code interne MDM<br>
+      &bull; Colonne <code style="background:rgba(245,158,11,.12);padding:1px 4px;border-radius:3px;color:#fcd34d;">Disponible</code> &mdash; stock net disponible<br>
+      Les stocks mis à jour s'affichent immédiatement dans le catalogue sans recharger la page.
+    </div>
+  </div>
+  <div class="modal-foot" id="stock-import-foot" style="display:none;">
+    <button class="btn btn-ghost" onclick="closeStockImport()">Annuler</button>
+    <button class="btn btn-primary" style="background:var(--amber);" onclick="applyStockImport()">&#10003; Appliquer les stocks</button>
+  </div>
+</div></div>
+
+<script>
+// ═══════════════════════════════════════════════
+//  IMPORT STOCKS
+// ═══════════════════════════════════════════════
+var pendingStockMap = {};
+
+function openStockImport() {
+  document.getElementById('stock-import-modal').classList.remove('hidden');
+  document.getElementById('stock-import-result').style.display = 'none';
+  document.getElementById('stock-import-foot').style.display = 'none';
+  pendingStockMap = {};
+}
+function closeStockImport() {
+  document.getElementById('stock-import-modal').classList.add('hidden');
+}
+function stockImportDrag(e, on) {
+  e.preventDefault();
+  document.getElementById('stock-import-drop').style.borderColor = on ? 'var(--amber)' : 'rgba(245,158,11,.3)';
+}
+function stockImportDrop(e) {
+  e.preventDefault();
+  stockImportDrag(e, false);
+  if (e.dataTransfer.files[0]) stockImportFile(e.dataTransfer.files[0]);
+}
+
+function stockImportFile(file) {
+  if (!file) return;
+  var ext = file.name.split('.').pop().toLowerCase();
+  var reader = new FileReader();
+  if (ext === 'csv') {
+    reader.onload = function(e) { stockParseCSV(e.target.result); };
+    reader.readAsText(file, 'UTF-8');
+  } else {
+    reader.onload = function(e) {
+      var wb = XLSX.read(e.target.result, {type:'binary'});
+      var ws = wb.Sheets[wb.SheetNames[0]];
+      stockParseCSV(XLSX.utils.sheet_to_csv(ws, {FS:';'}));
+    };
+    reader.readAsBinaryString(file);
+  }
+}
+
+function stockParseCSV(text) {
+  var lines = text.split(/\r?\n/).filter(function(l){return l.trim();});
+  if (lines.length < 2) { toast('Fichier vide ou invalide','err'); return; }
+
+  var sep = lines[0].includes(';') ? ';' : ',';
+  var hdrs = lines[0].split(sep).map(function(h){return h.trim().replace(/["']/g,'').toLowerCase();});
+
+  // Détecter colonnes : code article + disponible
+  var codeIdx  = hdrs.findIndex(function(h){return h==='code article'||h==='code'||h==='ref'||h==='code_article'||h==='codearticle';});
+  var stockIdx = hdrs.findIndex(function(h){return h==='disponible'||h==='stock'||h==='stock disponible'||h==='dispo'||h==='qte dispo'||h==='qté dispo';});
+
+  if (codeIdx < 0) { toast("Colonne 'Code article' non trouvée",'err'); return; }
+  if (stockIdx < 0) { toast("Colonne 'Disponible' non trouvée",'err'); return; }
+
+  // Construire index des codes produits pour matching rapide
+  var knownCodes = {};
+  PRODUCTS.forEach(function(p){ knownCodes[p.code.toUpperCase()] = true; });
+
+  pendingStockMap = {};
+  var matched = 0, unknown = 0, rupture = 0, exemples = [];
+
+  for (var i = 1; i < lines.length; i++) {
+    var cols = lines[i].split(sep).map(function(c){return c.trim().replace(/["']/g,'');});
+    if (!cols[codeIdx]) continue;
+
+    var code = cols[codeIdx].toUpperCase().trim();
+    var rawStock = cols[stockIdx] ? cols[stockIdx].replace(',','.') : null;
+    var stock = rawStock !== null && rawStock !== '' ? parseFloat(rawStock) : null;
+
+    if (!knownCodes[code]) { unknown++; continue; }
+
+    pendingStockMap[code] = stock !== null ? Math.round(stock) : null;
+    matched++;
+    if (stock !== null && stock <= 0) rupture++;
+
+    if (exemples.length < 60) {
+      exemples.push({code: code, stock: pendingStockMap[code]});
+    }
+  }
+
+  // Afficher résultats
+  var total = matched + unknown;
+  document.getElementById('stock-import-summary').innerHTML =
+    '<div style="flex:1;background:rgba(30,41,59,.7);border-radius:6px;padding:.5rem;text-align:center;">' +
+      '<div style="font-size:1.1rem;font-weight:600;color:#fcd34d;">'+matched+'</div>' +
+      '<div style="font-size:.6rem;color:var(--s600);text-transform:uppercase;">Mis à jour</div></div>' +
+    '<div style="flex:1;background:rgba(30,41,59,.7);border-radius:6px;padding:.5rem;text-align:center;">' +
+      '<div style="font-size:1.1rem;font-weight:600;color:#fca5a5;">'+rupture+'</div>' +
+      '<div style="font-size:.6rem;color:var(--s600);text-transform:uppercase;">Ruptures</div></div>' +
+    '<div style="flex:1;background:rgba(30,41,59,.7);border-radius:6px;padding:.5rem;text-align:center;">' +
+      '<div style="font-size:1.1rem;font-weight:600;color:var(--s400);">'+unknown+'</div>' +
+      '<div style="font-size:.6rem;color:var(--s600);text-transform:uppercase;">Non reconnus</div></div>';
+
+  document.getElementById('stock-import-subtitle').textContent =
+    matched + ' articles sur ' + total + ' reconnus — aperçu :';
+
+  document.getElementById('stock-import-rows').innerHTML = exemples.slice(0,50).map(function(r){
+    var stk = r.stock;
+    var color = stk === null ? 'var(--s600)' : stk <= 0 ? '#fca5a5' : stk <= 5 ? 'var(--amber)' : 'var(--em400)';
+    var label = stk === null ? '—' : stk <= 0 ? '⚠ Rupture ('+stk+')' : stk;
+    return '<div style="display:flex;align-items:center;gap:8px;padding:.38rem .7rem;border-bottom:1px solid rgba(255,255,255,.04);font-size:.73rem;">' +
+      '<span style="font-family:monospace;color:var(--s500);width:120px;flex-shrink:0;">'+r.code+'</span>' +
+      '<span style="flex:1;"></span>' +
+      '<span style="font-weight:600;color:'+color+';">'+label+'</span></div>';
+  }).join('');
+
+  document.getElementById('stock-import-result').style.display = 'block';
+  if (matched > 0) document.getElementById('stock-import-foot').style.display = 'flex';
+}
+
+function applyStockImport() {
+  // Fusionner dans bdcStockMap
+  Object.assign(bdcStockMap, pendingStockMap);
+
+  // Mettre à jour le tableau en direct sans rebuild complet
+  var updated = 0;
+  Object.keys(pendingStockMap).forEach(function(code) {
+    var stk = pendingStockMap[code];
+    // Trouver la ligne correspondante dans le tbody
+    var rows = document.querySelectorAll('#bdc-tbody tr');
+    rows.forEach(function(tr) {
+      if (tr.dataset.code === code) {
+        // Trouver la cellule stock (7ème td = index 6)
+        var tds = tr.querySelectorAll('td');
+        if (tds[6]) {
+          var stkH;
+          if (stk === null) stkH = '<span style="color:var(--s700)">—</span>';
+          else if (stk <= 0) stkH = '<span style="color:#fca5a5;font-size:.68rem;">⚠ Rupture</span>';
+          else if (stk <= 5) stkH = '<span style="color:var(--amber);font-weight:600;">'+stk+'</span>';
+          else stkH = '<span style="color:var(--em400);font-weight:600;">'+stk+'</span>';
+          tds[6].innerHTML = stkH;
+          updated++;
+        }
+      }
+    });
+  });
+
+  closeStockImport();
+  pendingStockMap = {};
+  toast('✅ Stocks mis à jour : ' + Object.keys(bdcStockMap).length + ' articles');
+}
+
+</script>
+</body>
+</html>
