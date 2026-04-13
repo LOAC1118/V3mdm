@@ -823,14 +823,15 @@ function setSyncing(on) {
 // ═══════════════════════════════════════════════
 const SECTIONS = ['dashboard','prospects','clients','bdc','frais'];
 function showSection(name, tabEl, sideEl) {
-  SECTIONS.forEach(s => document.getElementById('sec-'+s).classList.add('hidden'));
-  const sec=document.getElementById('sec-'+name); sec.classList.remove('hidden'); if(name==='bdc') sec.style.display='flex';
+  SECTIONS.forEach(s => { const el=document.getElementById('sec-'+s); el.classList.add('hidden'); el.style.display=''; });
+  const sec=document.getElementById('sec-'+name); sec.classList.remove('hidden'); sec.style.display=(name==='bdc')?'flex':'';
   document.querySelectorAll('.t-tab').forEach(t=>t.classList.remove('active'));
   document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
   if (tabEl) tabEl.classList.add('active');
   if (sideEl) sideEl.classList.add('active');
   if (name==='dashboard') refreshDashboard();
   if (name==='frais') refreshFraisStats();
+  if (name==='bdc') { if (!bdcInitDone) { buildTable(); bdcInitDone=true; } }
 }
 
 function toggleAvatarMenu() { document.getElementById('avatar-menu').classList.toggle('open'); }
