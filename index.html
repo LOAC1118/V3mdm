@@ -19,26 +19,6 @@
 body{font-family:var(--fd);background:var(--s950);color:var(--s200);font-size:14px;min-height:100vh;display:flex;flex-direction:column;}
 body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellipse 60% 50% at 100% 0%,rgba(5,150,105,.1) 0%,transparent 60%),radial-gradient(ellipse 40% 40% at 0% 100%,rgba(5,150,105,.06) 0%,transparent 60%);pointer-events:none;z-index:0;}
 
-/* ── CONFIG SCREEN ── */
-#config-screen{position:fixed;inset:0;background:var(--s950);z-index:1000;display:flex;align-items:center;justify-content:center;padding:1rem;}
-.config-box{background:var(--s900);border:1px solid rgba(255,255,255,.1);border-radius:16px;padding:2rem;width:100%;max-width:500px;}
-.config-logo{display:flex;align-items:center;gap:12px;margin-bottom:1.5rem;}
-.config-logo-ico{width:42px;height:42px;border-radius:11px;background:linear-gradient(135deg,#047857,#10b981);display:flex;align-items:center;justify-content:center;font-size:20px;}
-.config-logo-name{font-family:var(--fdisp);font-size:1.2rem;color:var(--white);}
-.config-logo-sub{font-size:.62rem;color:var(--s500);letter-spacing:.08em;text-transform:uppercase;}
-.config-note{font-size:.78rem;color:var(--s400);background:rgba(5,150,105,.07);border:1px solid rgba(5,150,105,.15);border-radius:8px;padding:.9rem 1rem;margin-bottom:1.2rem;line-height:1.6;}
-.config-note strong{color:var(--em400);}
-.config-note a{color:var(--em400);}
-.config-steps{margin-bottom:1.2rem;}
-.config-step{display:flex;gap:10px;align-items:flex-start;margin-bottom:.7rem;font-size:.78rem;color:var(--s400);line-height:1.5;}
-.config-step-num{width:20px;height:20px;border-radius:50%;background:rgba(16,185,129,.15);color:var(--em400);display:flex;align-items:center;justify-content:center;font-size:.68rem;font-weight:700;flex-shrink:0;margin-top:1px;}
-.cfg-field{margin-bottom:.9rem;}
-.cfg-field label{display:block;font-size:.7rem;font-weight:600;color:var(--s400);letter-spacing:.05em;text-transform:uppercase;margin-bottom:.3rem;}
-.cfg-field input{width:100%;background:rgba(51,65,85,.5);border:1px solid rgba(255,255,255,.1);border-radius:7px;padding:.55rem .8rem;color:var(--s200);font-family:var(--fd);font-size:.84rem;outline:none;transition:border-color .2s;}
-.cfg-field input:focus{border-color:var(--em600);}
-.cfg-field input::placeholder{color:var(--s600);}
-.cfg-err{font-size:.78rem;color:#fca5a5;background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.2);border-radius:6px;padding:.5rem .8rem;margin-bottom:.8rem;display:none;}
-
 /* ── LOGIN SCREEN ── */
 #login-screen{position:fixed;inset:0;background:var(--s950);z-index:900;display:none;align-items:center;justify-content:center;padding:1rem;}
 .login-box{background:var(--s900);border:1px solid rgba(255,255,255,.1);border-radius:16px;padding:2rem;width:100%;max-width:400px;}
@@ -224,33 +204,7 @@ textarea{resize:vertical;min-height:80px;}
 <!-- ══════════════════════════════════════════
      ÉCRAN 1 — CONFIGURATION FIREBASE
 ══════════════════════════════════════════ -->
-<div id="config-screen">
-  <div class="config-box">
-    <div class="config-logo">
-      <div class="config-logo-ico">🌾</div>
-      <div>
-        <div class="config-logo-name">Moulin des Moines</div>
-        <div class="config-logo-sub">CRM 2026 — Configuration Firebase</div>
-      </div>
-    </div>
-    <div class="config-note">
-      Connectez votre projet Firebase. Ces informations sont sauvegardées dans votre navigateur et <strong>ne seront plus demandées</strong>.<br>
-      → <a href="https://console.firebase.google.com" target="_blank">console.firebase.google.com</a>
-    </div>
-    <div class="config-steps">
-      <div class="config-step"><div class="config-step-num">1</div><div>Créez un projet Firebase → <strong style="color:var(--s200)">Ajouter une application Web</strong> → copiez la config</div></div>
-      <div class="config-step"><div class="config-step-num">2</div><div>Activez <strong style="color:var(--s200)">Authentication</strong> → Fournisseurs de connexion → Email/Mot de passe</div></div>
-      <div class="config-step"><div class="config-step-num">3</div><div>Activez <strong style="color:var(--s200)">Firestore Database</strong> → Créer une base de données → Mode production</div></div>
-      <div class="config-step"><div class="config-step-num">4</div><div>Collez vos clés ci-dessous et cliquez sur Connecter</div></div>
-    </div>
-    <div class="cfg-field"><label>API Key</label><input type="text" id="cfg-apikey" placeholder="AIzaSy..."></div>
-    <div class="cfg-field"><label>Auth Domain</label><input type="text" id="cfg-authdomain" placeholder="mon-projet.firebaseapp.com"></div>
-    <div class="cfg-field"><label>Project ID</label><input type="text" id="cfg-projectid" placeholder="mon-projet-mdm2026"></div>
-    <div class="cfg-err" id="cfg-err"></div>
-    <button class="btn btn-primary" style="width:100%;justify-content:center;" onclick="saveConfig()">Connecter à Firebase →</button>
-    <div style="text-align:center;margin-top:.8rem;"><a onclick="showConfigHelp()" style="font-size:.75rem;color:var(--em400);cursor:pointer;">Où trouver ces informations ?</a></div>
-  </div>
-</div>
+
 
 <!-- ══════════════════════════════════════════
      ÉCRAN 2 — LOGIN
@@ -287,9 +241,7 @@ textarea{resize:vertical;min-height:80px;}
       <div class="login-switch"><a onclick="switchForm('login')">← Retour à la connexion</a></div>
     </div>
 
-    <div style="text-align:center;margin-top:1.2rem;">
-      <a onclick="resetConfig()" style="font-size:.72rem;color:var(--s600);cursor:pointer;">Changer de projet Firebase</a>
-    </div>
+
   </div>
 </div>
 
@@ -644,21 +596,13 @@ textarea{resize:vertical;min-height:80px;}
 // ═══════════════════════════════════════════════
 //  CONFIG FIREBASE
 // ═══════════════════════════════════════════════
-const CFG_KEY = 'mdm2026_firebase_config';
 let db = null, auth = null, currentUser = null;
 let cache = { prospects:[], clients:[], commandes:[], frais:[], activite:[] };
 let listeners = [];
 
-function getConfig() { try { return JSON.parse(localStorage.getItem(CFG_KEY)); } catch { return null; } }
-function setConfig(c) { localStorage.setItem(CFG_KEY, JSON.stringify(c)); }
-function resetConfig() { localStorage.removeItem(CFG_KEY); location.reload(); }
 
-async function saveConfig() {
-  const apiKey     = g('cfg-apikey').trim();
-  const authDomain = g('cfg-authdomain').trim();
-  const projectId  = g('cfg-projectid').trim();
-  const errEl = document.getElementById('cfg-err');
-  if (!apiKey || !authDomain || !projectId) { showErr(errEl,'Veuillez remplir tous les champs.'); return; }
+
+
   try {
     // Init Firebase une seule fois
     const cfg = { apiKey, authDomain, projectId };
@@ -683,15 +627,13 @@ function initFirebase(cfg) {
   // Pas de enablePersistence : doit être appelé avant toute opération Firestore
 }
 
-function showConfigHelp() {
-  toast('Allez sur console.firebase.google.com → votre projet → Paramètres → Config de votre app Web');
-}
+
 
 // ═══════════════════════════════════════════════
 //  AUTH
 // ═══════════════════════════════════════════════
 function showLoginScreen() {
-  document.getElementById('config-screen').style.display = 'none';
+  
   document.getElementById('login-screen').style.display  = 'flex';
   auth.onAuthStateChanged(user => {
     if (user) { currentUser = user; showApp(); }
@@ -1214,8 +1156,18 @@ function fsB(s) { if(s==='Validé'||s==='Remboursé') return 'badge-client'; if(
 //  INIT
 // ═══════════════════════════════════════════════
 document.addEventListener('keydown', e => { if(e.key==='Escape') ['prospect','client','commande','frais'].forEach(closeModal); });
-const cfg = getConfig();
-if (cfg) { initFirebase(cfg); showLoginScreen(); }
+// Config Firebase MDM 2026 — intégrée
+const FIREBASE_CONFIG = {
+  apiKey:            "AIzaSyBk9X0E5XGx8GPXzZoD7bt4AdJE4NUwEyQ",
+  authDomain:        "bdcmdm26.firebaseapp.com",
+  projectId:         "bdcmdm26",
+  storageBucket:     "bdcmdm26.firebasestorage.app",
+  messagingSenderId: "907040110034",
+  appId:             "1:907040110034:web:3c5f1d4a3c56a7efe9840b"
+};
+// Initialisation directe — plus d'écran de configuration
+initFirebase(FIREBASE_CONFIG);
+showLoginScreen();
 
 // ═══════════════════════════════════════════════
 //  BON DE COMMANDE — CATALOGUE MDM
