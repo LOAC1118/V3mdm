@@ -822,8 +822,8 @@ textarea { resize:vertical; min-height:80px; }
 
   <!-- BON DE COMMANDE BDC -->
   <div id="sec-bdc" class="hidden" style="flex-direction:column;height:100%;overflow:hidden;">
-    <div style="background:rgba(15,23,42,.7);border-bottom:1px solid var(--border);padding:.55rem 1rem;display:flex;align-items:center;gap:8px;flex-shrink:0;flex-wrap:wrap;">
-      <div style="font-family:var(--fdisp);font-size:.9rem;color:var(--white);flex:1;min-width:140px;">🌾 Bon de Commande MDM 2026</div>
+    <div style="background:var(--surface);border-bottom:1px solid var(--border);padding:.55rem 1rem;display:flex;align-items:center;gap:8px;flex-shrink:0;flex-wrap:wrap;">
+      <div style="font-family:var(--fdisp);font-size:.9rem;color:var(--g900);flex:1;min-width:140px;">🌾 Bon de Commande MDM 2026</div>
       <button class="btn btn-ghost" style="font-size:.72rem;padding:.3rem .7rem;" onclick="openBdcImport()">📄 Importer commande</button>
       <button class="btn btn-ghost" style="font-size:.72rem;padding:.3rem .7rem;color:#fcd34d;border-color:rgba(245,158,11,.3);" onclick="openStockImport()">📦 Mettre à jour stocks</button>
       <button class="btn btn-ghost" style="font-size:.72rem;padding:.3rem .7rem;" onclick="resetBDC()">🗑 Effacer</button>
@@ -831,34 +831,34 @@ textarea { resize:vertical; min-height:80px; }
     </div>
     <div style="display:flex;flex:1;overflow:hidden;">
       <!-- Sidebar BDC -->
-      <div style="width:255px;background:rgba(15,23,42,.7);border-right:1px solid var(--border);display:flex;flex-direction:column;flex-shrink:0;overflow-y:auto;padding:.9rem;">
-        <div style="font-size:.63rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--s600);margin-bottom:.5rem;">Informations client</div>
-        <div style="margin-bottom:.5rem;"><label style="display:block;font-size:.65rem;font-weight:600;color:var(--s500);letter-spacing:.04em;text-transform:uppercase;margin-bottom:.2rem;">Magasin *</label><input type="text" id="bdc-magasin" placeholder="Nom du magasin" style="width:100%;background:rgba(51,65,85,.5);border:1px solid rgba(255,255,255,.1);border-radius:6px;padding:.4rem .6rem;color:var(--s200);font-family:var(--fd);font-size:.78rem;outline:none;"></div>
-        <div style="margin-bottom:.5rem;"><label style="display:block;font-size:.65rem;font-weight:600;color:var(--s500);letter-spacing:.04em;text-transform:uppercase;margin-bottom:.2rem;">N° Client</label><input type="text" id="bdc-numclient" placeholder="MDM-0123" style="width:100%;background:rgba(51,65,85,.5);border:1px solid rgba(255,255,255,.1);border-radius:6px;padding:.4rem .6rem;color:var(--s200);font-family:var(--fd);font-size:.78rem;outline:none;"></div>
-        <div style="margin-bottom:.5rem;"><label style="display:block;font-size:.65rem;font-weight:600;color:var(--s500);letter-spacing:.04em;text-transform:uppercase;margin-bottom:.2rem;">Contact</label><input type="text" id="bdc-contact" placeholder="Prénom Nom" style="width:100%;background:rgba(51,65,85,.5);border:1px solid rgba(255,255,255,.1);border-radius:6px;padding:.4rem .6rem;color:var(--s200);font-family:var(--fd);font-size:.78rem;outline:none;"></div>
-        <div style="margin-bottom:.5rem;"><label style="display:block;font-size:.65rem;font-weight:600;color:var(--s500);letter-spacing:.04em;text-transform:uppercase;margin-bottom:.2rem;">Email *</label><input type="email" id="bdc-email" placeholder="votre@email.fr" style="width:100%;background:rgba(51,65,85,.5);border:1px solid rgba(255,255,255,.1);border-radius:6px;padding:.4rem .6rem;color:var(--s200);font-family:var(--fd);font-size:.78rem;outline:none;"></div>
-        <div style="margin-bottom:.5rem;"><label style="display:block;font-size:.65rem;font-weight:600;color:var(--s500);letter-spacing:.04em;text-transform:uppercase;margin-bottom:.2rem;">Téléphone</label><input type="tel" id="bdc-tel" placeholder="06 xx xx xx xx" style="width:100%;background:rgba(51,65,85,.5);border:1px solid rgba(255,255,255,.1);border-radius:6px;padding:.4rem .6rem;color:var(--s200);font-family:var(--fd);font-size:.78rem;outline:none;"></div>
-        <div style="margin-bottom:.5rem;"><label style="display:block;font-size:.65rem;font-weight:600;color:var(--s500);letter-spacing:.04em;text-transform:uppercase;margin-bottom:.2rem;">Livraison</label><input type="date" id="bdc-datelivraison" style="width:100%;background:rgba(51,65,85,.5);border:1px solid rgba(255,255,255,.1);border-radius:6px;padding:.4rem .6rem;color:var(--s200);font-family:var(--fd);font-size:.78rem;outline:none;"></div>
-        <div style="margin-bottom:.8rem;"><label style="display:block;font-size:.65rem;font-weight:600;color:var(--s500);letter-spacing:.04em;text-transform:uppercase;margin-bottom:.2rem;">Commentaire</label><input type="text" id="bdc-comment" placeholder="Instructions…" style="width:100%;background:rgba(51,65,85,.5);border:1px solid rgba(255,255,255,.1);border-radius:6px;padding:.4rem .6rem;color:var(--s200);font-family:var(--fd);font-size:.78rem;outline:none;"></div>
-        <div style="font-size:.63rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--s600);margin-bottom:.5rem;">Remise groupement</div>
+      <div style="width:255px;background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;flex-shrink:0;overflow-y:auto;padding:.9rem;">
+        <div style="font-size:.63rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--g500);margin-bottom:.5rem;">Informations client</div>
+        <div style="margin-bottom:.5rem;"><label style="display:block;font-size:.65rem;font-weight:600;color:var(--g600);letter-spacing:.04em;text-transform:uppercase;margin-bottom:.2rem;">Magasin *</label><input type="text" id="bdc-magasin" placeholder="Nom du magasin" style="width:100%;background:var(--surface2);border:1px solid var(--border-med);border-radius:6px;padding:.4rem .6rem;color:var(--g800);font-family:var(--fd);font-size:.78rem;outline:none;"></div>
+        <div style="margin-bottom:.5rem;"><label style="display:block;font-size:.65rem;font-weight:600;color:var(--g600);letter-spacing:.04em;text-transform:uppercase;margin-bottom:.2rem;">N° Client</label><input type="text" id="bdc-numclient" placeholder="MDM-0123" style="width:100%;background:var(--surface2);border:1px solid var(--border-med);border-radius:6px;padding:.4rem .6rem;color:var(--g800);font-family:var(--fd);font-size:.78rem;outline:none;"></div>
+        <div style="margin-bottom:.5rem;"><label style="display:block;font-size:.65rem;font-weight:600;color:var(--g600);letter-spacing:.04em;text-transform:uppercase;margin-bottom:.2rem;">Contact</label><input type="text" id="bdc-contact" placeholder="Prénom Nom" style="width:100%;background:var(--surface2);border:1px solid var(--border-med);border-radius:6px;padding:.4rem .6rem;color:var(--g800);font-family:var(--fd);font-size:.78rem;outline:none;"></div>
+        <div style="margin-bottom:.5rem;"><label style="display:block;font-size:.65rem;font-weight:600;color:var(--g600);letter-spacing:.04em;text-transform:uppercase;margin-bottom:.2rem;">Email *</label><input type="email" id="bdc-email" placeholder="votre@email.fr" style="width:100%;background:var(--surface2);border:1px solid var(--border-med);border-radius:6px;padding:.4rem .6rem;color:var(--g800);font-family:var(--fd);font-size:.78rem;outline:none;"></div>
+        <div style="margin-bottom:.5rem;"><label style="display:block;font-size:.65rem;font-weight:600;color:var(--g600);letter-spacing:.04em;text-transform:uppercase;margin-bottom:.2rem;">Téléphone</label><input type="tel" id="bdc-tel" placeholder="06 xx xx xx xx" style="width:100%;background:var(--surface2);border:1px solid var(--border-med);border-radius:6px;padding:.4rem .6rem;color:var(--g800);font-family:var(--fd);font-size:.78rem;outline:none;"></div>
+        <div style="margin-bottom:.5rem;"><label style="display:block;font-size:.65rem;font-weight:600;color:var(--g600);letter-spacing:.04em;text-transform:uppercase;margin-bottom:.2rem;">Livraison</label><input type="date" id="bdc-datelivraison" style="width:100%;background:var(--surface2);border:1px solid var(--border-med);border-radius:6px;padding:.4rem .6rem;color:var(--g800);font-family:var(--fd);font-size:.78rem;outline:none;"></div>
+        <div style="margin-bottom:.8rem;"><label style="display:block;font-size:.65rem;font-weight:600;color:var(--g600);letter-spacing:.04em;text-transform:uppercase;margin-bottom:.2rem;">Commentaire</label><input type="text" id="bdc-comment" placeholder="Instructions…" style="width:100%;background:var(--surface2);border:1px solid var(--border-med);border-radius:6px;padding:.4rem .6rem;color:var(--g800);font-family:var(--fd);font-size:.78rem;outline:none;"></div>
+        <div style="font-size:.63rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--g500);margin-bottom:.5rem;">Remise groupement</div>
         <div style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:.8rem;" id="bdc-remise-btns">
           <button class="bdc-rem-btn active" onclick="bdcSetRemise(0,this)">Aucune</button>
           <button class="bdc-rem-btn" onclick="bdcSetRemise(5,this)">−5%</button>
           <button class="bdc-rem-btn" onclick="bdcSetRemise(10,this)">−10%</button>
           <button class="bdc-rem-btn" onclick="bdcSetRemise(15,this)">−15%</button>
           <button class="bdc-rem-btn" onclick="bdcSetRemise(20,this)">−20%</button>
-          <input type="number" id="bdc-remise-custom" min="0" max="99" step="0.5" placeholder="%" style="width:50px;padding:3px 5px;border:1.5px solid rgba(255,255,255,.15);border-radius:6px;background:rgba(51,65,85,.5);color:var(--s200);font-family:var(--fd);font-size:.72rem;outline:none;" oninput="bdcSetRemise(parseFloat(this.value)||0,null)">
+          <input type="number" id="bdc-remise-custom" min="0" max="99" step="0.5" placeholder="%" style="width:50px;padding:3px 5px;border:1.5px solid var(--border-med);border-radius:6px;background:var(--surface2);color:var(--g800);font-family:var(--fd);font-size:.72rem;outline:none;" oninput="bdcSetRemise(parseFloat(this.value)||0,null)">
         </div>
-        <div style="font-size:.63rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--s600);margin-bottom:.5rem;">Récapitulatif</div>
+        <div style="font-size:.63rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--g500);margin-bottom:.5rem;">Récapitulatif</div>
         <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:4px;margin-bottom:.6rem;">
-          <div style="background:rgba(30,41,59,.7);border-radius:6px;padding:.35rem;text-align:center;"><div style="font-size:.95rem;font-weight:600;color:var(--white);" id="bdc-nb-refs">0</div><div style="font-size:.58rem;color:var(--s600);text-transform:uppercase;">Réf.</div></div>
-          <div style="background:rgba(30,41,59,.7);border-radius:6px;padding:.35rem;text-align:center;"><div style="font-size:.95rem;font-weight:600;color:var(--white);" id="bdc-nb-colis">0</div><div style="font-size:.58rem;color:var(--s600);text-transform:uppercase;">Colis</div></div>
-          <div style="background:rgba(30,41,59,.7);border-radius:6px;padding:.35rem;text-align:center;"><div style="font-size:.95rem;font-weight:600;color:var(--white);" id="bdc-nb-uvc">0</div><div style="font-size:.58rem;color:var(--s600);text-transform:uppercase;">UVC</div></div>
+          <div style="background:var(--surface2);border-radius:6px;padding:.35rem;text-align:center;"><div style="font-size:.95rem;font-weight:600;color:var(--g900);" id="bdc-nb-refs">0</div><div style="font-size:.58rem;color:var(--g500);text-transform:uppercase;">Réf.</div></div>
+          <div style="background:var(--surface2);border-radius:6px;padding:.35rem;text-align:center;"><div style="font-size:.95rem;font-weight:600;color:var(--g900);" id="bdc-nb-colis">0</div><div style="font-size:.58rem;color:var(--g500);text-transform:uppercase;">Colis</div></div>
+          <div style="background:var(--surface2);border-radius:6px;padding:.35rem;text-align:center;"><div style="font-size:.95rem;font-weight:600;color:var(--g900);" id="bdc-nb-uvc">0</div><div style="font-size:.58rem;color:var(--g500);text-transform:uppercase;">UVC</div></div>
         </div>
-        <div style="background:rgba(5,150,105,.08);border:1px solid rgba(5,150,105,.2);border-radius:7px;padding:.7rem;">
-          <div style="display:flex;justify-content:space-between;font-size:.72rem;color:var(--s400);padding:.15rem 0;">Total HT brut<span style="font-weight:600;color:var(--s200);" id="bdc-total-brut">0,00€</span></div>
-          <div style="display:flex;justify-content:space-between;font-size:.72rem;color:var(--s400);padding:.15rem 0;">Remise<span style="font-weight:600;color:var(--s200);" id="bdc-total-remise">0,00€</span></div>
-          <div style="display:flex;justify-content:space-between;font-size:.82rem;font-weight:600;color:var(--em400);padding:.35rem 0;border-top:1px solid rgba(5,150,105,.2);margin-top:.25rem;">Total HT net<span id="bdc-total-net">0,00€</span></div>
+        <div style="background:var(--blue-p50);border:1px solid rgba(5,150,105,.2);border-radius:7px;padding:.7rem;">
+          <div style="display:flex;justify-content:space-between;font-size:.72rem;color:var(--g500);padding:.15rem 0;">Total HT brut<span style="font-weight:600;color:var(--g800);" id="bdc-total-brut">0,00€</span></div>
+          <div style="display:flex;justify-content:space-between;font-size:.72rem;color:var(--g500);padding:.15rem 0;">Remise<span style="font-weight:600;color:var(--g800);" id="bdc-total-remise">0,00€</span></div>
+          <div style="display:flex;justify-content:space-between;font-size:.82rem;font-weight:600;color:var(--blue-p700);padding:.35rem 0;border-top:1px solid rgba(5,150,105,.2);margin-top:.25rem;">Total HT net<span id="bdc-total-net">0,00€</span></div>
         </div>
         <div id="bdc-alert" style="display:none;border-radius:6px;padding:.5rem .7rem;font-size:.72rem;margin-top:.6rem;line-height:1.4;"></div>
         <button id="bdc-btn-send" class="btn btn-primary" style="width:100%;justify-content:center;margin-top:.7rem;" onclick="bdcSendOrder()">
@@ -868,10 +868,10 @@ textarea { resize:vertical; min-height:80px; }
       </div>
       <!-- Catalogue -->
       <div style="flex:1;display:flex;flex-direction:column;overflow:hidden;">
-        <div style="padding:.5rem .7rem;background:rgba(15,23,42,.5);border-bottom:1px solid var(--border);display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
-          <div style="display:flex;align-items:center;gap:6px;background:rgba(30,41,59,.7);border:1px solid var(--border);border-radius:6px;padding:.32rem .6rem;flex:1;min-width:180px;">
+        <div style="padding:.5rem .7rem;background:var(--surface2);border-bottom:1px solid var(--border);display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
+          <div style="display:flex;align-items:center;gap:6px;background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:.32rem .6rem;flex:1;min-width:180px;">
             <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="#64748b" stroke-width="1.5"><circle cx="6.5" cy="6.5" r="4.5"/><path d="M10.5 10.5L14 14"/></svg>
-            <input type="text" id="bdc-search" placeholder="Rechercher produit (désignation, code, EAN…)" oninput="bdcDoSearch()" style="background:transparent;border:none;outline:none;color:var(--s200);font-family:var(--fd);font-size:.75rem;width:100%;">
+            <input type="text" id="bdc-search" placeholder="Rechercher produit (désignation, code, EAN…)" oninput="bdcDoSearch()" style="background:transparent;border:none;outline:none;color:var(--g800);font-family:var(--fd);font-size:.75rem;width:100%;">
           </div>
           <div style="display:flex;gap:3px;">
             <button class="bdc-mode-btn active" data-mode="all" onclick="bdcSetMode(this)">Tout</button>
@@ -879,23 +879,23 @@ textarea { resize:vertical; min-height:80px; }
             <button class="bdc-mode-btn" data-mode="code" onclick="bdcSetMode(this)">Code</button>
             <button class="bdc-mode-btn" data-mode="ean" onclick="bdcSetMode(this)">EAN</button>
           </div>
-          <span id="bdc-search-count" style="font-size:.68rem;color:var(--s600);"></span>
+          <span id="bdc-search-count" style="font-size:.68rem;color:var(--g500);"></span>
           <button onclick="bdcClearSearch()" style="padding:.22rem .55rem;border-radius:4px;border:1px solid rgba(239,68,68,.2);background:transparent;color:#fca5a5;font-family:var(--fd);font-size:.68rem;cursor:pointer;">✕</button>
         </div>
         <div style="flex:1;overflow:auto;">
           <table id="bdc-table" style="width:100%;border-collapse:collapse;font-size:.73rem;">
             <thead style="position:sticky;top:0;z-index:10;">
               <tr id="bdc-thead-row">
-                <th style="background:rgba(15,23,42,.97);font-size:.6rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--s500);padding:.45rem .55rem;text-align:left;border-bottom:1px solid var(--border);white-space:nowrap;">Code</th>
-                <th style="background:rgba(15,23,42,.97);font-size:.6rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--s500);padding:.45rem .55rem;text-align:left;border-bottom:1px solid var(--border);min-width:180px;">Désignation</th>
-                <th style="background:rgba(15,23,42,.97);font-size:.6rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--s500);padding:.45rem .55rem;text-align:left;border-bottom:1px solid var(--border);">Certif.</th>
-                <th style="background:rgba(15,23,42,.97);font-size:.6rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--s500);padding:.45rem .55rem;text-align:left;border-bottom:1px solid var(--border);">PCB</th>
-                <th style="background:rgba(15,23,42,.97);font-size:.6rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--s500);padding:.45rem .55rem;text-align:left;border-bottom:1px solid var(--border);">TVA</th>
-                <th style="background:rgba(15,23,42,.97);font-size:.6rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--s500);padding:.45rem .55rem;text-align:left;border-bottom:1px solid var(--border);">Prix HT</th>
-                <th style="background:rgba(15,23,42,.97);font-size:.6rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--s500);padding:.45rem .55rem;text-align:left;border-bottom:1px solid var(--border);">Stock</th>
-                <th style="background:rgba(15,23,42,.97);font-size:.6rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--s500);padding:.45rem .55rem;text-align:left;border-bottom:1px solid var(--border);">Qté</th>
-                <th style="background:rgba(15,23,42,.97);font-size:.6rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--s500);padding:.45rem .55rem;text-align:left;border-bottom:1px solid var(--border);">UVC</th>
-                <th style="background:rgba(15,23,42,.97);font-size:.6rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--s500);padding:.45rem .55rem;text-align:left;border-bottom:1px solid var(--border);">Total HT</th>
+                <th style="background:var(--surface);font-size:.6rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--g600);padding:.45rem .55rem;text-align:left;border-bottom:1px solid var(--border);white-space:nowrap;">Code</th>
+                <th style="background:var(--surface);font-size:.6rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--g600);padding:.45rem .55rem;text-align:left;border-bottom:1px solid var(--border);min-width:180px;">Désignation</th>
+                <th style="background:var(--surface);font-size:.6rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--g600);padding:.45rem .55rem;text-align:left;border-bottom:1px solid var(--border);">Certif.</th>
+                <th style="background:var(--surface);font-size:.6rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--g600);padding:.45rem .55rem;text-align:left;border-bottom:1px solid var(--border);">PCB</th>
+                <th style="background:var(--surface);font-size:.6rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--g600);padding:.45rem .55rem;text-align:left;border-bottom:1px solid var(--border);">TVA</th>
+                <th style="background:var(--surface);font-size:.6rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--g600);padding:.45rem .55rem;text-align:left;border-bottom:1px solid var(--border);">Prix HT</th>
+                <th style="background:var(--surface);font-size:.6rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--g600);padding:.45rem .55rem;text-align:left;border-bottom:1px solid var(--border);">Stock</th>
+                <th style="background:var(--surface);font-size:.6rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--g600);padding:.45rem .55rem;text-align:left;border-bottom:1px solid var(--border);">Qté</th>
+                <th style="background:var(--surface);font-size:.6rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--g600);padding:.45rem .55rem;text-align:left;border-bottom:1px solid var(--border);">UVC</th>
+                <th style="background:var(--surface);font-size:.6rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--g600);padding:.45rem .55rem;text-align:left;border-bottom:1px solid var(--border);">Total HT</th>
               </tr>
             </thead>
             <tbody id="bdc-tbody"></tbody>
