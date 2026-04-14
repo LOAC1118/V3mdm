@@ -1365,7 +1365,7 @@ function bdcBuildText() {
   return lines.join('\n');
 }
 
-async async function bdcSendOrder() {
+async function bdcSendOrder() {
   var mag = g('bdc-magasin'), mail = g('bdc-email');
   if (!mag||!mail) { bdcShowAlert('Veuillez renseigner le magasin et votre email.','err'); return; }
   var hasOrder = Object.keys(bdcQtys).some(function(k){return bdcQtys[k]>0;});
