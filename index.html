@@ -1365,7 +1365,7 @@ function bdcBuildText() {
   return lines.join('\n');
 }
 
-async function bdcSendOrder() {
+async async function bdcSendOrder() {
   var mag = g('bdc-magasin'), mail = g('bdc-email');
   if (!mag||!mail) { bdcShowAlert('Veuillez renseigner le magasin et votre email.','err'); return; }
   var hasOrder = Object.keys(bdcQtys).some(function(k){return bdcQtys[k]>0;});
@@ -1374,6 +1374,22 @@ async function bdcSendOrder() {
   var spinner=document.getElementById('bdc-spinner');
   btn.disabled=true; spinner.style.display='inline-block';
   s2('bdc-send-label','Envoi…');
+
+  // Calculer le total et la liste des articles
+  var tN=0, nbRefs=0;
+  var lignes = [];
+  PRODUCTS.forEach(function(p){
+    var q=bdcQtys[p.code]||0;
+    if(q>0){
+      var pcb=parseFloat(p.pcb)||1;
+      var montantLigne=parseFloat((bdcPrixNet(p)*q*pcb).toFixed(2));
+      tN+=montantLigne;
+      nbRefs++;
+      lignes.push({code:p.code, libelle:p.libelle, qty:q, pu_ht:bdcPrixNet(p), total_ht:montantLigne});
+    }
+  });
+  tN=parseFloat(tN.toFixed(2));
+
   try {
     var today=new Date().toLocaleDateString('fr-FR');
     var payload={
@@ -1384,22 +1400,55 @@ async function bdcSendOrder() {
       _template:'table'
     };
     if(mail.toLowerCase()!=='cspoto@moulindesmoines.com') payload._replyto=mail;
-    // Sauvegarder dans Firebase
+
+    // ── Sauvegarder dans Firebase (commandes + activité) ──
     if(db && currentUser) {
       try {
-        var tN=0;
-        PRODUCTS.forEach(function(p){var q=bdcQtys[p.code]||0;if(q>0){var pcb=parseFloat(p.pcb)||1;tN+=bdcPrixNet(p)*q*pcb;}});
-        await db.collection('commandes').add({clientNom:mag,clientId:null,statut:'Envoyée',montant:parseFloat(tN.toFixed(2)),notes:'BDC envoyé par '+mail,createdBy:currentUser.uid,createdAt:firebase.firestore.FieldValue.serverTimestamp()});
-        await logActivite('BDC envoyé — '+mag+' — '+bdcFmt(tN),'blue');
-      } catch(e){}
+        var nc=g('bdc-numclient'), ct=g('bdc-contact'), tel=g('bdc-tel'), dl=g('bdc-datelivraison'), com=g('bdc-comment');
+        await db.collection('commandes').add({
+          clientNom: mag,
+          clientId: null,
+          numClient: nc||'',
+          contact: ct||'',
+          tel: tel||'',
+          email: mail,
+          datelivraison: dl||'',
+          commentaire: com||'',
+          statut: 'Envoyée',
+          montant: tN,
+          nbRefs: nbRefs,
+          remise: bdcRemise,
+          lignes: lignes,
+          notes: 'BDC envoyé par '+mail,
+          createdBy: currentUser.uid,
+          createdAt: firebase.firestore.FieldValue.serverTimestamp()
+        });
+        await logActivite('BDC envoyé — '+mag+' — '+bdcFmt(tN)+' ('+nbRefs+' réf.)','blue');
+      } catch(e){ console.warn('Firebase save error', e); }
     }
-    var res=await fetch('https://formsubmit.co/ajax/cspoto@moulindesmoines.com',{method:'POST',headers:{'Content-Type':'application/json','Accept':'application/json'},body:JSON.stringify(payload)});
+
+    // ── Envoi email via FormSubmit ──
+    var res=await fetch('https://formsubmit.co/ajax/cspoto@moulindesmoines.com',{
+      method:'POST',
+      headers:{'Content-Type':'application/json','Accept':'application/json'},
+      body:JSON.stringify(payload)
+    });
     var data=await res.json();
     if(data.success==='true'||data.success===true){
-      bdcShowAlert('✅ Commande envoyée ! Confirmation par email.','ok');
-    } else { throw new Error(); }
+      bdcShowAlert('✅ Commande envoyée et enregistrée dans le dashboard !','ok');
+      // Réinitialiser le BDC après envoi réussi
+      setTimeout(function(){
+        if(confirm('Réinitialiser le bon de commande ?')) {
+          bdcQtys = {};
+          bdcRemise = 0;
+          buildTable();
+          bdcUpdateTotals();
+        }
+      }, 1500);
+    } else { throw new Error('Réponse FormSubmit invalide'); }
   } catch(e) {
     bdcShowAlert('⚠️ Erreur lors de l\'envoi. Réessayez ou contactez MDM.','err');
+    console.error('bdcSendOrder error:', e);
   }
   btn.disabled=false; spinner.style.display='none';
   s2('bdc-send-label','Envoyer la commande');
@@ -1827,6 +1876,7 @@ function applyStockImport() {
 <script>
 // ═══════════════════════════════════════════════
 //  IMPORT PDF — extraction texte + parsing
+//  Format: BON DE COMMANDE MDM (Référence Désignation Qté PU_B PU_N Total T)
 // ═══════════════════════════════════════════════
 var pdfImportedQtys = {};
 
@@ -1848,11 +1898,10 @@ function pdfImportDrop(e) {
 }
 
 async function pdfImportFile(file) {
-  if (!file || !file.name.endsWith('.pdf')) return;
+  if (!file) return;
   if (typeof pdfjsLib === 'undefined') {
     bdcShowAlert('pdf.js non chargé, réessayez dans quelques secondes.', 'err'); return;
   }
-
   document.getElementById('pdf-progress').style.display = 'block';
   document.getElementById('pdf-import-result').style.display = 'none';
   document.getElementById('pdf-import-foot').style.display = 'none';
@@ -1864,156 +1913,186 @@ async function pdfImportFile(file) {
     var fullText = '';
 
     for (var p = 1; p <= totalPages; p++) {
-      var pct = Math.round(p/totalPages*90);
-      document.getElementById('pdf-progress-bar').style.width = pct + '%';
-      document.getElementById('pdf-progress-label').textContent = 'Page ' + p + ' / ' + totalPages + '…';
+      document.getElementById('pdf-progress-bar').style.width = Math.round(p/totalPages*90)+'%';
+      document.getElementById('pdf-progress-label').textContent = 'Page '+p+' / '+totalPages+'…';
       var page = await pdf.getPage(p);
       var tc = await page.getTextContent();
-      // Reconstituer le texte en gardant la structure ligne par ligne
-      var items = tc.items;
-      var lastY = null;
-      items.forEach(function(item) {
-        if (lastY !== null && Math.abs(item.transform[5] - lastY) > 3) fullText += '\n';
-        fullText += item.str + ' ';
-        lastY = item.transform[5];
+      // Reconstruire le texte ligne par ligne en respectant la mise en page
+      var lastY = null, lineText = '';
+      tc.items.forEach(function(item) {
+        var y = Math.round(item.transform[5]);
+        if (lastY !== null && Math.abs(y - lastY) > 3) { fullText += lineText + '\n'; lineText = ''; }
+        lineText += item.str + ' ';
+        lastY = y;
       });
-      fullText += '\n';
+      if (lineText.trim()) fullText += lineText + '\n';
     }
 
     document.getElementById('pdf-progress-bar').style.width = '100%';
     document.getElementById('pdf-progress-label').textContent = 'Analyse du contenu…';
-
-    // Afficher un aperçu du texte brut
-    document.getElementById('pdf-text-preview').textContent = fullText.substring(0, 400) + (fullText.length > 400 ? '…' : '');
-
     setTimeout(function() {
       document.getElementById('pdf-progress').style.display = 'none';
       parsePdfText(fullText);
-    }, 200);
-
+    }, 150);
   } catch(err) {
     document.getElementById('pdf-progress').style.display = 'none';
     bdcShowAlert('Erreur lecture PDF : ' + err.message, 'err');
   }
 }
 
+// ── Normalisation de code pour matching fuzzy
+function normalizeCode(s) {
+  return s.toUpperCase()
+    .replace(/[^A-Z0-9]/g, '')   // garder seulement alphanum
+    .replace(/0/g, 'O');          // 0 -> O pour PSYBL0300 -> PSYBLO300
+}
+
 function parsePdfText(text) {
-  // Construire index rapide des produits MDM
-  var byCode = {}, byEan = {};
+  // ─── Index produits : code exact + code normalisé + EAN ───
+  var byCode    = {};   // code exact (MAJ)
+  var byNorm    = {};   // code normalisé (0->O)
+  var byNormAlt = {};   // code normalisé (O->0)
+  var byEan     = {};
+
   PRODUCTS.forEach(function(p) {
-    byCode[p.code.toUpperCase()] = p;
+    var cu = p.code.toUpperCase();
+    byCode[cu] = p;
+    byNorm[normalizeCode(cu)] = p;
+    // variante O->0
+    var alt = cu.replace(/O/g, '0');
+    byNormAlt[alt] = p;
     if (p.ean) byEan[String(p.ean).trim()] = p;
   });
 
   pdfImportedQtys = {};
   var results = [];
+  var seen = {};
 
-  // ── Stratégie 1 : chercher les codes MDM dans le texte
-  // Les codes MDM sont alphanumériques (ex: QUINOA500, FARBLE65T05, MILLET)
-  // On cherche le code + un nombre à proximité (quantité)
-  var codePattern = /\b([A-Z][A-Z0-9_]{2,20})\b/g;
-  var match;
-  var foundCodes = new Set();
-
-  // Extraire toutes les lignes pour analyse contextuelle
-  var lines = text.split('\n').map(function(l){return l.trim();}).filter(Boolean);
+  var lines = text.split('\n');
 
   lines.forEach(function(line) {
-    // Chercher codes MDM connus dans chaque ligne
-    var words = line.split(/\s+/);
-    words.forEach(function(word, wi) {
-      var w = word.replace(/[^A-Z0-9]/gi,'').toUpperCase();
-      if (byCode[w] && !foundCodes.has(w)) {
-        // Chercher un nombre dans les mots voisins (qty)
-        var qty = 0;
-        // Chercher à droite
-        for (var j = wi+1; j < Math.min(wi+6, words.length); j++) {
-          var n = parseInt(words[j].replace(/[^0-9]/g,''));
-          if (n > 0 && n < 10000) { qty = n; break; }
-        }
-        // Si pas trouvé à droite, chercher à gauche
-        if (!qty) {
-          for (var j = wi-1; j >= Math.max(wi-4, 0); j--) {
-            var n = parseInt(words[j].replace(/[^0-9]/g,''));
-            if (n > 0 && n < 10000) { qty = n; break; }
-          }
-        }
-        if (qty > 0) {
-          foundCodes.add(w);
-          pdfImportedQtys[w] = qty;
-          results.push({code:w, qty:qty, libelle:byCode[w].libelle, matchedBy:'code'});
-        }
+    line = line.trim();
+    if (!line) return;
+
+    var parts = line.split(/\s+/);
+    if (parts.length < 3) return;
+
+    var firstWord = parts[0];
+
+    // Le premier mot doit ressembler à un code MDM ou EAN
+    // Code MDM : lettres+chiffres, 3-20 chars, commence par une lettre ou chiffre
+    // EAN : 12-13 chiffres
+    var isCode = /^[A-Z][A-Z0-9_,.-]{2,20}$/i.test(firstWord) || /^\d{12,13}$/.test(firstWord);
+    if (!isCode) return;
+
+    // Exclure les mots-clés entête/pied de page
+    var skip = ['REFERENCE','DATE','PAGE','CLIENT','COMMANDE','DESIGNATION','BASE','TOTAUX','EUROS',
+                'MODE','REGLEMENT','ECHEANCE','COND','PORT','TVA','TOTAL','VENDEUR','CLAUSE'];
+    if (skip.indexOf(firstWord.toUpperCase()) >= 0) return;
+
+    // Extraire tous les nombres de la ligne (après le premier mot)
+    var rest = parts.slice(1).join(' ');
+    var nums = rest.match(/\b(\d+(?:[.,]\d+)?)\b/g) || [];
+    nums = nums.map(function(n){ return parseFloat(n.replace(',','.')); });
+
+    // Il faut au minimum 4 nombres (qty, pu_b, pu_n, total)
+    if (nums.length < 4) return;
+
+    // Extraction de la quantité selon le format MDM :
+    // [desc_num?] qty pu_b [rem?] pu_n total tva
+    // Les 4 dernières valeurs sont toujours : pu_n, total, tva(1-4), et avant = pu_b
+    // La quantité est le premier nombre qui n'est pas un prix (<= total/pu_b)
+    // Stratégie : prendre nums[n-5] comme qty (5 valeurs depuis la fin)
+    var qty = null;
+    if (nums.length >= 5) {
+      var candidate = nums[nums.length - 5];
+      // Valider : qty doit être un entier ou multiple de 0.5, et < 10000
+      if (candidate > 0 && candidate < 10000 && (candidate * 2) === Math.round(candidate * 2)) {
+        qty = candidate;
       }
-    });
+    }
+    // Fallback: prendre nums[n-4]
+    if (!qty && nums.length >= 4) {
+      var candidate2 = nums[nums.length - 4];
+      if (candidate2 > 0 && candidate2 < 10000) qty = candidate2;
+    }
+    if (!qty) return;
+
+    // ─── Matching du code ───
+    var code = firstWord.toUpperCase().replace(/,/g, '.');
+    var found = null;
+
+    // 1. Code exact
+    found = byCode[code];
+
+    // 2. EAN (13 chiffres)
+    if (!found && /^\d{12,13}$/.test(firstWord)) {
+      found = byEan[firstWord] || byEan[firstWord.replace(/^0+/, '')];
+    }
+
+    // 3. Code normalisé (0<->O)
+    if (!found) found = byNorm[normalizeCode(code)];
+    if (!found) found = byNormAlt[code.replace(/O/g, '0')];
+
+    // 4. Correspondance partielle : le code PDF commence par le code catalogue (ou inversement)
+    if (!found) {
+      var normCode = normalizeCode(code);
+      PRODUCTS.some(function(p) {
+        var normCat = normalizeCode(p.code);
+        if (normCat === normCode ||
+            normCat.startsWith(normCode) ||
+            normCode.startsWith(normCat) ||
+            (normCode.length >= 5 && normCat.includes(normCode.substring(0,5)))) {
+          found = p;
+          return true;
+        }
+        return false;
+      });
+    }
+
+    if (!found) return; // Code non reconnu dans le catalogue MDM
+    if (seen[found.code]) return; // Doublon
+
+    seen[found.code] = true;
+    var qtyInt = Math.round(qty * 10) / 10; // garder 1 décimale max
+    pdfImportedQtys[found.code] = qtyInt;
+    results.push({ code: found.code, rawCode: firstWord, qty: qtyInt, libelle: found.libelle });
   });
 
-  // ── Stratégie 2 : chercher les EAN (13 chiffres) dans le texte
-  var eanRe = /\b(\d{13})\b/g;
-  while ((match = eanRe.exec(text)) !== null) {
-    var ean = match[1];
-    var prod = byEan[ean];
-    if (prod && !foundCodes.has(prod.code)) {
-      // Chercher quantité après le match
-      var afterEan = text.substring(match.index + ean.length, match.index + ean.length + 80);
-      var qm = afterEan.match(/\b(\d{1,4})\b/);
-      var qty = qm ? parseInt(qm[1]) : 0;
-      if (qty > 0 && qty < 10000) {
-        foundCodes.add(prod.code);
-        pdfImportedQtys[prod.code] = qty;
-        results.push({code:prod.code, qty:qty, libelle:prod.libelle, matchedBy:'EAN'});
-      }
-    }
-  }
-
-  // ── Stratégie 3 : pattern "code;qty" ou "code,qty" ou "code qty"
-  // Pour les PDFs tabulaires avec séparateurs
-  var tabRe = /\b([A-Z][A-Z0-9]{2,})\s*[;,\t|]\s*(\d+)/g;
-  while ((match = tabRe.exec(text)) !== null) {
-    var code = match[1].toUpperCase();
-    var qty = parseInt(match[2]);
-    if (byCode[code] && !foundCodes.has(code) && qty > 0 && qty < 10000) {
-      foundCodes.add(code);
-      pdfImportedQtys[code] = qty;
-      results.push({code:code, qty:qty, libelle:byCode[code].libelle, matchedBy:'tableau'});
-    }
-  }
-
-  // Afficher résultats
+  // ─── Affichage résultats ───
   var ok = results.length;
   document.getElementById('pdf-import-summary').innerHTML =
     '<div style="flex:1;background:rgba(30,41,59,.7);border-radius:6px;padding:.5rem;text-align:center;">' +
       '<div style="font-size:1.1rem;font-weight:600;color:#93c5fd;">'+ok+'</div>' +
       '<div style="font-size:.6rem;color:var(--s600);text-transform:uppercase;">Articles trouvés</div></div>' +
     '<div style="flex:2;background:rgba(30,41,59,.7);border-radius:6px;padding:.5rem;text-align:center;">' +
-      '<div style="font-size:.78rem;font-weight:500;color:var(--s300);">'+PRODUCTS.length+' références dans le catalogue</div>' +
-      '<div style="font-size:.6rem;color:var(--s600);">codes MDM + EAN analysés</div></div>';
+      '<div style="font-size:.8rem;font-weight:500;color:var(--s300);">Bon de commande MDM</div>' +
+      '<div style="font-size:.6rem;color:var(--s600);">Référence + Quantité extraites</div></div>';
 
   if (ok === 0) {
     document.getElementById('pdf-import-rows').innerHTML =
-      '<div style="padding:1rem;text-align:center;color:var(--s500);font-size:.78rem;">Aucun article MDM détecté dans ce PDF.<br>Vérifiez que le PDF contient du texte sélectionnable (non scanné).</div>';
+      '<div style="padding:1rem;text-align:center;color:var(--s500);font-size:.78rem;">Aucun article MDM détecté.<br>Vérifiez que le PDF est un bon de commande MDM non scanné.</div>';
   } else {
     document.getElementById('pdf-import-rows').innerHTML = results.map(function(r){
-      var badge = '<span style="font-size:.58rem;background:rgba(59,130,246,.2);color:#93c5fd;border-radius:3px;padding:1px 4px;margin-left:4px;">'+r.matchedBy+'</span>';
       return '<div style="display:flex;align-items:center;gap:7px;padding:.38rem .7rem;border-bottom:1px solid rgba(255,255,255,.04);font-size:.72rem;">' +
-        '<span style="font-family:monospace;color:var(--s500);width:100px;flex-shrink:0;">'+r.code+'</span>' +
-        '<span style="flex:1;color:var(--s300);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+r.libelle+badge+'</span>' +
-        '<span style="font-weight:600;color:var(--s100);width:28px;text-align:right;flex-shrink:0;">'+r.qty+'</span>' +
+        '<span style="font-family:monospace;color:var(--s500);width:110px;flex-shrink:0;font-size:.68rem;">'+r.rawCode+'</span>' +
+        '<span style="flex:1;color:var(--s300);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+r.libelle+'</span>' +
+        '<span style="font-weight:600;color:var(--em400);width:32px;text-align:right;flex-shrink:0;">'+r.qty+'</span>' +
         '<span style="width:14px;text-align:center;color:var(--em400);">✓</span></div>';
     }).join('');
     document.getElementById('pdf-import-foot').style.display = 'flex';
   }
-
   document.getElementById('pdf-import-result').style.display = 'block';
 }
 
 function applyPdfImport() {
+  var count = Object.keys(pdfImportedQtys).length;
   Object.assign(bdcQtys, pdfImportedQtys);
   buildTable();
   closePdfImport();
-  toast('✅ ' + Object.keys(pdfImportedQtys).length + ' articles importés depuis le PDF');
+  toast('✅ ' + count + ' articles importés depuis le PDF');
   pdfImportedQtys = {};
 }
-
 </script>
 </body>
 </html>
