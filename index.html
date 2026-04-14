@@ -1365,7 +1365,7 @@ function bdcBuildText() {
   return lines.join('\n');
 }
 
-async function bdcSendOrder() {
+function bdcSendOrder() {
   var mag = g('bdc-magasin'), mail = g('bdc-email');
   if (!mag||!mail) { bdcShowAlert('Veuillez renseigner le magasin et votre email.','err'); return; }
   var hasOrder = Object.keys(bdcQtys).some(function(k){return bdcQtys[k]>0;});
@@ -1376,82 +1376,61 @@ async function bdcSendOrder() {
   s2('bdc-send-label','Envoi…');
 
   // Calculer le total et la liste des articles
-  var tN=0, nbRefs=0;
-  var lignes = [];
+  var tN=0, nbRefs=0, lignes=[];
   PRODUCTS.forEach(function(p){
     var q=bdcQtys[p.code]||0;
     if(q>0){
       var pcb=parseFloat(p.pcb)||1;
       var montantLigne=parseFloat((bdcPrixNet(p)*q*pcb).toFixed(2));
-      tN+=montantLigne;
-      nbRefs++;
-      lignes.push({code:p.code, libelle:p.libelle, qty:q, pu_ht:bdcPrixNet(p), total_ht:montantLigne});
+      tN+=montantLigne; nbRefs++;
+      lignes.push({code:p.code,libelle:p.libelle,qty:q,pu_ht:bdcPrixNet(p),total_ht:montantLigne});
     }
   });
   tN=parseFloat(tN.toFixed(2));
 
-  try {
-    var today=new Date().toLocaleDateString('fr-FR');
-    var payload={
-      _subject:'Bon de commande MDM 2026 — '+mag+' — '+today,
-      _captcha:'false',
-      magasin:mag, email:mail,
-      commande:bdcBuildText(),
-      _template:'table'
-    };
-    if(mail.toLowerCase()!=='cspoto@moulindesmoines.com') payload._replyto=mail;
+  var today=new Date().toLocaleDateString('fr-FR');
+  var payload={
+    _subject:'Bon de commande MDM 2026 — '+mag+' — '+today,
+    _captcha:'false', magasin:mag, email:mail,
+    commande:bdcBuildText(), _template:'table'
+  };
+  if(mail.toLowerCase()!=='cspoto@moulindesmoines.com') payload._replyto=mail;
 
-    // ── Sauvegarder dans Firebase (commandes + activité) ──
-    if(db && currentUser) {
-      try {
-        var nc=g('bdc-numclient'), ct=g('bdc-contact'), tel=g('bdc-tel'), dl=g('bdc-datelivraison'), com=g('bdc-comment');
-        await db.collection('commandes').add({
-          clientNom: mag,
-          clientId: null,
-          numClient: nc||'',
-          contact: ct||'',
-          tel: tel||'',
-          email: mail,
-          datelivraison: dl||'',
-          commentaire: com||'',
-          statut: 'Envoyée',
-          montant: tN,
-          nbRefs: nbRefs,
-          remise: bdcRemise,
-          lignes: lignes,
-          notes: 'BDC envoyé par '+mail,
-          createdBy: currentUser.uid,
-          createdAt: firebase.firestore.FieldValue.serverTimestamp()
-        });
-        await logActivite('BDC envoyé — '+mag+' — '+bdcFmt(tN)+' ('+nbRefs+' réf.)','blue');
-      } catch(e){ console.warn('Firebase save error', e); }
-    }
+  // Sauvegarder dans Firebase (sans await)
+  if(db && currentUser){
+    var nc=g('bdc-numclient'),ct=g('bdc-contact'),tel=g('bdc-tel'),dl=g('bdc-datelivraison'),com=g('bdc-comment');
+    db.collection('commandes').add({
+      clientNom:mag,clientId:null,numClient:nc||'',contact:ct||'',tel:tel||'',
+      email:mail,datelivraison:dl||'',commentaire:com||'',statut:'Envoyée',
+      montant:tN,nbRefs:nbRefs,remise:bdcRemise,lignes:lignes,
+      notes:'BDC envoyé par '+mail,
+      createdBy:currentUser.uid,createdAt:firebase.firestore.FieldValue.serverTimestamp()
+    }).then(function(){
+      logActivite('BDC envoyé — '+mag+' — '+bdcFmt(tN)+' ('+nbRefs+' réf.)','blue');
+    }).catch(function(e){ console.warn('Firebase save error',e); });
+  }
 
-    // ── Envoi email via FormSubmit ──
-    var res=await fetch('https://formsubmit.co/ajax/cspoto@moulindesmoines.com',{
-      method:'POST',
-      headers:{'Content-Type':'application/json','Accept':'application/json'},
-      body:JSON.stringify(payload)
-    });
-    var data=await res.json();
+  // Envoi email via FormSubmit (Promise chain)
+  fetch('https://formsubmit.co/ajax/cspoto@moulindesmoines.com',{
+    method:'POST',
+    headers:{'Content-Type':'application/json','Accept':'application/json'},
+    body:JSON.stringify(payload)
+  }).then(function(res){ return res.json(); })
+  .then(function(data){
     if(data.success==='true'||data.success===true){
       bdcShowAlert('✅ Commande envoyée et enregistrée dans le dashboard !','ok');
-      // Réinitialiser le BDC après envoi réussi
       setTimeout(function(){
-        if(confirm('Réinitialiser le bon de commande ?')) {
-          bdcQtys = {};
-          bdcRemise = 0;
-          buildTable();
-          bdcUpdateTotals();
+        if(confirm('Réinitialiser le bon de commande ?')){
+          bdcQtys={}; bdcRemise=0; buildTable(); bdcUpdateTotals();
         }
-      }, 1500);
-    } else { throw new Error('Réponse FormSubmit invalide'); }
-  } catch(e) {
+      },1500);
+    } else { throw new Error('Réponse invalide'); }
+  }).catch(function(){
     bdcShowAlert('⚠️ Erreur lors de l\'envoi. Réessayez ou contactez MDM.','err');
-    console.error('bdcSendOrder error:', e);
-  }
-  btn.disabled=false; spinner.style.display='none';
-  s2('bdc-send-label','Envoyer la commande');
+  }).finally(function(){
+    btn.disabled=false; spinner.style.display='none';
+    s2('bdc-send-label','Envoyer la commande');
+  });
 }
 
 // IMPORT BDC
