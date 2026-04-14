@@ -620,22 +620,6 @@ let cache = { prospects:[], clients:[], commandes:[], frais:[], activite:[] };
 let listeners = [];
 
 
-
-
-  try {
-    // Init Firebase une seule fois
-    const cfg = { apiKey, authDomain, projectId };
-    initFirebase(cfg);
-    // Test connexion : simple lecture (pas d'écriture pour éviter les conflits)
-    await db.collection('_ping').limit(1).get();
-    setConfig(cfg);
-    errEl.style.display = 'none';
-    showLoginScreen();
-  } catch(e) {
-    showErr(errEl, 'Connexion échouée : ' + (e.message || 'vérifiez vos clés Firebase et les règles Firestore.'));
-  }
-}
-
 function initFirebase(cfg) {
   // Si une app existe déjà, on réutilise — pas de double init
   if (!firebase.apps.length) {
