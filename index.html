@@ -820,6 +820,10 @@ textarea { resize:vertical; min-height:80px; }
           <select class="filter-select" id="dash-ca-op"     onchange="dashCaRender()" style="font-size:.75rem;"><option value="">Tous opérateurs</option></select>
           <select class="filter-select" id="dash-ca-trans"  onchange="dashCaRender()" style="font-size:.75rem;"><option value="">Tous transporteurs</option></select>
           <select class="filter-select" id="dash-ca-client" onchange="dashCaRender()" style="font-size:.75rem;max-width:200px;"><option value="">Tous clients</option></select>
+          <label style="display:flex;align-items:center;gap:6px;padding:4px 10px;background:var(--blue-p100);border:1px solid var(--blue-p300);border-radius:6px;cursor:pointer;font-size:.74rem;color:var(--blue-p800);font-weight:600;margin-left:auto;">
+            <input type="checkbox" id="dash-ca-only-fac" checked onchange="dashCaRender()" style="accent-color:var(--blue-p700);cursor:pointer;"/>
+            Facturées uniquement
+          </label>
         </div>
 
         <!-- BLOC MOIS EN COURS -->
@@ -3014,11 +3018,15 @@ function dashCaRender() {
   var transF  = document.getElementById('dash-ca-trans').value;
   var clientF = document.getElementById('dash-ca-client').value;
 
+  var onlyFacEl = document.getElementById('dash-ca-only-fac');
+  var onlyFac  = onlyFacEl ? onlyFacEl.checked : false;
+
   var filtered = dashCaRows.filter(function(r) {
     if (yearF   && String(r.annee)   !== yearF)   return false;
     if (opF     && r.operateur       !== opF)     return false;
     if (transF  && r.transporteur    !== transF)  return false;
     if (clientF && r.client          !== clientF) return false;
+    if (onlyFac && r.statut          !== 'facturee') return false;
     return true;
   });
 
