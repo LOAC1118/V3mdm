@@ -696,6 +696,7 @@ textarea { resize:vertical; min-height:80px; }
     <button class="t-tab" onclick="showSection('clients',this)">Clients</button>
     <button class="t-tab" onclick="showSection('bdc',this)">Bon de Commande</button>
     <button class="t-tab" onclick="showSection('frais',this)">Frais</button>
+    <button class="t-tab" onclick="showSection('suivi',this)">Suivi</button>
   </div>
   <div class="topbar-right">
     <div class="sync-indicator"><div class="sync-dot" id="sync-dot"></div><span id="sync-label">Connecté</span></div>
@@ -928,6 +929,53 @@ textarea { resize:vertical; min-height:80px; }
       <select class="filter-select" id="filter-frais-mois" onchange="renderFrais()"><option value="">Tous les mois</option></select>
     </div>
     <div class="card"><div class="tbl-wrap"><table><thead><tr><th>Date</th><th>Commercial</th><th>Type</th><th>Motif</th><th>Client visité</th><th>Détail</th><th>Montant</th><th>Statut</th><th>Actions</th></tr></thead><tbody id="tbody-frais"></tbody></table></div></div>
+  </div>
+
+  <!-- SUIVI COMMANDES -->
+  <div id="sec-suivi" class="hidden">
+    <div class="page-header">
+      <div>
+        <div class="page-title">Suivi des commandes</div>
+        <div class="page-sub">Analyse mensuelle — CA livré, facturé, en attente</div>
+      </div>
+      <button class="btn btn-ghost" id="suivi-reload-btn" onclick="suiviReset()" style="display:none;">↺ Nouveau fichier</button>
+    </div>
+
+    <label for="suivi-file" id="suivi-upload-box" style="display:block;background:var(--surface);border:2px dashed var(--blue-p300);border-radius:14px;padding:2rem;text-align:center;cursor:pointer;transition:all .2s;margin-bottom:1.5rem;box-shadow:var(--shadow-sm);">
+      <div style="font-size:2.2rem;margin-bottom:.5rem;opacity:.5;">📊</div>
+      <div style="font-size:.95rem;font-weight:600;color:var(--g900);margin-bottom:.3rem;">Glissez votre fichier Excel ici ou cliquez</div>
+      <div style="font-size:.78rem;color:var(--g500);">Liste des commandes (.xlsx · .xls · .csv) — analyse locale, aucune donnée envoyée</div>
+      <input type="file" id="suivi-file" accept=".xlsx,.xls,.csv" onchange="suiviLoadFile(this.files[0])" style="display:none;"/>
+    </label>
+
+    <div id="suivi-content" style="display:none;">
+      <div class="stats-row-5" style="display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-bottom:1.5rem;">
+        <div class="stat-card" style="border-top:3px solid var(--g700)!important;"><div class="stat-label">Nombre commandes</div><div class="stat-val" id="kpi-nb">—</div><div class="stat-delta" id="kpi-nb-sub">—</div></div>
+        <div class="stat-card" style="border-top:3px solid #10b981!important;"><div class="stat-label">CA Livré</div><div class="stat-val" id="kpi-liv">—</div><div class="stat-delta">Livraison terminée</div></div>
+        <div class="stat-card" style="border-top:3px solid var(--blue-p600)!important;"><div class="stat-label">CA Facturé</div><div class="stat-val" id="kpi-fac">—</div><div class="stat-delta">N° facture émis</div></div>
+        <div class="stat-card" style="border-top:3px solid #f59e0b!important;"><div class="stat-label">Attente facturation</div><div class="stat-val" id="kpi-att-fac">—</div><div class="stat-delta">Livré, non facturé</div></div>
+        <div class="stat-card" style="border-top:3px solid #8b5cf6!important;"><div class="stat-label">Attente livraison</div><div class="stat-val" id="kpi-att-liv">—</div><div class="stat-delta">En préparation</div></div>
+      </div>
+
+      <div class="filters" style="margin-bottom:1.1rem;">
+        <label style="font-size:.72rem;font-weight:600;color:var(--g600);text-transform:uppercase;letter-spacing:.05em;margin:0 .4rem 0 0;align-self:center;">Période :</label>
+        <select class="filter-select" id="suivi-filter-year" onchange="suiviRender()"><option value="">Toutes les années</option></select>
+        <select class="filter-select" id="suivi-filter-op"   onchange="suiviRender()"><option value="">Tous les opérateurs</option></select>
+      </div>
+
+      <div class="card"><div class="tbl-wrap"><table>
+        <thead><tr>
+          <th>Mois</th>
+          <th style="text-align:right;">Nb cmds</th>
+          <th style="text-align:right;">CA Livré</th>
+          <th style="text-align:right;">CA Facturé</th>
+          <th style="text-align:right;">Attente fact.</th>
+          <th style="text-align:right;">Attente liv.</th>
+          <th style="text-align:right;">Total HT</th>
+        </tr></thead>
+        <tbody id="suivi-tbody"></tbody>
+      </table></div></div>
+    </div>
   </div>
 
 </div></div></div><!-- /main /app /app-shell -->
@@ -2536,6 +2584,192 @@ function applyPdfImport() {
   pdfImportedQtys = {};
   showSection('bdc');
 }
+
+// ═══════════════════════════════════════════════
+//  SUIVI COMMANDES — upload Excel + agrégation mensuelle
+//  Traitement 100% côté client, aucune donnée envoyée
+// ═══════════════════════════════════════════════
+var suiviRows = [];
+
+function suiviReset() {
+  suiviRows = [];
+  var box = document.getElementById('suivi-upload-box');
+  var content = document.getElementById('suivi-content');
+  var reload = document.getElementById('suivi-reload-btn');
+  var fileInput = document.getElementById('suivi-file');
+  if (box) box.style.display = '';
+  if (content) content.style.display = 'none';
+  if (reload) reload.style.display = 'none';
+  if (fileInput) fileInput.value = '';
+}
+
+function suiviLoadFile(file) {
+  if (!file) return;
+  if (typeof XLSX === 'undefined') { toast('SheetJS non chargé', 'err'); return; }
+  var reader = new FileReader();
+  reader.onload = function(e) {
+    try {
+      var data = new Uint8Array(e.target.result);
+      var wb = XLSX.read(data, { type: 'array', cellDates: true });
+      var ws = wb.Sheets[wb.SheetNames[0]];
+      var json = XLSX.utils.sheet_to_json(ws, { defval: null, raw: false, dateNF: 'yyyy-mm-dd' });
+      suiviProcess(json);
+    } catch(err) {
+      toast('Erreur lecture : ' + err.message, 'err');
+      console.error(err);
+    }
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+function suiviParseDate(v) {
+  if (!v) return null;
+  if (v instanceof Date) return isNaN(v) ? null : v;
+  var s = String(v).trim();
+  if (!s) return null;
+  var m = s.match(/^(\d{4})[-\/](\d{1,2})[-\/](\d{1,2})/);
+  if (m) return new Date(+m[1], +m[2]-1, +m[3]);
+  m = s.match(/^(\d{1,2})[-\/](\d{1,2})[-\/](\d{4})/);
+  if (m) return new Date(+m[3], +m[2]-1, +m[1]);
+  var d = new Date(s);
+  return isNaN(d) ? null : d;
+}
+
+function suiviEsc(s){ return String(s||'').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;'); }
+
+function suiviProcess(rows) {
+  suiviRows = rows
+    .filter(function(r) {
+      if (!r) return false;
+      var etat = String(r['Etat'] || '').trim();
+      if (etat === 'Total') return false;
+      return r['N° de cmd'] !== null && r['N° de cmd'] !== undefined;
+    })
+    .map(function(r) {
+      var etat = String(r['Etat'] || '').trim();
+      var dCmd = suiviParseDate(r['Commandé']);
+      var dLiv = suiviParseDate(r['Livré']);
+      var dFac = suiviParseDate(r['Facture']);
+      var numFac = r['N° Facture'];
+      var ca = parseFloat(String(r['CA HT'] || '0').replace(',', '.')) || 0;
+
+      var statut;
+      if (etat === 'En cours de préparation') statut = 'attente_liv';
+      else if (etat === 'Livraison terminée' && numFac) statut = 'facturee';
+      else if (etat === 'Livraison terminée' && !numFac) statut = 'livree_non_fac';
+      else if (dLiv && dFac && numFac) statut = 'facturee';
+      else if (dLiv && !numFac) statut = 'livree_non_fac';
+      else statut = 'autre';
+
+      return {
+        etat: etat, ca: ca, dateCmd: dCmd,
+        operateur: String(r['Opérateur'] || '').trim() || '—',
+        statut: statut,
+        mois: dCmd ? (dCmd.getFullYear() + '-' + String(dCmd.getMonth()+1).padStart(2,'0')) : '(inconnu)',
+        annee: dCmd ? dCmd.getFullYear() : null
+      };
+    })
+    .filter(function(r) { return r.ca !== 0 || r.statut === 'attente_liv'; });
+
+  var years = [...new Set(suiviRows.map(function(r){ return r.annee; }).filter(Boolean))].sort().reverse();
+  var ops   = [...new Set(suiviRows.map(function(r){ return r.operateur; }))].sort();
+  var yearSel = document.getElementById('suivi-filter-year');
+  var opSel   = document.getElementById('suivi-filter-op');
+  yearSel.innerHTML = '<option value="">Toutes les années</option>' +
+    years.map(function(y){ return '<option value="'+y+'">'+y+'</option>'; }).join('');
+  opSel.innerHTML = '<option value="">Tous les opérateurs</option>' +
+    ops.map(function(o){ return '<option value="'+suiviEsc(o)+'">'+suiviEsc(o)+'</option>'; }).join('');
+
+  document.getElementById('suivi-upload-box').style.display = 'none';
+  document.getElementById('suivi-content').style.display = '';
+  document.getElementById('suivi-reload-btn').style.display = '';
+  suiviRender();
+}
+
+function suiviFmt(n) {
+  if (!n || Math.abs(n) < 0.01) return '—';
+  return n.toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' €';
+}
+
+function suiviRender() {
+  var yearF = document.getElementById('suivi-filter-year').value;
+  var opF   = document.getElementById('suivi-filter-op').value;
+
+  var filtered = suiviRows.filter(function(r) {
+    if (yearF && String(r.annee) !== yearF) return false;
+    if (opF && r.operateur !== opF) return false;
+    return true;
+  });
+
+  var byMonth = {};
+  filtered.forEach(function(r) {
+    if (!byMonth[r.mois]) byMonth[r.mois] = { mois:r.mois, nb:0, livre:0, facture:0, att_fac:0, att_liv:0, total:0 };
+    var m = byMonth[r.mois];
+    m.nb++;
+    m.total += r.ca;
+    if (r.statut === 'facturee') { m.facture += r.ca; m.livre += r.ca; }
+    else if (r.statut === 'livree_non_fac') { m.livre += r.ca; m.att_fac += r.ca; }
+    else if (r.statut === 'attente_liv') { m.att_liv += r.ca; }
+  });
+
+  var months = Object.values(byMonth).sort(function(a,b){ return a.mois.localeCompare(b.mois); });
+
+  var totNb=0, totLiv=0, totFac=0, totAttFac=0, totAttLiv=0;
+  months.forEach(function(m){
+    totNb += m.nb; totLiv += m.livre; totFac += m.facture;
+    totAttFac += m.att_fac; totAttLiv += m.att_liv;
+  });
+
+  document.getElementById('kpi-nb').textContent = totNb.toLocaleString('fr-FR');
+  document.getElementById('kpi-nb-sub').textContent = months.length + ' mois analysés';
+  document.getElementById('kpi-liv').textContent = suiviFmt(totLiv);
+  document.getElementById('kpi-fac').textContent = suiviFmt(totFac);
+  document.getElementById('kpi-att-fac').textContent = suiviFmt(totAttFac);
+  document.getElementById('kpi-att-liv').textContent = suiviFmt(totAttLiv);
+
+  var moisNames = ['Jan','Fév','Mar','Avr','Mai','Juin','Juil','Août','Sep','Oct','Nov','Déc'];
+  var tbody = document.getElementById('suivi-tbody');
+  tbody.innerHTML = months.map(function(m) {
+    var parts = m.mois.split('-');
+    var label = moisNames[parseInt(parts[1])-1] + ' ' + parts[0];
+    function td(val, color) {
+      var style = val ? ('color:'+color+';font-weight:500;') : 'color:var(--g400);';
+      return '<td style="text-align:right;font-variant-numeric:tabular-nums;'+style+'">'+suiviFmt(val)+'</td>';
+    }
+    return '<tr>' +
+      '<td style="font-weight:600;color:var(--g900);">' + label + '</td>' +
+      '<td style="text-align:right;">' + m.nb + '</td>' +
+      td(m.livre, '#059669') +
+      td(m.facture, 'var(--blue-p700)') +
+      td(m.att_fac, '#b45309') +
+      td(m.att_liv, '#7c3aed') +
+      '<td style="text-align:right;font-weight:600;">' + suiviFmt(m.total) + '</td>' +
+    '</tr>';
+  }).join('') + (months.length ? (
+    '<tr style="background:var(--blue-p50);border-top:2px solid var(--blue-p600);font-weight:700;">' +
+      '<td style="color:var(--blue-p800);">TOTAL</td>' +
+      '<td style="text-align:right;">' + totNb + '</td>' +
+      '<td style="text-align:right;">' + suiviFmt(totLiv) + '</td>' +
+      '<td style="text-align:right;">' + suiviFmt(totFac) + '</td>' +
+      '<td style="text-align:right;">' + suiviFmt(totAttFac) + '</td>' +
+      '<td style="text-align:right;">' + suiviFmt(totAttLiv) + '</td>' +
+      '<td style="text-align:right;">' + suiviFmt(totLiv + totAttLiv) + '</td>' +
+    '</tr>'
+  ) : '<tr><td colspan="7" style="text-align:center;padding:2rem;color:var(--g500);">Aucune donnée</td></tr>');
+}
+
+window.addEventListener('load', function() {
+  var box = document.getElementById('suivi-upload-box');
+  if (!box) return;
+  box.addEventListener('dragover', function(e) { e.preventDefault(); box.style.borderColor = 'var(--blue-p600)'; });
+  box.addEventListener('dragleave', function() { box.style.borderColor = 'var(--blue-p300)'; });
+  box.addEventListener('drop', function(e) {
+    e.preventDefault();
+    box.style.borderColor = 'var(--blue-p300)';
+    if (e.dataTransfer.files[0]) suiviLoadFile(e.dataTransfer.files[0]);
+  });
+});
+
 </script>
 </body>
 </html>
