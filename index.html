@@ -830,7 +830,7 @@ textarea { resize:vertical; min-height:80px; }
           <select class="filter-select" id="dash-ca-trans"  onchange="dashCaRender()" style="font-size:.75rem;"><option value="">Tous transporteurs</option></select>
           <select class="filter-select" id="dash-ca-client" onchange="dashCaRender()" style="font-size:.75rem;max-width:200px;"><option value="">Tous clients</option></select>
           <label style="display:flex;align-items:center;gap:6px;padding:4px 10px;background:var(--blue-p100);border:1px solid var(--blue-p300);border-radius:6px;cursor:pointer;font-size:.74rem;color:var(--blue-p800);font-weight:600;margin-left:auto;">
-            <input type="checkbox" id="dash-ca-only-fac" checked onchange="dashCaRender()" style="accent-color:var(--blue-p700);cursor:pointer;"/>
+            <input type="checkbox" id="dash-ca-only-fac" onchange="dashCaRender()" style="accent-color:var(--blue-p700);cursor:pointer;"/>
             Facturées uniquement
           </label>
         </div>
@@ -857,7 +857,7 @@ textarea { resize:vertical; min-height:80px; }
               <div style="font-size:.65rem;color:var(--g500);" id="cur-cours-vs">—</div>
             </div>
             <div style="background:#fff;border-radius:8px;padding:.65rem .8rem;box-shadow:var(--shadow-xs);border-left:3px solid #059669;">
-              <div style="font-size:.6rem;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--g500);margin-bottom:3px;">Livré</div>
+              <div style="font-size:.6rem;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--g500);margin-bottom:3px;">Total mois</div>
               <div style="font-size:1.1rem;font-weight:700;color:#059669;" id="cur-livre">—</div>
               <div style="font-size:.65rem;color:var(--g500);" id="cur-livre-vs">—</div>
             </div>
@@ -888,9 +888,9 @@ textarea { resize:vertical; min-height:80px; }
             <div class="stat-delta">En préparation</div>
           </div>
           <div class="stat-card" style="padding:.9rem 1rem;border-top:3px solid #059669!important;">
-            <div class="stat-label">CA Livré</div>
+            <div class="stat-label">CA Total activité</div>
             <div class="stat-val" id="dashk-livre" style="font-size:1.3rem;color:#059669;">—</div>
-            <div class="stat-delta">Livraison terminée</div>
+            <div class="stat-delta">En cours + Facturé</div>
           </div>
           <div class="stat-card" style="padding:.9rem 1rem;border-top:3px solid var(--blue-p600)!important;">
             <div class="stat-label">CA Facturé</div>
@@ -948,7 +948,7 @@ textarea { resize:vertical; min-height:80px; }
                 <th style="text-align:right;">Nb cmds</th>
                 <th style="text-align:right;">Ticket moyen</th>
                 <th style="text-align:right;color:#7c3aed;">CA en cours</th>
-                <th style="text-align:right;color:#059669;">CA Livré</th>
+                <th style="text-align:right;color:#059669;">Total activité</th>
                 <th style="text-align:right;color:var(--blue-p700);">CA Facturé</th>
                 <th style="text-align:right;color:#dc2626;">Avoirs</th>
               </tr>
@@ -3076,7 +3076,7 @@ function dashCaRender() {
   document.getElementById('dashk-nb').textContent = totNb.toLocaleString('fr-FR');
   document.getElementById('dashk-nb-sub').textContent = 'Ticket moy. ' + dashCaFmt(ticketMoy);
   document.getElementById('dashk-cours').textContent = dashCaFmt(totCours);
-  document.getElementById('dashk-livre').textContent = dashCaFmt(totLivre);
+  document.getElementById('dashk-livre').textContent = dashCaFmt(totCours + totFac);
   document.getElementById('dashk-fac').textContent   = dashCaFmt(totFac);
   document.getElementById('dashk-avoirs').textContent = dashCaFmt(totAvoirs);
   document.getElementById('dashk-avoirs-sub').textContent = nbAvoirs + ' ligne' + (nbAvoirs>1?'s':'');
@@ -3097,7 +3097,7 @@ function dashCaRender() {
       '<td style="text-align:right;">' + m.nb + '</td>' +
       '<td style="text-align:right;color:var(--g700);">' + dashCaFmt(tk) + '</td>' +
       td(m.en_cours, '#7c3aed') +
-      td(m.livre, '#059669') +
+      td(m.en_cours + m.facture, '#059669') +
       td(m.facture, 'var(--blue-p700)') +
       td(m.avoirs, '#dc2626') +
     '</tr>';
@@ -3107,7 +3107,7 @@ function dashCaRender() {
       '<td style="text-align:right;">' + totNb + '</td>' +
       '<td style="text-align:right;">' + dashCaFmt(ticketMoy) + '</td>' +
       '<td style="text-align:right;">' + dashCaFmt(totCours) + '</td>' +
-      '<td style="text-align:right;">' + dashCaFmt(totLivre) + '</td>' +
+      '<td style="text-align:right;">' + dashCaFmt(totCours + totFac) + '</td>' +
       '<td style="text-align:right;">' + dashCaFmt(totFac) + '</td>' +
       '<td style="text-align:right;">' + dashCaFmt(totAvoirs) + '</td>' +
     '</tr>'
@@ -3176,15 +3176,19 @@ function dashCaRenderCurrentMonth(filtered, byMonth, months) {
   var ticket = cur.nb > 0 ? cur.totalPositif / cur.nb : 0;
   var prevTicket = prev && prev.nb > 0 ? prev.totalPositif / prev.nb : 0;
 
+  // Total du mois = en cours + facturé (activité totale)
+  var totalMois = cur.en_cours + cur.facture;
+  var prevTotalMois = prev ? (prev.en_cours + prev.facture) : 0;
+
   document.getElementById('cur-nb').textContent = cur.nb;
   document.getElementById('cur-cours').textContent = dashCaFmt(cur.en_cours);
-  document.getElementById('cur-livre').textContent = dashCaFmt(cur.livre);
+  document.getElementById('cur-livre').textContent = dashCaFmt(totalMois);
   document.getElementById('cur-fac').textContent = dashCaFmt(cur.facture);
   document.getElementById('cur-ticket').textContent = dashCaFmt(ticket);
 
   setVs('cur-nb-vs',     cur.nb,       prev ? prev.nb : 0, false);
   setVs('cur-cours-vs',  cur.en_cours, prev ? prev.en_cours : 0, true);
-  setVs('cur-livre-vs',  cur.livre,    prev ? prev.livre : 0, true);
+  setVs('cur-livre-vs',  totalMois,    prevTotalMois, true);
   setVs('cur-fac-vs',    cur.facture,  prev ? prev.facture : 0, true);
   setVs('cur-ticket-vs', ticket,       prevTicket, true);
 
@@ -3225,7 +3229,7 @@ function dashCaDrawCharts(filtered, months, moisNames) {
         labels: labels,
         datasets: [
           { label:'CA en cours',  data: months.map(function(m){return m.en_cours;}), borderColor:'#7c3aed', backgroundColor:'rgba(124,58,237,.1)', tension:.3, fill:true },
-          { label:'CA Livré',     data: months.map(function(m){return m.livre;}),    borderColor:'#059669', backgroundColor:'rgba(5,150,105,.1)', tension:.3, fill:true },
+          { label:'Total activité', data: months.map(function(m){return m.en_cours + m.facture;}), borderColor:'#059669', backgroundColor:'rgba(5,150,105,.1)', tension:.3, fill:true },
           { label:'CA Facturé',   data: months.map(function(m){return m.facture;}),  borderColor:'#2563b0', backgroundColor:'rgba(37,99,176,.1)', tension:.3, fill:true }
         ]
       },
