@@ -2011,10 +2011,26 @@ function bdcParseCSV(text) { bdcParseRows(bdcCSVtoRows(text)); }
 
 
 function bdcApplyImport() {
-  Object.assign(bdcQtys, bdcImportedQtys);
+  var unitEl = document.querySelector('input[name="bdc-import-unit"]:checked');
+  var unit = unitEl ? unitEl.value : 'colis';
+  var converted = {};
+  Object.keys(bdcImportedQtys).forEach(function(code){
+    var qty = bdcImportedQtys[code];
+    if (unit === 'uvc') {
+      var prod = PRODUCTS.find(function(p){ return p.code === code; });
+      var pcb = prod && parseFloat(prod.pcb) ? parseFloat(prod.pcb) : 1;
+      converted[code] = Math.ceil(qty / pcb);
+    } else {
+      converted[code] = qty;
+    }
+  });
+  var count = Object.keys(converted).length;
+  Object.assign(bdcQtys, converted);
   buildTable();
   closeBdcImport();
-  bdcShowAlert('✅ '+Object.keys(bdcImportedQtys).length+' articles importés.','ok');
+  var msg = '✅ '+count+' articles importés. Complétez les infos client puis envoyez.';
+  if (unit === 'uvc') msg += ' (UVC convertis en colis)';
+  bdcShowAlert(msg, 'ok');
   bdcImportedQtys={};
 }
 
@@ -2030,6 +2046,15 @@ function bdcApplyImport() {
       <div style="font-size:.72rem;color:var(--s600);">CSV, Excel (.xlsx/.xls) ou PDF</div>
     </div>
     <input type="file" id="bdc-import-file" accept=".csv,.xlsx,.xls,.pdf" style="display:none" onchange="bdcImportFile(this.files[0])">
+    <div style="margin-top:.8rem;display:flex;align-items:center;gap:10px;padding:.55rem .8rem;background:var(--blue-p50);border:1px solid var(--blue-p200,rgba(59,130,212,.15));border-radius:8px;">
+      <span style="font-size:.75rem;color:var(--g700);font-weight:500;">Unité dans le fichier :</span>
+      <label style="display:flex;align-items:center;gap:5px;cursor:pointer;font-size:.78rem;color:var(--g800);">
+        <input type="radio" name="bdc-import-unit" value="colis" checked style="accent-color:var(--blue-p600);"> Colis
+      </label>
+      <label style="display:flex;align-items:center;gap:5px;cursor:pointer;font-size:.78rem;color:var(--g800);">
+        <input type="radio" name="bdc-import-unit" value="uvc" style="accent-color:var(--blue-p600);"> UVC (unités)
+      </label>
+    </div>
     <div id="bdc-import-result" style="display:none;margin-top:.8rem;">
       <div id="bdc-import-summary" style="display:flex;gap:8px;margin-bottom:.7rem;"></div>
       <div id="bdc-import-rows" style="max-height:220px;overflow-y:auto;border:1px solid var(--border);border-radius:7px;"></div>
@@ -2242,6 +2267,15 @@ function applyStockImport() {
       <div style="font-size:.72rem;color:var(--s600);">Fichiers .pdf — extraction automatique des codes et quantités</div>
     </div>
     <input type="file" id="pdf-import-file" accept=".pdf" style="display:none" onchange="pdfImportFile(this.files[0])">
+    <div style="margin-top:.8rem;display:flex;align-items:center;gap:10px;padding:.55rem .8rem;background:var(--blue-p50);border:1px solid rgba(59,130,212,.15);border-radius:8px;">
+      <span style="font-size:.75rem;color:var(--g700);font-weight:500;">Qté dans le PDF :</span>
+      <label style="display:flex;align-items:center;gap:5px;cursor:pointer;font-size:.78rem;color:var(--g800);">
+        <input type="radio" name="pdf-import-unit" value="colis" checked style="accent-color:var(--blue-p600);"> Colis
+      </label>
+      <label style="display:flex;align-items:center;gap:5px;cursor:pointer;font-size:.78rem;color:var(--g800);">
+        <input type="radio" name="pdf-import-unit" value="uvc" style="accent-color:var(--blue-p600);"> UVC (unités)
+      </label>
+    </div>
 
     <div id="pdf-progress" style="display:none;margin-top:.8rem;text-align:center;">
       <div style="font-size:.8rem;color:var(--s400);margin-bottom:.5rem;" id="pdf-progress-label">Extraction du texte…</div>
@@ -2481,12 +2515,26 @@ function parsePdfText(text) {
 }
 
 function applyPdfImport() {
-  var count = Object.keys(pdfImportedQtys).length;
-  Object.assign(bdcQtys, pdfImportedQtys);
+  var unitEl = document.querySelector('input[name="pdf-import-unit"]:checked');
+  var unit = unitEl ? unitEl.value : 'colis';
+  var converted = {};
+  Object.keys(pdfImportedQtys).forEach(function(code){
+    var qty = pdfImportedQtys[code];
+    if (unit === 'uvc') {
+      var prod = PRODUCTS.find(function(p){ return p.code === code; });
+      var pcb = prod && parseFloat(prod.pcb) ? parseFloat(prod.pcb) : 1;
+      converted[code] = Math.ceil(qty / pcb);
+    } else {
+      converted[code] = qty;
+    }
+  });
+  var count = Object.keys(converted).length;
+  Object.assign(bdcQtys, converted);
   buildTable();
   closePdfImport();
-  toast('✅ ' + count + ' articles importés depuis le PDF');
+  toast('✅ ' + count + ' articles importés' + (unit === 'uvc' ? ' (UVC → colis)' : ''));
   pdfImportedQtys = {};
+  showSection('bdc');
 }
 </script>
 </body>
