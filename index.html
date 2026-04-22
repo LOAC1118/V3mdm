@@ -817,6 +817,15 @@ textarea { resize:vertical; min-height:80px; }
         <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;padding:.6rem .8rem;background:var(--surface2);border-radius:8px;margin-bottom:1rem;">
           <span style="font-size:.7rem;font-weight:600;color:var(--g600);text-transform:uppercase;letter-spacing:.05em;">Filtres :</span>
           <select class="filter-select" id="dash-ca-year"   onchange="dashCaRender()" style="font-size:.75rem;"><option value="">Toutes années</option></select>
+          <select class="filter-select" id="dash-ca-month"  onchange="dashCaRender()" style="font-size:.75rem;">
+            <option value="">Tous mois</option>
+            <option value="01">Janvier</option><option value="02">Février</option>
+            <option value="03">Mars</option><option value="04">Avril</option>
+            <option value="05">Mai</option><option value="06">Juin</option>
+            <option value="07">Juillet</option><option value="08">Août</option>
+            <option value="09">Septembre</option><option value="10">Octobre</option>
+            <option value="11">Novembre</option><option value="12">Décembre</option>
+          </select>
           <select class="filter-select" id="dash-ca-op"     onchange="dashCaRender()" style="font-size:.75rem;"><option value="">Tous opérateurs</option></select>
           <select class="filter-select" id="dash-ca-trans"  onchange="dashCaRender()" style="font-size:.75rem;"><option value="">Tous transporteurs</option></select>
           <select class="filter-select" id="dash-ca-client" onchange="dashCaRender()" style="font-size:.75rem;max-width:200px;"><option value="">Tous clients</option></select>
@@ -3021,8 +3030,11 @@ function dashCaRender() {
   var onlyFacEl = document.getElementById('dash-ca-only-fac');
   var onlyFac  = onlyFacEl ? onlyFacEl.checked : false;
 
+  var monthF = document.getElementById('dash-ca-month').value;
+
   var filtered = dashCaRows.filter(function(r) {
     if (yearF   && String(r.annee)   !== yearF)   return false;
+    if (monthF && r.mois && r.mois.slice(5) !== monthF) return false;
     if (opF     && r.operateur       !== opF)     return false;
     if (transF  && r.transporteur    !== transF)  return false;
     if (clientF && r.client          !== clientF) return false;
