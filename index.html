@@ -822,6 +822,46 @@ textarea { resize:vertical; min-height:80px; }
           <select class="filter-select" id="dash-ca-client" onchange="dashCaRender()" style="font-size:.75rem;max-width:200px;"><option value="">Tous clients</option></select>
         </div>
 
+        <!-- BLOC MOIS EN COURS -->
+        <div style="background:linear-gradient(135deg, var(--blue-p50), #fff);border:1.5px solid var(--blue-p300);border-radius:12px;padding:1rem 1.2rem;margin-bottom:1rem;position:relative;overflow:hidden;">
+          <div style="position:absolute;top:0;right:0;width:100px;height:100px;background:radial-gradient(circle, rgba(59,130,212,.08) 0%, transparent 70%);pointer-events:none;"></div>
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.8rem;position:relative;">
+            <div>
+              <span style="font-size:.65rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--blue-p700);">⭐ Mois en cours</span>
+              <span id="dash-cur-month-label" style="font-family:var(--fdisp);font-size:1.1rem;color:var(--g900);font-weight:600;margin-left:8px;">—</span>
+            </div>
+            <span id="dash-cur-progress" style="font-size:.68rem;color:var(--g500);"></span>
+          </div>
+          <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:10px;position:relative;">
+            <div style="background:#fff;border-radius:8px;padding:.65rem .8rem;box-shadow:var(--shadow-xs);">
+              <div style="font-size:.6rem;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--g500);margin-bottom:3px;">Nb cmds</div>
+              <div style="font-size:1.25rem;font-weight:700;color:var(--g900);" id="cur-nb">—</div>
+              <div style="font-size:.65rem;color:var(--g500);" id="cur-nb-vs">—</div>
+            </div>
+            <div style="background:#fff;border-radius:8px;padding:.65rem .8rem;box-shadow:var(--shadow-xs);border-left:3px solid #7c3aed;">
+              <div style="font-size:.6rem;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--g500);margin-bottom:3px;">En cours</div>
+              <div style="font-size:1.1rem;font-weight:700;color:#7c3aed;" id="cur-cours">—</div>
+              <div style="font-size:.65rem;color:var(--g500);" id="cur-cours-vs">—</div>
+            </div>
+            <div style="background:#fff;border-radius:8px;padding:.65rem .8rem;box-shadow:var(--shadow-xs);border-left:3px solid #059669;">
+              <div style="font-size:.6rem;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--g500);margin-bottom:3px;">Livré</div>
+              <div style="font-size:1.1rem;font-weight:700;color:#059669;" id="cur-livre">—</div>
+              <div style="font-size:.65rem;color:var(--g500);" id="cur-livre-vs">—</div>
+            </div>
+            <div style="background:#fff;border-radius:8px;padding:.65rem .8rem;box-shadow:var(--shadow-xs);border-left:3px solid var(--blue-p600);">
+              <div style="font-size:.6rem;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--g500);margin-bottom:3px;">Facturé</div>
+              <div style="font-size:1.1rem;font-weight:700;color:var(--blue-p700);" id="cur-fac">—</div>
+              <div style="font-size:.65rem;color:var(--g500);" id="cur-fac-vs">—</div>
+            </div>
+            <div style="background:#fff;border-radius:8px;padding:.65rem .8rem;box-shadow:var(--shadow-xs);border-left:3px solid #f59e0b;">
+              <div style="font-size:.6rem;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--g500);margin-bottom:3px;">Ticket moy.</div>
+              <div style="font-size:1.1rem;font-weight:700;color:#b45309;" id="cur-ticket">—</div>
+              <div style="font-size:.65rem;color:var(--g500);" id="cur-ticket-vs">—</div>
+            </div>
+          </div>
+          <div id="cur-top-clients" style="margin-top:.8rem;font-size:.7rem;color:var(--g700);display:none;"></div>
+        </div>
+
         <!-- 5 KPIs -->
         <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-bottom:1rem;">
           <div class="stat-card" style="padding:.9rem 1rem;border-top:3px solid var(--g700)!important;">
@@ -3045,9 +3085,99 @@ function dashCaRender() {
     '</tr>'
   ) : '<tr><td colspan="7" style="text-align:center;padding:2rem;color:var(--g500);">Aucune donnée</td></tr>');
 
+  // ═══ BLOC MOIS EN COURS ═══
+  dashCaRenderCurrentMonth(filtered, byMonth, months);
+
   // ═══ GRAPHIQUES ═══
   dashCaDrawCharts(filtered, months, moisNames);
   dashCaDrawTops(filtered);
+}
+
+function dashCaRenderCurrentMonth(filtered, byMonth, months) {
+  var moisNames = ['Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août','Septembre','Octobre','Novembre','Décembre'];
+  var now = new Date();
+  var curKey = now.getFullYear() + '-' + String(now.getMonth()+1).padStart(2,'0');
+  var cur = byMonth[curKey];
+
+  // Mois précédent pour comparaison
+  var prevDate = new Date(now.getFullYear(), now.getMonth()-1, 1);
+  var prevKey = prevDate.getFullYear() + '-' + String(prevDate.getMonth()+1).padStart(2,'0');
+  var prev = byMonth[prevKey];
+
+  var label = moisNames[now.getMonth()] + ' ' + now.getFullYear();
+  document.getElementById('dash-cur-month-label').textContent = label;
+
+  // Progression du mois (jour actuel / nb jours total)
+  var daysInMonth = new Date(now.getFullYear(), now.getMonth()+1, 0).getDate();
+  var pct = Math.round(now.getDate() / daysInMonth * 100);
+  document.getElementById('dash-cur-progress').textContent = 'Jour ' + now.getDate() + '/' + daysInMonth + ' · ' + pct + '% du mois écoulé';
+
+  function setVs(id, val, prevVal, isCurrency) {
+    var el = document.getElementById(id);
+    if (!el) return;
+    if (!prevVal || prevVal === 0) {
+      if (val) el.innerHTML = '<span style="color:var(--g400);">— mois précédent</span>';
+      else el.textContent = '—';
+      return;
+    }
+    var diff = val - prevVal;
+    var pctDiff = (diff / Math.abs(prevVal)) * 100;
+    var color = diff > 0 ? '#059669' : (diff < 0 ? '#dc2626' : 'var(--g500)');
+    var arrow = diff > 0 ? '▲' : (diff < 0 ? '▼' : '=');
+    el.innerHTML = '<span style="color:'+color+';font-weight:600;">' + arrow + ' ' +
+      (Math.abs(pctDiff) < 1 ? '<1%' : (pctDiff > 0 ? '+' : '') + pctDiff.toFixed(0) + '%') +
+      '</span> <span style="color:var(--g400);">vs ' + (isCurrency ? dashCaFmt(prevVal) : prevVal) + '</span>';
+  }
+
+  if (!cur) {
+    // Aucune donnée pour le mois en cours
+    document.getElementById('cur-nb').innerHTML = '<span style="color:var(--g400);font-size:.9rem;">Aucune commande</span>';
+    document.getElementById('cur-cours').textContent = '—';
+    document.getElementById('cur-livre').textContent = '—';
+    document.getElementById('cur-fac').textContent = '—';
+    document.getElementById('cur-ticket').textContent = '—';
+    document.getElementById('cur-nb-vs').textContent = '';
+    document.getElementById('cur-cours-vs').textContent = '';
+    document.getElementById('cur-livre-vs').textContent = '';
+    document.getElementById('cur-fac-vs').textContent = '';
+    document.getElementById('cur-ticket-vs').textContent = '';
+    document.getElementById('cur-top-clients').style.display = 'none';
+    return;
+  }
+
+  var ticket = cur.nb > 0 ? cur.totalPositif / cur.nb : 0;
+  var prevTicket = prev && prev.nb > 0 ? prev.totalPositif / prev.nb : 0;
+
+  document.getElementById('cur-nb').textContent = cur.nb;
+  document.getElementById('cur-cours').textContent = dashCaFmt(cur.en_cours);
+  document.getElementById('cur-livre').textContent = dashCaFmt(cur.livre);
+  document.getElementById('cur-fac').textContent = dashCaFmt(cur.facture);
+  document.getElementById('cur-ticket').textContent = dashCaFmt(ticket);
+
+  setVs('cur-nb-vs',     cur.nb,       prev ? prev.nb : 0, false);
+  setVs('cur-cours-vs',  cur.en_cours, prev ? prev.en_cours : 0, true);
+  setVs('cur-livre-vs',  cur.livre,    prev ? prev.livre : 0, true);
+  setVs('cur-fac-vs',    cur.facture,  prev ? prev.facture : 0, true);
+  setVs('cur-ticket-vs', ticket,       prevTicket, true);
+
+  // Top 3 clients du mois
+  var rowsCur = filtered.filter(function(r){ return r.mois === curKey && r.statut !== 'avoir'; });
+  if (rowsCur.length) {
+    var byClient = {};
+    rowsCur.forEach(function(r) {
+      if (!byClient[r.client]) byClient[r.client] = 0;
+      byClient[r.client] += r.ca;
+    });
+    var top3 = Object.entries(byClient).sort(function(a,b){ return b[1]-a[1]; }).slice(0,3);
+    var topEl = document.getElementById('cur-top-clients');
+    topEl.style.display = '';
+    topEl.innerHTML = '<strong style="color:var(--g600);font-weight:600;">Top 3 du mois :</strong> ' +
+      top3.map(function(t, i) {
+        return '<span style="color:var(--g800);margin-left:8px;">' + (i+1) + '. ' + t[0] + ' <span style="color:var(--blue-p700);font-weight:500;">(' + dashCaFmt(t[1]) + ')</span></span>';
+      }).join(' · ');
+  } else {
+    document.getElementById('cur-top-clients').style.display = 'none';
+  }
 }
 
 function dashCaDrawCharts(filtered, months, moisNames) {
