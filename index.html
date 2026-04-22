@@ -797,7 +797,7 @@ textarea { resize:vertical; min-height:80px; }
     <!-- ═══ ANALYSE CA MENSUELLE (upload Excel) ═══ -->
     <div class="card" style="margin-top:1.5rem;">
       <div class="card-head">
-        <span class="card-title">📊 Analyse CA mensuelle <span style="font-size:.7rem;font-weight:400;color:var(--g500);margin-left:8px;">regroupé par date de facture</span></span>
+        <span class="card-title">📊 Analyse CA mensuelle <span style="font-size:.7rem;font-weight:400;color:var(--g500);margin-left:8px;">regroupé par date de livraison</span></span>
         <div style="display:flex;gap:8px;align-items:center;">
           <span id="dash-ca-status" style="font-size:.72rem;color:var(--g500);"></span>
           <button class="btn btn-ghost" id="dash-ca-reload" onclick="dashCaReset()" style="display:none;font-size:.72rem;padding:.3rem .7rem;">↺ Nouveau fichier</button>
@@ -2975,21 +2975,18 @@ function dashCaProcess(rows) {
       var etat = String(r['Etat']||'').trim();
       var dCmd = suiviParseDate(r['Commandé']);
       var dFac = suiviParseDate(r['Facture']);
+      var dLiv = suiviParseDate(r['Livré']);
       var numFac = r['N° Facture'];
       var ca = parseFloat(String(r['CA HT']||'0').replace(',','.')) || 0;
       // Règle métier : le statut dépend UNIQUEMENT de la présence du N° Facture
-      //   - avec N° Facture  → facturee
-      //   - sans N° Facture  → en_cours (peu importe l'état "Livraison terminée" ou "En préparation")
-      //   - montant négatif → avoir
       var statut;
       if (ca < 0) statut = 'avoir';
       else if (numFac) statut = 'facturee';
       else statut = 'en_cours';
 
-      // Date de référence pour le regroupement par mois :
-      //   - si Facture présente → date de facture (plus proche du réel comptable)
-      //   - sinon → date de commande
-      var dRef = dFac || dCmd;
+      // Date de référence : date de livraison (chiffre d'affaires réel du mois)
+      //   fallback : date facture puis date commande
+      var dRef = dLiv || dFac || dCmd;
 
       return {
         ca: ca, statut: statut,
