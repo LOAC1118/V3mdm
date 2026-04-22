@@ -789,7 +789,42 @@ textarea { resize:vertical; min-height:80px; }
         <div style="padding:1rem;">
           <div style="margin-bottom:.8rem;"><div style="display:flex;justify-content:space-between;margin-bottom:4px;font-size:.75rem;"><span style="color:var(--s400)">Prospects</span><span id="rp-count" class="text-em">0</span></div><div style="background:rgba(255,255,255,.06);border-radius:4px;height:6px;"><div id="rp-bar" style="background:var(--amber);height:6px;border-radius:4px;width:0%;transition:width .4s;"></div></div></div>
           <div style="margin-bottom:.8rem;"><div style="display:flex;justify-content:space-between;margin-bottom:4px;font-size:.75rem;"><span style="color:var(--s400)">Clients</span><span id="rc-count" class="text-em">0</span></div><div style="background:rgba(255,255,255,.06);border-radius:4px;height:6px;"><div id="rc-bar" style="background:var(--em500);height:6px;border-radius:4px;width:0%;transition:width .4s;"></div></div></div>
-          <div><div style="display:flex;justify-content:space-between;margin-bottom:4px;font-size:.75rem;"><span style="color:var(--s400)">Frais du mois</span><span id="ro-count" class="text-em">0 €</span></div><div style="background:rgba(255,255,255,.06);border-radius:4px;height:6px;"><div id="ro-bar" style="background:var(--blue);height:6px;border-radius:4px;width:0%;transition:width .4s;"></div></div></div>
+          <div><div style="display:flex;justify-content:space-between;margin-bottom:4px;font-size:.75rem;"><span style="color:var(--g500)">Frais du mois</span><span id="ro-count" class="text-em">0 €</span></div><div style="background:var(--g200);border-radius:4px;height:6px;"><div id="ro-bar" style="background:var(--blue-p600);height:6px;border-radius:4px;width:0%;transition:width .4s;"></div></div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══ ANALYSE CA MENSUELLE (upload Excel) ═══ -->
+    <div class="card" style="margin-top:1.5rem;">
+      <div class="card-head">
+        <span class="card-title">📊 Analyse CA mensuelle</span>
+        <div style="display:flex;gap:8px;align-items:center;">
+          <span id="dash-ca-status" style="font-size:.72rem;color:var(--g500);"></span>
+          <button class="btn btn-ghost" id="dash-ca-reload" onclick="dashCaReset()" style="display:none;font-size:.72rem;padding:.3rem .7rem;">↺ Nouveau fichier</button>
+        </div>
+      </div>
+
+      <label for="dash-ca-file" id="dash-ca-upload" style="display:block;margin:1rem;border:2px dashed var(--blue-p300);border-radius:10px;padding:1.5rem;text-align:center;cursor:pointer;transition:all .2s;">
+        <div style="font-size:1.8rem;margin-bottom:.3rem;opacity:.5;">📊</div>
+        <div style="font-size:.85rem;font-weight:600;color:var(--g900);margin-bottom:.2rem;">Glissez votre fichier Excel ici</div>
+        <div style="font-size:.72rem;color:var(--g500);">Export « Liste des commandes en cours » — analyse locale uniquement</div>
+        <input type="file" id="dash-ca-file" accept=".xlsx,.xls,.csv" onchange="dashCaLoad(this.files[0])" style="display:none;"/>
+      </label>
+
+      <div id="dash-ca-content" style="display:none;padding:0 1rem 1rem;">
+        <div class="tbl-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Mois</th>
+                <th style="text-align:right;">Nb cmds</th>
+                <th style="text-align:right;color:#7c3aed;">CA en cours</th>
+                <th style="text-align:right;color:#059669;">CA Livré</th>
+                <th style="text-align:right;color:var(--blue-p700);">CA Facturé</th>
+              </tr>
+            </thead>
+            <tbody id="dash-ca-tbody"></tbody>
+          </table>
         </div>
       </div>
     </div>
@@ -2757,6 +2792,132 @@ function suiviRender() {
     '</tr>'
   ) : '<tr><td colspan="7" style="text-align:center;padding:2rem;color:var(--g500);">Aucune donnée</td></tr>');
 }
+
+// ═══ ANALYSE CA MENSUELLE — dashboard intégré ═══
+var dashCaRows = [];
+
+function dashCaReset() {
+  dashCaRows = [];
+  var box = document.getElementById('dash-ca-upload');
+  var content = document.getElementById('dash-ca-content');
+  var reload = document.getElementById('dash-ca-reload');
+  var fi = document.getElementById('dash-ca-file');
+  var st = document.getElementById('dash-ca-status');
+  if (box) box.style.display = '';
+  if (content) content.style.display = 'none';
+  if (reload) reload.style.display = 'none';
+  if (fi) fi.value = '';
+  if (st) st.textContent = '';
+}
+
+function dashCaLoad(file) {
+  if (!file) return;
+  if (typeof XLSX === 'undefined') { toast('SheetJS non chargé','err'); return; }
+  var reader = new FileReader();
+  reader.onload = function(e) {
+    try {
+      var data = new Uint8Array(e.target.result);
+      var wb = XLSX.read(data, { type: 'array', cellDates: true });
+      var ws = wb.Sheets[wb.SheetNames[0]];
+      var json = XLSX.utils.sheet_to_json(ws, { defval: null, raw: false, dateNF: 'yyyy-mm-dd' });
+      dashCaProcess(json);
+    } catch(err) {
+      toast('Erreur lecture : '+err.message,'err');
+      console.error(err);
+    }
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+function dashCaProcess(rows) {
+  dashCaRows = rows
+    .filter(function(r) {
+      if (!r) return false;
+      var etat = String(r['Etat']||'').trim();
+      if (etat === 'Total') return false;
+      return r['N° de cmd'] !== null && r['N° de cmd'] !== undefined;
+    })
+    .map(function(r) {
+      var etat = String(r['Etat']||'').trim();
+      var dCmd = suiviParseDate(r['Commandé']);
+      var numFac = r['N° Facture'];
+      var ca = parseFloat(String(r['CA HT']||'0').replace(',','.')) || 0;
+      var statut;
+      if (etat === 'En cours de préparation') statut = 'en_cours';
+      else if (etat === 'Livraison terminée' && numFac) statut = 'facturee';
+      else if (etat === 'Livraison terminée' && !numFac) statut = 'livree';
+      else statut = 'autre';
+      return {
+        ca: ca, statut: statut,
+        mois: dCmd ? (dCmd.getFullYear() + '-' + String(dCmd.getMonth()+1).padStart(2,'0')) : '(inconnu)',
+        annee: dCmd ? dCmd.getFullYear() : null
+      };
+    })
+    .filter(function(r) { return r.ca !== 0 || r.statut === 'en_cours'; });
+
+  document.getElementById('dash-ca-upload').style.display = 'none';
+  document.getElementById('dash-ca-content').style.display = '';
+  document.getElementById('dash-ca-reload').style.display = '';
+  document.getElementById('dash-ca-status').textContent = dashCaRows.length + ' commandes analysées';
+  dashCaRender();
+}
+
+function dashCaRender() {
+  var byMonth = {};
+  dashCaRows.forEach(function(r) {
+    if (!byMonth[r.mois]) byMonth[r.mois] = { mois:r.mois, nb:0, en_cours:0, livre:0, facture:0 };
+    var m = byMonth[r.mois];
+    m.nb++;
+    if (r.statut === 'en_cours') m.en_cours += r.ca;
+    else if (r.statut === 'livree') m.livre += r.ca;
+    else if (r.statut === 'facturee') { m.facture += r.ca; m.livre += r.ca; }
+  });
+
+  var months = Object.values(byMonth).sort(function(a,b){ return a.mois.localeCompare(b.mois); });
+  var totNb=0, totEnCours=0, totLivre=0, totFac=0;
+  months.forEach(function(m){ totNb+=m.nb; totEnCours+=m.en_cours; totLivre+=m.livre; totFac+=m.facture; });
+
+  var moisNames = ['Jan','Fév','Mar','Avr','Mai','Juin','Juil','Août','Sep','Oct','Nov','Déc'];
+  function fmt(n){ if(!n||Math.abs(n)<0.01) return '—'; return n.toLocaleString('fr-FR',{minimumFractionDigits:2,maximumFractionDigits:2})+' €'; }
+
+  var tbody = document.getElementById('dash-ca-tbody');
+  tbody.innerHTML = months.map(function(m) {
+    var parts = m.mois.split('-');
+    var label = moisNames[parseInt(parts[1])-1] + ' ' + parts[0];
+    function td(val, color) {
+      var style = val ? ('color:'+color+';font-weight:500;') : 'color:var(--g400);';
+      return '<td style="text-align:right;font-variant-numeric:tabular-nums;'+style+'">'+fmt(val)+'</td>';
+    }
+    return '<tr>' +
+      '<td style="font-weight:600;color:var(--g900);">' + label + '</td>' +
+      '<td style="text-align:right;">' + m.nb + '</td>' +
+      td(m.en_cours, '#7c3aed') +
+      td(m.livre, '#059669') +
+      td(m.facture, 'var(--blue-p700)') +
+    '</tr>';
+  }).join('') + (months.length ? (
+    '<tr style="background:var(--blue-p50);border-top:2px solid var(--blue-p600);font-weight:700;">' +
+      '<td style="color:var(--blue-p800);">TOTAL</td>' +
+      '<td style="text-align:right;">' + totNb + '</td>' +
+      '<td style="text-align:right;">' + fmt(totEnCours) + '</td>' +
+      '<td style="text-align:right;">' + fmt(totLivre) + '</td>' +
+      '<td style="text-align:right;">' + fmt(totFac) + '</td>' +
+    '</tr>'
+  ) : '<tr><td colspan="5" style="text-align:center;padding:2rem;color:var(--g500);">Aucune donnée</td></tr>');
+}
+
+// Drag & drop
+window.addEventListener('load', function() {
+  var box = document.getElementById('dash-ca-upload');
+  if (!box) return;
+  box.addEventListener('dragover', function(e){ e.preventDefault(); box.style.borderColor='var(--blue-p600)'; });
+  box.addEventListener('dragleave', function(){ box.style.borderColor='var(--blue-p300)'; });
+  box.addEventListener('drop', function(e){
+    e.preventDefault();
+    box.style.borderColor='var(--blue-p300)';
+    if (e.dataTransfer.files[0]) dashCaLoad(e.dataTransfer.files[0]);
+  });
+});
 
 window.addEventListener('load', function() {
   var box = document.getElementById('suivi-upload-box');
