@@ -812,15 +812,92 @@ textarea { resize:vertical; min-height:80px; }
       </label>
 
       <div id="dash-ca-content" style="display:none;padding:0 1rem 1rem;">
+
+        <!-- Filtres -->
+        <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;padding:.6rem .8rem;background:var(--surface2);border-radius:8px;margin-bottom:1rem;">
+          <span style="font-size:.7rem;font-weight:600;color:var(--g600);text-transform:uppercase;letter-spacing:.05em;">Filtres :</span>
+          <select class="filter-select" id="dash-ca-year"   onchange="dashCaRender()" style="font-size:.75rem;"><option value="">Toutes années</option></select>
+          <select class="filter-select" id="dash-ca-op"     onchange="dashCaRender()" style="font-size:.75rem;"><option value="">Tous opérateurs</option></select>
+          <select class="filter-select" id="dash-ca-trans"  onchange="dashCaRender()" style="font-size:.75rem;"><option value="">Tous transporteurs</option></select>
+          <select class="filter-select" id="dash-ca-client" onchange="dashCaRender()" style="font-size:.75rem;max-width:200px;"><option value="">Tous clients</option></select>
+        </div>
+
+        <!-- 5 KPIs -->
+        <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-bottom:1rem;">
+          <div class="stat-card" style="padding:.9rem 1rem;border-top:3px solid var(--g700)!important;">
+            <div class="stat-label">Nb commandes</div>
+            <div class="stat-val" id="dashk-nb" style="font-size:1.3rem;">—</div>
+            <div class="stat-delta" id="dashk-nb-sub">—</div>
+          </div>
+          <div class="stat-card" style="padding:.9rem 1rem;border-top:3px solid #7c3aed!important;">
+            <div class="stat-label">CA en cours</div>
+            <div class="stat-val" id="dashk-cours" style="font-size:1.3rem;color:#7c3aed;">—</div>
+            <div class="stat-delta">En préparation</div>
+          </div>
+          <div class="stat-card" style="padding:.9rem 1rem;border-top:3px solid #059669!important;">
+            <div class="stat-label">CA Livré</div>
+            <div class="stat-val" id="dashk-livre" style="font-size:1.3rem;color:#059669;">—</div>
+            <div class="stat-delta">Livraison terminée</div>
+          </div>
+          <div class="stat-card" style="padding:.9rem 1rem;border-top:3px solid var(--blue-p600)!important;">
+            <div class="stat-label">CA Facturé</div>
+            <div class="stat-val" id="dashk-fac" style="font-size:1.3rem;color:var(--blue-p700);">—</div>
+            <div class="stat-delta">N° facture émis</div>
+          </div>
+          <div class="stat-card" style="padding:.9rem 1rem;border-top:3px solid #dc2626!important;">
+            <div class="stat-label">Avoirs</div>
+            <div class="stat-val" id="dashk-avoirs" style="font-size:1.3rem;color:#dc2626;">—</div>
+            <div class="stat-delta" id="dashk-avoirs-sub">—</div>
+          </div>
+        </div>
+
+        <!-- Graphique évolution mensuelle -->
+        <div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:1rem;margin-bottom:1rem;">
+          <div style="font-size:.78rem;font-weight:600;color:var(--g700);margin-bottom:.5rem;">Évolution mensuelle (CA en cours · Livré · Facturé)</div>
+          <div style="height:260px;"><canvas id="dash-chart-evo"></canvas></div>
+        </div>
+
+        <!-- Ticket moyen + répartition en 2 colonnes -->
+        <div style="display:grid;grid-template-columns:2fr 1fr;gap:12px;margin-bottom:1rem;">
+          <div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:1rem;">
+            <div style="font-size:.78rem;font-weight:600;color:var(--g700);margin-bottom:.5rem;">Ticket moyen par mois</div>
+            <div style="height:200px;"><canvas id="dash-chart-ticket"></canvas></div>
+          </div>
+          <div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:1rem;">
+            <div style="font-size:.78rem;font-weight:600;color:var(--g700);margin-bottom:.5rem;">Répartition des statuts</div>
+            <div style="height:200px;"><canvas id="dash-chart-pie"></canvas></div>
+          </div>
+        </div>
+
+        <!-- Top 10 clients + Top opérateurs + Top transporteurs -->
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:1rem;">
+          <div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:1rem;">
+            <div style="font-size:.78rem;font-weight:600;color:var(--g700);margin-bottom:.5rem;">Top 10 clients</div>
+            <div id="dash-top-clients" style="font-size:.75rem;"></div>
+          </div>
+          <div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:1rem;">
+            <div style="font-size:.78rem;font-weight:600;color:var(--g700);margin-bottom:.5rem;">Top opérateurs</div>
+            <div id="dash-top-ops" style="font-size:.75rem;"></div>
+          </div>
+          <div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:1rem;">
+            <div style="font-size:.78rem;font-weight:600;color:var(--g700);margin-bottom:.5rem;">Top transporteurs</div>
+            <div id="dash-top-trans" style="font-size:.75rem;"></div>
+          </div>
+        </div>
+
+        <!-- Tableau mensuel détaillé -->
+        <div style="font-size:.78rem;font-weight:600;color:var(--g700);margin-bottom:.5rem;">Détail mensuel</div>
         <div class="tbl-wrap">
           <table>
             <thead>
               <tr>
                 <th>Mois</th>
                 <th style="text-align:right;">Nb cmds</th>
+                <th style="text-align:right;">Ticket moyen</th>
                 <th style="text-align:right;color:#7c3aed;">CA en cours</th>
                 <th style="text-align:right;color:#059669;">CA Livré</th>
                 <th style="text-align:right;color:var(--blue-p700);">CA Facturé</th>
+                <th style="text-align:right;color:#dc2626;">Avoirs</th>
               </tr>
             </thead>
             <tbody id="dash-ca-tbody"></tbody>
@@ -1104,6 +1181,7 @@ textarea { resize:vertical; min-height:80px; }
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <script>if(typeof pdfjsLib!=="undefined")pdfjsLib.GlobalWorkerOptions.workerSrc="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";</script>
 <!-- SDK Firebase (v9 compat) -->
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
@@ -2793,11 +2871,14 @@ function suiviRender() {
   ) : '<tr><td colspan="7" style="text-align:center;padding:2rem;color:var(--g500);">Aucune donnée</td></tr>');
 }
 
-// ═══ ANALYSE CA MENSUELLE — dashboard intégré ═══
+// ═══ ANALYSE CA MENSUELLE — dashboard intégré (version enrichie) ═══
 var dashCaRows = [];
+var dashCharts = {};
 
 function dashCaReset() {
   dashCaRows = [];
+  Object.values(dashCharts).forEach(function(c){ if(c && c.destroy) c.destroy(); });
+  dashCharts = {};
   var box = document.getElementById('dash-ca-upload');
   var content = document.getElementById('dash-ca-content');
   var reload = document.getElementById('dash-ca-reload');
@@ -2843,17 +2924,37 @@ function dashCaProcess(rows) {
       var numFac = r['N° Facture'];
       var ca = parseFloat(String(r['CA HT']||'0').replace(',','.')) || 0;
       var statut;
-      if (etat === 'En cours de préparation') statut = 'en_cours';
+      if (ca < 0) statut = 'avoir';
+      else if (etat === 'En cours de préparation') statut = 'en_cours';
       else if (etat === 'Livraison terminée' && numFac) statut = 'facturee';
       else if (etat === 'Livraison terminée' && !numFac) statut = 'livree';
       else statut = 'autre';
       return {
         ca: ca, statut: statut,
+        client: String(r['Nom client']||'').trim() || '—',
+        operateur: String(r['Opérateur']||'').trim() || '—',
+        transporteur: String(r['Transporteur']||'').trim() || '—',
         mois: dCmd ? (dCmd.getFullYear() + '-' + String(dCmd.getMonth()+1).padStart(2,'0')) : '(inconnu)',
         annee: dCmd ? dCmd.getFullYear() : null
       };
-    })
-    .filter(function(r) { return r.ca !== 0 || r.statut === 'en_cours'; });
+    });
+
+  // Peupler filtres
+  function uniq(arr){ return [...new Set(arr)].filter(Boolean).sort(); }
+  var years = uniq(dashCaRows.map(function(r){ return r.annee; })).reverse();
+  var ops   = uniq(dashCaRows.map(function(r){ return r.operateur; }));
+  var trans = uniq(dashCaRows.map(function(r){ return r.transporteur; }));
+  var clients = uniq(dashCaRows.map(function(r){ return r.client; }));
+
+  function fill(id, list, placeholder) {
+    var el = document.getElementById(id);
+    el.innerHTML = '<option value="">'+placeholder+'</option>' +
+      list.map(function(v){ return '<option value="'+String(v).replace(/"/g,'&quot;')+'">'+String(v)+'</option>'; }).join('');
+  }
+  fill('dash-ca-year',   years,   'Toutes années');
+  fill('dash-ca-op',     ops,     'Tous opérateurs');
+  fill('dash-ca-trans',  trans,   'Tous transporteurs');
+  fill('dash-ca-client', clients, 'Tous clients');
 
   document.getElementById('dash-ca-upload').style.display = 'none';
   document.getElementById('dash-ca-content').style.display = '';
@@ -2862,48 +2963,197 @@ function dashCaProcess(rows) {
   dashCaRender();
 }
 
+function dashCaFmt(n) {
+  if (!n || Math.abs(n) < 0.01) return '—';
+  return n.toLocaleString('fr-FR',{minimumFractionDigits:2,maximumFractionDigits:2}) + ' €';
+}
+
 function dashCaRender() {
-  var byMonth = {};
-  dashCaRows.forEach(function(r) {
-    if (!byMonth[r.mois]) byMonth[r.mois] = { mois:r.mois, nb:0, en_cours:0, livre:0, facture:0 };
-    var m = byMonth[r.mois];
-    m.nb++;
-    if (r.statut === 'en_cours') m.en_cours += r.ca;
-    else if (r.statut === 'livree') m.livre += r.ca;
-    else if (r.statut === 'facturee') { m.facture += r.ca; m.livre += r.ca; }
+  var yearF   = document.getElementById('dash-ca-year').value;
+  var opF     = document.getElementById('dash-ca-op').value;
+  var transF  = document.getElementById('dash-ca-trans').value;
+  var clientF = document.getElementById('dash-ca-client').value;
+
+  var filtered = dashCaRows.filter(function(r) {
+    if (yearF   && String(r.annee)   !== yearF)   return false;
+    if (opF     && r.operateur       !== opF)     return false;
+    if (transF  && r.transporteur    !== transF)  return false;
+    if (clientF && r.client          !== clientF) return false;
+    return true;
   });
 
+  // Agrégation par mois
+  var byMonth = {};
+  filtered.forEach(function(r) {
+    if (!byMonth[r.mois]) byMonth[r.mois] = { mois:r.mois, nb:0, en_cours:0, livre:0, facture:0, avoirs:0, totalPositif:0 };
+    var m = byMonth[r.mois];
+    m.nb++;
+    if (r.statut === 'en_cours') { m.en_cours += r.ca; m.totalPositif += r.ca; }
+    else if (r.statut === 'livree') { m.livre += r.ca; m.totalPositif += r.ca; }
+    else if (r.statut === 'facturee') { m.facture += r.ca; m.livre += r.ca; m.totalPositif += r.ca; }
+    else if (r.statut === 'avoir') { m.avoirs += r.ca; }
+  });
   var months = Object.values(byMonth).sort(function(a,b){ return a.mois.localeCompare(b.mois); });
-  var totNb=0, totEnCours=0, totLivre=0, totFac=0;
-  months.forEach(function(m){ totNb+=m.nb; totEnCours+=m.en_cours; totLivre+=m.livre; totFac+=m.facture; });
 
+  // Totaux
+  var totNb=0, totCours=0, totLivre=0, totFac=0, totAvoirs=0, totPos=0;
+  months.forEach(function(m){
+    totNb += m.nb; totCours += m.en_cours; totLivre += m.livre;
+    totFac += m.facture; totAvoirs += m.avoirs; totPos += m.totalPositif;
+  });
+  var ticketMoy = totNb > 0 ? totPos / totNb : 0;
+  var nbAvoirs = filtered.filter(function(r){ return r.statut==='avoir'; }).length;
+
+  // KPIs
+  document.getElementById('dashk-nb').textContent = totNb.toLocaleString('fr-FR');
+  document.getElementById('dashk-nb-sub').textContent = 'Ticket moy. ' + dashCaFmt(ticketMoy);
+  document.getElementById('dashk-cours').textContent = dashCaFmt(totCours);
+  document.getElementById('dashk-livre').textContent = dashCaFmt(totLivre);
+  document.getElementById('dashk-fac').textContent   = dashCaFmt(totFac);
+  document.getElementById('dashk-avoirs').textContent = dashCaFmt(totAvoirs);
+  document.getElementById('dashk-avoirs-sub').textContent = nbAvoirs + ' ligne' + (nbAvoirs>1?'s':'');
+
+  // Tableau détail
   var moisNames = ['Jan','Fév','Mar','Avr','Mai','Juin','Juil','Août','Sep','Oct','Nov','Déc'];
-  function fmt(n){ if(!n||Math.abs(n)<0.01) return '—'; return n.toLocaleString('fr-FR',{minimumFractionDigits:2,maximumFractionDigits:2})+' €'; }
-
   var tbody = document.getElementById('dash-ca-tbody');
   tbody.innerHTML = months.map(function(m) {
     var parts = m.mois.split('-');
     var label = moisNames[parseInt(parts[1])-1] + ' ' + parts[0];
+    var tk = m.nb > 0 ? m.totalPositif / m.nb : 0;
     function td(val, color) {
       var style = val ? ('color:'+color+';font-weight:500;') : 'color:var(--g400);';
-      return '<td style="text-align:right;font-variant-numeric:tabular-nums;'+style+'">'+fmt(val)+'</td>';
+      return '<td style="text-align:right;font-variant-numeric:tabular-nums;'+style+'">'+dashCaFmt(val)+'</td>';
     }
     return '<tr>' +
       '<td style="font-weight:600;color:var(--g900);">' + label + '</td>' +
       '<td style="text-align:right;">' + m.nb + '</td>' +
+      '<td style="text-align:right;color:var(--g700);">' + dashCaFmt(tk) + '</td>' +
       td(m.en_cours, '#7c3aed') +
       td(m.livre, '#059669') +
       td(m.facture, 'var(--blue-p700)') +
+      td(m.avoirs, '#dc2626') +
     '</tr>';
   }).join('') + (months.length ? (
     '<tr style="background:var(--blue-p50);border-top:2px solid var(--blue-p600);font-weight:700;">' +
       '<td style="color:var(--blue-p800);">TOTAL</td>' +
       '<td style="text-align:right;">' + totNb + '</td>' +
-      '<td style="text-align:right;">' + fmt(totEnCours) + '</td>' +
-      '<td style="text-align:right;">' + fmt(totLivre) + '</td>' +
-      '<td style="text-align:right;">' + fmt(totFac) + '</td>' +
+      '<td style="text-align:right;">' + dashCaFmt(ticketMoy) + '</td>' +
+      '<td style="text-align:right;">' + dashCaFmt(totCours) + '</td>' +
+      '<td style="text-align:right;">' + dashCaFmt(totLivre) + '</td>' +
+      '<td style="text-align:right;">' + dashCaFmt(totFac) + '</td>' +
+      '<td style="text-align:right;">' + dashCaFmt(totAvoirs) + '</td>' +
     '</tr>'
-  ) : '<tr><td colspan="5" style="text-align:center;padding:2rem;color:var(--g500);">Aucune donnée</td></tr>');
+  ) : '<tr><td colspan="7" style="text-align:center;padding:2rem;color:var(--g500);">Aucune donnée</td></tr>');
+
+  // ═══ GRAPHIQUES ═══
+  dashCaDrawCharts(filtered, months, moisNames);
+  dashCaDrawTops(filtered);
+}
+
+function dashCaDrawCharts(filtered, months, moisNames) {
+  if (typeof Chart === 'undefined') return;
+  var labels = months.map(function(m) {
+    var parts = m.mois.split('-');
+    return moisNames[parseInt(parts[1])-1] + ' ' + parts[0].slice(2);
+  });
+
+  // 1. Courbe évolution
+  if (dashCharts.evo) dashCharts.evo.destroy();
+  var ctx1 = document.getElementById('dash-chart-evo');
+  if (ctx1) {
+    dashCharts.evo = new Chart(ctx1, {
+      type: 'line',
+      data: {
+        labels: labels,
+        datasets: [
+          { label:'CA en cours',  data: months.map(function(m){return m.en_cours;}), borderColor:'#7c3aed', backgroundColor:'rgba(124,58,237,.1)', tension:.3, fill:true },
+          { label:'CA Livré',     data: months.map(function(m){return m.livre;}),    borderColor:'#059669', backgroundColor:'rgba(5,150,105,.1)', tension:.3, fill:true },
+          { label:'CA Facturé',   data: months.map(function(m){return m.facture;}),  borderColor:'#2563b0', backgroundColor:'rgba(37,99,176,.1)', tension:.3, fill:true }
+        ]
+      },
+      options: {
+        responsive:true, maintainAspectRatio:false,
+        plugins: { legend:{position:'bottom', labels:{font:{size:11}}} },
+        scales: { y:{ticks:{callback:function(v){return (v/1000).toFixed(0)+'k €';}}} }
+      }
+    });
+  }
+
+  // 2. Barres ticket moyen
+  if (dashCharts.ticket) dashCharts.ticket.destroy();
+  var ctx2 = document.getElementById('dash-chart-ticket');
+  if (ctx2) {
+    var tickets = months.map(function(m){ return m.nb>0 ? m.totalPositif/m.nb : 0; });
+    dashCharts.ticket = new Chart(ctx2, {
+      type: 'bar',
+      data: { labels:labels, datasets:[{ label:'Ticket moyen', data:tickets, backgroundColor:'#60a5e8', borderRadius:4 }] },
+      options: {
+        responsive:true, maintainAspectRatio:false,
+        plugins: { legend:{display:false} },
+        scales: { y:{ticks:{callback:function(v){return v.toFixed(0)+' €';}}} }
+      }
+    });
+  }
+
+  // 3. Camembert statuts
+  if (dashCharts.pie) dashCharts.pie.destroy();
+  var ctx3 = document.getElementById('dash-chart-pie');
+  if (ctx3) {
+    var totCours = 0, totLivreSeul = 0, totFac = 0, totAv = 0;
+    filtered.forEach(function(r){
+      if (r.statut === 'en_cours') totCours += r.ca;
+      else if (r.statut === 'livree') totLivreSeul += r.ca;
+      else if (r.statut === 'facturee') totFac += r.ca;
+      else if (r.statut === 'avoir') totAv += Math.abs(r.ca);
+    });
+    dashCharts.pie = new Chart(ctx3, {
+      type: 'doughnut',
+      data: {
+        labels:['En cours','Livré (non fac.)','Facturé','Avoirs'],
+        datasets:[{ data:[totCours, totLivreSeul, totFac, totAv], backgroundColor:['#7c3aed','#059669','#2563b0','#dc2626'], borderWidth:2, borderColor:'#fff' }]
+      },
+      options: {
+        responsive:true, maintainAspectRatio:false,
+        plugins: { legend:{position:'bottom', labels:{font:{size:10}, boxWidth:12}} }
+      }
+    });
+  }
+}
+
+function dashCaDrawTops(filtered) {
+  function topN(field, n) {
+    var agg = {};
+    filtered.forEach(function(r) {
+      if (r.statut === 'avoir') return; // exclure avoirs
+      var k = r[field];
+      if (!agg[k]) agg[k] = { label:k, nb:0, ca:0 };
+      agg[k].nb++;
+      agg[k].ca += r.ca;
+    });
+    return Object.values(agg).sort(function(a,b){ return b.ca - a.ca; }).slice(0, n);
+  }
+
+  function render(el, items) {
+    if (!items.length) { el.innerHTML = '<div style="color:var(--g400);font-size:.72rem;text-align:center;padding:1rem;">Aucune donnée</div>'; return; }
+    var max = items[0].ca;
+    el.innerHTML = items.map(function(it, i) {
+      var pct = max > 0 ? (it.ca / max * 100) : 0;
+      return '<div style="margin-bottom:.5rem;">' +
+        '<div style="display:flex;justify-content:space-between;gap:8px;font-size:.72rem;margin-bottom:2px;">' +
+          '<span style="color:var(--g800);font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:60%;" title="'+it.label+'">' + (i+1) + '. ' + it.label + '</span>' +
+          '<span style="color:var(--g700);font-variant-numeric:tabular-nums;">' + dashCaFmt(it.ca) + '</span>' +
+        '</div>' +
+        '<div style="background:var(--g100);border-radius:3px;height:4px;overflow:hidden;">' +
+          '<div style="background:var(--blue-p500);height:4px;width:'+pct+'%;"></div>' +
+        '</div>' +
+        '<div style="font-size:.62rem;color:var(--g500);margin-top:1px;">' + it.nb + ' commande' + (it.nb>1?'s':'') + '</div>' +
+      '</div>';
+    }).join('');
+  }
+
+  render(document.getElementById('dash-top-clients'), topN('client', 10));
+  render(document.getElementById('dash-top-ops'),     topN('operateur', 5));
+  render(document.getElementById('dash-top-trans'),   topN('transporteur', 5));
 }
 
 // Drag & drop
@@ -2918,6 +3168,7 @@ window.addEventListener('load', function() {
     if (e.dataTransfer.files[0]) dashCaLoad(e.dataTransfer.files[0]);
   });
 });
+
 
 window.addEventListener('load', function() {
   var box = document.getElementById('suivi-upload-box');
