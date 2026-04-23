@@ -1226,7 +1226,7 @@ textarea { resize:vertical; min-height:80px; }
 
   <!-- MODAL IMPORT -->
   <div class="modal-bg hidden" id="cdb-modal-import"><div class="modal" style="max-width:680px;">
-    <div class="modal-head"><span class="modal-title">📂 Importer un fichier Excel clients</span><button class="close-btn" onclick="closeModal('cdb-modal-import')">✕</button></div>
+    <div class="modal-head"><span class="modal-title">📂 Importer un fichier Excel clients</span><button class="close-btn" onclick="document.getElementById('cdb-modal-import').classList.add('hidden')">✕</button></div>
     <div class="modal-body">
       <div id="cdb-import-step1">
         <label for="cdb-import-file" style="display:block;border:2px dashed var(--blue-p300);border-radius:10px;padding:2rem;text-align:center;cursor:pointer;margin-bottom:1rem;">
@@ -1247,14 +1247,14 @@ textarea { resize:vertical; min-height:80px; }
       </div>
     </div>
     <div class="modal-foot">
-      <button class="btn btn-ghost" onclick="closeModal('cdb-modal-import')">Annuler</button>
+      <button class="btn btn-ghost" onclick="document.getElementById('cdb-modal-import').classList.add('hidden')">Annuler</button>
       <button class="btn btn-primary" id="cdb-import-apply" onclick="cdbImportApply()" style="display:none;">Importer et remplacer la base →</button>
     </div>
   </div></div>
 
   <!-- MODAL FICHE CONTACT -->
   <div class="modal-bg hidden" id="cdb-modal-edit"><div class="modal" style="max-width:720px;">
-    <div class="modal-head"><span class="modal-title" id="cdb-edit-title">Fiche contact</span><button class="close-btn" onclick="closeModal('cdb-modal-edit')">✕</button></div>
+    <div class="modal-head"><span class="modal-title" id="cdb-edit-title">Fiche contact</span><button class="close-btn" onclick="document.getElementById('cdb-modal-edit').classList.add('hidden')">✕</button></div>
     <div class="modal-body">
       <input type="hidden" id="cdb-edit-id"/>
       <div class="form-grid">
@@ -1273,7 +1273,7 @@ textarea { resize:vertical; min-height:80px; }
     </div>
     <div class="modal-foot">
       <button class="btn btn-ghost" id="cdb-edit-delete" onclick="cdbDelete()" style="margin-right:auto;color:#dc2626;">🗑 Supprimer</button>
-      <button class="btn btn-ghost" onclick="closeModal('cdb-modal-edit')">Annuler</button>
+      <button class="btn btn-ghost" onclick="document.getElementById('cdb-modal-edit').classList.add('hidden')">Annuler</button>
       <button class="btn btn-primary" onclick="cdbSave()">Enregistrer</button>
     </div>
   </div></div>
@@ -3834,7 +3834,7 @@ function cdbOpenImport() {
   document.getElementById('cdb-import-file').value = '';
   cdbImportRaw = null;
   cdbImportMapping = {};
-  openModal('cdb-modal-import');
+  document.getElementById('cdb-modal-import').classList.remove('hidden');
 }
 
 function cdbImportRead(file) {
@@ -3929,7 +3929,7 @@ function cdbImportApply() {
     cdbContacts = newContacts;
     try { localStorage.setItem(CDB_CACHE_KEY, JSON.stringify(cdbContacts)); } catch(e){}
     cdbRender();
-    closeModal('cdb-modal-import');
+    document.getElementById('cdb-modal-import').classList.add('hidden');
     return;
   }
 
@@ -3962,7 +3962,7 @@ function cdbImportApply() {
         cdbContacts = newContacts;
         try { localStorage.setItem(CDB_CACHE_KEY, JSON.stringify(cdbContacts)); } catch(e){}
         cdbRender();
-        closeModal('cdb-modal-import');
+        document.getElementById('cdb-modal-import').classList.add('hidden');
         toast('✅ Import terminé : ' + newContacts.length + ' contacts', 'ok');
         return;
       }
@@ -4010,7 +4010,7 @@ function cdbOpenEdit(id) {
     } else histEl.innerHTML = '';
   } else histEl.innerHTML = '';
 
-  openModal('cdb-modal-edit');
+  document.getElementById('cdb-modal-edit').classList.remove('hidden');
 }
 
 function cdbSave() {
@@ -4028,14 +4028,14 @@ function cdbSave() {
       if (!id) cdbContacts.push(c);
       try { localStorage.setItem(CDB_CACHE_KEY, JSON.stringify(cdbContacts)); } catch(e){}
       cdbRender();
-      closeModal('cdb-modal-edit');
+      document.getElementById('cdb-modal-edit').classList.add('hidden');
       toast('✅ Contact enregistré', 'ok');
     }).catch(function(e){ toast('Erreur : '+e.message, 'err'); });
   } else {
     if (!id) cdbContacts.push(c);
     try { localStorage.setItem(CDB_CACHE_KEY, JSON.stringify(cdbContacts)); } catch(e){}
     cdbRender();
-    closeModal('cdb-modal-edit');
+    document.getElementById('cdb-modal-edit').classList.add('hidden');
   }
 }
 
@@ -4048,7 +4048,7 @@ function cdbDelete() {
       cdbContacts = cdbContacts.filter(function(x){ return x.id !== id; });
       try { localStorage.setItem(CDB_CACHE_KEY, JSON.stringify(cdbContacts)); } catch(e){}
       cdbRender();
-      closeModal('cdb-modal-edit');
+      document.getElementById('cdb-modal-edit').classList.add('hidden');
       toast('Contact supprimé', 'ok');
     });
   }
