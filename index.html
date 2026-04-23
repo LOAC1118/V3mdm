@@ -618,6 +618,26 @@ textarea { resize:vertical; min-height:80px; }
 ::-webkit-scrollbar-track { background:transparent; }
 ::-webkit-scrollbar-thumb { background:var(--g300); border-radius:99px; }
 ::-webkit-scrollbar-thumb:hover { background:var(--g400); }
+
+/* ─── MAILING PROMO ─── */
+.ml-toolbar {
+  display:flex; align-items:center; gap:4px; flex-wrap:wrap;
+  padding:.4rem .8rem; background:var(--g100); border-radius:0;
+  border-top:1px solid var(--border);
+}
+.ml-toolbar button {
+  background:#fff; border:1px solid var(--border); border-radius:5px;
+  padding:.28rem .55rem; font-size:.78rem; cursor:pointer; color:var(--g800);
+  font-family:var(--fd); transition:all .15s;
+}
+.ml-toolbar button:hover { background:var(--blue-p50); border-color:var(--blue-p400); }
+.ml-tbsep { width:1px; height:18px; background:var(--border); margin:0 4px; }
+#ml-editor h2 { font-size:1.15rem; font-weight:700; margin:.5rem 0 .3rem; color:var(--g900); }
+#ml-editor h3 { font-size:1rem; font-weight:600; margin:.5rem 0 .2rem; color:var(--g900); }
+#ml-editor p { margin:.3rem 0; }
+#ml-editor ul, #ml-editor ol { padding-left:1.5rem; margin:.3rem 0; }
+#ml-editor img { max-width:100%; height:auto; border-radius:6px; }
+#ml-editor a { color:var(--blue-p700); text-decoration:underline; }
 </style>
 </head>
 <body>
@@ -697,6 +717,7 @@ textarea { resize:vertical; min-height:80px; }
     <button class="t-tab" onclick="showSection('bdc',this)">Bon de Commande</button>
     <button class="t-tab" onclick="showSection('frais',this)">Frais</button>
     <button class="t-tab" onclick="showSection('suivi',this)">Suivi</button>
+    <button class="t-tab" onclick="showSection('mailing',this)">Mailing</button>
   </div>
   <div class="topbar-right">
     <div class="sync-indicator"><div class="sync-dot" id="sync-dot"></div><span id="sync-label">Connecté</span></div>
@@ -1140,6 +1161,137 @@ textarea { resize:vertical; min-height:80px; }
         </tr></thead>
         <tbody id="suivi-tbody"></tbody>
       </table></div></div>
+    </div>
+  </div>
+
+
+  <!-- MAILING PROMO -->
+  <div id="sec-mailing" class="hidden">
+    <div class="page-header">
+      <div>
+        <div class="page-title">Mailing promotionnel</div>
+        <div class="page-sub">Éditeur d'emails promo avec pièce jointe PDF</div>
+      </div>
+    </div>
+
+    <div style="display:grid;grid-template-columns:1fr 380px;gap:1.2rem;">
+
+      <!-- Colonne principale : éditeur -->
+      <div style="display:flex;flex-direction:column;gap:1rem;">
+
+        <!-- Destinataires -->
+        <div class="card">
+          <div class="card-head"><span class="card-title">📧 Destinataires</span><span id="ml-recipients-count" style="font-size:.74rem;color:var(--g500);">0 adresses</span></div>
+          <div style="padding:1rem;">
+            <label class="lb" style="margin-bottom:.5rem;display:block;">Emails (un par ligne ou séparés par virgules/points-virgules)</label>
+            <textarea id="ml-recipients" oninput="mlUpdateRecipients()" placeholder="client1@example.com&#10;client2@example.com&#10;ou: client1@example.com, client2@example.com" style="min-height:90px;font-family:ui-monospace,SFMono-Regular,monospace;font-size:.82rem;"></textarea>
+            <div style="display:flex;gap:8px;align-items:center;margin-top:.5rem;flex-wrap:wrap;">
+              <button class="btn btn-ghost" onclick="mlImportCsv()" style="font-size:.74rem;padding:.35rem .7rem;">📥 Importer CSV</button>
+              <input type="file" id="ml-csv-file" accept=".csv,.txt" style="display:none" onchange="mlHandleCsv(this.files[0])"/>
+              <button class="btn btn-ghost" onclick="mlDedup()" style="font-size:.74rem;padding:.35rem .7rem;">🧹 Dédupliquer</button>
+              <button class="btn btn-ghost" onclick="mlClearRecipients()" style="font-size:.74rem;padding:.35rem .7rem;">🗑 Effacer</button>
+              <span id="ml-recipients-invalid" style="font-size:.7rem;color:#dc2626;margin-left:auto;"></span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Objet -->
+        <div class="card">
+          <div class="card-head"><span class="card-title">✉️ Objet</span></div>
+          <div style="padding:1rem;">
+            <input type="text" id="ml-subject" placeholder="Ex: 🌿 Promo bio d'avril — jusqu'à -20% sur la gamme truffes" maxlength="120" style="font-size:.9rem;font-weight:500;"/>
+            <div style="font-size:.68rem;color:var(--g500);margin-top:.3rem;"><span id="ml-subject-count">0</span>/120 caractères</div>
+          </div>
+        </div>
+
+        <!-- Éditeur riche -->
+        <div class="card">
+          <div class="card-head"><span class="card-title">📝 Contenu de l'email</span>
+            <div style="display:flex;gap:5px;">
+              <button class="btn btn-ghost" onclick="mlSetTemplate('promo')" style="font-size:.68rem;padding:.28rem .6rem;">🏷 Promo</button>
+              <button class="btn btn-ghost" onclick="mlSetTemplate('nouveau')" style="font-size:.68rem;padding:.28rem .6rem;">✨ Nouveauté</button>
+              <button class="btn btn-ghost" onclick="mlSetTemplate('relance')" style="font-size:.68rem;padding:.28rem .6rem;">🔔 Relance</button>
+            </div>
+          </div>
+
+          <div class="ml-toolbar">
+            <button type="button" onclick="mlExec('bold')" title="Gras"><b>G</b></button>
+            <button type="button" onclick="mlExec('italic')" title="Italique"><i>I</i></button>
+            <button type="button" onclick="mlExec('underline')" title="Souligné"><u>S</u></button>
+            <span class="ml-tbsep"></span>
+            <button type="button" onclick="mlExec('insertUnorderedList')" title="Liste">• Liste</button>
+            <button type="button" onclick="mlExec('insertOrderedList')" title="Liste ordonnée">1. Liste</button>
+            <span class="ml-tbsep"></span>
+            <select onchange="mlExec('formatBlock', this.value); this.value='';" style="border:none;background:none;font-size:.75rem;cursor:pointer;color:var(--g700);">
+              <option value="">Format</option>
+              <option value="h2">Titre</option>
+              <option value="h3">Sous-titre</option>
+              <option value="p">Paragraphe</option>
+            </select>
+            <span class="ml-tbsep"></span>
+            <label style="display:inline-flex;align-items:center;gap:3px;cursor:pointer;font-size:.72rem;color:var(--g700);">
+              Couleur <input type="color" value="#2563b0" onchange="mlExec('foreColor', this.value);" style="width:22px;height:22px;border:none;padding:0;border-radius:3px;cursor:pointer;"/>
+            </label>
+            <span class="ml-tbsep"></span>
+            <button type="button" onclick="mlInsertLink()" title="Lien">🔗 Lien</button>
+            <button type="button" onclick="mlInsertImage()" title="Image">🖼 Image</button>
+            <span class="ml-tbsep"></span>
+            <button type="button" onclick="mlExec('removeFormat')" title="Effacer mise en forme" style="color:#dc2626;">⨯ Format</button>
+          </div>
+          <div id="ml-editor" contenteditable="true" style="min-height:280px;max-height:500px;overflow-y:auto;padding:1rem 1.2rem;font-size:.9rem;line-height:1.55;color:var(--g800);outline:none;border-top:1px solid var(--border);"></div>
+        </div>
+
+        <!-- PJ + envoi -->
+        <div class="card">
+          <div class="card-head"><span class="card-title">📎 Pièce jointe PDF</span><span id="ml-pj-status" style="font-size:.72rem;color:var(--g500);">Aucune</span></div>
+          <div style="padding:1rem;">
+            <label for="ml-pj-file" id="ml-pj-drop" style="display:block;border:2px dashed var(--blue-p300);border-radius:8px;padding:1rem;text-align:center;cursor:pointer;transition:all .2s;">
+              <div style="font-size:1.5rem;margin-bottom:.2rem;opacity:.5;">📄</div>
+              <div style="font-size:.82rem;font-weight:600;color:var(--g800);">Glissez un PDF ou cliquez</div>
+              <div style="font-size:.7rem;color:var(--g500);">Max 5 Mo</div>
+              <input type="file" id="ml-pj-file" accept=".pdf" onchange="mlSetPJ(this.files[0])" style="display:none;"/>
+            </label>
+            <div id="ml-pj-info" style="display:none;margin-top:.6rem;padding:.6rem .9rem;background:var(--blue-p50);border-radius:7px;display:none;align-items:center;justify-content:space-between;gap:10px;">
+              <div style="display:flex;gap:10px;align-items:center;overflow:hidden;">
+                <span style="font-size:1.2rem;">📄</span>
+                <div style="overflow:hidden;">
+                  <div id="ml-pj-name" style="font-size:.82rem;font-weight:500;color:var(--g900);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;"></div>
+                  <div id="ml-pj-size" style="font-size:.7rem;color:var(--g500);"></div>
+                </div>
+              </div>
+              <button class="btn btn-ghost" onclick="mlRemovePJ()" style="font-size:.72rem;padding:.3rem .6rem;color:#dc2626;">🗑</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Envoi -->
+        <div style="display:flex;gap:10px;align-items:center;justify-content:space-between;padding:1rem;background:var(--blue-p50);border-radius:10px;border:1px solid var(--blue-p300);">
+          <div style="font-size:.78rem;color:var(--g700);">
+            <strong id="ml-send-summary">Aucune adresse saisie</strong>
+            <div id="ml-send-info" style="font-size:.68rem;color:var(--g500);margin-top:2px;">L'envoi se fera via FormSubmit, un email par destinataire.</div>
+          </div>
+          <button class="btn btn-primary" onclick="mlSendAll()" id="ml-send-btn" style="font-size:.88rem;padding:.6rem 1.2rem;" disabled>🚀 Envoyer le mailing</button>
+        </div>
+
+      </div>
+
+      <!-- Colonne latérale : aperçu -->
+      <div>
+        <div class="card" style="position:sticky;top:70px;">
+          <div class="card-head"><span class="card-title">👁 Aperçu</span></div>
+          <div style="padding:1rem;background:var(--g100);border-radius:0 0 10px 10px;">
+            <div style="background:#fff;border-radius:8px;padding:1rem;box-shadow:var(--shadow-sm);min-height:300px;">
+              <div style="font-size:.7rem;color:var(--g500);border-bottom:1px solid var(--g200);padding-bottom:.4rem;margin-bottom:.6rem;">
+                <strong>Objet :</strong> <span id="ml-preview-subject" style="color:var(--g800);">(à saisir)</span>
+              </div>
+              <div id="ml-preview-body" style="font-size:.8rem;line-height:1.5;color:var(--g800);min-height:200px;">
+                <em style="color:var(--g400);">Le contenu de votre email apparaîtra ici…</em>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
     </div>
   </div>
 
@@ -3316,6 +3468,286 @@ function dashCaDrawTops(filtered) {
   render(document.getElementById('dash-top-ops'),     topN('operateur', 5));
   render(document.getElementById('dash-top-trans'),   topN('transporteur', 5));
 }
+
+
+// ═══════════════════════════════════════════════
+// MAILING PROMO — éditeur riche + envoi FormSubmit
+// ═══════════════════════════════════════════════
+var mlPJ = null;        // { name, size, base64 }
+var mlRecipients = [];  // emails validés uniques
+
+function mlIsEmail(e) {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e);
+}
+
+function mlParseEmails(text) {
+  return (text || '')
+    .split(/[\n,;\s]+/)
+    .map(function(e){ return e.trim().toLowerCase(); })
+    .filter(Boolean);
+}
+
+function mlUpdateRecipients() {
+  var raw = document.getElementById('ml-recipients').value;
+  var all = mlParseEmails(raw);
+  var valid = [], invalid = [];
+  var seen = {};
+  all.forEach(function(e) {
+    if (mlIsEmail(e) && !seen[e]) { seen[e] = 1; valid.push(e); }
+    else if (!mlIsEmail(e)) invalid.push(e);
+  });
+  mlRecipients = valid;
+  document.getElementById('ml-recipients-count').textContent = valid.length + ' adresse' + (valid.length > 1 ? 's' : '');
+  var invEl = document.getElementById('ml-recipients-invalid');
+  invEl.textContent = invalid.length ? ('⚠ ' + invalid.length + ' invalide' + (invalid.length > 1 ? 's' : '')) : '';
+  mlUpdateSendBtn();
+}
+
+function mlDedup() {
+  document.getElementById('ml-recipients').value = mlRecipients.join('\n');
+  mlUpdateRecipients();
+  toast('Liste dédupliquée : ' + mlRecipients.length + ' adresses uniques', 'ok');
+}
+
+function mlClearRecipients() {
+  document.getElementById('ml-recipients').value = '';
+  mlUpdateRecipients();
+}
+
+function mlImportCsv() {
+  document.getElementById('ml-csv-file').click();
+}
+
+function mlHandleCsv(file) {
+  if (!file) return;
+  var reader = new FileReader();
+  reader.onload = function(e) {
+    var text = e.target.result;
+    var emails = mlParseEmails(text);
+    var valid = emails.filter(mlIsEmail);
+    var current = mlParseEmails(document.getElementById('ml-recipients').value);
+    var all = current.concat(valid);
+    var uniq = [...new Set(all)];
+    document.getElementById('ml-recipients').value = uniq.join('\n');
+    mlUpdateRecipients();
+    toast('Importé : ' + valid.length + ' adresses (' + (valid.length - (uniq.length - current.length)) + ' doublons ignorés)', 'ok');
+  };
+  reader.readAsText(file);
+}
+
+// Éditeur riche
+function mlExec(cmd, val) {
+  document.execCommand(cmd, false, val || null);
+  document.getElementById('ml-editor').focus();
+  mlUpdatePreview();
+}
+
+function mlInsertLink() {
+  var url = prompt('URL du lien :', 'https://');
+  if (url) mlExec('createLink', url);
+}
+
+function mlInsertImage() {
+  var url = prompt('URL de l\'image :', 'https://');
+  if (url) mlExec('insertImage', url);
+}
+
+// Templates
+var ML_TEMPLATES = {
+  promo: {
+    subject: "🌿 Promo exclusive — jusqu'à -20% sur notre gamme",
+    body: '<h2 style="color:#2563b0;">Une promo gourmande vous attend !</h2>' +
+          '<p>Bonjour,</p>' +
+          '<p>Pour quelques jours seulement, profitez d\'une <b>remise exceptionnelle</b> sur notre gamme de produits bio :</p>' +
+          '<ul><li>-15% sur les farines</li><li>-20% sur les pâtes</li><li>-10% sur les huiles</li></ul>' +
+          '<p>Commandez vite avant épuisement des stocks !</p>' +
+          '<p>Bien cordialement,<br/><b>L\'équipe Moulin des Moines</b></p>'
+  },
+  nouveau: {
+    subject: "✨ Nouveauté : découvrez notre dernière innovation bio",
+    body: '<h2 style="color:#059669;">Une nouveauté à découvrir</h2>' +
+          '<p>Bonjour,</p>' +
+          '<p>Nous avons le plaisir de vous présenter un <b>nouveau produit</b> qui vient enrichir notre catalogue :</p>' +
+          '<p><i>[Description du produit]</i></p>' +
+          '<p>N\'hésitez pas à nous contacter pour obtenir plus d\'informations ou recevoir un échantillon.</p>' +
+          '<p>Cordialement,<br/><b>Moulin des Moines</b></p>'
+  },
+  relance: {
+    subject: "🔔 Nous ne vous avons pas vu récemment…",
+    body: '<h2 style="color:#b45309;">Vous nous manquez !</h2>' +
+          '<p>Bonjour,</p>' +
+          '<p>Nous constatons que nous n\'avons pas eu le plaisir de traiter vos commandes récemment. Nous serions ravis de vous retrouver !</p>' +
+          '<p>Pour l\'occasion, profitez d\'une <b>remise de 10%</b> sur votre prochaine commande avec le code <b>RETOUR10</b>.</p>' +
+          '<p>À très bientôt,<br/><b>L\'équipe commerciale</b></p>'
+  }
+};
+
+function mlSetTemplate(key) {
+  var tpl = ML_TEMPLATES[key];
+  if (!tpl) return;
+  if (document.getElementById('ml-editor').innerHTML.trim() && 
+      !confirm('Remplacer le contenu actuel par le modèle ?')) return;
+  document.getElementById('ml-subject').value = tpl.subject;
+  document.getElementById('ml-editor').innerHTML = tpl.body;
+  mlUpdateSubject();
+  mlUpdatePreview();
+}
+
+// Aperçu live
+function mlUpdatePreview() {
+  var body = document.getElementById('ml-editor').innerHTML;
+  document.getElementById('ml-preview-body').innerHTML = body.trim() ? body : '<em style="color:var(--g400);">Le contenu de votre email apparaîtra ici…</em>';
+}
+
+function mlUpdateSubject() {
+  var s = document.getElementById('ml-subject').value;
+  document.getElementById('ml-subject-count').textContent = s.length;
+  document.getElementById('ml-preview-subject').textContent = s || '(à saisir)';
+  mlUpdateSendBtn();
+}
+
+// Pièce jointe PDF
+function mlSetPJ(file) {
+  if (!file) return;
+  if (file.type !== 'application/pdf' && !file.name.toLowerCase().endsWith('.pdf')) {
+    toast('Fichier non accepté : PDF uniquement', 'err');
+    return;
+  }
+  if (file.size > 5 * 1024 * 1024) {
+    toast('Fichier trop volumineux : max 5 Mo', 'err');
+    return;
+  }
+  var reader = new FileReader();
+  reader.onload = function(e) {
+    mlPJ = {
+      name: file.name,
+      size: file.size,
+      base64: e.target.result.split(',')[1]  // retire le prefix data:application/pdf;base64,
+    };
+    document.getElementById('ml-pj-name').textContent = file.name;
+    document.getElementById('ml-pj-size').textContent = (file.size / 1024).toFixed(0) + ' Ko';
+    document.getElementById('ml-pj-info').style.display = 'flex';
+    document.getElementById('ml-pj-drop').style.display = 'none';
+    document.getElementById('ml-pj-status').textContent = file.name;
+    document.getElementById('ml-pj-status').style.color = '#059669';
+  };
+  reader.readAsDataURL(file);
+}
+
+function mlRemovePJ() {
+  mlPJ = null;
+  document.getElementById('ml-pj-file').value = '';
+  document.getElementById('ml-pj-info').style.display = 'none';
+  document.getElementById('ml-pj-drop').style.display = 'block';
+  document.getElementById('ml-pj-status').textContent = 'Aucune';
+  document.getElementById('ml-pj-status').style.color = 'var(--g500)';
+}
+
+function mlUpdateSendBtn() {
+  var hasEmails = mlRecipients.length > 0;
+  var hasSubject = document.getElementById('ml-subject').value.trim().length > 0;
+  var hasBody = document.getElementById('ml-editor').innerHTML.trim().length > 0;
+  var ok = hasEmails && hasSubject && hasBody;
+  document.getElementById('ml-send-btn').disabled = !ok;
+  var summary = document.getElementById('ml-send-summary');
+  if (!hasEmails) summary.textContent = 'Aucune adresse saisie';
+  else if (!hasSubject) summary.textContent = mlRecipients.length + ' adresse' + (mlRecipients.length>1?'s':'') + ' — objet manquant';
+  else if (!hasBody) summary.textContent = mlRecipients.length + ' adresse' + (mlRecipients.length>1?'s':'') + ' — contenu manquant';
+  else summary.textContent = 'Prêt à envoyer à ' + mlRecipients.length + ' destinataire' + (mlRecipients.length>1?'s':'');
+}
+
+// Envoi via FormSubmit
+// NOTE: FormSubmit envoie UN email par requête. Pour un mailing, on boucle.
+// Limitation: FormSubmit n'accepte pas de PJ en base64 dans le corps de formulaire
+// → on inclut la PJ sous forme de lien (hébergé par l'utilisateur) OU on l'envoie via mailto backup
+function mlSendAll() {
+  if (!mlRecipients.length) { toast('Aucun destinataire', 'err'); return; }
+  var subject = document.getElementById('ml-subject').value.trim();
+  var htmlBody = document.getElementById('ml-editor').innerHTML;
+  if (!subject || !htmlBody) { toast('Objet et contenu requis', 'err'); return; }
+
+  if (!confirm('Envoyer le mailing à ' + mlRecipients.length + ' destinataire' + (mlRecipients.length>1?'s':'') + ' ?')) return;
+
+  // Récupère l'email émetteur du CRM (si dispo) ou demande
+  var sender = 'contact@moulindesmoines.com';
+
+  var btn = document.getElementById('ml-send-btn');
+  btn.disabled = true;
+  btn.textContent = 'Envoi en cours…';
+
+  var sent = 0, failed = 0;
+  var total = mlRecipients.length;
+
+  function next(i) {
+    if (i >= total) {
+      btn.disabled = false;
+      btn.textContent = '🚀 Envoyer le mailing';
+      toast('✅ Mailing envoyé : ' + sent + '/' + total + (failed ? ' (' + failed + ' échecs)' : ''), failed ? 'err' : 'ok');
+      return;
+    }
+    var to = mlRecipients[i];
+    btn.textContent = 'Envoi ' + (i+1) + '/' + total + '…';
+
+    // Construction du body avec PJ éventuelle
+    var finalBody = htmlBody;
+    if (mlPJ) {
+      finalBody += '<hr/><p style="font-size:.85em;color:#666;"><b>📎 Pièce jointe :</b> ' + mlPJ.name +
+        '<br/><em>Note : la pièce jointe sera transmise à l\'envoi.</em></p>';
+    }
+
+    var formData = new FormData();
+    formData.append('_subject', subject);
+    formData.append('_template', 'box');
+    formData.append('_captcha', 'false');
+    formData.append('message', finalBody);
+    formData.append('email', to);
+    if (mlPJ) {
+      // FormSubmit accepte un fichier en multipart via le champ "attachment"
+      var byteArr = Uint8Array.from(atob(mlPJ.base64), function(c){ return c.charCodeAt(0); });
+      var blob = new Blob([byteArr], { type: 'application/pdf' });
+      formData.append('attachment', blob, mlPJ.name);
+    }
+
+    fetch('https://formsubmit.co/ajax/' + to, {
+      method: 'POST',
+      body: formData
+    })
+    .then(function(r){ return r.json(); })
+    .then(function(res){
+      if (res.success) sent++;
+      else failed++;
+      setTimeout(function(){ next(i+1); }, 600); // petite pause entre envois
+    })
+    .catch(function(){
+      failed++;
+      setTimeout(function(){ next(i+1); }, 600);
+    });
+  }
+
+  next(0);
+}
+
+// Listeners au chargement
+window.addEventListener('load', function() {
+  var subj = document.getElementById('ml-subject');
+  var editor = document.getElementById('ml-editor');
+  if (subj) subj.addEventListener('input', mlUpdateSubject);
+  if (editor) {
+    editor.addEventListener('input', function(){ mlUpdatePreview(); mlUpdateSendBtn(); });
+    editor.addEventListener('paste', function(){ setTimeout(function(){ mlUpdatePreview(); mlUpdateSendBtn(); }, 50); });
+  }
+
+  var drop = document.getElementById('ml-pj-drop');
+  if (drop) {
+    drop.addEventListener('dragover', function(e){ e.preventDefault(); drop.style.borderColor='var(--blue-p600)'; drop.style.background='var(--blue-p50)'; });
+    drop.addEventListener('dragleave', function(){ drop.style.borderColor='var(--blue-p300)'; drop.style.background=''; });
+    drop.addEventListener('drop', function(e){
+      e.preventDefault();
+      drop.style.borderColor='var(--blue-p300)'; drop.style.background='';
+      if (e.dataTransfer.files[0]) mlSetPJ(e.dataTransfer.files[0]);
+    });
+  }
+});
 
 // Drag & drop
 window.addEventListener('load', function() {
