@@ -3762,19 +3762,38 @@ function cdbRender() {
     var checked = cdbSelection[c.id] ? 'checked' : '';
     var groupe = c.groupe ? '<span style="display:inline-block;padding:1px 7px;background:var(--blue-p100);color:var(--blue-p800);border-radius:10px;font-size:.68rem;font-weight:500;">'+cdbEsc(c.groupe)+'</span>' : '';
     var prospectBadge = c.prospect ? '<span style="display:inline-block;padding:1px 6px;background:#fef3c7;color:#92400e;border-radius:10px;font-size:.65rem;margin-left:4px;">Prospect</span>' : '';
+    var idAttr = cdbEsc(c.id);
     return '<tr>' +
-      '<td><input type="checkbox" ' + checked + ' onchange="cdbToggleOne(\'' + c.id + '\', this.checked)"/></td>' +
+      '<td><input type="checkbox" data-cdb-check="' + idAttr + '" ' + checked + '/></td>' +
       '<td style="font-family:ui-monospace,monospace;font-size:.76rem;color:var(--g600);">' + cdbEsc(c.numClient||'') + '</td>' +
-      '<td><a href="#" onclick="cdbOpenEdit(\'' + c.id + '\');return false;" style="font-weight:500;color:var(--g900);text-decoration:none;">' + cdbEsc(c.nom||'—') + '</a>' + prospectBadge + '</td>' +
+      '<td><a href="#" data-cdb-edit="' + idAttr + '" style="font-weight:500;color:var(--g900);text-decoration:none;">' + cdbEsc(c.nom||'—') + '</a>' + prospectBadge + '</td>' +
       '<td>' + groupe + '</td>' +
       '<td>' + cdbEsc(c.ville||'') + (c.cp ? ' <span style="color:var(--g500);font-size:.72rem;">('+cdbEsc(c.cp)+')</span>' : '') + '</td>' +
       '<td><a href="mailto:' + cdbEsc(c.email||'') + '" style="font-size:.78rem;color:var(--blue-p700);">' + cdbEsc(c.email||'') + '</a></td>' +
       '<td style="font-size:.78rem;">' + cdbEsc(c.telephone||'') + '</td>' +
       '<td style="text-align:right;font-size:.75rem;color:var(--g700);">' + cdbFmtDate(c.dateDerniereCmd) + '</td>' +
       '<td style="text-align:right;font-variant-numeric:tabular-nums;">' + cdbFmtCA(c.cumul2026) + '</td>' +
-      '<td><button class="btn btn-ghost" onclick="cdbOpenEdit(\'' + c.id + '\')" style="font-size:.68rem;padding:.22rem .55rem;">✏️</button></td>' +
+      '<td><button class="btn btn-ghost" data-cdb-edit="' + idAttr + '" style="font-size:.68rem;padding:.22rem .55rem;">✏️</button></td>' +
     '</tr>';
   }).join('');
+
+  // Event delegation : un seul handler pour tous les boutons/liens
+  var tb = document.getElementById('cdb-tbody');
+  if (tb && !tb._cdbDelegated) {
+    tb._cdbDelegated = true;
+    tb.addEventListener('click', function(e) {
+      var trg = e.target.closest('[data-cdb-edit]');
+      if (trg) {
+        e.preventDefault();
+        cdbOpenEdit(trg.getAttribute('data-cdb-edit'));
+      }
+    });
+    tb.addEventListener('change', function(e) {
+      if (e.target.hasAttribute('data-cdb-check')) {
+        cdbToggleOne(e.target.getAttribute('data-cdb-check'), e.target.checked);
+      }
+    });
+  }
 }
 
 function cdbEsc(s) { return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;').replace(/\\'/g,'&#39;'); }
@@ -3789,12 +3808,11 @@ function cdbClearFilters() {
 
 function cdbToggleOne(id, v) { if (v) cdbSelection[id] = true; else delete cdbSelection[id]; }
 function cdbToggleAll(v) {
-  var rows = document.querySelectorAll('#cdb-tbody input[type=checkbox]');
+  var rows = document.querySelectorAll('#cdb-tbody input[data-cdb-check]');
   rows.forEach(function(cb) { cb.checked = v; });
   cdbSelection = {};
   if (v) rows.forEach(function(cb) {
-    var id = cb.getAttribute('onchange').match(/'([^']+)'/)[1];
-    cdbSelection[id] = true;
+    cdbSelection[cb.getAttribute('data-cdb-check')] = true;
   });
 }
 
