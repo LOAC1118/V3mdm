@@ -717,6 +717,7 @@ textarea { resize:vertical; min-height:80px; }
     <button class="t-tab" onclick="showSection('bdc',this)">Bon de Commande</button>
     <button class="t-tab" onclick="showSection('frais',this)">Frais</button>
     <button class="t-tab" onclick="showSection('suivi',this)">Suivi</button>
+    <button class="t-tab" onclick="showSection('contacts-db',this)">Contacts</button>
     <button class="t-tab" onclick="showSection('mailing',this)">Mailing</button>
   </div>
   <div class="topbar-right">
@@ -1164,6 +1165,118 @@ textarea { resize:vertical; min-height:80px; }
     </div>
   </div>
 
+
+  <!-- BASE CONTACTS -->
+  <div id="sec-contacts-db" class="hidden">
+    <div class="page-header">
+      <div>
+        <div class="page-title">Base contacts <span id="cdb-total" style="font-size:.72rem;font-weight:400;color:var(--g500);margin-left:8px;">0 contacts</span></div>
+        <div class="page-sub">Clients & prospects — import Excel, liaison avec les commandes</div>
+      </div>
+      <div style="display:flex;gap:8px;">
+        <button class="btn btn-ghost" onclick="cdbExportCsv()" style="font-size:.78rem;">📥 Export CSV</button>
+        <button class="btn btn-ghost" onclick="cdbOpenImport()" style="font-size:.78rem;">📂 Importer Excel</button>
+        <button class="btn btn-primary" onclick="cdbOpenEdit(null)" style="font-size:.78rem;">+ Nouveau contact</button>
+      </div>
+    </div>
+
+    <!-- Filtres -->
+    <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;padding:.7rem 1rem;background:var(--surface2);border-radius:10px;margin-bottom:1rem;">
+      <input type="text" id="cdb-search" oninput="cdbRender()" placeholder="🔎 Rechercher (nom, ville, email, code…)" style="flex:1;min-width:220px;font-size:.82rem;"/>
+      <select id="cdb-filter-group" onchange="cdbRender()" style="font-size:.78rem;"><option value="">Tous groupes</option></select>
+      <select id="cdb-filter-dept"  onchange="cdbRender()" style="font-size:.78rem;"><option value="">Tous départements</option></select>
+      <select id="cdb-filter-act"   onchange="cdbRender()" style="font-size:.78rem;">
+        <option value="">Toute activité</option>
+        <option value="active-90">Actif (90 j)</option>
+        <option value="active-180">Actif (6 mois)</option>
+        <option value="active-365">Actif (12 mois)</option>
+        <option value="inactive-365">Inactif (&gt; 1 an)</option>
+        <option value="prospect">Prospects</option>
+        <option value="has-email">Avec email</option>
+        <option value="no-email">Sans email</option>
+      </select>
+      <span style="font-size:.72rem;color:var(--g600);" id="cdb-count-filtered">—</span>
+      <button class="btn btn-ghost" onclick="cdbClearFilters()" style="font-size:.72rem;padding:.3rem .7rem;">✕ Filtres</button>
+      <button class="btn btn-primary" onclick="cdbSendToMailing()" style="font-size:.78rem;padding:.38rem .9rem;margin-left:auto;">📧 Envoyer au Mailing</button>
+    </div>
+
+    <!-- Table -->
+    <div class="card">
+      <div class="tbl-wrap" style="max-height:calc(100vh - 280px);overflow-y:auto;">
+        <table>
+          <thead style="position:sticky;top:0;background:var(--surface);z-index:1;">
+            <tr>
+              <th style="width:34px;"><input type="checkbox" id="cdb-check-all" onchange="cdbToggleAll(this.checked)"/></th>
+              <th>Code</th>
+              <th>Raison sociale</th>
+              <th>Groupe</th>
+              <th>Ville (CP)</th>
+              <th>Email</th>
+              <th>Téléphone</th>
+              <th style="text-align:right;">Dernière cde</th>
+              <th style="text-align:right;">CA 2026</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="cdb-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL IMPORT -->
+  <div class="modal-bg hidden" id="cdb-modal-import"><div class="modal" style="max-width:680px;">
+    <div class="modal-head"><span class="modal-title">📂 Importer un fichier Excel clients</span><button class="close-btn" onclick="closeModal('cdb-modal-import')">✕</button></div>
+    <div class="modal-body">
+      <div id="cdb-import-step1">
+        <label for="cdb-import-file" style="display:block;border:2px dashed var(--blue-p300);border-radius:10px;padding:2rem;text-align:center;cursor:pointer;margin-bottom:1rem;">
+          <div style="font-size:2rem;margin-bottom:.3rem;opacity:.5;">📂</div>
+          <div style="font-size:.9rem;font-weight:600;color:var(--g900);margin-bottom:.3rem;">Glissez votre Excel ici ou cliquez</div>
+          <div style="font-size:.72rem;color:var(--g500);">.xlsx · .xls · .csv — max 10 Mo</div>
+          <input type="file" id="cdb-import-file" accept=".xlsx,.xls,.csv" onchange="cdbImportRead(this.files[0])" style="display:none;"/>
+        </label>
+        <div style="font-size:.78rem;color:var(--g600);padding:.8rem;background:var(--blue-p50);border-radius:7px;border-left:3px solid var(--blue-p500);">
+          <strong>ℹ️ Important :</strong> l\'import <b>remplace totalement</b> la base actuelle. Faites un export CSV avant si vous voulez sauvegarder.
+        </div>
+      </div>
+
+      <div id="cdb-import-step2" style="display:none;">
+        <div style="font-size:.82rem;margin-bottom:.6rem;">✅ Fichier lu : <strong id="cdb-import-filename"></strong> · <span id="cdb-import-nbrows">0</span> lignes détectées</div>
+        <div style="font-size:.78rem;margin-bottom:.4rem;color:var(--g700);font-weight:600;">Correspondance des colonnes :</div>
+        <div id="cdb-import-mapping" style="max-height:340px;overflow-y:auto;border:1px solid var(--border);border-radius:7px;padding:.6rem;"></div>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-ghost" onclick="closeModal('cdb-modal-import')">Annuler</button>
+      <button class="btn btn-primary" id="cdb-import-apply" onclick="cdbImportApply()" style="display:none;">Importer et remplacer la base →</button>
+    </div>
+  </div></div>
+
+  <!-- MODAL FICHE CONTACT -->
+  <div class="modal-bg hidden" id="cdb-modal-edit"><div class="modal" style="max-width:720px;">
+    <div class="modal-head"><span class="modal-title" id="cdb-edit-title">Fiche contact</span><button class="close-btn" onclick="closeModal('cdb-modal-edit')">✕</button></div>
+    <div class="modal-body">
+      <input type="hidden" id="cdb-edit-id"/>
+      <div class="form-grid">
+        <div><label class="lb">Code Client *</label><input type="text" id="cdb-edit-numClient" placeholder="4401"/></div>
+        <div><label class="lb">Prospect</label><select id="cdb-edit-prospect"><option value="0">Client</option><option value="1">Prospect</option></select></div>
+        <div style="grid-column:span 2;"><label class="lb">Raison sociale *</label><input type="text" id="cdb-edit-nom"/></div>
+        <div style="grid-column:span 2;"><label class="lb">Email</label><input type="email" id="cdb-edit-email"/></div>
+        <div><label class="lb">Téléphone</label><input type="text" id="cdb-edit-tel"/></div>
+        <div><label class="lb">Groupe</label><input type="text" id="cdb-edit-groupe" placeholder="Ex: ACCORD BIO"/></div>
+        <div style="grid-column:span 2;"><label class="lb">Adresse</label><input type="text" id="cdb-edit-adresse"/></div>
+        <div><label class="lb">Code postal</label><input type="text" id="cdb-edit-cp"/></div>
+        <div><label class="lb">Ville</label><input type="text" id="cdb-edit-ville"/></div>
+        <div style="grid-column:span 2;"><label class="lb">Notes</label><textarea id="cdb-edit-notes" style="min-height:60px;"></textarea></div>
+      </div>
+      <div id="cdb-edit-history" style="margin-top:1rem;"></div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-ghost" id="cdb-edit-delete" onclick="cdbDelete()" style="margin-right:auto;color:#dc2626;">🗑 Supprimer</button>
+      <button class="btn btn-ghost" onclick="closeModal('cdb-modal-edit')">Annuler</button>
+      <button class="btn btn-primary" onclick="cdbSave()">Enregistrer</button>
+    </div>
+  </div></div>
 
   <!-- MAILING PROMO -->
   <div id="sec-mailing" class="hidden">
@@ -3469,6 +3582,506 @@ function dashCaDrawTops(filtered) {
   render(document.getElementById('dash-top-trans'),   topN('transporteur', 5));
 }
 
+
+// ═══════════════════════════════════════════════
+// BASE CONTACTS — Firestore + cache localStorage
+// ═══════════════════════════════════════════════
+var CDB_CACHE_KEY = 'mdm_contacts_cache_v1';
+var cdbContacts = [];          // array complet de contacts
+var cdbImportRaw = null;       // raw data de l\'import en attente
+var cdbImportMapping = {};     // colonne fichier → champ DB
+var cdbSelection = {};         // id → true (sélection pour mailing)
+
+// Champs cibles de la base (clé = field, value = label FR)
+var CDB_FIELDS = {
+  numClient: 'Code Client',
+  nom: 'Raison sociale',
+  email: 'Email',
+  telephone: 'Téléphone',
+  adresse: 'Adresse',
+  cp: 'Code postal',
+  ville: 'Ville',
+  groupe: 'Groupe',
+  prospect: 'Prospect (0/1)',
+  dateDerniereCmd: 'Date dernière cde',
+  nbJoursSansCde: 'Nb jours sans cde',
+  stat2026Avril: 'Stat 2026 Avril',
+  stat2025Avril: 'Stat 2025 Avril',
+  cumul2026: 'Cumul 2026',
+  cumul2025: 'Cumul 2025',
+  jourVisite: 'Jour visite',
+  dateVisite: 'Date visite',
+  notes: 'Notes',
+  '_ignore': '⊘ Ignorer'
+};
+
+// Détection automatique des colonnes (basée sur votre fichier type)
+var CDB_AUTO_DETECT = {
+  'code client': 'numClient',
+  'raison sociale': 'nom',
+  'nom': 'nom',
+  'email': 'email',
+  'mail': 'email',
+  'e-mail': 'email',
+  'téléphone': 'telephone',
+  'telephone': 'telephone',
+  'tel': 'telephone',
+  'adresse': 'adresse',
+  'code postal': 'cp',
+  'cp': 'cp',
+  'ville': 'ville',
+  'groupe': 'groupe',
+  'prospect': 'prospect',
+  'date de dernière commande': 'dateDerniereCmd',
+  'date de derniere commande': 'dateDerniereCmd',
+  'nb jours sans cde': 'nbJoursSansCde',
+  'stat 2026 avril': 'stat2026Avril',
+  'stat 2025 avril': 'stat2025Avril',
+  'cumul 2026 avril': 'cumul2026',
+  'cumul 2025 avril': 'cumul2025',
+  'cumul 2026': 'cumul2026',
+  'cumul 2025': 'cumul2025',
+  'jour de visite': 'jourVisite',
+  'date de visite': 'dateVisite',
+  'notes': 'notes'
+};
+
+// Chargement initial : cache local puis sync Firestore
+function cdbInit() {
+  try {
+    var cached = localStorage.getItem(CDB_CACHE_KEY);
+    if (cached) {
+      cdbContacts = JSON.parse(cached);
+      cdbRender();
+    }
+  } catch(e) { console.warn('Cache contacts:', e); }
+  cdbSyncFromFirestore();
+}
+
+function cdbSyncFromFirestore() {
+  if (typeof firebase === 'undefined' || !firebase.firestore) {
+    console.warn('Firebase non chargé');
+    return;
+  }
+  try {
+    var db = firebase.firestore();
+    db.collection('contacts').get().then(function(snap) {
+      cdbContacts = [];
+      snap.forEach(function(doc) {
+        var data = doc.data();
+        data.id = doc.id;
+        cdbContacts.push(data);
+      });
+      try { localStorage.setItem(CDB_CACHE_KEY, JSON.stringify(cdbContacts)); } catch(e){}
+      cdbRender();
+    }).catch(function(e) { console.error('Sync contacts :', e); });
+  } catch(e) { console.error(e); }
+}
+
+function cdbFmtCA(n) {
+  if (!n || Math.abs(n) < 0.01) return '—';
+  return Number(n).toLocaleString('fr-FR', { maximumFractionDigits:0 }) + ' €';
+}
+
+function cdbFmtDate(d) {
+  if (!d) return '—';
+  try {
+    var dt = typeof d === 'string' ? new Date(d) : (d.toDate ? d.toDate() : new Date(d));
+    if (isNaN(dt)) return '—';
+    return dt.toLocaleDateString('fr-FR', { day:'2-digit', month:'2-digit', year:'2-digit' });
+  } catch(e) { return '—'; }
+}
+
+function cdbRender() {
+  var s = (document.getElementById('cdb-search').value || '').toLowerCase().trim();
+  var gF = document.getElementById('cdb-filter-group').value;
+  var dF = document.getElementById('cdb-filter-dept').value;
+  var aF = document.getElementById('cdb-filter-act').value;
+
+  // Peupler les filtres Groupe et Département (une seule fois au chargement)
+  if (document.getElementById('cdb-filter-group').options.length <= 1 && cdbContacts.length) {
+    var groupes = [...new Set(cdbContacts.map(function(c){ return c.groupe; }).filter(Boolean))].sort();
+    document.getElementById('cdb-filter-group').innerHTML = '<option value="">Tous groupes</option>' +
+      groupes.map(function(g){ return '<option value="'+cdbEsc(g)+'">'+cdbEsc(g)+'</option>'; }).join('');
+
+    var depts = [...new Set(cdbContacts.map(function(c){
+      return c.cp ? String(c.cp).padStart(5,'0').slice(0,2) : null;
+    }).filter(Boolean))].sort();
+    document.getElementById('cdb-filter-dept').innerHTML = '<option value="">Tous départements</option>' +
+      depts.map(function(d){ return '<option value="'+d+'">'+d+'</option>'; }).join('');
+  }
+
+  // Filtrage
+  var now = new Date();
+  var filtered = cdbContacts.filter(function(c) {
+    if (s) {
+      var hay = ((c.numClient||'') + ' ' + (c.nom||'') + ' ' + (c.ville||'') +
+                 ' ' + (c.email||'') + ' ' + (c.groupe||'') + ' ' + (c.cp||'')).toLowerCase();
+      if (hay.indexOf(s) < 0) return false;
+    }
+    if (gF && c.groupe !== gF) return false;
+    if (dF) {
+      var cp = c.cp ? String(c.cp).padStart(5,'0').slice(0,2) : '';
+      if (cp !== dF) return false;
+    }
+    if (aF) {
+      if (aF === 'prospect' && !c.prospect) return false;
+      if (aF === 'has-email' && !c.email) return false;
+      if (aF === 'no-email' && c.email) return false;
+      if (aF.startsWith('active-')) {
+        var days = parseInt(aF.split('-')[1]);
+        var d = c.dateDerniereCmd ? new Date(c.dateDerniereCmd) : null;
+        if (!d || isNaN(d)) return false;
+        var diff = (now - d) / (86400000);
+        if (diff > days) return false;
+      }
+      if (aF.startsWith('inactive-')) {
+        var days = parseInt(aF.split('-')[1]);
+        var d = c.dateDerniereCmd ? new Date(c.dateDerniereCmd) : null;
+        if (!d || isNaN(d)) return true;
+        var diff = (now - d) / (86400000);
+        if (diff <= days) return false;
+      }
+    }
+    return true;
+  });
+
+  // Tri par raison sociale
+  filtered.sort(function(a,b){ return (a.nom||'').localeCompare(b.nom||''); });
+
+  document.getElementById('cdb-total').textContent = cdbContacts.length + ' contact' + (cdbContacts.length>1?'s':'');
+  document.getElementById('cdb-count-filtered').textContent = filtered.length + ' résultat' + (filtered.length>1?'s':'');
+
+  var tbody = document.getElementById('cdb-tbody');
+  if (!filtered.length) {
+    tbody.innerHTML = '<tr><td colspan="10" style="text-align:center;padding:3rem;color:var(--g500);">Aucun contact. ' +
+      (cdbContacts.length ? 'Modifiez les filtres.' : '<br/>Cliquez sur <b>Importer Excel</b> pour démarrer.') + '</td></tr>';
+    return;
+  }
+  tbody.innerHTML = filtered.map(function(c) {
+    var checked = cdbSelection[c.id] ? 'checked' : '';
+    var groupe = c.groupe ? '<span style="display:inline-block;padding:1px 7px;background:var(--blue-p100);color:var(--blue-p800);border-radius:10px;font-size:.68rem;font-weight:500;">'+cdbEsc(c.groupe)+'</span>' : '';
+    var prospectBadge = c.prospect ? '<span style="display:inline-block;padding:1px 6px;background:#fef3c7;color:#92400e;border-radius:10px;font-size:.65rem;margin-left:4px;">Prospect</span>' : '';
+    return '<tr>' +
+      '<td><input type="checkbox" ' + checked + ' onchange="cdbToggleOne(\'' + c.id + '\', this.checked)"/></td>' +
+      '<td style="font-family:ui-monospace,monospace;font-size:.76rem;color:var(--g600);">' + cdbEsc(c.numClient||'') + '</td>' +
+      '<td><a href="#" onclick="cdbOpenEdit(\'' + c.id + '\');return false;" style="font-weight:500;color:var(--g900);text-decoration:none;">' + cdbEsc(c.nom||'—') + '</a>' + prospectBadge + '</td>' +
+      '<td>' + groupe + '</td>' +
+      '<td>' + cdbEsc(c.ville||'') + (c.cp ? ' <span style="color:var(--g500);font-size:.72rem;">('+cdbEsc(c.cp)+')</span>' : '') + '</td>' +
+      '<td><a href="mailto:' + cdbEsc(c.email||'') + '" style="font-size:.78rem;color:var(--blue-p700);">' + cdbEsc(c.email||'') + '</a></td>' +
+      '<td style="font-size:.78rem;">' + cdbEsc(c.telephone||'') + '</td>' +
+      '<td style="text-align:right;font-size:.75rem;color:var(--g700);">' + cdbFmtDate(c.dateDerniereCmd) + '</td>' +
+      '<td style="text-align:right;font-variant-numeric:tabular-nums;">' + cdbFmtCA(c.cumul2026) + '</td>' +
+      '<td><button class="btn btn-ghost" onclick="cdbOpenEdit(\'' + c.id + '\')" style="font-size:.68rem;padding:.22rem .55rem;">✏️</button></td>' +
+    '</tr>';
+  }).join('');
+}
+
+function cdbEsc(s) { return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;').replace(/\\'/g,'&#39;'); }
+
+function cdbClearFilters() {
+  document.getElementById('cdb-search').value = '';
+  document.getElementById('cdb-filter-group').value = '';
+  document.getElementById('cdb-filter-dept').value = '';
+  document.getElementById('cdb-filter-act').value = '';
+  cdbRender();
+}
+
+function cdbToggleOne(id, v) { if (v) cdbSelection[id] = true; else delete cdbSelection[id]; }
+function cdbToggleAll(v) {
+  var rows = document.querySelectorAll('#cdb-tbody input[type=checkbox]');
+  rows.forEach(function(cb) { cb.checked = v; });
+  cdbSelection = {};
+  if (v) rows.forEach(function(cb) {
+    var id = cb.getAttribute('onchange').match(/'([^']+)'/)[1];
+    cdbSelection[id] = true;
+  });
+}
+
+function cdbSendToMailing() {
+  // Si des sélectionnés : prendre ceux-là, sinon prendre tous les filtrés avec email
+  var chosen = Object.keys(cdbSelection);
+  var emails;
+  if (chosen.length) {
+    emails = chosen.map(function(id){
+      var c = cdbContacts.find(function(x){ return x.id === id; });
+      return c && c.email ? c.email : null;
+    }).filter(Boolean);
+  } else {
+    if (!confirm('Aucune sélection. Envoyer aux ' + cdbContacts.length + ' contacts de la base (ceux ayant un email) ?')) return;
+    emails = cdbContacts.map(function(c){ return c.email; }).filter(Boolean);
+  }
+  if (!emails.length) { toast('Aucun email trouvé dans la sélection', 'err'); return; }
+  emails = [...new Set(emails.map(function(e){ return e.toLowerCase().trim(); }))];
+
+  // Aller dans la page Mailing et remplir la zone
+  showSection('mailing', null);
+  setTimeout(function() {
+    var ta = document.getElementById('ml-recipients');
+    if (ta) {
+      ta.value = emails.join('\n');
+      if (typeof mlUpdateRecipients === 'function') mlUpdateRecipients();
+    }
+    toast('✅ ' + emails.length + ' email' + (emails.length>1?'s':'') + ' ajoutés au mailing', 'ok');
+  }, 100);
+}
+
+// ─── IMPORT EXCEL ───
+function cdbOpenImport() {
+  document.getElementById('cdb-import-step1').style.display = '';
+  document.getElementById('cdb-import-step2').style.display = 'none';
+  document.getElementById('cdb-import-apply').style.display = 'none';
+  document.getElementById('cdb-import-file').value = '';
+  cdbImportRaw = null;
+  cdbImportMapping = {};
+  openModal('cdb-modal-import');
+}
+
+function cdbImportRead(file) {
+  if (!file) return;
+  if (typeof XLSX === 'undefined') { toast('SheetJS non chargé', 'err'); return; }
+  var reader = new FileReader();
+  reader.onload = function(e) {
+    try {
+      var data = new Uint8Array(e.target.result);
+      var wb = XLSX.read(data, { type: 'array', cellDates: true });
+      var ws = wb.Sheets[wb.SheetNames[0]];
+      var json = XLSX.utils.sheet_to_json(ws, { defval: null, raw: false, dateNF: 'yyyy-mm-dd' });
+      if (!json.length) { toast('Fichier vide', 'err'); return; }
+      cdbImportRaw = json;
+      document.getElementById('cdb-import-filename').textContent = file.name;
+      document.getElementById('cdb-import-nbrows').textContent = json.length;
+      cdbImportBuildMapping(Object.keys(json[0]));
+      document.getElementById('cdb-import-step1').style.display = 'none';
+      document.getElementById('cdb-import-step2').style.display = '';
+      document.getElementById('cdb-import-apply').style.display = '';
+    } catch(err) {
+      toast('Erreur lecture : ' + err.message, 'err');
+    }
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+function cdbImportBuildMapping(cols) {
+  cdbImportMapping = {};
+  // Auto-détection
+  cols.forEach(function(c) {
+    var low = String(c).toLowerCase().trim();
+    for (var key in CDB_AUTO_DETECT) {
+      if (low === key || low.indexOf(key) >= 0) {
+        cdbImportMapping[c] = CDB_AUTO_DETECT[key];
+        return;
+      }
+    }
+    cdbImportMapping[c] = '_ignore';
+  });
+
+  var container = document.getElementById('cdb-import-mapping');
+  container.innerHTML = cols.map(function(c) {
+    var sel = cdbImportMapping[c];
+    var sample = cdbImportRaw.slice(0, 3).map(function(r){ return r[c]; }).filter(function(v){ return v !== null && v !== undefined && v !== ''; }).slice(0,2).join(' / ');
+    var options = Object.keys(CDB_FIELDS).map(function(k) {
+      var kSel = (sel === k) ? ' selected' : '';
+      return '<option value="'+k+'"'+kSel+'>' + CDB_FIELDS[k] + '</option>';
+    }).join('');
+    return '<div style="display:grid;grid-template-columns:1fr 2rem 1.5fr;align-items:center;gap:8px;padding:.4rem 0;border-bottom:1px solid var(--border);">' +
+      '<div><div style="font-size:.78rem;font-weight:500;color:var(--g900);">' + cdbEsc(c) + '</div>' +
+      (sample ? '<div style="font-size:.68rem;color:var(--g500);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">ex: ' + cdbEsc(sample) + '</div>' : '') +
+      '</div>' +
+      '<div style="text-align:center;color:var(--g400);">→</div>' +
+      '<select onchange="cdbImportMapping[\''+cdbEsc(c).replace(/\"/g,'&quot;')+'\']=this.value;" style="font-size:.78rem;">' + options + '</select>' +
+    '</div>';
+  }).join('');
+}
+
+function cdbImportApply() {
+  if (!cdbImportRaw || !cdbImportRaw.length) { toast('Rien à importer', 'err'); return; }
+  if (!confirm('Remplacer toute la base actuelle (' + cdbContacts.length + ' contacts) par ' + cdbImportRaw.length + ' nouveaux contacts ?')) return;
+
+  // Convertir les lignes
+  var newContacts = cdbImportRaw.map(function(row, idx) {
+    var c = { id: 'c_' + Date.now() + '_' + idx };
+    Object.keys(cdbImportMapping).forEach(function(col) {
+      var field = cdbImportMapping[col];
+      if (field === '_ignore') return;
+      var v = row[col];
+      if (v === null || v === undefined || v === '') return;
+      // Normalisations
+      if (field === 'email') v = String(v).trim().toLowerCase();
+      else if (field === 'prospect') v = (v == 1 || String(v).toLowerCase() === 'true' || String(v).toLowerCase() === 'oui') ? 1 : 0;
+      else if (['stat2026Avril','stat2025Avril','cumul2026','cumul2025','nbJoursSansCde'].indexOf(field) >= 0) {
+        v = parseFloat(String(v).replace(',','.').replace(/[^\d.-]/g,'')) || 0;
+      }
+      else if (field === 'numClient') v = String(v).trim();
+      else if (field === 'dateDerniereCmd' || field === 'dateVisite') {
+        if (v instanceof Date) v = v.toISOString().slice(0,10);
+        else if (typeof v === 'string') { var d = new Date(v); if (!isNaN(d)) v = d.toISOString().slice(0,10); }
+      }
+      else v = String(v).trim();
+      c[field] = v;
+    });
+    return c;
+  }).filter(function(c){ return c.numClient || c.nom; });
+
+  // Sauvegarde Firestore : delete all + batch insert
+  if (typeof firebase === 'undefined' || !firebase.firestore) {
+    toast('Firebase non disponible, sauvegarde locale uniquement', 'err');
+    cdbContacts = newContacts;
+    try { localStorage.setItem(CDB_CACHE_KEY, JSON.stringify(cdbContacts)); } catch(e){}
+    cdbRender();
+    closeModal('cdb-modal-import');
+    return;
+  }
+
+  var db = firebase.firestore();
+  var applyBtn = document.getElementById('cdb-import-apply');
+  applyBtn.disabled = true;
+  applyBtn.textContent = 'Suppression ancienne base…';
+
+  db.collection('contacts').get().then(function(snap) {
+    // Supprimer par batch de 500
+    var docs = [];
+    snap.forEach(function(d){ docs.push(d.id); });
+
+    function delBatch(i) {
+      if (i >= docs.length) {
+        applyBtn.textContent = 'Importation…';
+        return addBatch(0);
+      }
+      var batch = db.batch();
+      var end = Math.min(i + 500, docs.length);
+      for (var j = i; j < end; j++) batch.delete(db.collection('contacts').doc(docs[j]));
+      applyBtn.textContent = 'Suppression ' + end + '/' + docs.length + '…';
+      batch.commit().then(function(){ delBatch(end); }).catch(function(e){ console.error(e); toast('Erreur suppression', 'err'); applyBtn.disabled=false; });
+    }
+
+    function addBatch(i) {
+      if (i >= newContacts.length) {
+        applyBtn.textContent = 'Importer et remplacer la base →';
+        applyBtn.disabled = false;
+        cdbContacts = newContacts;
+        try { localStorage.setItem(CDB_CACHE_KEY, JSON.stringify(cdbContacts)); } catch(e){}
+        cdbRender();
+        closeModal('cdb-modal-import');
+        toast('✅ Import terminé : ' + newContacts.length + ' contacts', 'ok');
+        return;
+      }
+      var batch = db.batch();
+      var end = Math.min(i + 500, newContacts.length);
+      for (var j = i; j < end; j++) {
+        var c = newContacts[j];
+        batch.set(db.collection('contacts').doc(c.id), c);
+      }
+      applyBtn.textContent = 'Import ' + end + '/' + newContacts.length + '…';
+      batch.commit().then(function(){ addBatch(end); }).catch(function(e){ console.error(e); toast('Erreur import', 'err'); applyBtn.disabled=false; });
+    }
+
+    delBatch(0);
+  }).catch(function(e) {
+    console.error(e);
+    toast('Erreur Firestore : ' + e.message, 'err');
+    applyBtn.disabled = false;
+  });
+}
+
+// ─── FICHE CONTACT ───
+function cdbOpenEdit(id) {
+  var c = id ? cdbContacts.find(function(x){ return x.id === id; }) : null;
+  document.getElementById('cdb-edit-id').value = id || '';
+  document.getElementById('cdb-edit-title').textContent = c ? 'Fiche : ' + (c.nom || c.numClient) : 'Nouveau contact';
+  document.getElementById('cdb-edit-delete').style.display = c ? '' : 'none';
+  ['numClient','nom','email','telephone','adresse','cp','ville','groupe','notes'].forEach(function(f){
+    document.getElementById('cdb-edit-'+f).value = c ? (c[f] || '') : '';
+  });
+  document.getElementById('cdb-edit-prospect').value = c && c.prospect ? '1' : '0';
+
+  // Historique des commandes (recherche dans dashCaRows si dispo)
+  var histEl = document.getElementById('cdb-edit-history');
+  if (c && typeof dashCaRows !== 'undefined' && dashCaRows.length && c.numClient) {
+    var cmds = dashCaRows.filter(function(r) {
+      return String(r.client||'').toLowerCase().indexOf(String(c.nom||'').toLowerCase()) >= 0;
+    });
+    if (cmds.length) {
+      var totCA = cmds.reduce(function(s,r){ return s + r.ca; }, 0);
+      histEl.innerHTML = '<div style="margin-top:.8rem;padding-top:.8rem;border-top:1px solid var(--border);">' +
+        '<div style="font-weight:600;font-size:.82rem;color:var(--g800);margin-bottom:.4rem;">📊 Historique : ' + cmds.length + ' commande' + (cmds.length>1?'s':'') + ' · ' + cdbFmtCA(totCA) + ' (dans le fichier Suivi)</div>' +
+        '<div style="font-size:.72rem;color:var(--g500);">Importez un fichier de commandes dans l\'onglet Dashboard pour voir le détail par contact.</div>' +
+        '</div>';
+    } else histEl.innerHTML = '';
+  } else histEl.innerHTML = '';
+
+  openModal('cdb-modal-edit');
+}
+
+function cdbSave() {
+  var id = document.getElementById('cdb-edit-id').value;
+  var c = id ? cdbContacts.find(function(x){ return x.id === id; }) : { id: 'c_' + Date.now() };
+  if (!c) return;
+  ['numClient','nom','email','telephone','adresse','cp','ville','groupe','notes'].forEach(function(f){
+    c[f] = document.getElementById('cdb-edit-'+f).value.trim();
+  });
+  c.prospect = parseInt(document.getElementById('cdb-edit-prospect').value) || 0;
+  if (!c.nom) { toast('Raison sociale requise', 'err'); return; }
+
+  if (typeof firebase !== 'undefined' && firebase.firestore) {
+    firebase.firestore().collection('contacts').doc(c.id).set(c).then(function(){
+      if (!id) cdbContacts.push(c);
+      try { localStorage.setItem(CDB_CACHE_KEY, JSON.stringify(cdbContacts)); } catch(e){}
+      cdbRender();
+      closeModal('cdb-modal-edit');
+      toast('✅ Contact enregistré', 'ok');
+    }).catch(function(e){ toast('Erreur : '+e.message, 'err'); });
+  } else {
+    if (!id) cdbContacts.push(c);
+    try { localStorage.setItem(CDB_CACHE_KEY, JSON.stringify(cdbContacts)); } catch(e){}
+    cdbRender();
+    closeModal('cdb-modal-edit');
+  }
+}
+
+function cdbDelete() {
+  var id = document.getElementById('cdb-edit-id').value;
+  if (!id) return;
+  if (!confirm('Supprimer ce contact définitivement ?')) return;
+  if (typeof firebase !== 'undefined' && firebase.firestore) {
+    firebase.firestore().collection('contacts').doc(id).delete().then(function(){
+      cdbContacts = cdbContacts.filter(function(x){ return x.id !== id; });
+      try { localStorage.setItem(CDB_CACHE_KEY, JSON.stringify(cdbContacts)); } catch(e){}
+      cdbRender();
+      closeModal('cdb-modal-edit');
+      toast('Contact supprimé', 'ok');
+    });
+  }
+}
+
+function cdbExportCsv() {
+  if (!cdbContacts.length) { toast('Base vide', 'err'); return; }
+  var cols = ['numClient','nom','email','telephone','adresse','cp','ville','groupe','prospect','dateDerniereCmd','cumul2026','cumul2025','notes'];
+  var header = cols.map(function(k){ return CDB_FIELDS[k] || k; }).join(',');
+  var lines = cdbContacts.map(function(c){
+    return cols.map(function(k){
+      var v = c[k] == null ? '' : String(c[k]);
+      if (v.indexOf(',') >= 0 || v.indexOf('"') >= 0 || v.indexOf('\n') >= 0) v = '"' + v.replace(/"/g,'""') + '"';
+      return v;
+    }).join(',');
+  });
+  var csv = '\ufeff' + header + '\n' + lines.join('\n');
+  var blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
+  var a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'contacts_' + new Date().toISOString().slice(0,10) + '.csv';
+  a.click();
+  toast('Export CSV : ' + cdbContacts.length + ' contacts', 'ok');
+}
+
+// Initialiser au chargement Firebase
+(function() {
+  function tryInit() {
+    if (typeof firebase !== 'undefined' && firebase.firestore) cdbInit();
+    else setTimeout(tryInit, 300);
+  }
+  window.addEventListener('load', tryInit);
+})();
 
 // ═══════════════════════════════════════════════
 // MAILING PROMO — éditeur riche + envoi FormSubmit
