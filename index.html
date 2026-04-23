@@ -3773,18 +3773,26 @@ function cdbRender() {
       '<td style="font-size:.78rem;">' + cdbEsc(c.telephone||'') + '</td>' +
       '<td style="text-align:right;font-size:.75rem;color:var(--g700);">' + cdbFmtDate(c.dateDerniereCmd) + '</td>' +
       '<td style="text-align:right;font-variant-numeric:tabular-nums;">' + cdbFmtCA(c.cumul2026) + '</td>' +
-      '<td><button type="button" class="btn btn-ghost" data-cdb-edit="' + idAttr + '" style="font-size:.68rem;padding:.22rem .55rem;cursor:pointer;">✏️</button></td>' +
+      '<td style="position:relative;"><button type="button" class="btn btn-ghost cdb-menu-btn" data-cdb-id="' + idAttr + '" style="font-size:.9rem;padding:.18rem .45rem;cursor:pointer;line-height:1;" title="Actions">⋮</button></td>' +
     '</tr>';
   }).join('');
 
   // Attacher DIRECTEMENT les handlers sur chaque élément (plus fiable que la delegation)
+  // Lien sur le nom : ouvre directement en mode édition
   document.querySelectorAll('#cdb-tbody [data-cdb-edit]').forEach(function(el) {
     el.onclick = function(e) {
       e.preventDefault();
       e.stopPropagation();
-      var id = el.getAttribute('data-cdb-edit');
-      console.log('[CDB] Clic modifier, id=', id);
-      cdbOpenEdit(id);
+      cdbOpenEdit(el.getAttribute('data-cdb-edit'));
+      return false;
+    };
+  });
+  // Bouton menu ⋮ : ouvre un menu contextuel
+  document.querySelectorAll('#cdb-tbody .cdb-menu-btn').forEach(function(el) {
+    el.onclick = function(e) {
+      e.preventDefault();
+      e.stopPropagation();
+      cdbShowMenu(el, el.getAttribute('data-cdb-id'));
       return false;
     };
   });
@@ -4040,6 +4048,238 @@ function cdbOpenEdit(id) {
   } else histEl.innerHTML = '';
 
   document.getElementById('cdb-modal-edit').classList.remove('hidden');
+}
+
+// ═══ MENU CONTEXTUEL ACTIONS ═══
+function cdbShowMenu(anchor, id) {
+  // Fermer tout menu ouvert
+  var existing = document.getElementById('cdb-ctx-menu');
+  if (existing) existing.remove();
+
+  var menu = document.createElement('div');
+  menu.id = 'cdb-ctx-menu';
+  menu.style.cssText = 'position:fixed;background:#fff;border:1px solid var(--border);border-radius:8px;box-shadow:0 6px 20px rgba(30,45,78,.15);z-index:400;padding:.25rem;min-width:200px;font-family:var(--fd);';
+
+  var actions = [
+    { icon: '✏️', label: 'Modifier la fiche', fn: function(){ cdbOpenEdit(id); } },
+    { icon: '🛒', label: 'Nouvelle commande', fn: function(){ cdbNewOrder(id); } },
+    { icon: '📊', label: 'Voir le CA', fn: function(){ cdbShowCA(id); } }
+  ];
+
+  menu.innerHTML = actions.map(function(a, i) {
+    return '<button type="button" data-idx="' + i + '" style="display:block;width:100%;text-align:left;padding:.55rem .8rem;border:none;background:none;cursor:pointer;font-size:.82rem;color:var(--g800);border-radius:5px;">' +
+      '<span style="margin-right:6px;">' + a.icon + '</span>' + a.label + '</button>';
+  }).join('');
+
+  // Position : à droite du bouton ancre
+  var rect = anchor.getBoundingClientRect();
+  menu.style.left = (rect.right + 4) + 'px';
+  menu.style.top = rect.top + 'px';
+
+  document.body.appendChild(menu);
+
+  // Décaler si sort de l'écran
+  setTimeout(function() {
+    var mrect = menu.getBoundingClientRect();
+    if (mrect.right > window.innerWidth - 10) {
+      menu.style.left = (rect.left - mrect.width - 4) + 'px';
+    }
+    if (mrect.bottom > window.innerHeight - 10) {
+      menu.style.top = (rect.bottom - mrect.height) + 'px';
+    }
+  }, 0);
+
+  menu.querySelectorAll('button').forEach(function(btn) {
+    btn.onmouseover = function(){ btn.style.background = 'var(--blue-p50)'; };
+    btn.onmouseout  = function(){ btn.style.background = ''; };
+    btn.onclick = function(e) {
+      e.stopPropagation();
+      var idx = parseInt(btn.getAttribute('data-idx'));
+      menu.remove();
+      actions[idx].fn();
+    };
+  });
+
+  // Fermer si clic ailleurs
+  setTimeout(function() {
+    document.addEventListener('click', function close(ev) {
+      if (!menu.contains(ev.target)) {
+        menu.remove();
+        document.removeEventListener('click', close);
+      }
+    });
+  }, 50);
+}
+
+// ═══ NOUVELLE COMMANDE depuis contact ═══
+function cdbNewOrder(id) {
+  var c = cdbContacts.find(function(x){ return x.id === id; });
+  if (!c) { toast('Contact introuvable', 'err'); return; }
+
+  // Basculer vers l'onglet Bon de Commande
+  showSection('bdc', null);
+
+  // Pré-remplir les champs BDC après court délai (laisser le DOM se rendre)
+  setTimeout(function() {
+    var set = function(id, val){ var el = document.getElementById(id); if (el) el.value = val || ''; };
+    set('bdc-magasin',   c.nom || '');
+    set('bdc-numclient', c.numClient || '');
+    set('bdc-contact',   c.nom || '');
+    set('bdc-email',     c.email || '');
+    set('bdc-tel',       c.telephone || '');
+
+    // Scroll vers le haut du BDC
+    var secBdc = document.getElementById('sec-bdc');
+    if (secBdc) secBdc.scrollIntoView({ behavior:'smooth', block:'start' });
+
+    toast('✅ Commande pré-remplie pour ' + (c.nom || c.numClient), 'ok');
+  }, 150);
+}
+
+// ═══ VOIR LE CA du contact ═══
+function cdbShowCA(id) {
+  var c = cdbContacts.find(function(x){ return x.id === id; });
+  if (!c) { toast('Contact introuvable', 'err'); return; }
+
+  // Récupérer infos CA depuis la fiche Excel importée
+  var stat26 = parseFloat(c.stat2026Avril) || 0;
+  var stat25 = parseFloat(c.stat2025Avril) || 0;
+  var cum26  = parseFloat(c.cumul2026) || 0;
+  var cum25  = parseFloat(c.cumul2025) || 0;
+  var nbJ    = c.nbJoursSansCde || '—';
+  var derCde = c.dateDerniereCmd || '—';
+
+  // Chercher les commandes depuis dashCaRows (Suivi) liées à ce client
+  var cmds = [];
+  if (typeof dashCaRows !== 'undefined' && dashCaRows.length) {
+    var nomLow = String(c.nom || '').toLowerCase();
+    if (nomLow) {
+      cmds = dashCaRows.filter(function(r) {
+        return String(r.client || '').toLowerCase().indexOf(nomLow) >= 0;
+      });
+    }
+  }
+
+  // Agrégation par mois
+  var byMonth = {};
+  var totCA = 0, totFac = 0, totEnCours = 0, totAvoirs = 0;
+  cmds.forEach(function(r) {
+    if (!byMonth[r.mois]) byMonth[r.mois] = { mois:r.mois, nb:0, ca:0 };
+    byMonth[r.mois].nb++;
+    byMonth[r.mois].ca += r.ca;
+    totCA += r.ca;
+    if (r.statut === 'facturee') totFac += r.ca;
+    else if (r.statut === 'en_cours') totEnCours += r.ca;
+    else if (r.statut === 'avoir') totAvoirs += r.ca;
+  });
+  var months = Object.values(byMonth).sort(function(a,b){ return a.mois.localeCompare(b.mois); });
+
+  // Formatter
+  function fmtCA(n) {
+    if (!n || Math.abs(n) < 0.01) return '—';
+    return Number(n).toLocaleString('fr-FR', { maximumFractionDigits: 2 }) + ' €';
+  }
+  var moisNames = ['Jan','Fév','Mar','Avr','Mai','Juin','Juil','Août','Sep','Oct','Nov','Déc'];
+
+  // Graphique (barres SVG simple)
+  var maxCA = months.length ? Math.max.apply(null, months.map(function(m){return Math.abs(m.ca);})) : 1;
+  var chartHtml = '';
+  if (months.length) {
+    chartHtml = '<div style="display:flex;align-items:flex-end;gap:4px;height:100px;padding:.5rem 0;border-bottom:1px solid var(--border);margin-bottom:.5rem;">' +
+      months.map(function(m) {
+        var h = maxCA > 0 ? Math.max(2, Math.abs(m.ca) / maxCA * 90) : 2;
+        var parts = m.mois.split('-');
+        var label = moisNames[parseInt(parts[1])-1] + " '" + parts[0].slice(2);
+        var color = m.ca < 0 ? '#dc2626' : 'var(--blue-p600)';
+        return '<div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;gap:3px;min-width:0;">' +
+          '<div style="font-size:.58rem;color:var(--g600);white-space:nowrap;" title="' + fmtCA(m.ca) + '">' + (Math.abs(m.ca) >= 1000 ? (Math.round(m.ca/1000)+'k') : Math.round(m.ca)) + '€</div>' +
+          '<div style="background:' + color + ';width:100%;height:' + h + 'px;border-radius:3px 3px 0 0;"></div>' +
+          '<div style="font-size:.58rem;color:var(--g500);white-space:nowrap;">' + label + '</div>' +
+        '</div>';
+      }).join('') + '</div>';
+  }
+
+  // Tableau détail
+  var tableHtml = '';
+  if (months.length) {
+    tableHtml = '<div style="margin-top:.8rem;max-height:200px;overflow-y:auto;border:1px solid var(--border);border-radius:6px;">' +
+      '<table style="width:100%;font-size:.75rem;"><thead style="position:sticky;top:0;background:var(--surface2);"><tr>' +
+      '<th style="padding:.35rem .6rem;text-align:left;font-size:.68rem;color:var(--g600);">Mois</th>' +
+      '<th style="padding:.35rem .6rem;text-align:right;font-size:.68rem;color:var(--g600);">Nb cmds</th>' +
+      '<th style="padding:.35rem .6rem;text-align:right;font-size:.68rem;color:var(--g600);">CA HT</th>' +
+      '</tr></thead><tbody>' +
+      months.map(function(m) {
+        var parts = m.mois.split('-');
+        var label = moisNames[parseInt(parts[1])-1] + ' ' + parts[0];
+        var color = m.ca < 0 ? '#dc2626' : 'var(--g900)';
+        return '<tr>' +
+          '<td style="padding:.3rem .6rem;border-top:1px solid var(--border);">' + label + '</td>' +
+          '<td style="padding:.3rem .6rem;text-align:right;border-top:1px solid var(--border);">' + m.nb + '</td>' +
+          '<td style="padding:.3rem .6rem;text-align:right;border-top:1px solid var(--border);color:' + color + ';font-variant-numeric:tabular-nums;">' + fmtCA(m.ca) + '</td>' +
+        '</tr>';
+      }).join('') + '</tbody></table></div>';
+  } else {
+    tableHtml = '<div style="padding:1rem;text-align:center;color:var(--g500);font-size:.75rem;background:var(--surface2);border-radius:6px;">Aucune commande trouvée dans le fichier Suivi.<br/>Importez un fichier dans le Dashboard.</div>';
+  }
+
+  // Modale dynamique
+  var existing = document.getElementById('cdb-ca-modal');
+  if (existing) existing.remove();
+
+  var modal = document.createElement('div');
+  modal.id = 'cdb-ca-modal';
+  modal.className = 'modal-bg';
+  modal.innerHTML = '<div class="modal" style="max-width:720px;">' +
+    '<div class="modal-head">' +
+      '<span class="modal-title">📊 CA client : ' + cdbEsc(c.nom || c.numClient) + '</span>' +
+      '<button class="close-btn" onclick="document.getElementById(\'cdb-ca-modal\').remove()">✕</button>' +
+    '</div>' +
+    '<div class="modal-body" style="padding:1.2rem;">' +
+      // Infos contact
+      '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:1rem;padding:.8rem;background:var(--surface2);border-radius:8px;font-size:.78rem;">' +
+        '<div><strong style="color:var(--g600);font-size:.68rem;text-transform:uppercase;">Code client</strong><div>' + cdbEsc(c.numClient || '—') + '</div></div>' +
+        '<div><strong style="color:var(--g600);font-size:.68rem;text-transform:uppercase;">Groupe</strong><div>' + cdbEsc(c.groupe || '—') + '</div></div>' +
+        '<div><strong style="color:var(--g600);font-size:.68rem;text-transform:uppercase;">Ville (CP)</strong><div>' + cdbEsc(c.ville || '—') + (c.cp ? ' (' + cdbEsc(c.cp) + ')' : '') + '</div></div>' +
+        '<div><strong style="color:var(--g600);font-size:.68rem;text-transform:uppercase;">Dernière commande</strong><div>' + cdbFmtDate(derCde) + (typeof nbJ === 'number' ? ' <span style="color:var(--g500);">(il y a ' + Math.round(nbJ) + ' j)</span>' : '') + '</div></div>' +
+      '</div>' +
+      // KPIs Excel
+      '<div style="font-size:.7rem;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--g600);margin-bottom:.4rem;">📋 Données de la base</div>' +
+      '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:1rem;">' +
+        '<div style="padding:.6rem .7rem;background:var(--blue-p50);border-radius:7px;border-left:3px solid var(--blue-p600);">' +
+          '<div style="font-size:.62rem;color:var(--g600);font-weight:600;text-transform:uppercase;">Cumul 2026</div>' +
+          '<div style="font-size:1rem;font-weight:700;color:var(--blue-p700);">' + fmtCA(cum26) + '</div>' +
+        '</div>' +
+        '<div style="padding:.6rem .7rem;background:var(--g100);border-radius:7px;border-left:3px solid var(--g500);">' +
+          '<div style="font-size:.62rem;color:var(--g600);font-weight:600;text-transform:uppercase;">Cumul 2025</div>' +
+          '<div style="font-size:1rem;font-weight:700;color:var(--g700);">' + fmtCA(cum25) + '</div>' +
+        '</div>' +
+        '<div style="padding:.6rem .7rem;background:#f0fdf4;border-radius:7px;border-left:3px solid #059669;">' +
+          '<div style="font-size:.62rem;color:var(--g600);font-weight:600;text-transform:uppercase;">Stat 2026 Avril</div>' +
+          '<div style="font-size:1rem;font-weight:700;color:#059669;">' + fmtCA(stat26) + '</div>' +
+        '</div>' +
+        '<div style="padding:.6rem .7rem;background:#fef3c7;border-radius:7px;border-left:3px solid #b45309;">' +
+          '<div style="font-size:.62rem;color:var(--g600);font-weight:600;text-transform:uppercase;">Stat 2025 Avril</div>' +
+          '<div style="font-size:1rem;font-weight:700;color:#b45309;">' + fmtCA(stat25) + '</div>' +
+        '</div>' +
+      '</div>' +
+      // Détail Suivi
+      '<div style="font-size:.7rem;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--g600);margin-bottom:.4rem;">📊 Historique Suivi (' + cmds.length + ' cmd' + (cmds.length>1?'s':'') + ')</div>' +
+      (cmds.length ? (
+        '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:.6rem;">' +
+          '<div style="padding:.5rem .7rem;background:#fff;border:1px solid var(--border);border-radius:6px;"><div style="font-size:.6rem;color:var(--g500);font-weight:600;">CA TOTAL</div><div style="font-size:.9rem;font-weight:700;">' + fmtCA(totCA) + '</div></div>' +
+          '<div style="padding:.5rem .7rem;background:#fff;border:1px solid var(--border);border-radius:6px;"><div style="font-size:.6rem;color:var(--g500);font-weight:600;">FACTURÉ</div><div style="font-size:.9rem;font-weight:700;color:var(--blue-p700);">' + fmtCA(totFac) + '</div></div>' +
+          '<div style="padding:.5rem .7rem;background:#fff;border:1px solid var(--border);border-radius:6px;"><div style="font-size:.6rem;color:var(--g500);font-weight:600;">EN COURS</div><div style="font-size:.9rem;font-weight:700;color:#7c3aed;">' + fmtCA(totEnCours) + '</div></div>' +
+          '<div style="padding:.5rem .7rem;background:#fff;border:1px solid var(--border);border-radius:6px;"><div style="font-size:.6rem;color:var(--g500);font-weight:600;">AVOIRS</div><div style="font-size:.9rem;font-weight:700;color:#dc2626;">' + fmtCA(totAvoirs) + '</div></div>' +
+        '</div>'
+      ) : '') +
+      chartHtml + tableHtml +
+    '</div>' +
+    '<div class="modal-foot">' +
+      '<button class="btn btn-ghost" onclick="document.getElementById(\'cdb-ca-modal\').remove()">Fermer</button>' +
+      '<button class="btn btn-primary" onclick="document.getElementById(\'cdb-ca-modal\').remove(); cdbNewOrder(\'' + id + '\');">🛒 Nouvelle commande</button>' +
+    '</div></div>';
+
+  document.body.appendChild(modal);
 }
 
 function cdbSave() {
