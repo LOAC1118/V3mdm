@@ -1669,7 +1669,7 @@ function setSyncing(on) {
 // ═══════════════════════════════════════════════
 //  NAVIGATION
 // ═══════════════════════════════════════════════
-const SECTIONS = ['dashboard','prospects','clients','bdc','frais'];
+const SECTIONS = ['dashboard','prospects','clients','bdc','frais','suivi','contacts-db','mailing'];
 function showSection(name, tabEl, sideEl) {
   SECTIONS.forEach(s => { const el=document.getElementById('sec-'+s); el.classList.add('hidden'); el.style.display=''; });
   const sec=document.getElementById('sec-'+name); sec.classList.remove('hidden'); sec.style.display=(name==='bdc')?'flex':'';
