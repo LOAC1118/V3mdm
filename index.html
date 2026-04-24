@@ -1202,6 +1202,8 @@ textarea { resize:vertical; min-height:80px; }
         <option value="prospect">Prospects</option>
         <option value="has-email">Avec email</option>
         <option value="no-email">Sans email</option>
+        <option value="with-orders">Avec commandes (dans fichier)</option>
+        <option value="orphan">Sans commande (orphelins) ⚠</option>
       </select>
       <span style="font-size:.72rem;color:var(--g600);" id="cdb-count-filtered">—</span>
       <button class="btn btn-ghost" onclick="cdbClearFilters()" style="font-size:.72rem;padding:.3rem .7rem;">✕ Filtres</button>
@@ -3315,9 +3317,29 @@ function dashCaProcess(rows) {
       else if (dateCol === 'commande') dRef = dCmd || dFac || dLiv;
       else dRef = dFac || dLiv || dCmd;
 
+      // Normalisation code client pour matching
+      var rawCode = r['Code client'];
+      var codeNorm = '';
+      if (rawCode !== null && rawCode !== undefined && rawCode !== '') {
+        // Retire le .0 final (Excel lit 11461 comme 11461.0)
+        codeNorm = String(rawCode).trim();
+        if (codeNorm.endsWith('.0')) codeNorm = codeNorm.slice(0, -2);
+        // Garder l'original pour 4702.01 etc. (vraies décimales)
+      }
+
+      var clientNom = String(r['Nom client']||'').trim() || '—';
+      var refDate = dRef;
+
       return {
         ca: ca, statut: statut,
-        client: String(r['Nom client']||'').trim() || '—',
+        client: clientNom,
+        codeClient: codeNorm,
+        clientNomKey: clientNom.toLowerCase().replace(/\s+/g,' ').trim(),
+        numCmd: String(r['N° de cmd']||'').trim(),
+        dateCmd: dCmd,
+        dateLiv: dLiv,
+        dateFac: dFac,
+        dateRef: refDate,
         operateur: String(r['Opérateur']||'').trim() || '—',
         transporteur: String(r['Transporteur']||'').trim() || '—',
         mois: dRef ? (dRef.getFullYear() + '-' + String(dRef.getMonth()+1).padStart(2,'0')) : '(inconnu)',
@@ -3346,7 +3368,100 @@ function dashCaProcess(rows) {
   document.getElementById('dash-ca-content').style.display = '';
   document.getElementById('dash-ca-reload').style.display = '';
   document.getElementById('dash-ca-status').textContent = dashCaRows.length + ' commandes analysées';
+
+  // ═══ Enrichir la base contacts avec les stats des commandes ═══
+  if (typeof cdbContacts !== 'undefined' && cdbContacts.length) {
+    cdbEnrichFromOrders(dashCaRows);
+  }
+
   dashCaRender();
+}
+
+// ═══════════════════════════════════════════════
+// LIAISON COMMANDES ↔ CONTACTS
+// Enrichit chaque contact avec ses stats calculées
+// en direct depuis le fichier de commandes uploadé
+// ═══════════════════════════════════════════════
+function cdbEnrichFromOrders(orders) {
+  if (!orders || !orders.length || !cdbContacts.length) return;
+
+  // Indexer les contacts par code normalisé et par nom normalisé
+  function normName(s) {
+    return String(s||'').toLowerCase()
+      .normalize('NFD').replace(/[\u0300-\u036f]/g, '') // retire accents
+      .replace(/\s+/g,' ').trim();
+  }
+  function normCode(s) {
+    var str = String(s||'').trim();
+    if (str.endsWith('.0')) str = str.slice(0, -2);
+    // Retirer les zéros de tête (000097 → 97) pour matcher plus largement
+    var noZero = str.replace(/^0+/, '') || str;
+    return { full: str, noZero: noZero };
+  }
+
+  var byCode = {};     // code exact → contact
+  var byCodeNoZero = {}; // code sans zéros tête → contact
+  var byName = {};     // nom normalisé → contact
+
+  cdbContacts.forEach(function(c) {
+    if (c.numClient) {
+      var n = normCode(c.numClient);
+      byCode[n.full] = c;
+      byCodeNoZero[n.noZero] = c;
+    }
+    if (c.nom) byName[normName(c.nom)] = c;
+    // Reset stats
+    c._stats = { nbCmds:0, caTotal:0, caFac:0, caEnCours:0, caAvoirs:0, derniereCmd:null, orphan:false };
+  });
+
+  // Parcourir les commandes et matcher
+  var unmatched = 0, matchedByCode = 0, matchedByName = 0;
+  orders.forEach(function(o) {
+    if (!o) return;
+    var c = null;
+
+    // Match par code
+    if (o.codeClient) {
+      var n = normCode(o.codeClient);
+      c = byCode[n.full] || byCodeNoZero[n.noZero];
+      if (c) matchedByCode++;
+    }
+    // Fallback par nom
+    if (!c && o.clientNomKey) {
+      c = byName[normName(o.clientNomKey)];
+      if (c) matchedByName++;
+    }
+
+    if (!c) { unmatched++; return; }
+
+    // Agréger
+    var st = c._stats;
+    st.nbCmds++;
+    st.caTotal += o.ca;
+    if (o.statut === 'facturee') st.caFac += o.ca;
+    else if (o.statut === 'en_cours') st.caEnCours += o.ca;
+    else if (o.statut === 'avoir') st.caAvoirs += o.ca;
+
+    if (o.dateRef && (!st.derniereCmd || o.dateRef > st.derniereCmd)) {
+      st.derniereCmd = o.dateRef;
+    }
+  });
+
+  // Marquer les orphelins (aucune commande trouvée)
+  var orphans = 0;
+  cdbContacts.forEach(function(c) {
+    if (c._stats.nbCmds === 0) { c._stats.orphan = true; orphans++; }
+  });
+
+  // Re-render la base contacts si elle est affichée
+  if (typeof cdbRender === 'function') cdbRender();
+
+  // Toast résumé
+  if (typeof toast === 'function') {
+    toast('✅ ' + (matchedByCode + matchedByName) + ' commandes liées aux contacts' +
+      ' (' + matchedByCode + ' par code, ' + matchedByName + ' par nom' +
+      (unmatched ? ', ' + unmatched + ' orphelines' : '') + ')', 'ok');
+  }
 }
 
 function dashCaFmt(n) {
@@ -3820,6 +3935,8 @@ function cdbRender() {
       if (aF === 'prospect' && !c.prospect) return false;
       if (aF === 'has-email' && !c.email) return false;
       if (aF === 'no-email' && c.email) return false;
+      if (aF === 'with-orders' && !(c._stats && c._stats.nbCmds > 0)) return false;
+      if (aF === 'orphan' && !(c._stats && c._stats.orphan)) return false;
       if (aF.startsWith('active-')) {
         var days = parseInt(aF.split('-')[1]);
         var d = c.dateDerniereCmd ? new Date(c.dateDerniereCmd) : null;
@@ -3863,8 +3980,8 @@ function cdbRender() {
       '<td>' + cdbEsc(c.ville||'') + (c.cp ? ' <span style="color:var(--g500);font-size:.72rem;">('+cdbEsc(c.cp)+')</span>' : '') + '</td>' +
       '<td><a href="mailto:' + cdbEsc(c.email||'') + '" style="font-size:.78rem;color:var(--blue-p700);">' + cdbEsc(c.email||'') + '</a></td>' +
       '<td style="font-size:.78rem;">' + cdbEsc(c.telephone||'') + '</td>' +
-      '<td style="text-align:right;font-size:.75rem;color:var(--g700);">' + cdbFmtDate(c.dateDerniereCmd) + '</td>' +
-      '<td style="text-align:right;font-variant-numeric:tabular-nums;">' + cdbFmtCA(c.cumul2026) + '</td>' +
+      '<td style="text-align:right;font-size:.75rem;color:' + (c._stats && c._stats.orphan ? '#dc2626' : 'var(--g700)') + ';">' + (c._stats && c._stats.derniereCmd ? cdbFmtDate(c._stats.derniereCmd) : cdbFmtDate(c.dateDerniereCmd)) + (c._stats && c._stats.orphan ? ' ⚠' : '') + '</td>' +
+      '<td style="text-align:right;font-variant-numeric:tabular-nums;">' + (c._stats && c._stats.nbCmds > 0 ? ('<strong>' + cdbFmtCA(c._stats.caTotal) + '</strong><div style="font-size:.62rem;color:var(--g500);">' + c._stats.nbCmds + ' cmd' + (c._stats.nbCmds>1?'s':'') + '</div>') : cdbFmtCA(c.cumul2026)) + '</td>' +
       '<td style="position:relative;"><button type="button" class="btn btn-ghost cdb-menu-btn" data-cdb-id="' + idAttr + '" style="font-size:.9rem;padding:.18rem .45rem;cursor:pointer;line-height:1;" title="Actions">⋮</button></td>' +
     '</tr>';
   }).join('');
