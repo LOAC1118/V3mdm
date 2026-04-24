@@ -819,7 +819,7 @@ textarea { resize:vertical; min-height:80px; }
     <!-- ═══ ANALYSE CA MENSUELLE (upload Excel) ═══ -->
     <div class="card" style="margin-top:1.5rem;">
       <div class="card-head">
-        <span class="card-title">📊 Analyse CA mensuelle <span style="font-size:.7rem;font-weight:400;color:var(--g500);margin-left:8px;">regroupé par date de livraison</span></span>
+        <span class="card-title">📊 Analyse CA mensuelle <span id="dash-ca-subtitle" style="font-size:.7rem;font-weight:400;color:var(--g500);margin-left:8px;">regroupé par date de facture</span></span>
         <div style="display:flex;gap:8px;align-items:center;">
           <span id="dash-ca-status" style="font-size:.72rem;color:var(--g500);"></span>
           <button class="btn btn-ghost" id="dash-ca-reload" onclick="dashCaReset()" style="display:none;font-size:.72rem;padding:.3rem .7rem;">↺ Nouveau fichier</button>
@@ -838,6 +838,11 @@ textarea { resize:vertical; min-height:80px; }
         <!-- Filtres -->
         <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;padding:.6rem .8rem;background:var(--surface2);border-radius:8px;margin-bottom:1rem;">
           <span style="font-size:.7rem;font-weight:600;color:var(--g600);text-transform:uppercase;letter-spacing:.05em;">Filtres :</span>
+          <select class="filter-select" id="dash-ca-datecol" onchange="dashCaChangeDateCol(this.value)" style="font-size:.75rem;">
+            <option value="facture" selected>📅 Date Facture</option>
+            <option value="livraison">📦 Date Livraison</option>
+            <option value="commande">📝 Date Commande</option>
+          </select>
           <select class="filter-select" id="dash-ca-year"   onchange="dashCaRender()" style="font-size:.75rem;"><option value="">Toutes années</option></select>
           <select class="filter-select" id="dash-ca-month"  onchange="dashCaRender()" style="font-size:.75rem;">
             <option value="">Tous mois</option>
@@ -3192,6 +3197,19 @@ function suiviRender() {
 // ═══ ANALYSE CA MENSUELLE — dashboard intégré (version enrichie) ═══
 var dashCaRows = [];
 var dashCharts = {};
+var dashCaDateCol = 'facture'; // par défaut : date de facture
+var dashCaRawJson = null;      // garde le JSON brut pour reparser au changement de date
+
+function dashCaChangeDateCol(val) {
+  dashCaDateCol = val || 'facture';
+  var labels = { facture:'date de facture', livraison:'date de livraison', commande:'date de commande' };
+  var subEl = document.getElementById('dash-ca-subtitle');
+  if (subEl) subEl.textContent = 'regroupé par ' + (labels[dashCaDateCol] || 'date de facture');
+  // Si on a déjà un fichier chargé, on retraite avec la nouvelle date de référence
+  if (dashCaRawJson && dashCaRawJson.length) {
+    dashCaProcess(dashCaRawJson);
+  }
+}
 
 function dashCaReset() {
   dashCaRows = [];
@@ -3219,6 +3237,7 @@ function dashCaLoad(file) {
       var wb = XLSX.read(data, { type: 'array', cellDates: true });
       var ws = wb.Sheets[wb.SheetNames[0]];
       var json = XLSX.utils.sheet_to_json(ws, { defval: null, raw: false, dateNF: 'yyyy-mm-dd' });
+      dashCaRawJson = json;  // conserver pour reparser si on change de date de réf
       dashCaProcess(json);
     } catch(err) {
       toast('Erreur lecture : '+err.message,'err');
@@ -3249,9 +3268,13 @@ function dashCaProcess(rows) {
       else if (numFac) statut = 'facturee';
       else statut = 'en_cours';
 
-      // Date de référence : date de livraison (chiffre d'affaires réel du mois)
-      //   fallback : date facture puis date commande
-      var dRef = dLiv || dFac || dCmd;
+      // Date de référence paramétrable via le sélecteur "dash-ca-datecol"
+      //   par défaut : date de facture (correspond à votre tableau Excel)
+      var dateCol = (typeof dashCaDateCol !== 'undefined') ? dashCaDateCol : 'facture';
+      var dRef;
+      if (dateCol === 'livraison') dRef = dLiv || dFac || dCmd;
+      else if (dateCol === 'commande') dRef = dCmd || dFac || dLiv;
+      else dRef = dFac || dLiv || dCmd;
 
       return {
         ca: ca, statut: statut,
