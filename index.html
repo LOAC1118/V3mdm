@@ -3408,14 +3408,34 @@ function dashCaRender() {
   dashCaDrawCharts(filtered, months, moisNames);
   dashCaDrawTops(filtered);
 
-  // ═══ DEBUG INFO (visible seulement si #dash-ca-debug existe) ═══
+  // ═══ DEBUG INFO ═══
   var dbg = document.getElementById('dash-ca-debug');
   if (dbg) {
-    var info = 'Debug : ' + dashCaRows.length + ' lignes totales · ' +
-      filtered.length + ' après filtres · ' +
-      months.length + ' mois · ' +
-      'Totaux filtered : Facturé=' + Math.round(totFac) + ' En cours=' + Math.round(totCours) + ' Avoirs=' + Math.round(totAvoirs);
-    dbg.textContent = info;
+    // Stats brutes sur dashCaRows (avant filtres UI)
+    var rawFac = 0, rawEc = 0, rawAv = 0, rawOther = 0;
+    dashCaRows.forEach(function(r) {
+      if (r.statut === 'facturee') rawFac += r.ca;
+      else if (r.statut === 'en_cours') rawEc += r.ca;
+      else if (r.statut === 'avoir') rawAv += r.ca;
+      else rawOther += r.ca;
+    });
+    // Avril 2026 brut (sans filtre UI)
+    var avr = dashCaRows.filter(function(r){ return r.mois === '2026-04'; });
+    var avrFac = avr.filter(function(r){ return r.statut === 'facturee'; }).reduce(function(s,r){return s+r.ca;},0);
+    var avrEc  = avr.filter(function(r){ return r.statut === 'en_cours'; }).reduce(function(s,r){return s+r.ca;},0);
+    var avrAv  = avr.filter(function(r){ return r.statut === 'avoir'; }).reduce(function(s,r){return s+r.ca;},0);
+
+    dbg.innerHTML =
+      '<div><strong>📊 Fichier brut :</strong> ' + dashCaRows.length + ' lignes · ' +
+      'Facturé=' + Math.round(rawFac).toLocaleString('fr-FR') + '€ · ' +
+      'En cours=' + Math.round(rawEc).toLocaleString('fr-FR') + '€ · ' +
+      'Avoirs=' + Math.round(rawAv).toLocaleString('fr-FR') + '€ · ' +
+      'Autre=' + Math.round(rawOther).toLocaleString('fr-FR') + '€</div>' +
+      '<div><strong>📅 Avril 2026 (brut) :</strong> ' + avr.length + ' cmds · ' +
+      'Facturé=' + Math.round(avrFac).toLocaleString('fr-FR') + '€ · ' +
+      'En cours=' + Math.round(avrEc).toLocaleString('fr-FR') + '€ · ' +
+      'Avoirs=' + Math.round(avrAv).toLocaleString('fr-FR') + '€</div>' +
+      '<div><strong>🎯 Filtres actifs :</strong> ' + filtered.length + ' / ' + dashCaRows.length + ' lignes</div>';
   }
 }
 
