@@ -3250,6 +3250,42 @@ function dashCaLoad(file) {
   reader.readAsArrayBuffer(file);
 }
 
+// Parsing robuste de nombres : gère tous les formats (FR, US, espaces)
+function parseNum(v) {
+  if (v === null || v === undefined || v === '') return 0;
+  if (typeof v === 'number') return v;
+  var s = String(v).trim();
+  if (!s) return 0;
+  // Retirer tout sauf chiffres, virgule, point, moins
+  s = s.replace(/[^\d,.\-]/g, '');
+  // Détecter le format : si on a BOTH virgule ET point, le dernier est décimal
+  var lastComma = s.lastIndexOf(',');
+  var lastDot = s.lastIndexOf('.');
+  if (lastComma >= 0 && lastDot >= 0) {
+    // Format mixte : le séparateur décimal est le dernier
+    if (lastComma > lastDot) {
+      // "1.234,56" FR → enlever les points, remplacer , par .
+      s = s.replace(/\./g, '').replace(',', '.');
+    } else {
+      // "1,234.56" US → enlever les virgules
+      s = s.replace(/,/g, '');
+    }
+  } else if (lastComma >= 0) {
+    // Que des virgules : séparateur décimal
+    // Sauf si plusieurs virgules (ex "1,234,567") → c'est un séparateur milliers US sans décimale
+    var commaCount = (s.match(/,/g) || []).length;
+    if (commaCount > 1 || s.length - lastComma - 1 === 3) {
+      // Probablement séparateur milliers US
+      s = s.replace(/,/g, '');
+    } else {
+      s = s.replace(',', '.');
+    }
+  }
+  // Sinon format propre ou avec juste des points
+  var n = parseFloat(s);
+  return isNaN(n) ? 0 : n;
+}
+
 function dashCaProcess(rows) {
   dashCaRows = rows
     .filter(function(r) {
@@ -3264,7 +3300,7 @@ function dashCaProcess(rows) {
       var dFac = suiviParseDate(r['Facture']);
       var dLiv = suiviParseDate(r['Livré']);
       var numFac = r['N° Facture'];
-      var ca = parseFloat(String(r['CA HT']||'0').replace(',','.')) || 0;
+      var ca = parseNum(r['CA HT']);
       // Règle métier : le statut dépend UNIQUEMENT de la présence du N° Facture
       var statut;
       if (ca < 0) statut = 'avoir';
