@@ -931,6 +931,9 @@ textarea { resize:vertical; min-height:80px; }
           </div>
         </div>
 
+        <!-- Debug info -->
+        <div id="dash-ca-debug" style="font-size:.68rem;color:var(--g600);padding:.4rem .7rem;background:#fff7ed;border:1px solid #fed7aa;border-radius:6px;margin-bottom:.6rem;font-family:ui-monospace,monospace;"></div>
+
         <!-- Graphique évolution mensuelle -->
         <div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:1rem;margin-bottom:1rem;">
           <div style="font-size:.78rem;font-weight:600;color:var(--g700);margin-bottom:.5rem;">Évolution mensuelle (CA en cours · Reste à facturer · Facturé)</div>
@@ -3404,6 +3407,16 @@ function dashCaRender() {
   // ═══ GRAPHIQUES ═══
   dashCaDrawCharts(filtered, months, moisNames);
   dashCaDrawTops(filtered);
+
+  // ═══ DEBUG INFO (visible seulement si #dash-ca-debug existe) ═══
+  var dbg = document.getElementById('dash-ca-debug');
+  if (dbg) {
+    var info = 'Debug : ' + dashCaRows.length + ' lignes totales · ' +
+      filtered.length + ' après filtres · ' +
+      months.length + ' mois · ' +
+      'Totaux filtered : Facturé=' + Math.round(totFac) + ' En cours=' + Math.round(totCours) + ' Avoirs=' + Math.round(totAvoirs);
+    dbg.textContent = info;
+  }
 }
 
 function dashCaRenderCurrentMonth(filtered, byMonth, months) {
