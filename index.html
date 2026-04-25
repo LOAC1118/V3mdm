@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>MDM 2026 — CRM v3.7 [6241]</title>
+<title>MDM 2026 — CRM v3.8 [6810]</title>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Lora:ital,wght@0,500;0,600;1,400&display=swap" rel="stylesheet">
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Lora:ital,wght@0,500;0,600;1,400&display=swap');
@@ -1196,8 +1196,23 @@ textarea { resize:vertical; min-height:80px; }
 
       <div id="cdb-import-step2" style="display:none;">
         <div style="font-size:.82rem;margin-bottom:.6rem;">✅ Fichier lu : <strong id="cdb-import-filename"></strong> · <span id="cdb-import-nbrows">0</span> lignes détectées</div>
-        <div style="font-size:.78rem;margin-bottom:.4rem;color:var(--g700);font-weight:600;">Correspondance des colonnes :</div>
-        <div id="cdb-import-mapping" style="max-height:340px;overflow-y:auto;border:1px solid var(--border);border-radius:7px;padding:.6rem;"></div>
+
+        <!-- Mode rapide : import sans mapping -->
+        <div style="background:#f0fdf4;border:1px solid #86efac;border-radius:7px;padding:.7rem .9rem;margin-bottom:.8rem;">
+          <div style="font-size:.78rem;font-weight:600;color:#15803d;margin-bottom:.4rem;">🚀 Import rapide (recommandé)</div>
+          <div style="font-size:.72rem;color:#166534;margin-bottom:.5rem;">Le système détecte automatiquement les colonnes Code, Nom, Email, Tél, Adresse, etc.</div>
+          <button class="btn btn-primary" onclick="cdbImportApplyAuto()" style="font-size:.8rem;padding:.4rem .9rem;background:#16a34a;border-color:#16a34a;">⚡ Importer automatiquement</button>
+        </div>
+
+        <details style="margin-bottom:.6rem;">
+          <summary style="font-size:.78rem;color:var(--g700);font-weight:600;cursor:pointer;">⚙️ Mapping manuel des colonnes (avancé)</summary>
+          <div id="cdb-import-mapping" style="max-height:340px;overflow-y:auto;border:1px solid var(--border);border-radius:7px;padding:.6rem;margin-top:.5rem;"></div>
+        </details>
+
+        <!-- Aperçu colonnes détectées -->
+        <div style="font-size:.7rem;color:var(--g600);margin-top:.5rem;padding:.5rem .7rem;background:var(--g100);border-radius:5px;">
+          <strong>Colonnes détectées :</strong> <span id="cdb-import-cols-preview">—</span>
+        </div>
       </div>
     </div>
     <div class="modal-foot">
@@ -3373,7 +3388,7 @@ function dashCaProcess(rows) {
 
 // ═══════════════════════════════════════════════
 // VERSION DU CODE — pour vérifier le déploiement
-console.log('%c[MDM CRM] Version chargée : v3.7-mapping-' + Date.now(), 'color:#2563b0;font-weight:bold;font-size:14px');
+console.log('%c[MDM CRM] Version chargée : v3.8-quick-importmapping-' + Date.now(), 'color:#2563b0;font-weight:bold;font-size:14px');
 
 // ═══════════════════════════════════════════════
 // SAUVEGARDE / CHARGEMENT FIRESTORE DES COMMANDES
@@ -4496,12 +4511,20 @@ function cdbImportRead(file) {
       if (elFn) elFn.textContent = file.name;
       if (elNb) elNb.textContent = validJson.length;
 
+      // Stocker les colonnes pour l'import auto
+      cdbImportColsIndex = cols;
+
+      // Aperçu visuel des colonnes
+      var elPrev = document.getElementById('cdb-import-cols-preview');
+      if (elPrev) elPrev.textContent = cols.join(' · ');
+
+      // Construire le mapping (auto-détection des colonnes)
       try {
         cdbImportBuildMapping(cols);
       } catch(eMap) {
         console.error('[CDB] Erreur buildMapping:', eMap);
-        toast('Erreur construction mapping : ' + eMap.message, 'err');
-        return;
+        // On continue quand même : l'utilisateur peut utiliser l'import rapide
+        toast('Mapping manuel indisponible — utilisez "Import rapide"', 'err');
       }
 
       if (elS1) elS1.style.display = 'none';
@@ -4643,6 +4666,38 @@ function cdbImportBuildMapping(cols) {
   };
 
   console.log('[CDB] buildMapping OK, ' + cols.length + ' colonnes affichées');
+}
+
+function cdbImportApplyAuto() {
+  console.log('[CDB] Import rapide automatique');
+  if (!cdbImportRaw || !cdbImportRaw.length) {
+    toast('Aucune donnée chargée', 'err');
+    return;
+  }
+  // S'assurer que le mapping est rempli (auto-détection)
+  if (!cdbImportMapping || Object.keys(cdbImportMapping).length === 0) {
+    if (!cdbImportColsIndex || !cdbImportColsIndex.length) {
+      toast('Colonnes introuvables', 'err');
+      return;
+    }
+    // Re-faire l'auto-détection
+    cdbImportMapping = {};
+    for (var i = 0; i < cdbImportColsIndex.length; i++) {
+      var c = cdbImportColsIndex[i];
+      if (!c) continue;
+      var low = String(c).toLowerCase().trim();
+      var found = false;
+      for (var key in CDB_AUTO_DETECT) {
+        if (CDB_AUTO_DETECT.hasOwnProperty(key) && (low === key || low.indexOf(key) >= 0)) {
+          cdbImportMapping[c] = CDB_AUTO_DETECT[key];
+          found = true;
+          break;
+        }
+      }
+      if (!found) cdbImportMapping[c] = '_ignore';
+    }
+  }
+  cdbImportApply();
 }
 
 function cdbImportApply() {
