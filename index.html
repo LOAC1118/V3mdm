@@ -4130,20 +4130,46 @@ var CDB_AUTO_DETECT = {
 };
 
 // Chargement initial : cache local puis sync Firestore
-function cdbInit() {
+var cdbCacheLoaded = false;
+var cdbFsLoaded = false;
+
+function cdbLoadCache() {
+  if (cdbCacheLoaded) return;
+  cdbCacheLoaded = true;
   try {
     var cached = localStorage.getItem(CDB_CACHE_KEY);
     if (cached) {
       cdbContacts = JSON.parse(cached);
-      cdbRender();
+      console.log('[CDB] Cache local : ' + cdbContacts.length + ' contacts');
+      // Re-render si la page contacts est ouverte
+      if (typeof cdbRender === 'function') cdbRender();
+      // Si commandes déjà chargées, enrichir
+      if (typeof dashCaRows !== 'undefined' && dashCaRows.length && typeof cdbEnrichFromOrders === 'function') {
+        cdbEnrichFromOrders(dashCaRows);
+      }
     }
   } catch(e) { console.warn('Cache contacts:', e); }
+}
+
+function cdbInit() {
+  cdbLoadCache();
+  if (cdbFsLoaded) return;
+  if (typeof currentUser === 'undefined' || !currentUser) {
+    console.warn('[CDB] Pas connecté, sync Firestore reportée');
+    return;
+  }
+  cdbFsLoaded = true;
+  console.log('[CDB] Sync Firestore...');
   cdbSyncFromFirestore();
 }
 
 function cdbSyncFromFirestore() {
   if (typeof firebase === 'undefined' || !firebase.firestore) {
-    console.warn('Firebase non chargé');
+    console.warn('[CDB] Firebase non chargé');
+    return;
+  }
+  if (typeof currentUser !== 'undefined' && !currentUser) {
+    console.warn('[CDB] Pas connecté, sync différée');
     return;
   }
   try {
@@ -4828,13 +4854,36 @@ function cdbExportCsv() {
   toast('Export CSV : ' + cdbContacts.length + ' contacts', 'ok');
 }
 
-// Initialiser au chargement Firebase
+// Initialiser : cache local instantané puis sync Firestore après auth
 (function() {
-  function tryInit() {
-    if (typeof firebase !== 'undefined' && firebase.firestore) cdbInit();
-    else setTimeout(tryInit, 300);
+  // 1. Charger le cache LOCAL dès que possible (ne nécessite pas Firebase ni auth)
+  function tryLoadCache() {
+    if (typeof cdbLoadCache === 'function') {
+      cdbLoadCache();
+    } else {
+      setTimeout(tryLoadCache, 100);
+    }
   }
-  window.addEventListener('load', tryInit);
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', tryLoadCache);
+  } else {
+    tryLoadCache();
+  }
+
+  // 2. Sync Firestore : attendre que l'utilisateur soit connecté
+  function waitForAuth() {
+    if (typeof firebase !== 'undefined' && firebase.auth) {
+      firebase.auth().onAuthStateChanged(function(user) {
+        if (user) {
+          // currentUser sera dispo dans la milliseconde suivante
+          setTimeout(cdbInit, 800);
+        }
+      });
+    } else {
+      setTimeout(waitForAuth, 300);
+    }
+  }
+  waitForAuth();
 })();
 
 // ═══════════════════════════════════════════════
