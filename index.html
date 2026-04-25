@@ -4468,19 +4468,34 @@ function cdbImportRead(file) {
         return;
       }
 
-      // Récupérer les colonnes en fusionnant les clés des 5 premières lignes
-      // (au cas où les premières lignes auraient moins de colonnes)
+      // Filtrer les lignes vides
+      json = json.filter(function(r) { return r && typeof r === 'object'; });
+      if (!json.length) {
+        toast('Aucune donnée valide dans le fichier', 'err');
+        console.error('[CDB] Toutes les lignes sont vides ou invalides');
+        return;
+      }
+
+      // Récupérer les colonnes en fusionnant les clés des 10 premières lignes
       var allCols = {};
-      json.slice(0, 5).forEach(function(row) {
-        Object.keys(row).forEach(function(k) {
-          if (k && !k.startsWith('__EMPTY')) allCols[k] = true;
-        });
+      json.slice(0, 10).forEach(function(row) {
+        if (!row || typeof row !== 'object') return;
+        try {
+          var keys = Object.keys(row);
+          keys.forEach(function(k) {
+            if (k && typeof k === 'string' && k.indexOf('__EMPTY') !== 0) {
+              allCols[k] = true;
+            }
+          });
+        } catch(e) {
+          console.warn('[CDB] Ligne ignorée:', e);
+        }
       });
       var cols = Object.keys(allCols);
       console.log('[CDB] Colonnes détectées:', cols);
 
       if (!cols.length) {
-        toast('Aucune colonne valide détectée', 'err');
+        toast('Aucune colonne avec un nom valide détectée. Vérifiez que la 1re ligne contient les en-têtes.', 'err');
         return;
       }
       cdbImportRaw = json;
@@ -4535,9 +4550,13 @@ function cdbImportBuildMapping(cols) {
     var sel = cdbImportMapping[c];
     var sample = '';
     try {
-      var samples = cdbImportRaw.slice(0, 3).map(function(r){ return r[c]; }).filter(function(v){ return v !== null && v !== undefined && v !== ''; }).slice(0,2);
-      sample = samples.join(' / ');
-    } catch(e) {}
+      var samples = cdbImportRaw.slice(0, 5)
+        .filter(function(r){ return r && typeof r === 'object'; })
+        .map(function(r){ return r[c]; })
+        .filter(function(v){ return v !== null && v !== undefined && v !== ''; })
+        .slice(0,2);
+      sample = samples.map(function(s){ return String(s); }).join(' / ');
+    } catch(e) { console.warn('[CDB] Sample error:', e); }
 
     var options = Object.keys(CDB_FIELDS).map(function(k) {
       var kSel = (sel === k) ? ' selected' : '';
@@ -4573,8 +4592,10 @@ function cdbImportApply() {
   if (!cdbImportRaw || !cdbImportRaw.length) { toast('Rien à importer', 'err'); return; }
   if (!confirm('Remplacer toute la base actuelle (' + cdbContacts.length + ' contacts) par ' + cdbImportRaw.length + ' nouveaux contacts ?')) return;
 
-  // Convertir les lignes
-  var newContacts = cdbImportRaw.map(function(row, idx) {
+  // Convertir les lignes (en filtrant les vides)
+  var newContacts = cdbImportRaw
+    .filter(function(r){ return r && typeof r === 'object'; })
+    .map(function(row, idx) {
     var c = { id: 'c_' + Date.now() + '_' + idx };
     Object.keys(cdbImportMapping).forEach(function(col) {
       var field = cdbImportMapping[col];
