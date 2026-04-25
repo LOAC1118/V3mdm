@@ -4071,7 +4071,8 @@ function dashCaDrawTops(filtered) {
 // ═══════════════════════════════════════════════
 var CDB_CACHE_KEY = 'mdm_contacts_cache_v1';
 var cdbContacts = [];          // array complet de contacts
-var cdbImportRaw = null;       // raw data de l\'import en attente
+var cdbImportRaw = null;
+var cdbImportColsIndex = [];       // raw data de l\'import en attente
 var cdbImportMapping = {};     // colonne fichier → champ DB
 var cdbSelection = {};         // id → true (sélection pour mailing)
 
@@ -4374,24 +4375,39 @@ function cdbOpenImport() {
 }
 
 function cdbImportRead(file) {
-  if (!file) return;
-  if (typeof XLSX === 'undefined') { toast('SheetJS non chargé', 'err'); return; }
+  console.log('[CDB] cdbImportRead appelée avec', file);
+  if (!file) { console.warn('[CDB] Pas de fichier'); return; }
+  if (typeof XLSX === 'undefined') { toast('SheetJS non chargé', 'err'); console.error('[CDB] XLSX undefined'); return; }
   var reader = new FileReader();
+  reader.onerror = function(e) {
+    console.error('[CDB] FileReader error', e);
+    toast('Erreur lecture fichier', 'err');
+  };
   reader.onload = function(e) {
     try {
+      console.log('[CDB] Fichier lu, parsing XLSX...');
       var data = new Uint8Array(e.target.result);
       var wb = XLSX.read(data, { type: 'array', cellDates: true });
+      console.log('[CDB] Sheets:', wb.SheetNames);
       var ws = wb.Sheets[wb.SheetNames[0]];
       var json = XLSX.utils.sheet_to_json(ws, { defval: null, raw: false, dateNF: 'yyyy-mm-dd' });
+      console.log('[CDB] Lignes parsées:', json.length);
       if (!json.length) { toast('Fichier vide', 'err'); return; }
       cdbImportRaw = json;
-      document.getElementById('cdb-import-filename').textContent = file.name;
-      document.getElementById('cdb-import-nbrows').textContent = json.length;
+      var f1 = document.getElementById('cdb-import-filename');
+      var f2 = document.getElementById('cdb-import-nbrows');
+      var s1 = document.getElementById('cdb-import-step1');
+      var s2 = document.getElementById('cdb-import-step2');
+      var ap = document.getElementById('cdb-import-apply');
+      if (f1) f1.textContent = file.name;
+      if (f2) f2.textContent = json.length;
       cdbImportBuildMapping(Object.keys(json[0]));
-      document.getElementById('cdb-import-step1').style.display = 'none';
-      document.getElementById('cdb-import-step2').style.display = '';
-      document.getElementById('cdb-import-apply').style.display = '';
+      if (s1) s1.style.display = 'none';
+      if (s2) s2.style.display = '';
+      if (ap) ap.style.display = '';
+      console.log('[CDB] Étape 2 affichée');
     } catch(err) {
+      console.error('[CDB] Erreur parsing:', err);
       toast('Erreur lecture : ' + err.message, 'err');
     }
   };
@@ -4403,31 +4419,63 @@ function cdbImportBuildMapping(cols) {
   // Auto-détection
   cols.forEach(function(c) {
     var low = String(c).toLowerCase().trim();
+    var found = false;
     for (var key in CDB_AUTO_DETECT) {
       if (low === key || low.indexOf(key) >= 0) {
         cdbImportMapping[c] = CDB_AUTO_DETECT[key];
-        return;
+        found = true;
+        break;
       }
     }
-    cdbImportMapping[c] = '_ignore';
+    if (!found) cdbImportMapping[c] = '_ignore';
   });
 
   var container = document.getElementById('cdb-import-mapping');
-  container.innerHTML = cols.map(function(c) {
+  if (!container) {
+    console.error('[CDB] Container cdb-import-mapping introuvable');
+    return;
+  }
+
+  // Construire le HTML SANS onclick/onchange inline (utiliser data-attributes)
+  // On indexe les colonnes par numéro pour éviter les pbms d'échappement
+  cdbImportColsIndex = cols;  // garde la liste pour le handler
+
+  container.innerHTML = cols.map(function(c, idx) {
     var sel = cdbImportMapping[c];
-    var sample = cdbImportRaw.slice(0, 3).map(function(r){ return r[c]; }).filter(function(v){ return v !== null && v !== undefined && v !== ''; }).slice(0,2).join(' / ');
+    var sample = '';
+    try {
+      var samples = cdbImportRaw.slice(0, 3).map(function(r){ return r[c]; }).filter(function(v){ return v !== null && v !== undefined && v !== ''; }).slice(0,2);
+      sample = samples.join(' / ');
+    } catch(e) {}
+
     var options = Object.keys(CDB_FIELDS).map(function(k) {
       var kSel = (sel === k) ? ' selected' : '';
       return '<option value="'+k+'"'+kSel+'>' + CDB_FIELDS[k] + '</option>';
     }).join('');
+
     return '<div style="display:grid;grid-template-columns:1fr 2rem 1.5fr;align-items:center;gap:8px;padding:.4rem 0;border-bottom:1px solid var(--border);">' +
       '<div><div style="font-size:.78rem;font-weight:500;color:var(--g900);">' + cdbEsc(c) + '</div>' +
       (sample ? '<div style="font-size:.68rem;color:var(--g500);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">ex: ' + cdbEsc(sample) + '</div>' : '') +
       '</div>' +
       '<div style="text-align:center;color:var(--g400);">→</div>' +
-      '<select onchange="cdbImportMapping[\''+cdbEsc(c).replace(/\"/g,'&quot;')+'\']=this.value;" style="font-size:.78rem;">' + options + '</select>' +
+      '<select data-cdb-mapping-idx="' + idx + '" style="font-size:.78rem;">' + options + '</select>' +
     '</div>';
   }).join('');
+
+  // Attacher les handlers via event delegation
+  container.onchange = function(e) {
+    var t = e.target;
+    if (t.tagName === 'SELECT' && t.hasAttribute('data-cdb-mapping-idx')) {
+      var i = parseInt(t.getAttribute('data-cdb-mapping-idx'));
+      var col = cdbImportColsIndex[i];
+      if (col !== undefined) {
+        cdbImportMapping[col] = t.value;
+        console.log('[CDB] Mapping mis à jour:', col, '→', t.value);
+      }
+    }
+  };
+
+  console.log('[CDB] Mapping construit pour', cols.length, 'colonnes');
 }
 
 function cdbImportApply() {
