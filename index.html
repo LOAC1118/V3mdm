@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>MDM 2026 — CRM v3.5 [5726]</title>
+<title>MDM 2026 — CRM v3.6 [6748]</title>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Lora:ital,wght@0,500;0,600;1,400&display=swap" rel="stylesheet">
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Lora:ital,wght@0,500;0,600;1,400&display=swap');
@@ -3373,7 +3373,7 @@ function dashCaProcess(rows) {
 
 // ═══════════════════════════════════════════════
 // VERSION DU CODE — pour vérifier le déploiement
-console.log('%c[MDM CRM] Version chargée : v3.5-fix-import-' + Date.now(), 'color:#2563b0;font-weight:bold;font-size:14px');
+console.log('%c[MDM CRM] Version chargée : v3.6-bulletproof-' + Date.now(), 'color:#2563b0;font-weight:bold;font-size:14px');
 
 // ═══════════════════════════════════════════════
 // SAUVEGARDE / CHARGEMENT FIRESTORE DES COMMANDES
@@ -4379,166 +4379,182 @@ function cdbOpenImport() {
 }
 
 function cdbImportRead(file) {
-  console.log('[CDB] cdbImportRead appelée avec', file);
-  if (!file) { console.warn('[CDB] Pas de fichier'); return; }
-  if (typeof XLSX === 'undefined') { toast('SheetJS non chargé', 'err'); console.error('[CDB] XLSX undefined'); return; }
+  console.log('[CDB] === DÉBUT IMPORT ===');
+  console.log('[CDB] Fichier reçu:', file);
 
-  // Diagnostic du fichier
-  console.log('[CDB] Fichier :', {
-    name: file.name,
-    size: file.size,
-    type: file.type,
-    lastModified: new Date(file.lastModified)
-  });
+  if (!file) {
+    console.warn('[CDB] Aucun fichier sélectionné');
+    return;
+  }
+  if (typeof XLSX === 'undefined') {
+    toast('SheetJS non chargé', 'err');
+    console.error('[CDB] XLSX undefined');
+    return;
+  }
+  console.log('[CDB] Nom:', file.name, '| Taille:', file.size, '| Type:', file.type);
 
   if (file.size === 0) {
-    toast('Fichier vide (0 octet)', 'err');
-    console.error('[CDB] File size = 0');
-    return;
-  }
-  if (file.size > 50 * 1024 * 1024) {
-    toast('Fichier trop volumineux (>50 Mo)', 'err');
+    toast('Fichier vide', 'err');
     return;
   }
 
-  // Essai n°1 : ArrayBuffer (méthode standard)
-  function tryArrayBuffer() {
-    var reader = new FileReader();
-    reader.onerror = function(e) {
-      console.error('[CDB] ArrayBuffer error:', reader.error, e);
-      var msg = reader.error ? reader.error.name + ' : ' + reader.error.message : 'inconnu';
-      toast('Erreur lecture (ArrayBuffer): ' + msg, 'err');
-      // Tenter méthode alternative
-      console.log('[CDB] Tentative méthode binary...');
-      tryBinaryString();
-    };
-    reader.onload = function(e) { processData(e.target.result, 'array'); };
-    try {
-      reader.readAsArrayBuffer(file);
-    } catch(err) {
-      console.error('[CDB] readAsArrayBuffer threw:', err);
-      tryBinaryString();
-    }
-  }
+  var reader = new FileReader();
 
-  // Essai n°2 : BinaryString (fallback pour vieux navigateurs ou problèmes spéciaux)
-  function tryBinaryString() {
-    var reader = new FileReader();
-    reader.onerror = function(e) {
-      console.error('[CDB] BinaryString error:', reader.error);
-      var msg = reader.error ? reader.error.name + ' : ' + (reader.error.message || 'pas de détail') : 'inconnu';
-      toast('Impossible de lire ce fichier : ' + msg + '. Fermez Excel ou copiez le fichier ailleurs.', 'err');
-    };
-    reader.onload = function(e) { processData(e.target.result, 'binary'); };
-    try {
-      reader.readAsBinaryString(file);
-    } catch(err) {
-      console.error('[CDB] readAsBinaryString threw:', err);
-      toast('Lecture impossible : ' + err.message, 'err');
-    }
-  }
+  reader.onerror = function() {
+    console.error('[CDB] FileReader.onerror:', reader.error);
+    toast('Erreur lecture fichier : ' + (reader.error ? reader.error.name : 'inconnu'), 'err');
+  };
 
-  function processData(rawData, mode) {
+  reader.onload = function(e) {
     try {
-      var sizeInfo = (mode === 'array') ? rawData.byteLength + ' octets' : rawData.length + ' chars';
-      console.log('[CDB] Fichier lu (mode ' + mode + '), taille:', sizeInfo, ', parsing XLSX...');
-      var wb;
-      if (mode === 'array') {
-        var data = new Uint8Array(rawData);
-        wb = XLSX.read(data, { type: 'array', cellDates: true });
-      } else {
-        wb = XLSX.read(rawData, { type: 'binary', cellDates: true });
+      console.log('[CDB] FileReader.onload, byteLength:', e.target.result.byteLength);
+
+      var data = new Uint8Array(e.target.result);
+      console.log('[CDB] Uint8Array OK, parsing XLSX...');
+
+      var wb = XLSX.read(data, { type: 'array', cellDates: true });
+      console.log('[CDB] Workbook lu, sheets:', wb.SheetNames);
+
+      if (!wb.SheetNames || !wb.SheetNames.length) {
+        toast('Fichier sans feuille', 'err');
+        return;
       }
-      console.log('[CDB] Sheets disponibles:', wb.SheetNames);
 
-      // Trouver la première feuille avec des données (pas juste la première)
-      var ws = null, json = [];
-      for (var sn = 0; sn < wb.SheetNames.length; sn++) {
-        var sname = wb.SheetNames[sn];
-        var trial = wb.Sheets[sname];
-        var trialJson = XLSX.utils.sheet_to_json(trial, { defval: null, raw: false, dateNF: 'yyyy-mm-dd' });
-        console.log('[CDB] Feuille "'+sname+'" :', trialJson.length, 'lignes');
-        if (trialJson.length) {
-          ws = trial;
-          json = trialJson;
-          console.log('[CDB] Feuille retenue: "'+sname+'"');
+      // Parcourir les feuilles pour trouver des données
+      var json = null;
+      var sheetUsed = null;
+      for (var i = 0; i < wb.SheetNames.length; i++) {
+        var sname = wb.SheetNames[i];
+        var ws = wb.Sheets[sname];
+        if (!ws) continue;
+        var trial = XLSX.utils.sheet_to_json(ws, { defval: null, raw: false, dateNF: 'yyyy-mm-dd' });
+        console.log('[CDB] Feuille "' + sname + '": ' + trial.length + ' lignes');
+        if (trial && trial.length > 0) {
+          json = trial;
+          sheetUsed = sname;
           break;
         }
       }
 
-      if (!json.length) {
-        toast('Fichier vide ou mauvais format', 'err');
-        console.error('[CDB] Aucune donnée trouvée dans aucune feuille');
+      if (!json || json.length === 0) {
+        toast('Aucune donnée dans le fichier', 'err');
         return;
       }
 
-      // Filtrer les lignes vides
-      json = json.filter(function(r) { return r && typeof r === 'object'; });
-      if (!json.length) {
-        toast('Aucune donnée valide dans le fichier', 'err');
-        console.error('[CDB] Toutes les lignes sont vides ou invalides');
-        return;
-      }
+      console.log('[CDB] Feuille utilisée: "' + sheetUsed + '" avec ' + json.length + ' lignes');
 
-      // Récupérer les colonnes en fusionnant les clés des 10 premières lignes
-      var allCols = {};
-      json.slice(0, 10).forEach(function(row) {
-        if (!row || typeof row !== 'object') return;
-        try {
-          var keys = Object.keys(row);
-          keys.forEach(function(k) {
-            if (k && typeof k === 'string' && k.indexOf('__EMPTY') !== 0) {
-              allCols[k] = true;
-            }
-          });
-        } catch(e) {
-          console.warn('[CDB] Ligne ignorée:', e);
+      // Filtrer les lignes invalides
+      var validJson = [];
+      for (var k = 0; k < json.length; k++) {
+        var row = json[k];
+        if (row !== null && row !== undefined && typeof row === 'object') {
+          validJson.push(row);
         }
-      });
-      var cols = Object.keys(allCols);
-      console.log('[CDB] Colonnes détectées:', cols);
+      }
+      console.log('[CDB] Lignes valides:', validJson.length, '/', json.length);
 
-      if (!cols.length) {
-        toast('Aucune colonne avec un nom valide détectée. Vérifiez que la 1re ligne contient les en-têtes.', 'err');
+      if (validJson.length === 0) {
+        toast('Toutes les lignes sont vides', 'err');
         return;
       }
-      cdbImportRaw = json;
-      var f1 = document.getElementById('cdb-import-filename');
-      var f2 = document.getElementById('cdb-import-nbrows');
-      var s1 = document.getElementById('cdb-import-step1');
-      var s2 = document.getElementById('cdb-import-step2');
-      var ap = document.getElementById('cdb-import-apply');
-      if (f1) f1.textContent = file.name;
-      if (f2) f2.textContent = json.length;
-      cdbImportBuildMapping(cols);
-      if (s1) s1.style.display = 'none';
-      if (s2) s2.style.display = '';
-      if (ap) ap.style.display = '';
-      console.log('[CDB] Étape 2 affichée');
-    } catch(err) {
-      console.error('[CDB] Erreur parsing:', err);
-      toast('Erreur parsing XLSX : ' + err.message, 'err');
-    }
-  }
 
-  tryArrayBuffer();
+      // Récupérer les colonnes (première ligne valide qui en a)
+      var cols = [];
+      for (var n = 0; n < Math.min(validJson.length, 20); n++) {
+        var rowObj = validJson[n];
+        if (!rowObj || typeof rowObj !== 'object') continue;
+        try {
+          var rowKeys = Object.keys(rowObj);
+          for (var p = 0; p < rowKeys.length; p++) {
+            var ky = rowKeys[p];
+            if (ky && typeof ky === 'string' && cols.indexOf(ky) === -1) {
+              if (ky.indexOf('__EMPTY') !== 0) {
+                cols.push(ky);
+              }
+            }
+          }
+        } catch(eK) {
+          console.warn('[CDB] Erreur Object.keys ligne ' + n + ':', eK);
+        }
+      }
+
+      console.log('[CDB] Colonnes finales (' + cols.length + '):', cols);
+
+      if (cols.length === 0) {
+        toast('Aucune colonne valide trouvée', 'err');
+        return;
+      }
+
+      // Stocker et afficher étape 2
+      cdbImportRaw = validJson;
+      var elFn = document.getElementById('cdb-import-filename');
+      var elNb = document.getElementById('cdb-import-nbrows');
+      var elS1 = document.getElementById('cdb-import-step1');
+      var elS2 = document.getElementById('cdb-import-step2');
+      var elAp = document.getElementById('cdb-import-apply');
+
+      if (elFn) elFn.textContent = file.name;
+      if (elNb) elNb.textContent = validJson.length;
+
+      try {
+        cdbImportBuildMapping(cols);
+      } catch(eMap) {
+        console.error('[CDB] Erreur buildMapping:', eMap);
+        toast('Erreur construction mapping : ' + eMap.message, 'err');
+        return;
+      }
+
+      if (elS1) elS1.style.display = 'none';
+      if (elS2) elS2.style.display = '';
+      if (elAp) elAp.style.display = '';
+
+      console.log('[CDB] === IMPORT ÉTAPE 1 OK, ÉTAPE 2 AFFICHÉE ===');
+
+    } catch(err) {
+      console.error('[CDB] ERREUR onload:', err);
+      console.error('[CDB] Stack:', err.stack);
+      toast('Erreur : ' + err.message, 'err');
+    }
+  };
+
+  try {
+    reader.readAsArrayBuffer(file);
+  } catch(eRead) {
+    console.error('[CDB] readAsArrayBuffer threw:', eRead);
+    toast('Lecture impossible : ' + eRead.message, 'err');
+  }
 }
 
 function cdbImportBuildMapping(cols) {
+  console.log('[CDB] buildMapping appelée avec', cols ? cols.length : 0, 'colonnes');
+
+  if (!cols || !Array.isArray(cols) || cols.length === 0) {
+    console.error('[CDB] cols invalide:', cols);
+    return;
+  }
+
   cdbImportMapping = {};
+
   // Auto-détection
-  cols.forEach(function(c) {
-    var low = String(c).toLowerCase().trim();
+  for (var i = 0; i < cols.length; i++) {
+    var c = cols[i];
+    if (!c || typeof c !== 'string') continue;
+    var low = c.toLowerCase().trim();
     var found = false;
-    for (var key in CDB_AUTO_DETECT) {
-      if (low === key || low.indexOf(key) >= 0) {
-        cdbImportMapping[c] = CDB_AUTO_DETECT[key];
-        found = true;
-        break;
+
+    if (typeof CDB_AUTO_DETECT !== 'undefined' && CDB_AUTO_DETECT) {
+      for (var key in CDB_AUTO_DETECT) {
+        if (CDB_AUTO_DETECT.hasOwnProperty(key)) {
+          if (low === key || low.indexOf(key) >= 0) {
+            cdbImportMapping[c] = CDB_AUTO_DETECT[key];
+            found = true;
+            break;
+          }
+        }
       }
     }
     if (!found) cdbImportMapping[c] = '_ignore';
-  });
+  }
 
   var container = document.getElementById('cdb-import-mapping');
   if (!container) {
@@ -4546,50 +4562,79 @@ function cdbImportBuildMapping(cols) {
     return;
   }
 
-  // Construire le HTML SANS onclick/onchange inline (utiliser data-attributes)
-  // On indexe les colonnes par numéro pour éviter les pbms d'échappement
-  cdbImportColsIndex = cols;  // garde la liste pour le handler
+  cdbImportColsIndex = cols;
 
-  container.innerHTML = cols.map(function(c, idx) {
-    var sel = cdbImportMapping[c];
+  // Construire les options une seule fois
+  var fieldOptions = '';
+  if (typeof CDB_FIELDS !== 'undefined' && CDB_FIELDS) {
+    var fkeys = Object.keys(CDB_FIELDS);
+    for (var fi = 0; fi < fkeys.length; fi++) {
+      var fk = fkeys[fi];
+      fieldOptions += '<option value="' + fk + '">' + CDB_FIELDS[fk] + '</option>';
+    }
+  }
+
+  // Construire chaque ligne
+  var html = '';
+  for (var idx = 0; idx < cols.length; idx++) {
+    var col = cols[idx];
+    if (!col) continue;
+
+    var sel = cdbImportMapping[col] || '_ignore';
+
+    // Sample sécurisé
     var sample = '';
     try {
-      var samples = cdbImportRaw.slice(0, 5)
-        .filter(function(r){ return r && typeof r === 'object'; })
-        .map(function(r){ return r[c]; })
-        .filter(function(v){ return v !== null && v !== undefined && v !== ''; })
-        .slice(0,2);
-      sample = samples.map(function(s){ return String(s); }).join(' / ');
-    } catch(e) { console.warn('[CDB] Sample error:', e); }
+      if (cdbImportRaw && cdbImportRaw.length > 0) {
+        var samples = [];
+        for (var sj = 0; sj < Math.min(cdbImportRaw.length, 5) && samples.length < 2; sj++) {
+          var rr = cdbImportRaw[sj];
+          if (rr && typeof rr === 'object') {
+            var v = rr[col];
+            if (v !== null && v !== undefined && v !== '') {
+              samples.push(String(v).substring(0, 40));
+            }
+          }
+        }
+        sample = samples.join(' / ');
+      }
+    } catch(eS) {
+      console.warn('[CDB] Sample error col=' + col + ':', eS);
+    }
 
-    var options = Object.keys(CDB_FIELDS).map(function(k) {
-      var kSel = (sel === k) ? ' selected' : '';
-      return '<option value="'+k+'"'+kSel+'>' + CDB_FIELDS[k] + '</option>';
-    }).join('');
+    // Options avec selected
+    var opts = fieldOptions.replace(
+      'value="' + sel + '"',
+      'value="' + sel + '" selected'
+    );
 
-    return '<div style="display:grid;grid-template-columns:1fr 2rem 1.5fr;align-items:center;gap:8px;padding:.4rem 0;border-bottom:1px solid var(--border);">' +
-      '<div><div style="font-size:.78rem;font-weight:500;color:var(--g900);">' + cdbEsc(c) + '</div>' +
-      (sample ? '<div style="font-size:.68rem;color:var(--g500);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">ex: ' + cdbEsc(sample) + '</div>' : '') +
-      '</div>' +
-      '<div style="text-align:center;color:var(--g400);">→</div>' +
-      '<select data-cdb-mapping-idx="' + idx + '" style="font-size:.78rem;">' + options + '</select>' +
-    '</div>';
-  }).join('');
+    html += '<div style="display:grid;grid-template-columns:1fr 2rem 1.5fr;align-items:center;gap:8px;padding:.4rem 0;border-bottom:1px solid var(--border);">';
+    html += '<div><div style="font-size:.78rem;font-weight:500;color:var(--g900);">' + cdbEsc(col) + '</div>';
+    if (sample) {
+      html += '<div style="font-size:.68rem;color:var(--g500);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">ex: ' + cdbEsc(sample) + '</div>';
+    }
+    html += '</div>';
+    html += '<div style="text-align:center;color:var(--g400);">→</div>';
+    html += '<select data-cdb-mapping-idx="' + idx + '" style="font-size:.78rem;">' + opts + '</select>';
+    html += '</div>';
+  }
 
-  // Attacher les handlers via event delegation
+  container.innerHTML = html;
+
+  // Handler unique sur le container
   container.onchange = function(e) {
     var t = e.target;
-    if (t.tagName === 'SELECT' && t.hasAttribute('data-cdb-mapping-idx')) {
-      var i = parseInt(t.getAttribute('data-cdb-mapping-idx'));
-      var col = cdbImportColsIndex[i];
-      if (col !== undefined) {
-        cdbImportMapping[col] = t.value;
-        console.log('[CDB] Mapping mis à jour:', col, '→', t.value);
+    if (t && t.tagName === 'SELECT' && t.hasAttribute('data-cdb-mapping-idx')) {
+      var ix = parseInt(t.getAttribute('data-cdb-mapping-idx'));
+      var c = cdbImportColsIndex[ix];
+      if (c !== undefined) {
+        cdbImportMapping[c] = t.value;
+        console.log('[CDB] Mapping:', c, '→', t.value);
       }
     }
   };
 
-  console.log('[CDB] Mapping construit pour', cols.length, 'colonnes');
+  console.log('[CDB] buildMapping OK, ' + cols.length + ' colonnes affichées');
 }
 
 function cdbImportApply() {
