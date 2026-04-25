@@ -3542,6 +3542,10 @@ function dashCaSaveToFirestore() {
 
 function dashCaLoadFromFirestore() {
   if (typeof firebase === 'undefined' || !firebase.firestore) return;
+  if (typeof currentUser !== 'undefined' && !currentUser) {
+    console.warn('[DashCA] Pas connecté, sync Firestore reportée');
+    return;
+  }
   var fdb;
   try { fdb = firebase.firestore(); } catch(e) { return; }
 
@@ -3591,23 +3595,53 @@ function dashCaLoadFromFirestore() {
 }
 
 // Auto-init au chargement de la page
-function dashCaAutoLoad() {
-  // 1. Cache local instantané
+var dashCaCacheLoaded = false;
+var dashCaFsLoaded = false;
+
+function dashCaAutoLoadCache() {
+  if (dashCaCacheLoaded) return;
+  // Le DOM doit être prêt et la section dashboard accessible
+  var content = document.getElementById('dash-ca-content');
+  if (!content) {
+    setTimeout(dashCaAutoLoadCache, 200);
+    return;
+  }
+  dashCaCacheLoaded = true;
   var hadCache = dashCaLoadCache();
-  // 2. Sync Firestore en arrière-plan (rafraîchit si plus récent)
-  setTimeout(function() {
-    dashCaLoadFromFirestore();
-  }, hadCache ? 800 : 100);
+  if (hadCache) {
+    console.log('[DashCA] Cache local chargé :', dashCaRows.length, 'commandes');
+  }
   // Refresh "il y a X min" toutes les minutes
   setInterval(dashCaUpdateLastImportLabel, 60000);
 }
 
-// Lancer dès que Firebase est prêt
-(function tryAutoLoad() {
-  if (typeof firebase !== 'undefined' && firebase.firestore) {
-    setTimeout(dashCaAutoLoad, 500);
+function dashCaAutoLoadFirestore() {
+  if (dashCaFsLoaded) return;
+  if (typeof firebase === 'undefined' || !firebase.firestore) return;
+  if (typeof currentUser === 'undefined' || !currentUser) return;
+  dashCaFsLoaded = true;
+  console.log('[DashCA] Sync Firestore...');
+  dashCaLoadFromFirestore();
+}
+
+// 1. CACHE LOCAL : dès le DOM prêt (avant auth, instant)
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', dashCaAutoLoadCache);
+} else {
+  dashCaAutoLoadCache();
+}
+
+// 2. FIRESTORE : attendre que l'utilisateur soit connecté
+(function waitForAuth() {
+  if (typeof firebase !== 'undefined' && firebase.auth) {
+    firebase.auth().onAuthStateChanged(function(user) {
+      if (user) {
+        // Petit délai pour laisser currentUser s'initialiser
+        setTimeout(dashCaAutoLoadFirestore, 800);
+      }
+    });
   } else {
-    setTimeout(tryAutoLoad, 300);
+    setTimeout(waitForAuth, 300);
   }
 })();
 
