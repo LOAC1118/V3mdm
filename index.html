@@ -1083,13 +1083,15 @@ textarea { resize:vertical; min-height:80px; }
             <thead style="position:sticky;top:0;z-index:10;">
               <tr id="bdc-thead-row">
                 <th style="background:var(--surface);font-size:.6rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--g600);padding:.45rem .55rem;text-align:left;border-bottom:1px solid var(--border);white-space:nowrap;">Code</th>
+                <th style="background:var(--surface);font-size:.6rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--g600);padding:.45rem .55rem;text-align:left;border-bottom:1px solid var(--border);white-space:nowrap;">EAN</th>
                 <th style="background:var(--surface);font-size:.6rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--g600);padding:.45rem .55rem;text-align:left;border-bottom:1px solid var(--border);min-width:180px;">Désignation</th>
                 <th style="background:var(--surface);font-size:.6rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--g600);padding:.45rem .55rem;text-align:left;border-bottom:1px solid var(--border);">Certif.</th>
                 <th style="background:var(--surface);font-size:.6rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--g600);padding:.45rem .55rem;text-align:left;border-bottom:1px solid var(--border);">PCB</th>
                 <th style="background:var(--surface);font-size:.6rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--g600);padding:.45rem .55rem;text-align:left;border-bottom:1px solid var(--border);">TVA</th>
                 <th style="background:var(--surface);font-size:.6rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--g600);padding:.45rem .55rem;text-align:left;border-bottom:1px solid var(--border);">Prix HT</th>
                 <th style="background:var(--surface);font-size:.6rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--g600);padding:.45rem .55rem;text-align:left;border-bottom:1px solid var(--border);">Stock</th>
-                <th style="background:var(--surface);font-size:.6rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--g600);padding:.45rem .55rem;text-align:left;border-bottom:1px solid var(--border);">Qté</th>
+                <th style="background:var(--surface);font-size:.6rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--g600);padding:.45rem .55rem;text-align:center;border-bottom:1px solid var(--border);">Qté</th>
+                <th style="background:var(--surface);font-size:.6rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--g600);padding:.45rem .55rem;text-align:center;border-bottom:1px solid var(--border);" title="Remise en % spécifique à cette ligne (laisser vide pour utiliser la remise globale)">Rem. %</th>
                 <th style="background:var(--surface);font-size:.6rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--g600);padding:.45rem .55rem;text-align:left;border-bottom:1px solid var(--border);">UVC</th>
                 <th style="background:var(--surface);font-size:.6rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--g600);padding:.45rem .55rem;text-align:left;border-bottom:1px solid var(--border);">Total HT</th>
               </tr>
@@ -2098,7 +2100,7 @@ var PRODUCTS = [{"code":"ABRCOU200","libelle":"Abricots secs coupés bio - 200g"
 
 
 
-var bdcQtys = {};
+var bdcQtys = {}; bdcRemiseLigne = {};
 var bdcRemise = 0;
 var bdcSearchMode = 'all';
 var bdcInitDone = false;
@@ -2114,8 +2116,48 @@ function bdcActivate() {
 function bdcFmt(n) { return n.toFixed(2).replace('.',',')+'€'; }
 function bdcEsc(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
 
+var bdcRemiseLigne = {}; // remise par produit : code → %
+
 function bdcPrixNet(p) {
-  return p.pu_ht * (1 - bdcRemise/100);
+  // Priorité : remise par ligne > remise globale
+  var rem = (bdcRemiseLigne[p.code] !== undefined && bdcRemiseLigne[p.code] !== null && bdcRemiseLigne[p.code] !== '')
+    ? parseFloat(bdcRemiseLigne[p.code]) : bdcRemise;
+  if (isNaN(rem)) rem = 0;
+  return p.pu_ht * (1 - rem/100);
+}
+
+function bdcOnRemiseLigne(input) {
+  var code = input.dataset.code;
+  var val = input.value.trim();
+  if (val === '' || isNaN(parseFloat(val))) {
+    delete bdcRemiseLigne[code];
+  } else {
+    var v = parseFloat(val);
+    if (v < 0) v = 0; if (v > 100) v = 100;
+    bdcRemiseLigne[code] = v;
+  }
+  // Recalculer le prix de cette ligne uniquement
+  var p = PRODUCTS.find(function(x){return x.code===code;});
+  if (!p) return;
+  var qty = bdcQtys[code] || 0;
+  var pcb = parseFloat(p.pcb)||1;
+  var pNet = bdcPrixNet(p);
+  // Maj cellule total
+  var cell = document.getElementById('bdc-t-'+code);
+  if (cell) cell.textContent = qty ? bdcFmt(pNet*qty*pcb) : '';
+  // Maj cellule prix (avec/sans rature)
+  var tr = input.closest('tr');
+  if (tr) {
+    var prixTd = tr.children[6]; // colonne Prix HT (après ajout EAN: décalage +1)
+    if (prixTd) {
+      if (pNet < p.pu_ht) {
+        prixTd.innerHTML = '<strong style="color:var(--em400)">'+bdcFmt(pNet)+'</strong> <span style="text-decoration:line-through;color:var(--s700);font-size:10px;">'+bdcFmt(p.pu_ht)+'</span>';
+      } else {
+        prixTd.innerHTML = bdcFmt(pNet);
+      }
+    }
+  }
+  bdcUpdateTotals();
 }
 
 function buildTable() {
@@ -2130,9 +2172,11 @@ function buildTable() {
     var dCode = bdcEsc(p.code);
     var dLib = bdcEsc((p.libelle||'').toLowerCase());
     var dEan = bdcEsc((p.ean||'').toLowerCase());
+    var rl = (typeof bdcRemiseLigne !== 'undefined' && bdcRemiseLigne[p.code] !== undefined) ? bdcRemiseLigne[p.code] : '';
 
     rows += '<tr class="'+hasQty+'" data-code="'+dCode+'" data-lib="'+dLib+'" data-ean="'+dEan+'" style="border-bottom:1px solid rgba(255,255,255,.03);">';
     rows += '<td style="padding:.4rem .55rem;color:var(--s500);font-family:monospace;font-size:.68rem;white-space:nowrap;">'+bdcEsc(p.code)+'</td>';
+    rows += '<td style="padding:.4rem .55rem;color:var(--s500);font-family:monospace;font-size:.66rem;white-space:nowrap;">'+bdcEsc(p.ean||'')+'</td>';
     rows += '<td style="padding:.4rem .55rem;color:var(--s300);max-width:220px;">'+bdcEsc(p.libelle)+'</td>';
     rows += '<td style="padding:.4rem .55rem;">'+(p.certif?'<span style="font-size:.62rem;padding:1px 5px;border-radius:3px;background:rgba(5,150,105,.15);color:var(--em400);">'+bdcEsc(p.certif)+'</span>':'—')+'</td>';
     rows += '<td style="padding:.4rem .55rem;color:var(--s400);">'+(p.pcb||'')+'</td>';
@@ -2151,6 +2195,7 @@ function buildTable() {
     rows += '<td style="padding:.4rem .55rem;">'+stkH+'</td>';
     // Qty
     rows += '<td class="bdc-td-qty" style="padding:.35rem .45rem;"><input type="number" min="0" step="1" value="'+(qty||'')+'" placeholder="0" data-code="'+dCode+'" data-pcb="'+(p.pcb||1)+'" oninput="bdcOnQty(this)" onchange="bdcOnQty(this)"></td>';
+    rows += '<td style="padding:.35rem .45rem;text-align:center;"><input type="number" min="0" max="100" step="0.5" value="'+rl+'" placeholder="—" data-code="'+dCode+'" oninput="bdcOnRemiseLigne(this)" onchange="bdcOnRemiseLigne(this)" style="width:55px;text-align:right;font-size:.78rem;padding:.25rem .4rem;" title="Remise % spécifique à cette ligne"></td>';
     var uvc = qty > 0 ? qty * (p.pcb||1) : '';
     rows += '<td id="bdc-uvc-'+dCode+'" style="padding:.4rem .55rem;font-size:.7rem;color:var(--s500);text-align:center;">'+(uvc||'—')+'</td>';
     rows += '<td id="bdc-t-'+dCode+'" style="padding:.4rem .55rem;font-weight:600;color:var(--em400);white-space:nowrap;">'+(qty?bdcFmt(total):'')+'</td>';
@@ -2231,7 +2276,7 @@ function bdcClearSearch() {
 
 function resetBDC() {
   if (Object.keys(bdcQtys).length && !confirm('Effacer toutes les quantités ?')) return;
-  bdcQtys = {};
+  bdcQtys = {}; bdcRemiseLigne = {};
   buildTable();
 }
 
@@ -2288,7 +2333,8 @@ function bdcSendOrder() {
       var pcb=parseFloat(p.pcb)||1;
       var montantLigne=parseFloat((bdcPrixNet(p)*q*pcb).toFixed(2));
       tN+=montantLigne; nbRefs++;
-      lignes.push({code:p.code,libelle:p.libelle,qty:q,pu_ht:bdcPrixNet(p),total_ht:montantLigne});
+      var remEff = (bdcRemiseLigne[p.code] !== undefined && bdcRemiseLigne[p.code] !== null && bdcRemiseLigne[p.code] !== '') ? parseFloat(bdcRemiseLigne[p.code]) : bdcRemise;
+      lignes.push({code:p.code,ean:p.ean||'',libelle:p.libelle,qty:q,pu_ht:bdcPrixNet(p),pu_brut:p.pu_ht,remise:remEff,total_ht:montantLigne});
     }
   });
   tN=parseFloat(tN.toFixed(2));
@@ -2326,7 +2372,7 @@ function bdcSendOrder() {
       bdcShowAlert('✅ Commande envoyée et enregistrée dans le dashboard !','ok');
       setTimeout(function(){
         if(confirm('Réinitialiser le bon de commande ?')){
-          bdcQtys={}; bdcRemise=0; buildTable(); bdcUpdateTotals();
+          bdcQtys={}; bdcRemiseLigne={}; bdcRemise=0; buildTable(); bdcUpdateTotals();
         }
       },1500);
     } else { throw new Error('Réponse invalide'); }
