@@ -822,6 +822,7 @@ textarea { resize:vertical; min-height:80px; }
         <span class="card-title">📊 Analyse CA mensuelle <span id="dash-ca-subtitle" style="font-size:.7rem;font-weight:400;color:var(--g500);margin-left:8px;">regroupé par date de facture</span></span>
         <div style="display:flex;gap:8px;align-items:center;">
           <span id="dash-ca-status" style="font-size:.72rem;color:var(--g500);"></span>
+          <span id="dash-ca-lastimport" style="font-size:.7rem;color:var(--g600);background:var(--blue-p50);padding:.25rem .55rem;border-radius:6px;border:1px solid var(--blue-p200,#dbeafe);"></span>
           <button class="btn btn-ghost" id="dash-ca-reload" onclick="dashCaReset()" style="display:none;font-size:.72rem;padding:.3rem .7rem;">↺ Nouveau fichier</button>
         </div>
       </div>
@@ -3421,7 +3422,261 @@ function dashCaProcess(rows) {
   }
 
   dashCaRender();
+
+  // ═══ Sauvegarde Firestore + cache localStorage (sauf si chargement depuis Firestore) ═══
+  if (!dashCaSilentLoad) {
+    dashCaSaveToFirestore();
+  }
+  dashCaSaveCache();
 }
+
+// ═══════════════════════════════════════════════
+// SAUVEGARDE / CHARGEMENT FIRESTORE DES COMMANDES
+// Stockage compact dans collection 'commandes_stats'
+// + Cache localStorage pour affichage instantané
+// ═══════════════════════════════════════════════
+var DASHCA_CACHE_KEY = 'mdm_commandes_stats_cache_v1';
+var DASHCA_META_KEY  = 'mdm_commandes_stats_meta_v1';
+var dashCaSilentLoad = false;  // évite la re-sauvegarde lors d'un chargement
+
+function dashCaSaveCache() {
+  try {
+    // On stocke uniquement ce qu'il faut pour reconstruire dashCaRows
+    var compact = dashCaRows.map(function(r) {
+      return {
+        ca: r.ca, statut: r.statut, client: r.client, codeClient: r.codeClient,
+        clientNomKey: r.clientNomKey, numCmd: r.numCmd,
+        dCmd: r.dateCmd ? r.dateCmd.getTime() : null,
+        dLiv: r.dateLiv ? r.dateLiv.getTime() : null,
+        dFac: r.dateFac ? r.dateFac.getTime() : null,
+        dRef: r.dateRef ? r.dateRef.getTime() : null,
+        operateur: r.operateur, transporteur: r.transporteur,
+        mois: r.mois, annee: r.annee
+      };
+    });
+    localStorage.setItem(DASHCA_CACHE_KEY, JSON.stringify(compact));
+    localStorage.setItem(DASHCA_META_KEY, JSON.stringify({
+      lastImport: Date.now(),
+      nbRows: dashCaRows.length,
+      dateCol: dashCaDateCol
+    }));
+    dashCaUpdateLastImportLabel();
+  } catch(e) { console.warn('Cache save error:', e); }
+}
+
+function dashCaLoadCache() {
+  try {
+    var raw = localStorage.getItem(DASHCA_CACHE_KEY);
+    if (!raw) return false;
+    var compact = JSON.parse(raw);
+    if (!compact || !compact.length) return false;
+    dashCaRows = compact.map(function(r) {
+      return {
+        ca: r.ca, statut: r.statut, client: r.client, codeClient: r.codeClient,
+        clientNomKey: r.clientNomKey, numCmd: r.numCmd,
+        dateCmd: r.dCmd ? new Date(r.dCmd) : null,
+        dateLiv: r.dLiv ? new Date(r.dLiv) : null,
+        dateFac: r.dFac ? new Date(r.dFac) : null,
+        dateRef: r.dRef ? new Date(r.dRef) : null,
+        operateur: r.operateur, transporteur: r.transporteur,
+        mois: r.mois, annee: r.annee
+      };
+    });
+    dashCaShowContent();
+    dashCaPopulateFilters();
+    dashCaRender();
+    if (typeof cdbContacts !== 'undefined' && cdbContacts.length) {
+      cdbEnrichFromOrders(dashCaRows);
+    }
+    return true;
+  } catch(e) { console.warn('Cache load error:', e); return false; }
+}
+
+function dashCaShowContent() {
+  var box = document.getElementById('dash-ca-upload');
+  var content = document.getElementById('dash-ca-content');
+  var reload = document.getElementById('dash-ca-reload');
+  var status = document.getElementById('dash-ca-status');
+  if (box) box.style.display = 'none';
+  if (content) content.style.display = '';
+  if (reload) reload.style.display = '';
+  if (status) status.textContent = dashCaRows.length + ' commandes analysées';
+}
+
+function dashCaPopulateFilters() {
+  function uniq(arr){ return [...new Set(arr)].filter(Boolean).sort(); }
+  var years = uniq(dashCaRows.map(function(r){ return r.annee; })).reverse();
+  var ops   = uniq(dashCaRows.map(function(r){ return r.operateur; }));
+  var trans = uniq(dashCaRows.map(function(r){ return r.transporteur; }));
+  var clients = uniq(dashCaRows.map(function(r){ return r.client; }));
+  function fill(id, list, placeholder) {
+    var el = document.getElementById(id);
+    if (!el) return;
+    el.innerHTML = '<option value="">'+placeholder+'</option>' +
+      list.map(function(v){ return '<option value="'+String(v).replace(/"/g,'&quot;')+'">'+String(v)+'</option>'; }).join('');
+  }
+  fill('dash-ca-year',   years,   'Toutes années');
+  fill('dash-ca-op',     ops,     'Tous opérateurs');
+  fill('dash-ca-trans',  trans,   'Tous transporteurs');
+  fill('dash-ca-client', clients, 'Tous clients');
+}
+
+function dashCaUpdateLastImportLabel() {
+  var el = document.getElementById('dash-ca-lastimport');
+  if (!el) return;
+  try {
+    var meta = JSON.parse(localStorage.getItem(DASHCA_META_KEY) || '{}');
+    if (!meta.lastImport) { el.textContent = ''; return; }
+    var d = new Date(meta.lastImport);
+    var diff = (Date.now() - d) / 1000;
+    var ago;
+    if (diff < 60) ago = 'à l\'instant';
+    else if (diff < 3600) ago = 'il y a ' + Math.floor(diff/60) + ' min';
+    else if (diff < 86400) ago = 'il y a ' + Math.floor(diff/3600) + ' h';
+    else ago = 'le ' + d.toLocaleDateString('fr-FR') + ' à ' + d.toLocaleTimeString('fr-FR', {hour:'2-digit',minute:'2-digit'});
+    el.innerHTML = '🕒 Dernier import : <strong>' + ago + '</strong> · ' + meta.nbRows + ' commandes';
+  } catch(e) {}
+}
+
+// === FIRESTORE ===
+function dashCaSaveToFirestore() {
+  if (typeof firebase === 'undefined' || !firebase.firestore || !dashCaRows.length) return;
+  var fdb;
+  try { fdb = firebase.firestore(); } catch(e) { console.warn('Firestore indispo'); return; }
+
+  var status = document.getElementById('dash-ca-status');
+  if (status) status.textContent = dashCaRows.length + ' commandes · sauvegarde Firestore…';
+
+  // Préparer les documents (clé = numCmd ou index)
+  var docs = dashCaRows.map(function(r, i) {
+    var id = r.numCmd ? String(r.numCmd).replace(/[\/\.\#\$\[\]]/g,'_') : ('cmd_' + i);
+    return {
+      id: id,
+      data: {
+        ca: r.ca, statut: r.statut,
+        client: r.client || '', codeClient: r.codeClient || '',
+        clientNomKey: r.clientNomKey || '',
+        numCmd: r.numCmd || '',
+        dCmd: r.dateCmd ? r.dateCmd.getTime() : null,
+        dLiv: r.dateLiv ? r.dateLiv.getTime() : null,
+        dFac: r.dateFac ? r.dateFac.getTime() : null,
+        dRef: r.dateRef ? r.dateRef.getTime() : null,
+        operateur: r.operateur || '', transporteur: r.transporteur || '',
+        mois: r.mois || '(inconnu)', annee: r.annee,
+        updated: Date.now()
+      }
+    };
+  });
+
+  // Batch writes (max 500 par batch Firestore)
+  var BATCH = 500;
+  var total = docs.length;
+  var done = 0;
+
+  function nextBatch(start) {
+    if (start >= total) {
+      // Mise à jour méta finale
+      try {
+        fdb.collection('commandes_meta').doc('latest').set({
+          lastImport: Date.now(),
+          nbRows: total,
+          dateCol: dashCaDateCol
+        });
+      } catch(e) {}
+      if (status) status.textContent = total + ' commandes · ✅ sauvegardées';
+      if (typeof toast === 'function') toast('✅ ' + total + ' commandes sauvegardées', 'ok');
+      dashCaUpdateLastImportLabel();
+      return;
+    }
+    var end = Math.min(start + BATCH, total);
+    var batch = fdb.batch();
+    for (var j = start; j < end; j++) {
+      var ref = fdb.collection('commandes_stats').doc(docs[j].id);
+      batch.set(ref, docs[j].data, { merge: true });  // merge = fusion
+    }
+    if (status) status.textContent = total + ' commandes · sauvegarde ' + end + '/' + total + '…';
+    batch.commit().then(function() {
+      done = end;
+      nextBatch(end);
+    }).catch(function(e) {
+      console.error('Batch error:', e);
+      if (status) status.textContent = total + ' commandes · ❌ erreur sauvegarde';
+      if (typeof toast === 'function') toast('Erreur sauvegarde Firestore : ' + e.message, 'err');
+    });
+  }
+  nextBatch(0);
+}
+
+function dashCaLoadFromFirestore() {
+  if (typeof firebase === 'undefined' || !firebase.firestore) return;
+  var fdb;
+  try { fdb = firebase.firestore(); } catch(e) { return; }
+
+  fdb.collection('commandes_stats').get().then(function(snap) {
+    if (snap.empty) return;
+    var rows = [];
+    snap.forEach(function(doc) {
+      var r = doc.data();
+      rows.push({
+        ca: r.ca, statut: r.statut,
+        client: r.client || '', codeClient: r.codeClient || '',
+        clientNomKey: r.clientNomKey || '',
+        numCmd: r.numCmd || '',
+        dateCmd: r.dCmd ? new Date(r.dCmd) : null,
+        dateLiv: r.dLiv ? new Date(r.dLiv) : null,
+        dateFac: r.dFac ? new Date(r.dFac) : null,
+        dateRef: r.dRef ? new Date(r.dRef) : null,
+        operateur: r.operateur || '', transporteur: r.transporteur || '',
+        mois: r.mois || '(inconnu)', annee: r.annee
+      });
+    });
+    // Si on a des données plus récentes que le cache local (ou aucun cache), on remplace
+    var meta = {};
+    try { meta = JSON.parse(localStorage.getItem(DASHCA_META_KEY) || '{}'); } catch(e){}
+    if (rows.length > dashCaRows.length || !dashCaRows.length) {
+      dashCaSilentLoad = true;
+      dashCaRows = rows;
+      dashCaShowContent();
+      dashCaPopulateFilters();
+      dashCaRender();
+      if (typeof cdbContacts !== 'undefined' && cdbContacts.length) cdbEnrichFromOrders(dashCaRows);
+      // Mettre à jour le cache local avec les données Firestore
+      dashCaSaveCache();
+      dashCaSilentLoad = false;
+      // Récupérer la méta Firestore pour l'indicateur
+      fdb.collection('commandes_meta').doc('latest').get().then(function(doc) {
+        if (doc.exists) {
+          var m = doc.data();
+          localStorage.setItem(DASHCA_META_KEY, JSON.stringify(m));
+          dashCaUpdateLastImportLabel();
+        }
+      }).catch(function(){});
+    }
+  }).catch(function(e) {
+    console.warn('Firestore load error:', e);
+  });
+}
+
+// Auto-init au chargement de la page
+function dashCaAutoLoad() {
+  // 1. Cache local instantané
+  var hadCache = dashCaLoadCache();
+  // 2. Sync Firestore en arrière-plan (rafraîchit si plus récent)
+  setTimeout(function() {
+    dashCaLoadFromFirestore();
+  }, hadCache ? 800 : 100);
+  // Refresh "il y a X min" toutes les minutes
+  setInterval(dashCaUpdateLastImportLabel, 60000);
+}
+
+// Lancer dès que Firebase est prêt
+(function tryAutoLoad() {
+  if (typeof firebase !== 'undefined' && firebase.firestore) {
+    setTimeout(dashCaAutoLoad, 500);
+  } else {
+    setTimeout(tryAutoLoad, 300);
+  }
+})();
 
 // ═══════════════════════════════════════════════
 // LIAISON COMMANDES ↔ CONTACTS
