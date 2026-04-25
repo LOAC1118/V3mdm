@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>MDM 2026 — CRM v3.6 [6748]</title>
+<title>MDM 2026 — CRM v3.7 [6241]</title>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Lora:ital,wght@0,500;0,600;1,400&display=swap" rel="stylesheet">
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Lora:ital,wght@0,500;0,600;1,400&display=swap');
@@ -3373,7 +3373,7 @@ function dashCaProcess(rows) {
 
 // ═══════════════════════════════════════════════
 // VERSION DU CODE — pour vérifier le déploiement
-console.log('%c[MDM CRM] Version chargée : v3.6-bulletproof-' + Date.now(), 'color:#2563b0;font-weight:bold;font-size:14px');
+console.log('%c[MDM CRM] Version chargée : v3.7-mapping-' + Date.now(), 'color:#2563b0;font-weight:bold;font-size:14px');
 
 // ═══════════════════════════════════════════════
 // SAUVEGARDE / CHARGEMENT FIRESTORE DES COMMANDES
@@ -4564,12 +4564,18 @@ function cdbImportBuildMapping(cols) {
 
   cdbImportColsIndex = cols;
 
-  // Construire les options une seule fois
+  // Construire les options une seule fois (mettre _ignore en premier pour avoir une valeur par défaut visible)
   var fieldOptions = '';
   if (typeof CDB_FIELDS !== 'undefined' && CDB_FIELDS) {
+    // _ignore en premier (valeur par défaut)
+    if (CDB_FIELDS['_ignore']) {
+      fieldOptions += '<option value="_ignore">' + CDB_FIELDS['_ignore'] + '</option>';
+    }
+    // Puis les autres
     var fkeys = Object.keys(CDB_FIELDS);
     for (var fi = 0; fi < fkeys.length; fi++) {
       var fk = fkeys[fi];
+      if (fk === '_ignore') continue;
       fieldOptions += '<option value="' + fk + '">' + CDB_FIELDS[fk] + '</option>';
     }
   }
@@ -4602,12 +4608,6 @@ function cdbImportBuildMapping(cols) {
       console.warn('[CDB] Sample error col=' + col + ':', eS);
     }
 
-    // Options avec selected
-    var opts = fieldOptions.replace(
-      'value="' + sel + '"',
-      'value="' + sel + '" selected'
-    );
-
     html += '<div style="display:grid;grid-template-columns:1fr 2rem 1.5fr;align-items:center;gap:8px;padding:.4rem 0;border-bottom:1px solid var(--border);">';
     html += '<div><div style="font-size:.78rem;font-weight:500;color:var(--g900);">' + cdbEsc(col) + '</div>';
     if (sample) {
@@ -4615,11 +4615,19 @@ function cdbImportBuildMapping(cols) {
     }
     html += '</div>';
     html += '<div style="text-align:center;color:var(--g400);">→</div>';
-    html += '<select data-cdb-mapping-idx="' + idx + '" style="font-size:.78rem;">' + opts + '</select>';
+    html += '<select data-cdb-mapping-idx="' + idx + '" data-cdb-default="' + sel + '" style="font-size:.82rem;padding:.35rem .5rem;border:1px solid var(--border);border-radius:5px;background:#fff;color:var(--g900);min-height:30px;width:100%;">' + fieldOptions + '</select>';
     html += '</div>';
   }
 
   container.innerHTML = html;
+
+  // Setter les valeurs par défaut via JS (plus fiable que l'attribut selected)
+  var allSelects = container.querySelectorAll('select[data-cdb-mapping-idx]');
+  for (var si = 0; si < allSelects.length; si++) {
+    var def = allSelects[si].getAttribute('data-cdb-default') || '_ignore';
+    allSelects[si].value = def;
+  }
+  console.log('[CDB] ' + allSelects.length + ' selects initialisés avec leurs valeurs');
 
   // Handler unique sur le container
   container.onchange = function(e) {
