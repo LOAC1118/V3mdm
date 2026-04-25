@@ -4378,21 +4378,111 @@ function cdbImportRead(file) {
   console.log('[CDB] cdbImportRead appelée avec', file);
   if (!file) { console.warn('[CDB] Pas de fichier'); return; }
   if (typeof XLSX === 'undefined') { toast('SheetJS non chargé', 'err'); console.error('[CDB] XLSX undefined'); return; }
-  var reader = new FileReader();
-  reader.onerror = function(e) {
-    console.error('[CDB] FileReader error', e);
-    toast('Erreur lecture fichier', 'err');
-  };
-  reader.onload = function(e) {
+
+  // Diagnostic du fichier
+  console.log('[CDB] Fichier :', {
+    name: file.name,
+    size: file.size,
+    type: file.type,
+    lastModified: new Date(file.lastModified)
+  });
+
+  if (file.size === 0) {
+    toast('Fichier vide (0 octet)', 'err');
+    console.error('[CDB] File size = 0');
+    return;
+  }
+  if (file.size > 50 * 1024 * 1024) {
+    toast('Fichier trop volumineux (>50 Mo)', 'err');
+    return;
+  }
+
+  // Essai n°1 : ArrayBuffer (méthode standard)
+  function tryArrayBuffer() {
+    var reader = new FileReader();
+    reader.onerror = function(e) {
+      console.error('[CDB] ArrayBuffer error:', reader.error, e);
+      var msg = reader.error ? reader.error.name + ' : ' + reader.error.message : 'inconnu';
+      toast('Erreur lecture (ArrayBuffer): ' + msg, 'err');
+      // Tenter méthode alternative
+      console.log('[CDB] Tentative méthode binary...');
+      tryBinaryString();
+    };
+    reader.onload = function(e) { processData(e.target.result, 'array'); };
     try {
-      console.log('[CDB] Fichier lu, parsing XLSX...');
-      var data = new Uint8Array(e.target.result);
-      var wb = XLSX.read(data, { type: 'array', cellDates: true });
-      console.log('[CDB] Sheets:', wb.SheetNames);
-      var ws = wb.Sheets[wb.SheetNames[0]];
-      var json = XLSX.utils.sheet_to_json(ws, { defval: null, raw: false, dateNF: 'yyyy-mm-dd' });
-      console.log('[CDB] Lignes parsées:', json.length);
-      if (!json.length) { toast('Fichier vide', 'err'); return; }
+      reader.readAsArrayBuffer(file);
+    } catch(err) {
+      console.error('[CDB] readAsArrayBuffer threw:', err);
+      tryBinaryString();
+    }
+  }
+
+  // Essai n°2 : BinaryString (fallback pour vieux navigateurs ou problèmes spéciaux)
+  function tryBinaryString() {
+    var reader = new FileReader();
+    reader.onerror = function(e) {
+      console.error('[CDB] BinaryString error:', reader.error);
+      var msg = reader.error ? reader.error.name + ' : ' + (reader.error.message || 'pas de détail') : 'inconnu';
+      toast('Impossible de lire ce fichier : ' + msg + '. Fermez Excel ou copiez le fichier ailleurs.', 'err');
+    };
+    reader.onload = function(e) { processData(e.target.result, 'binary'); };
+    try {
+      reader.readAsBinaryString(file);
+    } catch(err) {
+      console.error('[CDB] readAsBinaryString threw:', err);
+      toast('Lecture impossible : ' + err.message, 'err');
+    }
+  }
+
+  function processData(rawData, mode) {
+    try {
+      var sizeInfo = (mode === 'array') ? rawData.byteLength + ' octets' : rawData.length + ' chars';
+      console.log('[CDB] Fichier lu (mode ' + mode + '), taille:', sizeInfo, ', parsing XLSX...');
+      var wb;
+      if (mode === 'array') {
+        var data = new Uint8Array(rawData);
+        wb = XLSX.read(data, { type: 'array', cellDates: true });
+      } else {
+        wb = XLSX.read(rawData, { type: 'binary', cellDates: true });
+      }
+      console.log('[CDB] Sheets disponibles:', wb.SheetNames);
+
+      // Trouver la première feuille avec des données (pas juste la première)
+      var ws = null, json = [];
+      for (var sn = 0; sn < wb.SheetNames.length; sn++) {
+        var sname = wb.SheetNames[sn];
+        var trial = wb.Sheets[sname];
+        var trialJson = XLSX.utils.sheet_to_json(trial, { defval: null, raw: false, dateNF: 'yyyy-mm-dd' });
+        console.log('[CDB] Feuille "'+sname+'" :', trialJson.length, 'lignes');
+        if (trialJson.length) {
+          ws = trial;
+          json = trialJson;
+          console.log('[CDB] Feuille retenue: "'+sname+'"');
+          break;
+        }
+      }
+
+      if (!json.length) {
+        toast('Fichier vide ou mauvais format', 'err');
+        console.error('[CDB] Aucune donnée trouvée dans aucune feuille');
+        return;
+      }
+
+      // Récupérer les colonnes en fusionnant les clés des 5 premières lignes
+      // (au cas où les premières lignes auraient moins de colonnes)
+      var allCols = {};
+      json.slice(0, 5).forEach(function(row) {
+        Object.keys(row).forEach(function(k) {
+          if (k && !k.startsWith('__EMPTY')) allCols[k] = true;
+        });
+      });
+      var cols = Object.keys(allCols);
+      console.log('[CDB] Colonnes détectées:', cols);
+
+      if (!cols.length) {
+        toast('Aucune colonne valide détectée', 'err');
+        return;
+      }
       cdbImportRaw = json;
       var f1 = document.getElementById('cdb-import-filename');
       var f2 = document.getElementById('cdb-import-nbrows');
@@ -4401,17 +4491,18 @@ function cdbImportRead(file) {
       var ap = document.getElementById('cdb-import-apply');
       if (f1) f1.textContent = file.name;
       if (f2) f2.textContent = json.length;
-      cdbImportBuildMapping(Object.keys(json[0]));
+      cdbImportBuildMapping(cols);
       if (s1) s1.style.display = 'none';
       if (s2) s2.style.display = '';
       if (ap) ap.style.display = '';
       console.log('[CDB] Étape 2 affichée');
     } catch(err) {
       console.error('[CDB] Erreur parsing:', err);
-      toast('Erreur lecture : ' + err.message, 'err');
+      toast('Erreur parsing XLSX : ' + err.message, 'err');
     }
-  };
-  reader.readAsArrayBuffer(file);
+  }
+
+  tryArrayBuffer();
 }
 
 function cdbImportBuildMapping(cols) {
