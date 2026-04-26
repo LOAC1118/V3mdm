@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>MDM 2026 — CRM v4.1 [0152]</title>
+<title>MDM 2026 — CRM v4.2 [0462]</title>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Lora:ital,wght@0,500;0,600;1,400&display=swap" rel="stylesheet">
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Lora:ital,wght@0,500;0,600;1,400&display=swap');
@@ -3388,7 +3388,7 @@ function dashCaProcess(rows) {
 
 // ═══════════════════════════════════════════════
 // VERSION DU CODE — pour vérifier le déploiement
-console.log('%c[MDM CRM] Version chargée : v4.1-diagnostic' + Date.now(), 'color:#2563b0;font-weight:bold;font-size:14px');
+console.log('%c[MDM CRM] Version chargée : v4.2-auto-mapping' + Date.now(), 'color:#2563b0;font-weight:bold;font-size:14px');
 
 // ═══════════════════════════════════════════════
 // SAUVEGARDE / CHARGEMENT FIRESTORE DES COMMANDES
@@ -4718,13 +4718,40 @@ function cdbImportApply() {
     return;
   }
   if (typeof cdbImportMapping === 'undefined' || !cdbImportMapping) {
-    toast('Mapping manquant', 'err');
-    console.error('[CDB] cdbImportMapping absent');
-    return;
+    cdbImportMapping = {};
+  }
+
+  // Si le mapping est vide ou ne contient AUCUNE correspondance utile, refaire l'auto-detect
+  var hasValidMapping = false;
+  for (var k in cdbImportMapping) {
+    if (cdbImportMapping[k] && cdbImportMapping[k] !== '_ignore') { hasValidMapping = true; break; }
+  }
+  if (!hasValidMapping) {
+    console.warn('[CDB] Mapping vide/inutile, re-auto-détection des colonnes du fichier');
+    // Récupérer les colonnes depuis cdbImportColsIndex OU directement depuis cdbImportRaw[0]
+    var colsToMap = (typeof cdbImportColsIndex !== 'undefined' && cdbImportColsIndex && cdbImportColsIndex.length)
+      ? cdbImportColsIndex
+      : (cdbImportRaw[0] ? Object.keys(cdbImportRaw[0]) : []);
+    console.log('[CDB] Colonnes à mapper :', colsToMap);
+    cdbImportMapping = {};
+    for (var ci = 0; ci < colsToMap.length; ci++) {
+      var col = colsToMap[ci];
+      if (!col) continue;
+      var low = String(col).toLowerCase().trim();
+      var matched = false;
+      for (var key in CDB_AUTO_DETECT) {
+        if (CDB_AUTO_DETECT.hasOwnProperty(key) && (low === key || low.indexOf(key) >= 0)) {
+          cdbImportMapping[col] = CDB_AUTO_DETECT[key];
+          matched = true;
+          break;
+        }
+      }
+      if (!matched) cdbImportMapping[col] = '_ignore';
+    }
   }
 
   console.log('[CDB] Données prêtes:', cdbImportRaw.length, 'lignes');
-  console.log('[CDB] Mapping:', cdbImportMapping);
+  console.log('[CDB] Mapping FINAL utilisé :', cdbImportMapping);
 
   // Toast progression
   toast('⏳ Import en cours...', 'ok');
