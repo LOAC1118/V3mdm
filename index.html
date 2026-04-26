@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>MDM 2026 — CRM v4.8 [3498]</title>
+<title>MDM 2026 — CRM v4.9 [3704]</title>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Lora:ital,wght@0,500;0,600;1,400&display=swap" rel="stylesheet">
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Lora:ital,wght@0,500;0,600;1,400&display=swap');
@@ -2306,6 +2306,7 @@ async function saveProspect() {
 }
 
 function renderProspects() {
+  if (!document.getElementById('tbody-prospects')) return; // Section supprimée
   const q=(g('search-prospects')||'').toLowerCase(), fs=g('filter-prospect-statut');
   const list=cache.prospects.filter(p=>(!q||(p.raison||'').toLowerCase().includes(q)||(p.contact||'').toLowerCase().includes(q)||(p.ville||'').toLowerCase().includes(q))&&(!fs||p.statut===fs));
   const tbody=document.getElementById('tbody-prospects');
@@ -2360,6 +2361,7 @@ async function saveClient() {
 }
 
 function renderClients() {
+  if (!document.getElementById('tbody-clients')) return; // Section supprimée
   const q=(g('search-clients')||'').toLowerCase(), fp=g('filter-client-profil');
   const list=cache.clients.filter(c=>(!q||(c.raison||'').toLowerCase().includes(q)||(c.contact||'').toLowerCase().includes(q))&&(!fp||c.profil===fp));
   const tbody=document.getElementById('tbody-clients');
@@ -2404,6 +2406,7 @@ async function saveCommande() {
 }
 
 function renderCommandes() {
+  if (!document.getElementById('tbody-commandes')) return; // Section supprimée
   const q=(g('search-commandes')||'').toLowerCase(), fs=g('filter-cmd-statut');
   const list=cache.commandes.filter(o=>(!q||(o.clientNom||'').toLowerCase().includes(q))&&(!fs||o.statut===fs));
   const tbody=document.getElementById('tbody-commandes');
@@ -2482,6 +2485,7 @@ function renderFrais() {
     (!ft||f.typeFrais===ft)&&(!fs||f.statut===fs)&&(!fm||f.dateFrais?.startsWith(fm))
   );
   const tbody=document.getElementById('tbody-frais');
+  if (!tbody) return;
   if (!list.length) { tbody.innerHTML=`<tr><td colspan="9"><div class="empty"><div class="empty-icon">💳</div><div class="empty-title">Aucun frais enregistré</div><div class="empty-sub">Cliquez sur "+ Saisir des frais"</div></div></td></tr>`; return; }
   tbody.innerHTML=list.map(f=>{
     const detail=f.typeFrais==='Déplacement'&&f.km?`${f.km} km`:f.typeFrais==='Hébergement'&&f.nuits?`${f.nuits} nuit(s)`:f.typeFrais==='Repas'&&f.couverts?`${f.couverts} couvert(s)`:'—';
@@ -3977,7 +3981,7 @@ function dashCaProcess(rows) {
 
 // ═══════════════════════════════════════════════
 // VERSION DU CODE — pour vérifier le déploiement
-console.log('%c[MDM CRM] Version chargée : v4.8-fix-tabs' + Date.now(), 'color:#2563b0;font-weight:bold;font-size:14px');
+console.log('%c[MDM CRM] Version chargée : v4.9-guard-render' + Date.now(), 'color:#2563b0;font-weight:bold;font-size:14px');
 
 // ═══════════════════════════════════════════════
 // SAUVEGARDE / CHARGEMENT FIRESTORE DES COMMANDES
