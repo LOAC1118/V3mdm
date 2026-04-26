@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>MDM 2026 — CRM v4.7 [3184]</title>
+<title>MDM 2026 — CRM v4.8 [3498]</title>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Lora:ital,wght@0,500;0,600;1,400&display=swap" rel="stylesheet">
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Lora:ital,wght@0,500;0,600;1,400&display=swap');
@@ -638,6 +638,26 @@ textarea { resize:vertical; min-height:80px; }
 #ml-editor ul, #ml-editor ol { padding-left:1.5rem; margin:.3rem 0; }
 #ml-editor img { max-width:100%; height:auto; border-radius:6px; }
 #ml-editor a { color:var(--blue-p700); text-decoration:underline; }
+
+/* ── ONGLETS FRAIS (com/perso) ─────────────── */
+#frais-zone-com, #frais-zone-perso {
+  width: 100%;
+  position: relative;
+}
+#frais-zone-perso[style*="display:none"],
+#frais-zone-perso[style*="display: none"] {
+  display: none !important;
+}
+.frais-tab.active {
+  background: #fff !important;
+  color: var(--g900) !important;
+  box-shadow: var(--shadow-sm) !important;
+}
+
+/* Améliorer la visibilité du formulaire de saisie NFD */
+#frais-zone-perso .card[style*="blue-p50"] {
+  margin-bottom: 1rem !important;
+}
 </style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.0/jspdf.plugin.autotable.min.js"></script>
@@ -1121,7 +1141,7 @@ textarea { resize:vertical; min-height:80px; }
     </div><!-- /frais-zone-com -->
 
     <!-- ZONE 2 : Note de frais personnelle -->
-    <div id="frais-zone-perso" style="display:none;">
+    <div id="frais-zone-perso" style="display:none !important;">
       <div class="page-header">
         <div>
           <div class="page-title">Note de frais personnelle</div>
@@ -1806,8 +1826,16 @@ var NFD_CACHE_KEY = 'mdm_nfd_lines_v1';
 var NFD_IDENTITY_KEY = 'mdm_nfd_identity_v1';
 
 function nfdSwitchTab(tab) {
-  document.getElementById('frais-zone-com').style.display = (tab === 'com') ? '' : 'none';
-  document.getElementById('frais-zone-perso').style.display = (tab === 'perso') ? '' : 'none';
+  var zCom = document.getElementById('frais-zone-com');
+  var zPerso = document.getElementById('frais-zone-perso');
+  if (!zCom || !zPerso) return;
+  if (tab === 'com') {
+    zCom.style.cssText = 'display:block !important;width:100%;';
+    zPerso.style.cssText = 'display:none !important;';
+  } else {
+    zCom.style.cssText = 'display:none !important;';
+    zPerso.style.cssText = 'display:block !important;width:100%;';
+  }
   document.getElementById('frais-tab-com').classList.toggle('active', tab === 'com');
   document.getElementById('frais-tab-perso').classList.toggle('active', tab === 'perso');
   // Visuel actif
@@ -3949,7 +3977,7 @@ function dashCaProcess(rows) {
 
 // ═══════════════════════════════════════════════
 // VERSION DU CODE — pour vérifier le déploiement
-console.log('%c[MDM CRM] Version chargée : v4.7-firebase-safe' + Date.now(), 'color:#2563b0;font-weight:bold;font-size:14px');
+console.log('%c[MDM CRM] Version chargée : v4.8-fix-tabs' + Date.now(), 'color:#2563b0;font-weight:bold;font-size:14px');
 
 // ═══════════════════════════════════════════════
 // SAUVEGARDE / CHARGEMENT FIRESTORE DES COMMANDES
