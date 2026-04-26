@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>MDM 2026 — CRM v4.4 [1793]</title>
+<title>MDM 2026 — CRM v4.5 [2472]</title>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Lora:ital,wght@0,500;0,600;1,400&display=swap" rel="stylesheet">
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Lora:ital,wght@0,500;0,600;1,400&display=swap');
@@ -639,6 +639,8 @@ textarea { resize:vertical; min-height:80px; }
 #ml-editor img { max-width:100%; height:auto; border-radius:6px; }
 #ml-editor a { color:var(--blue-p700); text-decoration:underline; }
 </style>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.0/jspdf.plugin.autotable.min.js"></script>
 </head>
 <body>
 
@@ -1095,6 +1097,14 @@ textarea { resize:vertical; min-height:80px; }
 
   <!-- FRAIS -->
   <div id="sec-frais" class="hidden">
+    <!-- Onglets internes -->
+    <div style="display:flex;gap:6px;margin-bottom:1rem;background:var(--surface2);padding:.3rem;border-radius:10px;">
+      <button id="frais-tab-com" class="frais-tab active" onclick="fraisSwitchTab('com')" style="flex:1;padding:.55rem 1rem;border:none;background:#fff;border-radius:7px;font-family:var(--fd);font-size:.82rem;font-weight:600;color:var(--g900);cursor:pointer;box-shadow:var(--shadow-sm);">💼 Frais commerciaux</button>
+      <button id="frais-tab-perso" class="frais-tab" onclick="fraisSwitchTab('perso')" style="flex:1;padding:.55rem 1rem;border:none;background:transparent;border-radius:7px;font-family:var(--fd);font-size:.82rem;font-weight:600;color:var(--g600);cursor:pointer;">📋 Note de frais perso</button>
+    </div>
+
+    <!-- ZONE 1 : Frais commerciaux (existant) -->
+    <div id="frais-zone-com">
     <div class="page-header">
       <div><div class="page-title">Frais commerciaux</div><div class="page-sub">Suivi des dépenses terrain par commercial</div></div>
       <div class="flex gap-2">
@@ -1115,7 +1125,113 @@ textarea { resize:vertical; min-height:80px; }
       <select class="filter-select" id="filter-frais-statut" onchange="renderFrais()"><option value="">Tous statuts</option><option>En attente</option><option>Validé</option><option>Remboursé</option><option>Refusé</option></select>
       <select class="filter-select" id="filter-frais-mois" onchange="renderFrais()"><option value="">Tous les mois</option></select>
     </div>
-    <div class="card"><div class="tbl-wrap"><table><thead><tr><th>Date</th><th>Commercial</th><th>Type</th><th>Motif</th><th>Client visité</th><th>Détail</th><th>Montant</th><th>Statut</th><th>Actions</th></tr></thead><tbody id="tbody-frais"></tbody></table></div></div>
+    <div class="card"><div class="tbl-wrap"><table><thead><tr><th>Date</th><th>Commercial</th><th>Type</th><th>Motif</th><th>Client visité</th><th>Détail</th><th>Montant</th><th>Statut</th><th>Actions</th>
+    </div><!-- /frais-zone-com -->
+
+    <!-- ZONE 2 : Note de frais personnelle -->
+    <div id="frais-zone-perso" style="display:none;">
+      <div class="page-header">
+        <div>
+          <div class="page-title">Note de frais personnelle</div>
+          <div class="page-sub">Saisie ligne par ligne · génération PDF mensuel · synchronisation cloud</div>
+        </div>
+        <div style="display:flex;gap:8px;">
+          <button class="btn btn-ghost" onclick="nfdExportCSV()" style="font-size:.78rem;">↓ Export CSV</button>
+          <button class="btn btn-primary" onclick="nfdGeneratePDF()" style="font-size:.78rem;background:#dc2626;border-color:#dc2626;">📄 Générer PDF</button>
+        </div>
+      </div>
+
+      <!-- Identité + sélection mois/année -->
+      <div class="card" style="padding:1rem;margin-bottom:1rem;">
+        <div style="display:grid;grid-template-columns:1fr 1fr 130px 110px;gap:12px;align-items:end;">
+          <div>
+            <label class="lb">Nom</label>
+            <input type="text" id="nfd-nom" placeholder="SPOTO" oninput="nfdSaveIdentity()"/>
+          </div>
+          <div>
+            <label class="lb">Prénom</label>
+            <input type="text" id="nfd-prenom" placeholder="Christophe" oninput="nfdSaveIdentity()"/>
+          </div>
+          <div>
+            <label class="lb">Mois</label>
+            <select id="nfd-mois" onchange="nfdRender()">
+              <option value="01">Janvier</option><option value="02">Février</option>
+              <option value="03">Mars</option><option value="04">Avril</option>
+              <option value="05">Mai</option><option value="06">Juin</option>
+              <option value="07">Juillet</option><option value="08">Août</option>
+              <option value="09">Septembre</option><option value="10">Octobre</option>
+              <option value="11">Novembre</option><option value="12">Décembre</option>
+            </select>
+          </div>
+          <div>
+            <label class="lb">Année</label>
+            <input type="number" id="nfd-annee" value="2026" min="2020" max="2099" onchange="nfdRender()"/>
+          </div>
+        </div>
+      </div>
+
+      <!-- KPIs -->
+      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:1rem;">
+        <div class="stat-card" style="border-top:3px solid var(--g700)!important;"><div class="stat-label">Nb dépenses</div><div class="stat-val" id="nfd-kpi-nb">0</div></div>
+        <div class="stat-card" style="border-top:3px solid #2563b0!important;"><div class="stat-label">Total HT</div><div class="stat-val" id="nfd-kpi-ht" style="color:#2563b0;">0,00 €</div></div>
+        <div class="stat-card" style="border-top:3px solid #b45309!important;"><div class="stat-label">Total TVA</div><div class="stat-val" id="nfd-kpi-tva" style="color:#b45309;">0,00 €</div></div>
+        <div class="stat-card" style="border-top:3px solid #059669!important;"><div class="stat-label">Total TTC</div><div class="stat-val" id="nfd-kpi-ttc" style="color:#059669;">0,00 €</div></div>
+      </div>
+
+      <!-- Saisie nouvelle ligne -->
+      <div class="card" style="padding:1rem;margin-bottom:1rem;background:linear-gradient(135deg,var(--blue-p50),#fff);border:1.5px solid var(--blue-p300);">
+        <div style="font-size:.72rem;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--blue-p700);margin-bottom:.6rem;">➕ Ajouter une ligne</div>
+        <div style="display:grid;grid-template-columns:120px 1.2fr 100px 90px 100px 1.5fr auto;gap:8px;align-items:end;">
+          <div><label class="lb">Date</label><input type="date" id="nfd-new-date"/></div>
+          <div><label class="lb">Catégorie</label>
+            <select id="nfd-new-cat">
+              <option>Carburant</option><option>Déjeuner</option><option>Péage</option>
+              <option>Stationnement</option><option>Auto</option><option>Missions</option>
+              <option>Timbres / Impressions</option><option>Hôtel</option>
+              <option>Divers</option><option>SNCF Transport</option>
+            </select>
+          </div>
+          <div><label class="lb">HT (€)</label><input type="number" step="0.01" min="0" id="nfd-new-ht" oninput="nfdComputeTTC()" placeholder="0,00"/></div>
+          <div><label class="lb">TVA (€)</label><input type="number" step="0.01" min="0" id="nfd-new-tva" oninput="nfdComputeTTC()" placeholder="0,00"/></div>
+          <div><label class="lb">TTC (€)</label><input type="number" step="0.01" id="nfd-new-ttc" placeholder="auto" readonly style="background:var(--g100);"/></div>
+          <div><label class="lb">Description</label><input type="text" id="nfd-new-desc" placeholder="Ex: Total Bourges → Lyon"/></div>
+          <div><button class="btn btn-primary" onclick="nfdAddLine()" style="white-space:nowrap;">➕ Ajouter</button></div>
+        </div>
+      </div>
+
+      <!-- Tableau des lignes -->
+      <div class="card">
+        <div class="tbl-wrap" style="max-height:calc(100vh - 480px);overflow-y:auto;">
+          <table>
+            <thead style="position:sticky;top:0;background:var(--surface);z-index:1;">
+              <tr>
+                <th>Date</th>
+                <th>Catégorie</th>
+                <th style="text-align:right;">HT</th>
+                <th style="text-align:right;">TVA</th>
+                <th style="text-align:right;">TTC</th>
+                <th>Description</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+            <tbody id="nfd-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Récap par catégorie -->
+      <div class="card" style="margin-top:1rem;">
+        <div class="card-head"><span class="card-title">Récapitulatif par catégorie</span></div>
+        <div class="tbl-wrap">
+          <table>
+            <thead><tr><th>Catégorie</th><th style="text-align:right;">HT</th><th style="text-align:right;">TVA</th><th style="text-align:right;">TTC</th></tr></thead>
+            <tbody id="nfd-recap-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+
+    </div><!-- /frais-zone-perso -->
+</tr></thead><tbody id="tbody-frais"></tbody></table></div></div>
   </div>
 
   <!-- BASE CONTACTS -->
@@ -1689,6 +1805,453 @@ function openModal(type) {
   document.getElementById('modal-'+type).classList.remove('hidden');
 }
 function closeModal(type) { document.getElementById('modal-'+type).classList.add('hidden'); }
+
+// ═══════════════════════════════════════════════
+//  NOTE DE FRAIS PERSO — saisie + PDF
+// ═══════════════════════════════════════════════
+var nfdLines = [];      // toutes les dépenses, tous mois confondus
+var NFD_CACHE_KEY = 'mdm_nfd_lines_v1';
+var NFD_IDENTITY_KEY = 'mdm_nfd_identity_v1';
+
+function nfdSwitchTab(tab) {
+  document.getElementById('frais-zone-com').style.display = (tab === 'com') ? '' : 'none';
+  document.getElementById('frais-zone-perso').style.display = (tab === 'perso') ? '' : 'none';
+  document.getElementById('frais-tab-com').classList.toggle('active', tab === 'com');
+  document.getElementById('frais-tab-perso').classList.toggle('active', tab === 'perso');
+  // Visuel actif
+  var btnCom = document.getElementById('frais-tab-com');
+  var btnPerso = document.getElementById('frais-tab-perso');
+  if (tab === 'com') {
+    btnCom.style.background = '#fff'; btnCom.style.color = 'var(--g900)'; btnCom.style.boxShadow = 'var(--shadow-sm)';
+    btnPerso.style.background = 'transparent'; btnPerso.style.color = 'var(--g600)'; btnPerso.style.boxShadow = 'none';
+  } else {
+    btnPerso.style.background = '#fff'; btnPerso.style.color = 'var(--g900)'; btnPerso.style.boxShadow = 'var(--shadow-sm)';
+    btnCom.style.background = 'transparent'; btnCom.style.color = 'var(--g600)'; btnCom.style.boxShadow = 'none';
+    nfdRender();
+  }
+}
+window.fraisSwitchTab = nfdSwitchTab;
+
+// Calcul TTC = HT + TVA
+function nfdComputeTTC() {
+  var ht = parseFloat(document.getElementById('nfd-new-ht').value) || 0;
+  var tva = parseFloat(document.getElementById('nfd-new-tva').value) || 0;
+  var ttc = ht + tva;
+  document.getElementById('nfd-new-ttc').value = ttc > 0 ? ttc.toFixed(2) : '';
+}
+
+// Identité
+function nfdLoadIdentity() {
+  try {
+    var s = localStorage.getItem(NFD_IDENTITY_KEY);
+    if (s) {
+      var id = JSON.parse(s);
+      if (id.nom) document.getElementById('nfd-nom').value = id.nom;
+      if (id.prenom) document.getElementById('nfd-prenom').value = id.prenom;
+    } else {
+      document.getElementById('nfd-nom').value = 'SPOTO';
+      document.getElementById('nfd-prenom').value = 'Christophe';
+    }
+  } catch(e) {}
+}
+function nfdSaveIdentity() {
+  try {
+    localStorage.setItem(NFD_IDENTITY_KEY, JSON.stringify({
+      nom: document.getElementById('nfd-nom').value,
+      prenom: document.getElementById('nfd-prenom').value
+    }));
+  } catch(e) {}
+}
+
+// Stockage local + Firestore
+function nfdSaveCache() {
+  try { localStorage.setItem(NFD_CACHE_KEY, JSON.stringify(nfdLines)); } catch(e) {}
+}
+function nfdLoadCache() {
+  try {
+    var s = localStorage.getItem(NFD_CACHE_KEY);
+    if (s) {
+      var loaded = JSON.parse(s);
+      if (Array.isArray(loaded)) nfdLines = loaded;
+    }
+  } catch(e) {}
+}
+
+function nfdSaveLine(line) {
+  if (typeof firebase === 'undefined' || !firebase.firestore || !firebase.auth) return;
+  var u = firebase.auth().currentUser;
+  if (!u) return;
+  try {
+    firebase.firestore().collection('notes_frais').doc(line.id).set(line, { merge:true });
+  } catch(e) { console.warn('NFD save Firestore:', e); }
+}
+function nfdDeleteLineFs(id) {
+  if (typeof firebase === 'undefined' || !firebase.firestore || !firebase.auth) return;
+  var u = firebase.auth().currentUser;
+  if (!u) return;
+  try {
+    firebase.firestore().collection('notes_frais').doc(id).delete();
+  } catch(e) {}
+}
+function nfdSyncFromFirestore() {
+  if (typeof firebase === 'undefined' || !firebase.firestore || !firebase.auth) return;
+  var u = firebase.auth().currentUser;
+  if (!u) {
+    setTimeout(nfdSyncFromFirestore, 1000);
+    return;
+  }
+  try {
+    firebase.firestore().collection('notes_frais').get().then(function(snap) {
+      if (snap.empty) {
+        console.log('[NFD] Firestore vide, cache local conservé');
+        return;
+      }
+      var loaded = [];
+      snap.forEach(function(doc) {
+        var d = doc.data();
+        d.id = doc.id;
+        loaded.push(d);
+      });
+      nfdLines = loaded;
+      nfdSaveCache();
+      console.log('[NFD] ' + loaded.length + ' dépenses chargées depuis Firestore');
+      if (document.getElementById('frais-zone-perso') && document.getElementById('frais-zone-perso').style.display !== 'none') {
+        nfdRender();
+      }
+    }).catch(function(e){ console.warn('[NFD] Sync error:', e); });
+  } catch(e) { console.error(e); }
+}
+
+// Ajouter une ligne
+function nfdAddLine() {
+  var date = document.getElementById('nfd-new-date').value;
+  var cat = document.getElementById('nfd-new-cat').value;
+  var ht = parseFloat(document.getElementById('nfd-new-ht').value) || 0;
+  var tva = parseFloat(document.getElementById('nfd-new-tva').value) || 0;
+  var ttc = parseFloat(document.getElementById('nfd-new-ttc').value) || (ht + tva);
+  var desc = document.getElementById('nfd-new-desc').value.trim();
+
+  if (!date) { toast('Date requise', 'err'); return; }
+  if (ht <= 0 && tva <= 0 && ttc <= 0) { toast('Montant requis', 'err'); return; }
+
+  var line = {
+    id: 'nfd_' + Date.now() + '_' + Math.floor(Math.random() * 1000),
+    date: date,
+    categorie: cat,
+    ht: Math.round(ht * 100) / 100,
+    tva: Math.round(tva * 100) / 100,
+    ttc: Math.round(ttc * 100) / 100,
+    description: desc,
+    createdAt: Date.now()
+  };
+
+  nfdLines.push(line);
+  nfdSaveCache();
+  nfdSaveLine(line);
+
+  // Reset formulaire (sauf date et catégorie pour aller plus vite)
+  document.getElementById('nfd-new-ht').value = '';
+  document.getElementById('nfd-new-tva').value = '';
+  document.getElementById('nfd-new-ttc').value = '';
+  document.getElementById('nfd-new-desc').value = '';
+  document.getElementById('nfd-new-ht').focus();
+
+  nfdRender();
+  toast('✅ Ligne ajoutée', 'ok');
+}
+
+// Supprimer ligne
+function nfdDeleteLine(id) {
+  if (!confirm('Supprimer cette ligne ?')) return;
+  nfdLines = nfdLines.filter(function(l){ return l.id !== id; });
+  nfdSaveCache();
+  nfdDeleteLineFs(id);
+  nfdRender();
+  toast('Ligne supprimée', 'ok');
+}
+
+// Formatage
+function nfdFmt(n) {
+  if (!n) return '0,00 €';
+  return Number(n).toLocaleString('fr-FR', { minimumFractionDigits:2, maximumFractionDigits:2 }) + ' €';
+}
+function nfdFmtDate(d) {
+  if (!d) return '';
+  var dt = new Date(d);
+  if (isNaN(dt)) return d;
+  return dt.toLocaleDateString('fr-FR', { day:'2-digit', month:'2-digit', year:'numeric' });
+}
+function nfdEsc(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;'); }
+
+// Rendu
+function nfdRender() {
+  var mois = document.getElementById('nfd-mois').value;
+  var annee = document.getElementById('nfd-annee').value;
+  var prefix = annee + '-' + mois;
+
+  var filtered = nfdLines.filter(function(l) {
+    return l.date && l.date.indexOf(prefix) === 0;
+  }).sort(function(a,b){ return a.date.localeCompare(b.date); });
+
+  // KPIs
+  var totHt=0, totTva=0, totTtc=0;
+  filtered.forEach(function(l){ totHt += l.ht||0; totTva += l.tva||0; totTtc += l.ttc||0; });
+  document.getElementById('nfd-kpi-nb').textContent = filtered.length;
+  document.getElementById('nfd-kpi-ht').textContent = nfdFmt(totHt);
+  document.getElementById('nfd-kpi-tva').textContent = nfdFmt(totTva);
+  document.getElementById('nfd-kpi-ttc').textContent = nfdFmt(totTtc);
+
+  // Tableau lignes
+  var tbody = document.getElementById('nfd-tbody');
+  if (!filtered.length) {
+    tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:2rem;color:var(--g500);">Aucune dépense pour ce mois.<br/>Ajoutez votre première ligne ci-dessus.</td></tr>';
+  } else {
+    tbody.innerHTML = filtered.map(function(l) {
+      return '<tr>' +
+        '<td>' + nfdFmtDate(l.date) + '</td>' +
+        '<td><span style="display:inline-block;padding:2px 8px;background:var(--blue-p100);color:var(--blue-p800);border-radius:10px;font-size:.7rem;font-weight:500;">' + nfdEsc(l.categorie) + '</span></td>' +
+        '<td style="text-align:right;font-variant-numeric:tabular-nums;">' + nfdFmt(l.ht) + '</td>' +
+        '<td style="text-align:right;font-variant-numeric:tabular-nums;">' + nfdFmt(l.tva) + '</td>' +
+        '<td style="text-align:right;font-variant-numeric:tabular-nums;font-weight:600;">' + nfdFmt(l.ttc) + '</td>' +
+        '<td style="font-size:.78rem;color:var(--g700);">' + nfdEsc(l.description) + '</td>' +
+        '<td><button class="btn btn-ghost" onclick="nfdDeleteLine(\'' + l.id + '\')" style="font-size:.7rem;padding:.25rem .55rem;color:#dc2626;">🗑</button></td>' +
+      '</tr>';
+    }).join('');
+  }
+
+  // Récap par catégorie
+  var byCat = {};
+  filtered.forEach(function(l) {
+    if (!byCat[l.categorie]) byCat[l.categorie] = { ht:0, tva:0, ttc:0 };
+    byCat[l.categorie].ht += l.ht||0;
+    byCat[l.categorie].tva += l.tva||0;
+    byCat[l.categorie].ttc += l.ttc||0;
+  });
+  var recapBody = document.getElementById('nfd-recap-tbody');
+  var cats = Object.keys(byCat).sort();
+  if (!cats.length) {
+    recapBody.innerHTML = '<tr><td colspan="4" style="text-align:center;padding:1rem;color:var(--g500);">—</td></tr>';
+  } else {
+    recapBody.innerHTML = cats.map(function(c) {
+      return '<tr><td><strong>' + nfdEsc(c) + '</strong></td>' +
+        '<td style="text-align:right;font-variant-numeric:tabular-nums;">' + nfdFmt(byCat[c].ht) + '</td>' +
+        '<td style="text-align:right;font-variant-numeric:tabular-nums;">' + nfdFmt(byCat[c].tva) + '</td>' +
+        '<td style="text-align:right;font-variant-numeric:tabular-nums;font-weight:600;">' + nfdFmt(byCat[c].ttc) + '</td></tr>';
+    }).join('') +
+    '<tr style="background:var(--blue-p50);border-top:2px solid var(--blue-p600);font-weight:700;">' +
+      '<td>TOTAL</td>' +
+      '<td style="text-align:right;font-variant-numeric:tabular-nums;">' + nfdFmt(totHt) + '</td>' +
+      '<td style="text-align:right;font-variant-numeric:tabular-nums;">' + nfdFmt(totTva) + '</td>' +
+      '<td style="text-align:right;font-variant-numeric:tabular-nums;">' + nfdFmt(totTtc) + '</td>' +
+    '</tr>';
+  }
+}
+
+// Export CSV
+function nfdExportCSV() {
+  var mois = document.getElementById('nfd-mois').value;
+  var annee = document.getElementById('nfd-annee').value;
+  var prefix = annee + '-' + mois;
+  var filtered = nfdLines.filter(function(l){ return l.date && l.date.indexOf(prefix) === 0; })
+    .sort(function(a,b){ return a.date.localeCompare(b.date); });
+  if (!filtered.length) { toast('Aucune ligne', 'err'); return; }
+
+  var header = 'Date,Catégorie,HT,TVA,TTC,Description';
+  var lines = filtered.map(function(l) {
+    var desc = String(l.description||'').replace(/"/g,'""');
+    if (desc.indexOf(',') >= 0 || desc.indexOf('"') >= 0) desc = '"' + desc + '"';
+    return [l.date, l.categorie, (l.ht||0).toFixed(2), (l.tva||0).toFixed(2), (l.ttc||0).toFixed(2), desc].join(',');
+  });
+  var csv = '\ufeff' + header + '\n' + lines.join('\n');
+  var blob = new Blob([csv], { type:'text/csv;charset=utf-8' });
+  var a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  var moisNoms = ['','JAN','FEV','MAR','AVR','MAI','JUN','JUL','AOU','SEP','OCT','NOV','DEC'];
+  a.download = 'NDF_' + moisNoms[parseInt(mois)] + '_' + annee + '.csv';
+  a.click();
+  toast('Export CSV : ' + filtered.length + ' lignes', 'ok');
+}
+
+// Génération PDF
+function nfdGeneratePDF() {
+  if (typeof jspdf === 'undefined') { toast('jsPDF non chargé', 'err'); return; }
+
+  var mois = document.getElementById('nfd-mois').value;
+  var annee = document.getElementById('nfd-annee').value;
+  var prefix = annee + '-' + mois;
+  var nom = document.getElementById('nfd-nom').value || 'SPOTO';
+  var prenom = document.getElementById('nfd-prenom').value || 'Christophe';
+
+  var filtered = nfdLines.filter(function(l){ return l.date && l.date.indexOf(prefix) === 0; })
+    .sort(function(a,b){ return a.date.localeCompare(b.date); });
+
+  if (!filtered.length) { toast('Aucune dépense pour ce mois', 'err'); return; }
+
+  var moisNoms = ['','JANVIER','FEVRIER','MARS','AVRIL','MAI','JUIN','JUILLET','AOUT','SEPTEMBRE','OCTOBRE','NOVEMBRE','DECEMBRE'];
+  var moisLabel = moisNoms[parseInt(mois)];
+
+  // Cumul par catégorie
+  var byCat = {};
+  filtered.forEach(function(l) {
+    if (!byCat[l.categorie]) byCat[l.categorie] = { ht:0, tva:0, ttc:0 };
+    byCat[l.categorie].ht += l.ht||0;
+    byCat[l.categorie].tva += l.tva||0;
+    byCat[l.categorie].ttc += l.ttc||0;
+  });
+
+  // Catégories dans l'ordre fixe
+  var ordreFixe = ['Carburant','Déjeuner','Péage','Stationnement','Auto','Missions','Timbres / Impressions','Hôtel','Divers','SNCF Transport'];
+
+  // Initialise jsPDF
+  var doc = new jspdf.jsPDF({ orientation:'portrait', unit:'mm', format:'a4' });
+  var pageW = doc.internal.pageSize.getWidth();
+
+  // En-tête
+  doc.setFont('helvetica','bold');
+  doc.setFontSize(18);
+  doc.text('NOTE DE FRAIS', pageW/2, 18, { align:'center' });
+
+  doc.setFontSize(11);
+  doc.setFont('helvetica','normal');
+  doc.text('Mois : ' + moisLabel, 20, 30);
+  doc.text('Année : ' + annee, 20, 36);
+  doc.text('Nom : ' + nom, 120, 30);
+  doc.text('Prénom : ' + prenom, 120, 36);
+
+  // Tableau récapitulatif par catégorie (style fiche Excel)
+  var totalHt=0, totalTva=0, totalTtc=0;
+  var rowsRecap = ordreFixe.map(function(c) {
+    var v = byCat[c] || { ht:0, tva:0, ttc:0 };
+    totalHt += v.ht; totalTva += v.tva; totalTtc += v.ttc;
+    return [c,
+      v.ht ? v.ht.toFixed(2).replace('.',',') + ' €' : '',
+      v.tva ? v.tva.toFixed(2).replace('.',',') + ' €' : '',
+      v.ttc ? v.ttc.toFixed(2).replace('.',',') + ' €' : '',
+      v.ttc ? v.ttc.toFixed(2).replace('.',',') + ' €' : ''
+    ];
+  });
+  // Ajouter catégories non listées
+  Object.keys(byCat).forEach(function(c) {
+    if (ordreFixe.indexOf(c) < 0) {
+      var v = byCat[c];
+      rowsRecap.push([c,
+        v.ht.toFixed(2).replace('.',',') + ' €',
+        v.tva.toFixed(2).replace('.',',') + ' €',
+        v.ttc.toFixed(2).replace('.',',') + ' €',
+        v.ttc.toFixed(2).replace('.',',') + ' €'
+      ]);
+    }
+  });
+
+  doc.autoTable({
+    startY: 44,
+    head: [['Catégorie','H.T.','TVA','TTC','TOTAUX']],
+    body: rowsRecap,
+    foot: [['TOTAUX DES FRAIS AVEC JUSTIFICATIFS',
+      totalHt.toFixed(2).replace('.',',') + ' €',
+      totalTva.toFixed(2).replace('.',',') + ' €',
+      totalTtc.toFixed(2).replace('.',',') + ' €',
+      totalTtc.toFixed(2).replace('.',',') + ' €']],
+    theme: 'grid',
+    headStyles: { fillColor:[230,230,230], textColor:[0,0,0], fontStyle:'bold' },
+    footStyles: { fillColor:[200,220,255], textColor:[0,0,0], fontStyle:'bold' },
+    columnStyles: {
+      0: { cellWidth: 60, fontStyle:'bold' },
+      1: { halign:'right', cellWidth: 28 },
+      2: { halign:'right', cellWidth: 28 },
+      3: { halign:'right', cellWidth: 28 },
+      4: { halign:'right', cellWidth: 28 }
+    },
+    margin: { left: 20, right: 20 }
+  });
+
+  var afterRecapY = doc.lastAutoTable.finalY + 8;
+
+  // Détail des lignes
+  doc.setFont('helvetica','bold');
+  doc.setFontSize(11);
+  doc.text('Détail des dépenses', 20, afterRecapY);
+
+  doc.autoTable({
+    startY: afterRecapY + 3,
+    head: [['Date','Catégorie','H.T.','TVA','TTC','Description']],
+    body: filtered.map(function(l) {
+      return [
+        nfdFmtDate(l.date),
+        l.categorie,
+        (l.ht||0).toFixed(2).replace('.',',') + ' €',
+        (l.tva||0).toFixed(2).replace('.',',') + ' €',
+        (l.ttc||0).toFixed(2).replace('.',',') + ' €',
+        l.description || ''
+      ];
+    }),
+    theme: 'striped',
+    headStyles: { fillColor:[37,99,176], textColor:255, fontStyle:'bold' },
+    columnStyles: {
+      0: { cellWidth: 22 },
+      1: { cellWidth: 32 },
+      2: { halign:'right', cellWidth: 22 },
+      3: { halign:'right', cellWidth: 20 },
+      4: { halign:'right', cellWidth: 22 },
+      5: { cellWidth: 'auto' }
+    },
+    margin: { left: 20, right: 20 },
+    styles: { fontSize: 9 }
+  });
+
+  // Pied de page sur chaque page
+  var pageCount = doc.internal.getNumberOfPages();
+  for (var p=1; p<=pageCount; p++) {
+    doc.setPage(p);
+    doc.setFontSize(8);
+    doc.setTextColor(100);
+    doc.text('NDF ' + nom + ' ' + prenom + ' — ' + moisLabel + ' ' + annee + '  |  Page ' + p + '/' + pageCount,
+      pageW/2, doc.internal.pageSize.getHeight() - 8, { align:'center' });
+  }
+
+  // Sauvegarder
+  var moisAbbr = ['','JAN','FEV','MAR','AVR','MAI','JUN','JUL','AOU','SEP','OCT','NOV','DEC'][parseInt(mois)];
+  doc.save('NDF_' + nom + '_' + moisAbbr + '_' + annee + '.pdf');
+  toast('✅ PDF généré', 'ok');
+}
+
+// Init au chargement
+(function() {
+  function tryInit() {
+    if (!document.getElementById('nfd-mois')) {
+      setTimeout(tryInit, 200);
+      return;
+    }
+    nfdLoadCache();
+    nfdLoadIdentity();
+
+    // Initialiser le mois en cours
+    var now = new Date();
+    var moisEl = document.getElementById('nfd-mois');
+    var anneeEl = document.getElementById('nfd-annee');
+    var dateEl = document.getElementById('nfd-new-date');
+    if (moisEl) moisEl.value = String(now.getMonth()+1).padStart(2,'0');
+    if (anneeEl) anneeEl.value = now.getFullYear();
+    if (dateEl) dateEl.value = now.toISOString().slice(0,10);
+
+    // Sync Firestore en arrière-plan
+    function waitAuth() {
+      if (typeof firebase !== 'undefined' && firebase.auth) {
+        firebase.auth().onAuthStateChanged(function(user) {
+          if (user) setTimeout(nfdSyncFromFirestore, 1000);
+        });
+      } else {
+        setTimeout(waitAuth, 300);
+      }
+    }
+    waitAuth();
+  }
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', tryInit);
+  } else {
+    tryInit();
+  }
+})();
 
 // ═══════════════════════════════════════════════
 //  TOAST
@@ -3388,7 +3951,7 @@ function dashCaProcess(rows) {
 
 // ═══════════════════════════════════════════════
 // VERSION DU CODE — pour vérifier le déploiement
-console.log('%c[MDM CRM] Version chargée : v4.4-fix-reload' + Date.now(), 'color:#2563b0;font-weight:bold;font-size:14px');
+console.log('%c[MDM CRM] Version chargée : v4.5-ndf' + Date.now(), 'color:#2563b0;font-weight:bold;font-size:14px');
 
 // ═══════════════════════════════════════════════
 // SAUVEGARDE / CHARGEMENT FIRESTORE DES COMMANDES
