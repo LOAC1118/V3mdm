@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>MDM 2026 — CRM v4.9 [3704]</title>
+<title>MDM 2026 — CRM v5.0 [4082]</title>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Lora:ital,wght@0,500;0,600;1,400&display=swap" rel="stylesheet">
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Lora:ital,wght@0,500;0,600;1,400&display=swap');
@@ -1111,8 +1111,8 @@ textarea { resize:vertical; min-height:80px; }
   <div id="sec-frais" class="hidden">
     <!-- Onglets internes -->
     <div style="display:flex;gap:6px;margin-bottom:1rem;background:var(--surface2);padding:.3rem;border-radius:10px;">
-      <button id="frais-tab-com" class="frais-tab active" onclick="fraisSwitchTab('com')" style="flex:1;padding:.55rem 1rem;border:none;background:#fff;border-radius:7px;font-family:var(--fd);font-size:.82rem;font-weight:600;color:var(--g900);cursor:pointer;box-shadow:var(--shadow-sm);">💼 Frais commerciaux</button>
-      <button id="frais-tab-perso" class="frais-tab" onclick="fraisSwitchTab('perso')" style="flex:1;padding:.55rem 1rem;border:none;background:transparent;border-radius:7px;font-family:var(--fd);font-size:.82rem;font-weight:600;color:var(--g600);cursor:pointer;">📋 Note de frais perso</button>
+      <button id="frais-tab-com" class="frais-tab active" onclick="nfdSwitchTab('com')" style="flex:1;padding:.55rem 1rem;border:none;background:#fff;border-radius:7px;font-family:var(--fd);font-size:.82rem;font-weight:600;color:var(--g900);cursor:pointer;box-shadow:var(--shadow-sm);">💼 Frais commerciaux</button>
+      <button id="frais-tab-perso" class="frais-tab" onclick="nfdSwitchTab('perso')" style="flex:1;padding:.55rem 1rem;border:none;background:transparent;border-radius:7px;font-family:var(--fd);font-size:.82rem;font-weight:600;color:var(--g600);cursor:pointer;">📋 Note de frais perso</button>
     </div>
 
     <!-- ZONE 1 : Frais commerciaux (existant) -->
@@ -3981,7 +3981,7 @@ function dashCaProcess(rows) {
 
 // ═══════════════════════════════════════════════
 // VERSION DU CODE — pour vérifier le déploiement
-console.log('%c[MDM CRM] Version chargée : v4.9-guard-render' + Date.now(), 'color:#2563b0;font-weight:bold;font-size:14px');
+console.log('%c[MDM CRM] Version chargée : v5.0-stable' + Date.now(), 'color:#2563b0;font-weight:bold;font-size:14px');
 
 // ═══════════════════════════════════════════════
 // SAUVEGARDE / CHARGEMENT FIRESTORE DES COMMANDES
