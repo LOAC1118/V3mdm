@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>MDM 2026 — CRM v4.3 [1155]</title>
+<title>MDM 2026 — CRM v4.4 [1793]</title>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Lora:ital,wght@0,500;0,600;1,400&display=swap" rel="stylesheet">
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Lora:ital,wght@0,500;0,600;1,400&display=swap');
@@ -3388,7 +3388,7 @@ function dashCaProcess(rows) {
 
 // ═══════════════════════════════════════════════
 // VERSION DU CODE — pour vérifier le déploiement
-console.log('%c[MDM CRM] Version chargée : v4.3-direct-detect' + Date.now(), 'color:#2563b0;font-weight:bold;font-size:14px');
+console.log('%c[MDM CRM] Version chargée : v4.4-fix-reload' + Date.now(), 'color:#2563b0;font-weight:bold;font-size:14px');
 
 // ═══════════════════════════════════════════════
 // SAUVEGARDE / CHARGEMENT FIRESTORE DES COMMANDES
@@ -4174,37 +4174,60 @@ function cdbLoadCache() {
 function cdbInit() {
   cdbLoadCache();
   if (cdbFsLoaded) return;
-  if (typeof currentUser === 'undefined' || !currentUser) {
-    console.warn('[CDB] Pas connecté, sync Firestore reportée');
+  // Vérifier auth Firebase directement (pas la var currentUser qui peut ne pas être prête)
+  if (typeof firebase === 'undefined' || !firebase.auth) {
+    console.warn('[CDB] Firebase non chargé, retry...');
+    setTimeout(cdbInit, 500);
+    return;
+  }
+  var fbUser = firebase.auth().currentUser;
+  if (!fbUser) {
+    console.warn('[CDB] Pas connecté Firebase, retry dans 1s...');
+    setTimeout(cdbInit, 1000);
     return;
   }
   cdbFsLoaded = true;
-  console.log('[CDB] Sync Firestore...');
+  console.log('[CDB] Sync Firestore... (user:', fbUser.email, ')');
   cdbSyncFromFirestore();
 }
 
 function cdbSyncFromFirestore() {
-  if (typeof firebase === 'undefined' || !firebase.firestore) {
+  if (typeof firebase === 'undefined' || !firebase.firestore || !firebase.auth) {
     console.warn('[CDB] Firebase non chargé');
     return;
   }
-  if (typeof currentUser !== 'undefined' && !currentUser) {
-    console.warn('[CDB] Pas connecté, sync différée');
+  var fbUser = firebase.auth().currentUser;
+  if (!fbUser) {
+    console.warn('[CDB] Sync Firestore : pas connecté');
     return;
   }
   try {
     var db = firebase.firestore();
+    console.log('[CDB] Lecture Firestore en cours...');
     db.collection('contacts').get().then(function(snap) {
-      cdbContacts = [];
+      console.log('[CDB] Firestore retourne', snap.size, 'documents');
+      var loaded = [];
       snap.forEach(function(doc) {
         var data = doc.data();
         data.id = doc.id;
-        cdbContacts.push(data);
+        loaded.push(data);
       });
-      try { localStorage.setItem(CDB_CACHE_KEY, JSON.stringify(cdbContacts)); } catch(e){}
-      cdbRender();
-    }).catch(function(e) { console.error('Sync contacts :', e); });
-  } catch(e) { console.error(e); }
+      // Ne remplace que si Firestore a des données (sinon on garde le cache local)
+      if (loaded.length > 0) {
+        cdbContacts = loaded;
+        try { localStorage.setItem(CDB_CACHE_KEY, JSON.stringify(cdbContacts)); } catch(e){}
+        console.log('[CDB] ' + cdbContacts.length + ' contacts chargés depuis Firestore');
+      } else {
+        console.log('[CDB] Firestore vide, cache local conservé');
+      }
+      if (typeof cdbRender === 'function') cdbRender();
+      if (typeof dashCaRows !== 'undefined' && dashCaRows.length && typeof cdbEnrichFromOrders === 'function') {
+        cdbEnrichFromOrders(dashCaRows);
+      }
+    }).catch(function(e) {
+      console.error('[CDB] Sync error:', e);
+    });
+  } catch(e) { console.error('[CDB] Sync exception:', e); }
 }
 
 function cdbFmtCA(n) {
