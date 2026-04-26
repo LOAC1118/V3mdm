@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>MDM 2026 — CRM v4.2 [0462]</title>
+<title>MDM 2026 — CRM v4.3 [1155]</title>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Lora:ital,wght@0,500;0,600;1,400&display=swap" rel="stylesheet">
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Lora:ital,wght@0,500;0,600;1,400&display=swap');
@@ -3388,7 +3388,7 @@ function dashCaProcess(rows) {
 
 // ═══════════════════════════════════════════════
 // VERSION DU CODE — pour vérifier le déploiement
-console.log('%c[MDM CRM] Version chargée : v4.2-auto-mapping' + Date.now(), 'color:#2563b0;font-weight:bold;font-size:14px');
+console.log('%c[MDM CRM] Version chargée : v4.3-direct-detect' + Date.now(), 'color:#2563b0;font-weight:bold;font-size:14px');
 
 // ═══════════════════════════════════════════════
 // SAUVEGARDE / CHARGEMENT FIRESTORE DES COMMANDES
@@ -4701,149 +4701,109 @@ function cdbImportApplyAuto() {
 }
 
 function cdbImportApply() {
-  console.log('[CDB] === cdbImportApply DÉMARRE ===');
-
-  // Protections initiales
-  if (typeof cdbContacts === 'undefined') {
-    console.warn('[CDB] cdbContacts undefined, init []');
-    cdbContacts = [];
-  }
-  if (typeof cdbImportRaw === 'undefined' || !cdbImportRaw) {
+  console.log('%c[CDB] === IMPORT ===', 'color:#16a34a;font-weight:bold');
+  if (typeof cdbContacts === 'undefined') cdbContacts = [];
+  if (!cdbImportRaw || !cdbImportRaw.length) {
     toast('Aucune donnée chargée', 'err');
-    console.error('[CDB] cdbImportRaw absent');
     return;
   }
-  if (!cdbImportRaw.length) {
-    toast('Fichier vide', 'err');
-    return;
-  }
-  if (typeof cdbImportMapping === 'undefined' || !cdbImportMapping) {
-    cdbImportMapping = {};
-  }
 
-  // Si le mapping est vide ou ne contient AUCUNE correspondance utile, refaire l'auto-detect
-  var hasValidMapping = false;
-  for (var k in cdbImportMapping) {
-    if (cdbImportMapping[k] && cdbImportMapping[k] !== '_ignore') { hasValidMapping = true; break; }
-  }
-  if (!hasValidMapping) {
-    console.warn('[CDB] Mapping vide/inutile, re-auto-détection des colonnes du fichier');
-    // Récupérer les colonnes depuis cdbImportColsIndex OU directement depuis cdbImportRaw[0]
-    var colsToMap = (typeof cdbImportColsIndex !== 'undefined' && cdbImportColsIndex && cdbImportColsIndex.length)
-      ? cdbImportColsIndex
-      : (cdbImportRaw[0] ? Object.keys(cdbImportRaw[0]) : []);
-    console.log('[CDB] Colonnes à mapper :', colsToMap);
-    cdbImportMapping = {};
-    for (var ci = 0; ci < colsToMap.length; ci++) {
-      var col = colsToMap[ci];
-      if (!col) continue;
-      var low = String(col).toLowerCase().trim();
-      var matched = false;
-      for (var key in CDB_AUTO_DETECT) {
-        if (CDB_AUTO_DETECT.hasOwnProperty(key) && (low === key || low.indexOf(key) >= 0)) {
-          cdbImportMapping[col] = CDB_AUTO_DETECT[key];
-          matched = true;
-          break;
-        }
-      }
-      if (!matched) cdbImportMapping[col] = '_ignore';
-    }
-  }
+  console.log('[CDB] Lignes brutes:', cdbImportRaw.length);
+  console.log('[CDB] Première ligne brute:', cdbImportRaw[0]);
 
-  console.log('[CDB] Données prêtes:', cdbImportRaw.length, 'lignes');
-  console.log('[CDB] Mapping FINAL utilisé :', cdbImportMapping);
-
-  // Toast progression
   toast('⏳ Import en cours...', 'ok');
 
-  // Convertir les lignes
+  // Conversion ULTRA-SIMPLE avec détection de colonne au cas par cas
   var newContacts = [];
-  try {
-    newContacts = cdbImportRaw
-      .filter(function(r){ return r && typeof r === 'object'; })
-      .map(function(row, idx) {
-        var c = { id: 'c_' + Date.now() + '_' + idx };
-        Object.keys(cdbImportMapping).forEach(function(col) {
-          var field = cdbImportMapping[col];
-          if (!field || field === '_ignore') return;
-          var v = row[col];
-          if (v === null || v === undefined || v === '') return;
-          try {
-            if (field === 'email') v = String(v).trim().toLowerCase();
-            else if (field === 'prospect') v = (v == 1 || String(v).toLowerCase() === 'true' || String(v).toLowerCase() === 'oui') ? 1 : 0;
-            else if (['stat2026Avril','stat2025Avril','cumul2026','cumul2025','nbJoursSansCde'].indexOf(field) >= 0) {
-              v = parseFloat(String(v).replace(',','.').replace(/[^\d.-]/g,'')) || 0;
-            }
-            else if (field === 'numClient') v = String(v).trim();
-            else if (field === 'dateDerniereCmd' || field === 'dateVisite') {
-              if (v instanceof Date) v = v.toISOString().slice(0,10);
-              else if (typeof v === 'string') {
-                var dd = new Date(v);
-                if (!isNaN(dd)) v = dd.toISOString().slice(0,10);
-              }
-            }
-            else v = String(v).trim();
-            c[field] = v;
-          } catch(eF) {
-            console.warn('[CDB] Erreur champ', field, eF);
-          }
-        });
-        return c;
-      })
-      .filter(function(c){ return c.numClient || c.nom; });
-  } catch(eMap) {
-    console.error('[CDB] Erreur conversion:', eMap);
-    toast('Erreur conversion : ' + eMap.message, 'err');
-    return;
-  }
+  for (var ix = 0; ix < cdbImportRaw.length; ix++) {
+    var row = cdbImportRaw[ix];
+    if (!row || typeof row !== 'object') continue;
 
-  console.log('[CDB] Contacts convertis:', newContacts.length);
-  // Debug : afficher les 3 premiers contacts convertis pour voir leurs propriétés
-  if (newContacts.length > 0) {
-    console.log('[CDB] Sample contacts:', newContacts.slice(0, 3));
-  } else {
-    // Debug : pourquoi 0 contacts ?
-    console.error('[CDB] === DIAGNOSTIC : pourquoi aucun contact ne passe ===');
-    console.log('[CDB] cdbImportRaw[0]:', cdbImportRaw[0]);
-    console.log('[CDB] cdbImportRaw[1]:', cdbImportRaw[1]);
-    console.log('[CDB] cdbImportMapping:', JSON.stringify(cdbImportMapping));
-    // Tester manuellement la conversion d'une ligne
-    var testRow = cdbImportRaw[0];
-    if (testRow) {
-      var testC = { id: 'test' };
-      Object.keys(cdbImportMapping).forEach(function(col) {
-        var field = cdbImportMapping[col];
-        var v = testRow[col];
-        console.log('[CDB] Test col=' + col + ', field=' + field + ', raw value=', v, 'type=', typeof v);
-        if (field !== '_ignore' && v !== null && v !== undefined && v !== '') {
-          testC[field] = v;
-        }
-      });
-      console.log('[CDB] Test contact reconstruit:', testC);
-      console.log('[CDB] Aurait numClient ?', !!testC.numClient, ' nom ?', !!testC.nom);
+    var contact = { id: 'c_' + Date.now() + '_' + ix };
+
+    // Parcourir les colonnes de cette ligne
+    var keys = Object.keys(row);
+    for (var kj = 0; kj < keys.length; kj++) {
+      var colName = keys[kj];
+      if (!colName) continue;
+
+      var lowName = String(colName).toLowerCase().trim();
+      var rawVal = row[colName];
+      if (rawVal === null || rawVal === undefined || rawVal === '') continue;
+
+      // Détection en dur
+      if (lowName === 'code client' || lowName === 'numclient') {
+        contact.numClient = String(rawVal).trim();
+      }
+      else if (lowName === 'raison sociale' || lowName === 'nom') {
+        contact.nom = String(rawVal).trim();
+      }
+      else if (lowName === 'mail' || lowName === 'email' || lowName === 'e-mail') {
+        contact.email = String(rawVal).trim().toLowerCase();
+      }
+      else if (lowName === 'téléphone' || lowName === 'telephone' || lowName === 'tel') {
+        contact.telephone = String(rawVal).trim();
+      }
+      else if (lowName === 'adresse') {
+        if (!contact.adresse) contact.adresse = String(rawVal).trim();
+      }
+      else if (lowName === 'code postal' || lowName === 'cp') {
+        contact.cp = String(rawVal).trim();
+      }
+      else if (lowName === 'ville') {
+        contact.ville = String(rawVal).trim();
+      }
+      else if (lowName === 'groupe') {
+        contact.groupe = String(rawVal).trim();
+      }
+      else if (lowName === 'prospect') {
+        contact.prospect = (rawVal == 1 || String(rawVal).toLowerCase() === 'true' || String(rawVal).toLowerCase() === 'oui') ? 1 : 0;
+      }
+      else if (lowName.indexOf('cumul') >= 0 && lowName.indexOf('2026') >= 0) {
+        contact.cumul2026 = parseFloat(String(rawVal).replace(',','.').replace(/[^\d.\-]/g,'')) || 0;
+      }
+      else if (lowName.indexOf('cumul') >= 0 && lowName.indexOf('2025') >= 0) {
+        contact.cumul2025 = parseFloat(String(rawVal).replace(',','.').replace(/[^\d.\-]/g,'')) || 0;
+      }
+      else if (lowName.indexOf('stat') >= 0 && lowName.indexOf('2026') >= 0) {
+        contact.stat2026Avril = parseFloat(String(rawVal).replace(',','.').replace(/[^\d.\-]/g,'')) || 0;
+      }
+      else if (lowName.indexOf('stat') >= 0 && lowName.indexOf('2025') >= 0) {
+        contact.stat2025Avril = parseFloat(String(rawVal).replace(',','.').replace(/[^\d.\-]/g,'')) || 0;
+      }
+      else if (lowName.indexOf('date') >= 0 && lowName.indexOf('dernière') >= 0) {
+        contact.dateDerniereCmd = String(rawVal).trim();
+      }
+      else if (lowName.indexOf('jours sans') >= 0) {
+        contact.nbJoursSansCde = parseFloat(String(rawVal).replace(',','.').replace(/[^\d.\-]/g,'')) || 0;
+      }
+    }
+
+    // Garder si on a au moins numClient ou nom
+    if (contact.numClient || contact.nom) {
+      newContacts.push(contact);
+    } else if (ix < 5) {
+      console.warn('[CDB] Ligne ' + ix + ' rejetée (pas de numClient/nom):', row);
     }
   }
+
+  console.log('[CDB] Contacts convertis:', newContacts.length, '/', cdbImportRaw.length);
+  console.log('[CDB] Sample:', newContacts.slice(0, 3));
+
   if (!newContacts.length) {
-    toast('Aucun contact valide. Voir console (F12) pour diagnostic.', 'err');
+    toast('Aucun contact valide. Voir console (F12).', 'err');
     return;
   }
 
-  // Désactiver les 2 boutons d'import
+  // Désactiver les boutons
+  document.querySelectorAll('#cdb-modal-import button').forEach(function(b){ b.disabled = true; });
   var applyBtn = document.getElementById('cdb-import-apply');
-  var btnsTxtBackup = {};
-  document.querySelectorAll('#cdb-modal-import button').forEach(function(b) {
-    btnsTxtBackup[b] = b.textContent;
-    b.disabled = true;
-  });
-  function setBtnText(t) {
-    if (applyBtn) applyBtn.textContent = t;
-  }
+  function setBtn(t) { if (applyBtn) applyBtn.textContent = t; }
 
-  // ───── Pas de Firebase = sauvegarde locale uniquement ─────
+  // Sans Firebase : sauvegarde locale uniquement
   if (typeof firebase === 'undefined' || !firebase.firestore) {
-    console.warn('[CDB] Firebase indispo, save local');
     cdbContacts = newContacts;
-    try { localStorage.setItem(CDB_CACHE_KEY, JSON.stringify(cdbContacts)); } catch(e){ console.warn('Cache:', e); }
+    try { localStorage.setItem(CDB_CACHE_KEY, JSON.stringify(cdbContacts)); } catch(e){}
     if (typeof cdbRender === 'function') cdbRender();
     var modal = document.getElementById('cdb-modal-import');
     if (modal) modal.classList.add('hidden');
@@ -4852,65 +4812,57 @@ function cdbImportApply() {
     return;
   }
 
-  // ───── Firebase : delete all + batch insert ─────
-  console.log('[CDB] Démarrage écriture Firestore...');
+  // Firestore : suppression + ajout par batches
+  setBtn('Suppression...');
   var db = firebase.firestore();
-  setBtnText('Suppression ancienne base...');
 
   db.collection('contacts').get().then(function(snap) {
-    var docs = [];
-    snap.forEach(function(d){ docs.push(d.id); });
-    console.log('[CDB] Anciens contacts à supprimer:', docs.length);
+    var ids = [];
+    snap.forEach(function(d){ ids.push(d.id); });
+    console.log('[CDB] Anciens à supprimer:', ids.length);
 
     function delBatch(i) {
-      if (i >= docs.length) {
-        console.log('[CDB] Suppression terminée, ajout des nouveaux...');
-        return addBatch(0);
-      }
-      var batch = db.batch();
-      var end = Math.min(i + 500, docs.length);
-      for (var j = i; j < end; j++) batch.delete(db.collection('contacts').doc(docs[j]));
-      setBtnText('Suppression ' + end + '/' + docs.length + '...');
-      batch.commit().then(function(){ delBatch(end); }).catch(function(e){
-        console.error('[CDB] Erreur suppression batch:', e);
-        toast('Erreur suppression : ' + e.message, 'err');
+      if (i >= ids.length) return addBatch(0);
+      var b = db.batch();
+      var end = Math.min(i + 500, ids.length);
+      for (var j = i; j < end; j++) b.delete(db.collection('contacts').doc(ids[j]));
+      setBtn('Suppression ' + end + '/' + ids.length);
+      b.commit().then(function(){ delBatch(end); }).catch(function(e){
+        console.error('[CDB] Del err:', e);
+        toast('Erreur: ' + e.message, 'err');
         document.querySelectorAll('#cdb-modal-import button').forEach(function(b){ b.disabled = false; });
       });
     }
 
     function addBatch(i) {
       if (i >= newContacts.length) {
-        // Fini
         cdbContacts = newContacts;
         try { localStorage.setItem(CDB_CACHE_KEY, JSON.stringify(cdbContacts)); } catch(e){}
         if (typeof cdbRender === 'function') cdbRender();
         var modal = document.getElementById('cdb-modal-import');
         if (modal) modal.classList.add('hidden');
-        toast('✅ Import terminé : ' + newContacts.length + ' contacts', 'ok');
-        console.log('[CDB] === IMPORT TERMINÉ ===');
+        toast('✅ ' + newContacts.length + ' contacts importés', 'ok');
         document.querySelectorAll('#cdb-modal-import button').forEach(function(b){ b.disabled = false; });
-        setBtnText('Importer et remplacer la base →');
+        setBtn('Importer et remplacer la base →');
         return;
       }
-      var batch = db.batch();
+      var b = db.batch();
       var end = Math.min(i + 500, newContacts.length);
       for (var j = i; j < end; j++) {
-        var c = newContacts[j];
-        batch.set(db.collection('contacts').doc(c.id), c);
+        b.set(db.collection('contacts').doc(newContacts[j].id), newContacts[j]);
       }
-      setBtnText('Import ' + end + '/' + newContacts.length + '...');
-      batch.commit().then(function(){ addBatch(end); }).catch(function(e){
-        console.error('[CDB] Erreur ajout batch:', e);
-        toast('Erreur import : ' + e.message, 'err');
+      setBtn('Import ' + end + '/' + newContacts.length);
+      b.commit().then(function(){ addBatch(end); }).catch(function(e){
+        console.error('[CDB] Add err:', e);
+        toast('Erreur: ' + e.message, 'err');
         document.querySelectorAll('#cdb-modal-import button').forEach(function(b){ b.disabled = false; });
       });
     }
 
     delBatch(0);
-
-  }).catch(function(e) {
-    console.error('[CDB] Firestore .get() error:', e);
-    toast('Erreur Firestore : ' + e.message, 'err');
+  }).catch(function(e){
+    console.error('[CDB] Get err:', e);
+    toast('Erreur Firestore: ' + e.message, 'err');
     document.querySelectorAll('#cdb-modal-import button').forEach(function(b){ b.disabled = false; });
   });
 }
