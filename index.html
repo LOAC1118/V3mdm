@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>MDM 2026 — CRM v4.5 [2472]</title>
+<title>MDM 2026 — CRM v4.6 [3017]</title>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Lora:ital,wght@0,500;0,600;1,400&display=swap" rel="stylesheet">
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Lora:ital,wght@0,500;0,600;1,400&display=swap');
@@ -714,10 +714,9 @@ textarea { resize:vertical; min-height:80px; }
   </div>
   <div class="topbar-center">
     <button class="t-tab active" onclick="showSection('dashboard',this)">Dashboard</button>
-    <button class="t-tab" onclick="showSection('clients',this)">Clients</button>
     <button class="t-tab" onclick="showSection('bdc',this)">Bon de Commande</button>
     <button class="t-tab" onclick="showSection('frais',this)">Frais</button>
-    <button class="t-tab" onclick="showSection('contacts-db',this)">Contacts</button>
+    <button class="t-tab" onclick="showSection('contacts-db',this)">Clients</button>
     <button class="t-tab" onclick="showSection('mailing',this)">Mailing</button>
   </div>
   <div class="topbar-right">
@@ -744,10 +743,7 @@ textarea { resize:vertical; min-height:80px; }
       Dashboard
     </div>
     
-    <div class="nav-item" onclick="showSection('clients',null,this)">
-      <svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M10 5a3 3 0 1 1-6 0 3 3 0 0 1 6 0z"/><path d="M1 14c0-3.3 2.7-6 6-6 1.1 0 2.2.3 3.1.8"/><path d="M13 10l2 2-4 4"/></svg>
-      Clients <span class="nav-badge" id="nb-clients">0</span>
-    </div>
+    
     <div class="nav-item" onclick="showSection('bdc',null,this)">
       <svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 2h12l-1 8H3z"/><circle cx="6" cy="14" r="1"/><circle cx="11" cy="14" r="1"/></svg>
       Bon de Commande
@@ -758,7 +754,7 @@ textarea { resize:vertical; min-height:80px; }
     </div>
     <div class="nav-item" onclick="showSection('contacts-db',null,this)">
       <svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="5" cy="5" r="2.5"/><path d="M1 14c0-2.5 1.8-4.5 4-4.5s4 2 4 4.5"/><circle cx="12" cy="6" r="2"/><path d="M10 14c0-2 1-3.5 2-3.5s3 1.5 3 3.5"/></svg>
-      Base contacts
+      Base clients
     </div>
     <div class="nav-item" onclick="showSection('mailing',null,this)">
       <svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="1" y="3" width="14" height="10" rx="1.5"/><path d="M1 4l7 5 7-5"/></svg>
@@ -996,11 +992,7 @@ textarea { resize:vertical; min-height:80px; }
     </div>
   </div>
 
-  <div id="sec-clients" class="hidden">
-    <div class="page-header">
-      <div><div class="page-title">Clients</div><div class="page-sub">Comptes clients actifs</div></div>
-      <button class="btn btn-primary" onclick="openModal('client')">+ Nouveau client</button>
-    </div>
+  
     <div class="filters">
       <div class="search-box"><svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="#64748b" stroke-width="1.5"><circle cx="6.5" cy="6.5" r="4.5"/><path d="M10.5 10.5L14 14"/></svg><input type="text" id="search-clients" placeholder="Rechercher…" oninput="renderClients()"></div>
       <select class="filter-select" id="filter-client-profil" onchange="renderClients()"><option value="">Tous profils</option><option>Biocoop</option><option>Biomonde</option><option>Indépendant</option><option>Restaurateur</option><option>Grossiste</option></select>
@@ -1238,8 +1230,8 @@ textarea { resize:vertical; min-height:80px; }
   <div id="sec-contacts-db" class="hidden">
     <div class="page-header">
       <div>
-        <div class="page-title">Base contacts <span id="cdb-total" style="font-size:.72rem;font-weight:400;color:var(--g500);margin-left:8px;">0 contacts</span></div>
-        <div class="page-sub">Clients & prospects — import Excel, liaison avec les commandes</div>
+        <div class="page-title">Base clients <span id="cdb-total" style="font-size:.72rem;font-weight:400;color:var(--g500);margin-left:8px;">0 contacts</span></div>
+        <div class="page-sub">Clients — import Excel, liaison avec les commandes, génération mailing</div>
       </div>
       <div style="display:flex;gap:8px;">
         <button class="btn btn-ghost" onclick="cdbExportCsv()" style="font-size:.78rem;">📥 Export CSV</button>
@@ -1493,7 +1485,7 @@ textarea { resize:vertical; min-height:80px; }
     </div>
   </div>
 
-</div></div></div><!-- /main /app /app-shell -->
+</div></div><!-- /main /app /app-shell -->
 
 <div id="toast"></div>
 
@@ -1754,7 +1746,7 @@ function setSyncing(on) {
 // ═══════════════════════════════════════════════
 //  NAVIGATION
 // ═══════════════════════════════════════════════
-const SECTIONS = ['dashboard','clients','bdc','frais','contacts-db','mailing'];
+const SECTIONS = ['dashboard','bdc','frais','contacts-db','mailing'];
 function showSection(name, tabEl, sideEl) {
   SECTIONS.forEach(s => { const el=document.getElementById('sec-'+s); el.classList.add('hidden'); el.style.display=''; });
   const sec=document.getElementById('sec-'+name); if(!sec){console.warn('Section absente:',name);return;} sec.classList.remove('hidden'); sec.style.display=(name==='bdc')?'flex':'';
@@ -3951,7 +3943,7 @@ function dashCaProcess(rows) {
 
 // ═══════════════════════════════════════════════
 // VERSION DU CODE — pour vérifier le déploiement
-console.log('%c[MDM CRM] Version chargée : v4.5-ndf' + Date.now(), 'color:#2563b0;font-weight:bold;font-size:14px');
+console.log('%c[MDM CRM] Version chargée : v4.6-rename-clients' + Date.now(), 'color:#2563b0;font-weight:bold;font-size:14px');
 
 // ═══════════════════════════════════════════════
 // SAUVEGARDE / CHARGEMENT FIRESTORE DES COMMANDES
