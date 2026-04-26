@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>MDM 2026 — CRM v4.6 [3017]</title>
+<title>MDM 2026 — CRM v4.7 [3184]</title>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Lora:ital,wght@0,500;0,600;1,400&display=swap" rel="stylesheet">
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Lora:ital,wght@0,500;0,600;1,400&display=swap');
@@ -1887,7 +1887,13 @@ function nfdDeleteLineFs(id) {
 }
 function nfdSyncFromFirestore() {
   if (typeof firebase === 'undefined' || !firebase.firestore || !firebase.auth) return;
-  var u = firebase.auth().currentUser;
+  if (!firebase.apps || !firebase.apps.length) {
+    // Pas encore initialisée, retry
+    setTimeout(nfdSyncFromFirestore, 1000);
+    return;
+  }
+  var u;
+  try { u = firebase.auth().currentUser; } catch(e) { return; }
   if (!u) {
     setTimeout(nfdSyncFromFirestore, 1000);
     return;
@@ -3943,7 +3949,7 @@ function dashCaProcess(rows) {
 
 // ═══════════════════════════════════════════════
 // VERSION DU CODE — pour vérifier le déploiement
-console.log('%c[MDM CRM] Version chargée : v4.6-rename-clients' + Date.now(), 'color:#2563b0;font-weight:bold;font-size:14px');
+console.log('%c[MDM CRM] Version chargée : v4.7-firebase-safe' + Date.now(), 'color:#2563b0;font-weight:bold;font-size:14px');
 
 // ═══════════════════════════════════════════════
 // SAUVEGARDE / CHARGEMENT FIRESTORE DES COMMANDES
@@ -4124,6 +4130,10 @@ function dashCaSaveToFirestore() {
 
 function dashCaLoadFromFirestore() {
   if (typeof firebase === 'undefined' || !firebase.firestore) return;
+  if (!firebase.apps || !firebase.apps.length) {
+    setTimeout(dashCaLoadFromFirestore, 1000);
+    return;
+  }
   if (typeof currentUser !== 'undefined' && !currentUser) {
     console.warn('[DashCA] Pas connecté, sync Firestore reportée');
     return;
@@ -4729,13 +4739,21 @@ function cdbLoadCache() {
 function cdbInit() {
   cdbLoadCache();
   if (cdbFsLoaded) return;
-  // Vérifier auth Firebase directement (pas la var currentUser qui peut ne pas être prête)
   if (typeof firebase === 'undefined' || !firebase.auth) {
     console.warn('[CDB] Firebase non chargé, retry...');
     setTimeout(cdbInit, 500);
     return;
   }
-  var fbUser = firebase.auth().currentUser;
+  if (!firebase.apps || !firebase.apps.length) {
+    console.warn('[CDB] Firebase non initialisé, retry...');
+    setTimeout(cdbInit, 1000);
+    return;
+  }
+  var fbUser;
+  try { fbUser = firebase.auth().currentUser; } catch(e) {
+    setTimeout(cdbInit, 1000);
+    return;
+  }
   if (!fbUser) {
     console.warn('[CDB] Pas connecté Firebase, retry dans 1s...');
     setTimeout(cdbInit, 1000);
@@ -4751,7 +4769,13 @@ function cdbSyncFromFirestore() {
     console.warn('[CDB] Firebase non chargé');
     return;
   }
-  var fbUser = firebase.auth().currentUser;
+  if (!firebase.apps || !firebase.apps.length) {
+    console.warn('[CDB] Firebase non initialisé, retry');
+    setTimeout(cdbSyncFromFirestore, 1000);
+    return;
+  }
+  var fbUser;
+  try { fbUser = firebase.auth().currentUser; } catch(e) { return; }
   if (!fbUser) {
     console.warn('[CDB] Sync Firestore : pas connecté');
     return;
