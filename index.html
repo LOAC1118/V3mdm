@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>MDM 2026 — CRM v4.0 [7334]</title>
+<title>MDM 2026 — CRM v4.1 [0152]</title>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Lora:ital,wght@0,500;0,600;1,400&display=swap" rel="stylesheet">
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Lora:ital,wght@0,500;0,600;1,400&display=swap');
@@ -3388,7 +3388,7 @@ function dashCaProcess(rows) {
 
 // ═══════════════════════════════════════════════
 // VERSION DU CODE — pour vérifier le déploiement
-console.log('%c[MDM CRM] Version chargée : v4.0-bulletproof' + Date.now(), 'color:#2563b0;font-weight:bold;font-size:14px');
+console.log('%c[MDM CRM] Version chargée : v4.1-diagnostic' + Date.now(), 'color:#2563b0;font-weight:bold;font-size:14px');
 
 // ═══════════════════════════════════════════════
 // SAUVEGARDE / CHARGEMENT FIRESTORE DES COMMANDES
@@ -4771,8 +4771,33 @@ function cdbImportApply() {
   }
 
   console.log('[CDB] Contacts convertis:', newContacts.length);
+  // Debug : afficher les 3 premiers contacts convertis pour voir leurs propriétés
+  if (newContacts.length > 0) {
+    console.log('[CDB] Sample contacts:', newContacts.slice(0, 3));
+  } else {
+    // Debug : pourquoi 0 contacts ?
+    console.error('[CDB] === DIAGNOSTIC : pourquoi aucun contact ne passe ===');
+    console.log('[CDB] cdbImportRaw[0]:', cdbImportRaw[0]);
+    console.log('[CDB] cdbImportRaw[1]:', cdbImportRaw[1]);
+    console.log('[CDB] cdbImportMapping:', JSON.stringify(cdbImportMapping));
+    // Tester manuellement la conversion d'une ligne
+    var testRow = cdbImportRaw[0];
+    if (testRow) {
+      var testC = { id: 'test' };
+      Object.keys(cdbImportMapping).forEach(function(col) {
+        var field = cdbImportMapping[col];
+        var v = testRow[col];
+        console.log('[CDB] Test col=' + col + ', field=' + field + ', raw value=', v, 'type=', typeof v);
+        if (field !== '_ignore' && v !== null && v !== undefined && v !== '') {
+          testC[field] = v;
+        }
+      });
+      console.log('[CDB] Test contact reconstruit:', testC);
+      console.log('[CDB] Aurait numClient ?', !!testC.numClient, ' nom ?', !!testC.nom);
+    }
+  }
   if (!newContacts.length) {
-    toast('Aucun contact valide après conversion', 'err');
+    toast('Aucun contact valide. Voir console (F12) pour diagnostic.', 'err');
     return;
   }
 
