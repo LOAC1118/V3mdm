@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>MDM 2026 — CRM v5.2 [4805]</title>
+<title>MDM 2026 — CRM v5.3 [6165]</title>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Lora:ital,wght@0,500;0,600;1,400&display=swap" rel="stylesheet">
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Lora:ital,wght@0,500;0,600;1,400&display=swap');
@@ -267,7 +267,8 @@ body::before {
 .sf-name { font-size:.8rem; color:var(--g800); font-weight:500; }
 .sf-role { font-size:.68rem; color:var(--g500); }
 
-.main { flex:1; overflow-y:auto; padding:1.75rem 2rem; background:var(--bg); }
+.main { flex:1; overflow-y:auto; padding:1.75rem 2rem; background:var(--bg); width:100%; box-sizing:border-box; }
+.main > div[id^="sec-"] { max-width: 1400px; margin: 0 auto; width: 100%; }
 
 /* ══════════════════════════════════
    PAGE HEADER
@@ -1103,141 +1104,105 @@ textarea { resize:vertical; min-height:80px; }
 
   <!-- FRAIS -->
   <div id="sec-frais" class="hidden">
-    <!-- Onglets internes -->
-    <div style="display:flex;gap:6px;margin-bottom:1rem;background:var(--surface2);padding:.3rem;border-radius:10px;">
-      <button id="frais-tab-com" class="frais-tab active" onclick="nfdSwitchTab('com')" style="flex:1;padding:.55rem 1rem;border:none;background:#fff;border-radius:7px;font-family:var(--fd);font-size:.82rem;font-weight:600;color:var(--g900);cursor:pointer;box-shadow:var(--shadow-sm);">💼 Frais commerciaux</button>
-      <button id="frais-tab-perso" class="frais-tab" onclick="nfdSwitchTab('perso')" style="flex:1;padding:.55rem 1rem;border:none;background:transparent;border-radius:7px;font-family:var(--fd);font-size:.82rem;font-weight:600;color:var(--g600);cursor:pointer;">📋 Note de frais perso</button>
-    </div>
-
-    <!-- ZONE 1 : Frais commerciaux (existant) -->
-    <div id="frais-zone-com">
     <div class="page-header">
-      <div><div class="page-title">Frais commerciaux</div><div class="page-sub">Suivi des dépenses terrain par commercial</div></div>
-      <div class="flex gap-2">
-        <button class="btn btn-ghost" onclick="exportFraisCSV()">↓ Export CSV</button>
-        <button class="btn btn-primary" onclick="openModal('frais')">+ Saisir des frais</button>
+      <div>
+        <div class="page-title">Note de frais</div>
+        <div class="page-sub">Saisie ligne par ligne · génération PDF mensuel · synchronisation cloud</div>
+      </div>
+      <div style="display:flex;gap:8px;">
+        <button class="btn btn-ghost" onclick="nfdExportCSV()" style="font-size:.78rem;">↓ Export CSV</button>
+        <button class="btn btn-primary" onclick="nfdGeneratePDF()" style="font-size:.78rem;background:#dc2626;border-color:#dc2626;">📄 Générer PDF</button>
       </div>
     </div>
-    <div class="stats-row-5">
-      <div class="stat-card"><div class="stat-label">Total du mois</div><div class="stat-val" id="frais-stat-mois">—</div><div class="stat-delta" id="frais-stat-mois-label">—</div></div>
-      <div class="stat-card"><div class="stat-label">Déplacements</div><div class="stat-val" id="frais-stat-dep">—</div><div class="stat-delta" style="color:var(--amber)">🚗</div></div>
-      <div class="stat-card"><div class="stat-label">Repas</div><div class="stat-val" id="frais-stat-repas">—</div><div class="stat-delta" style="color:var(--blue)">🍽</div></div>
-      <div class="stat-card"><div class="stat-label">Hébergement</div><div class="stat-val" id="frais-stat-heb">—</div><div class="stat-delta" style="color:#a78bfa">🏨</div></div>
-      <div class="stat-card"><div class="stat-label">Divers</div><div class="stat-val" id="frais-stat-div">—</div><div class="stat-delta text-muted">📎</div></div>
-    </div>
-    <div class="filters">
-      <div class="search-box"><svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="#64748b" stroke-width="1.5"><circle cx="6.5" cy="6.5" r="4.5"/><path d="M10.5 10.5L14 14"/></svg><input type="text" id="search-frais" placeholder="Commercial, motif…" oninput="renderFrais()"></div>
-      <select class="filter-select" id="filter-frais-type" onchange="renderFrais()"><option value="">Tous types</option><option>Déplacement</option><option>Repas</option><option>Hébergement</option><option>Divers</option></select>
-      <select class="filter-select" id="filter-frais-statut" onchange="renderFrais()"><option value="">Tous statuts</option><option>En attente</option><option>Validé</option><option>Remboursé</option><option>Refusé</option></select>
-      <select class="filter-select" id="filter-frais-mois" onchange="renderFrais()"><option value="">Tous les mois</option></select>
-    </div>
-    <div class="card"><div class="tbl-wrap"><table><thead><tr><th>Date</th><th>Commercial</th><th>Type</th><th>Motif</th><th>Client visité</th><th>Détail</th><th>Montant</th><th>Statut</th><th>Actions</th></tr></thead><tbody id="tbody-frais"></tbody></table></div></div>
 
-    </div><!-- /frais-zone-com -->
-
-    <!-- ZONE 2 : Note de frais personnelle -->
-    <div id="frais-zone-perso" style="display:none !important;">
-      <div class="page-header">
+    <!-- Identité + sélection mois/année -->
+    <div class="card" style="padding:1rem;margin-bottom:1rem;">
+      <div style="display:grid;grid-template-columns:1fr 1fr 130px 110px;gap:12px;align-items:end;">
         <div>
-          <div class="page-title">Note de frais personnelle</div>
-          <div class="page-sub">Saisie ligne par ligne · génération PDF mensuel · synchronisation cloud</div>
+          <label class="lb">Nom</label>
+          <input type="text" id="nfd-nom" placeholder="SPOTO" oninput="nfdSaveIdentity()"/>
         </div>
-        <div style="display:flex;gap:8px;">
-          <button class="btn btn-ghost" onclick="nfdExportCSV()" style="font-size:.78rem;">↓ Export CSV</button>
-          <button class="btn btn-primary" onclick="nfdGeneratePDF()" style="font-size:.78rem;background:#dc2626;border-color:#dc2626;">📄 Générer PDF</button>
+        <div>
+          <label class="lb">Prénom</label>
+          <input type="text" id="nfd-prenom" placeholder="Christophe" oninput="nfdSaveIdentity()"/>
         </div>
-      </div>
-
-      <!-- Identité + sélection mois/année -->
-      <div class="card" style="padding:1rem;margin-bottom:1rem;">
-        <div style="display:grid;grid-template-columns:1fr 1fr 130px 110px;gap:12px;align-items:end;">
-          <div>
-            <label class="lb">Nom</label>
-            <input type="text" id="nfd-nom" placeholder="SPOTO" oninput="nfdSaveIdentity()"/>
-          </div>
-          <div>
-            <label class="lb">Prénom</label>
-            <input type="text" id="nfd-prenom" placeholder="Christophe" oninput="nfdSaveIdentity()"/>
-          </div>
-          <div>
-            <label class="lb">Mois</label>
-            <select id="nfd-mois" onchange="nfdRender()">
-              <option value="01">Janvier</option><option value="02">Février</option>
-              <option value="03">Mars</option><option value="04">Avril</option>
-              <option value="05">Mai</option><option value="06">Juin</option>
-              <option value="07">Juillet</option><option value="08">Août</option>
-              <option value="09">Septembre</option><option value="10">Octobre</option>
-              <option value="11">Novembre</option><option value="12">Décembre</option>
-            </select>
-          </div>
-          <div>
-            <label class="lb">Année</label>
-            <input type="number" id="nfd-annee" value="2026" min="2020" max="2099" onchange="nfdRender()"/>
-          </div>
+        <div>
+          <label class="lb">Mois</label>
+          <select id="nfd-mois" onchange="nfdRender()">
+            <option value="01">Janvier</option><option value="02">Février</option>
+            <option value="03">Mars</option><option value="04">Avril</option>
+            <option value="05">Mai</option><option value="06">Juin</option>
+            <option value="07">Juillet</option><option value="08">Août</option>
+            <option value="09">Septembre</option><option value="10">Octobre</option>
+            <option value="11">Novembre</option><option value="12">Décembre</option>
+          </select>
+        </div>
+        <div>
+          <label class="lb">Année</label>
+          <input type="number" id="nfd-annee" value="2026" min="2020" max="2099" onchange="nfdRender()"/>
         </div>
       </div>
+    </div>
 
-      <!-- KPIs -->
-      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:1rem;">
-        <div class="stat-card" style="border-top:3px solid var(--g700)!important;"><div class="stat-label">Nb dépenses</div><div class="stat-val" id="nfd-kpi-nb">0</div></div>
-        <div class="stat-card" style="border-top:3px solid #2563b0!important;"><div class="stat-label">Total HT</div><div class="stat-val" id="nfd-kpi-ht" style="color:#2563b0;">0,00 €</div></div>
-        <div class="stat-card" style="border-top:3px solid #b45309!important;"><div class="stat-label">Total TVA</div><div class="stat-val" id="nfd-kpi-tva" style="color:#b45309;">0,00 €</div></div>
-        <div class="stat-card" style="border-top:3px solid #059669!important;"><div class="stat-label">Total TTC</div><div class="stat-val" id="nfd-kpi-ttc" style="color:#059669;">0,00 €</div></div>
-      </div>
+    <!-- KPIs -->
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:1rem;">
+      <div class="stat-card" style="border-top:3px solid var(--g700)!important;"><div class="stat-label">Nb dépenses</div><div class="stat-val" id="nfd-kpi-nb">0</div></div>
+      <div class="stat-card" style="border-top:3px solid #2563b0!important;"><div class="stat-label">Total HT</div><div class="stat-val" id="nfd-kpi-ht" style="color:#2563b0;">0,00 €</div></div>
+      <div class="stat-card" style="border-top:3px solid #b45309!important;"><div class="stat-label">Total TVA</div><div class="stat-val" id="nfd-kpi-tva" style="color:#b45309;">0,00 €</div></div>
+      <div class="stat-card" style="border-top:3px solid #059669!important;"><div class="stat-label">Total TTC</div><div class="stat-val" id="nfd-kpi-ttc" style="color:#059669;">0,00 €</div></div>
+    </div>
 
-      <!-- Saisie nouvelle ligne -->
-      <div class="card" style="padding:1rem;margin-bottom:1rem;background:linear-gradient(135deg,var(--blue-p50),#fff);border:1.5px solid var(--blue-p300);">
-        <div style="font-size:.72rem;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--blue-p700);margin-bottom:.6rem;">➕ Ajouter une ligne</div>
-        <div style="display:grid;grid-template-columns:120px 1.2fr 100px 90px 100px 1.5fr auto;gap:8px;align-items:end;">
-          <div><label class="lb">Date</label><input type="date" id="nfd-new-date"/></div>
-          <div><label class="lb">Catégorie</label>
-            <select id="nfd-new-cat">
-              <option>Carburant</option><option>Déjeuner</option><option>Péage</option>
-              <option>Stationnement</option><option>Auto</option><option>Missions</option>
-              <option>Timbres / Impressions</option><option>Hôtel</option>
-              <option>Divers</option><option>SNCF Transport</option>
-            </select>
-          </div>
-          <div><label class="lb">HT (€)</label><input type="number" step="0.01" min="0" id="nfd-new-ht" oninput="nfdComputeTTC()" placeholder="0,00"/></div>
-          <div><label class="lb">TVA (€)</label><input type="number" step="0.01" min="0" id="nfd-new-tva" oninput="nfdComputeTTC()" placeholder="0,00"/></div>
-          <div><label class="lb">TTC (€)</label><input type="number" step="0.01" id="nfd-new-ttc" placeholder="auto" readonly style="background:var(--g100);"/></div>
-          <div><label class="lb">Description</label><input type="text" id="nfd-new-desc" placeholder="Ex: Total Bourges → Lyon"/></div>
-          <div><button class="btn btn-primary" onclick="nfdAddLine()" style="white-space:nowrap;">➕ Ajouter</button></div>
+    <!-- Saisie nouvelle ligne -->
+    <div class="card" style="padding:1rem;margin-bottom:1rem;background:linear-gradient(135deg,var(--blue-p50),#fff);border:1.5px solid var(--blue-p300);">
+      <div style="font-size:.72rem;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--blue-p700);margin-bottom:.6rem;">➕ Ajouter une ligne</div>
+      <div style="display:grid;grid-template-columns:120px 1.2fr 100px 90px 100px 1.5fr auto;gap:8px;align-items:end;">
+        <div><label class="lb">Date</label><input type="date" id="nfd-new-date"/></div>
+        <div><label class="lb">Catégorie</label>
+          <select id="nfd-new-cat">
+            <option>Carburant</option><option>Déjeuner</option><option>Péage</option>
+            <option>Stationnement</option><option>Auto</option><option>Missions</option>
+            <option>Timbres / Impressions</option><option>Hôtel</option>
+            <option>Divers</option><option>SNCF Transport</option>
+          </select>
         </div>
+        <div><label class="lb">HT (€)</label><input type="number" step="0.01" min="0" id="nfd-new-ht" oninput="nfdComputeTTC()" placeholder="0,00"/></div>
+        <div><label class="lb">TVA (€)</label><input type="number" step="0.01" min="0" id="nfd-new-tva" oninput="nfdComputeTTC()" placeholder="0,00"/></div>
+        <div><label class="lb">TTC (€)</label><input type="number" step="0.01" id="nfd-new-ttc" placeholder="auto" readonly style="background:var(--g100);"/></div>
+        <div><label class="lb">Description</label><input type="text" id="nfd-new-desc" placeholder="Ex: Total Bourges → Lyon"/></div>
+        <div><button class="btn btn-primary" onclick="nfdAddLine()" style="white-space:nowrap;">➕ Ajouter</button></div>
       </div>
+    </div>
 
-      <!-- Tableau des lignes -->
-      <div class="card">
-        <div class="tbl-wrap" style="max-height:calc(100vh - 480px);overflow-y:auto;">
-          <table>
-            <thead style="position:sticky;top:0;background:var(--surface);z-index:1;">
-              <tr>
-                <th>Date</th>
-                <th>Catégorie</th>
-                <th style="text-align:right;">HT</th>
-                <th style="text-align:right;">TVA</th>
-                <th style="text-align:right;">TTC</th>
-                <th>Description</th>
-                <th>Action</th>
-              </tr>
-            </thead>
-            <tbody id="nfd-tbody"></tbody>
-          </table>
-        </div>
+    <!-- Tableau des lignes -->
+    <div class="card">
+      <div class="tbl-wrap" style="max-height:calc(100vh - 480px);overflow-y:auto;">
+        <table>
+          <thead style="position:sticky;top:0;background:var(--surface);z-index:1;">
+            <tr>
+              <th>Date</th>
+              <th>Catégorie</th>
+              <th style="text-align:right;">HT</th>
+              <th style="text-align:right;">TVA</th>
+              <th style="text-align:right;">TTC</th>
+              <th>Description</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody id="nfd-tbody"></tbody>
+        </table>
       </div>
+    </div>
 
-      <!-- Récap par catégorie -->
-      <div class="card" style="margin-top:1rem;">
-        <div class="card-head"><span class="card-title">Récapitulatif par catégorie</span></div>
-        <div class="tbl-wrap">
-          <table>
-            <thead><tr><th>Catégorie</th><th style="text-align:right;">HT</th><th style="text-align:right;">TVA</th><th style="text-align:right;">TTC</th></tr></thead>
-            <tbody id="nfd-recap-tbody"></tbody>
-          </table>
-        </div>
+    <!-- Récap par catégorie -->
+    <div class="card" style="margin-top:1rem;">
+      <div class="card-head"><span class="card-title">Récapitulatif par catégorie</span></div>
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr><th>Catégorie</th><th style="text-align:right;">HT</th><th style="text-align:right;">TVA</th><th style="text-align:right;">TTC</th></tr></thead>
+          <tbody id="nfd-recap-tbody"></tbody>
+        </table>
       </div>
-
-    </div><!-- /frais-zone-perso -->
+    </div>
   </div>
 
   <!-- BASE CONTACTS -->
@@ -3975,7 +3940,7 @@ function dashCaProcess(rows) {
 
 // ═══════════════════════════════════════════════
 // VERSION DU CODE — pour vérifier le déploiement
-console.log('%c[MDM CRM] Version chargée : v5.2-restore-table' + Date.now(), 'color:#2563b0;font-weight:bold;font-size:14px');
+console.log('%c[MDM CRM] Version chargée : v5.3-clean-frais' + Date.now(), 'color:#2563b0;font-weight:bold;font-size:14px');
 
 // ═══════════════════════════════════════════════
 // SAUVEGARDE / CHARGEMENT FIRESTORE DES COMMANDES
