@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>MDM 2026 — CRM v5.5 [3418]</title>
+<title>MDM 2026 — CRM v5.6 [4519]</title>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Lora:ital,wght@0,500;0,600;1,400&display=swap" rel="stylesheet">
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Lora:ital,wght@0,500;0,600;1,400&display=swap');
@@ -1107,8 +1107,8 @@ textarea { resize:vertical; min-height:80px; }
   <div id="sec-frais" class="hidden">
     <div class="page-header">
       <div>
-        <div class="page-title">Note de frais</div>
-        <div class="page-sub">Saisie ligne par ligne · génération PDF mensuel · synchronisation cloud</div>
+        <div class="page-title">Note de frais <span id="nfd-save-status" style="font-size:.65rem;font-weight:400;background:#dcfce7;color:#15803d;padding:2px 8px;border-radius:10px;margin-left:8px;display:none;">✓ sauvegardé</span></div>
+        <div class="page-sub">Saisie ligne par ligne · sauvegarde automatique · génération PDF mensuel</div>
       </div>
       <div style="display:flex;gap:8px;">
         <button class="btn btn-ghost" onclick="nfdExportCSV()" style="font-size:.78rem;">↓ Export CSV</button>
@@ -1735,7 +1735,7 @@ function showSection(name, tabEl, sideEl) {
   if (tabEl) tabEl.classList.add('active');
   if (sideEl) sideEl.classList.add('active');
   if (name==='dashboard') refreshDashboard();
-  if (name==='frais') refreshFraisStats();
+  if (name==='frais') { if (typeof refreshFraisStats === 'function') { try{refreshFraisStats();}catch(e){} } if (typeof nfdRender === 'function') nfdRender(); }
   if (name==='bdc') { if (!bdcInitDone) { buildTable(); bdcInitDone=true; } }
 }
 
@@ -1845,25 +1845,48 @@ function nfdSaveIdentity() {
 
 // Stockage local + Firestore
 function nfdSaveCache() {
-  try { localStorage.setItem(NFD_CACHE_KEY, JSON.stringify(nfdLines)); } catch(e) {}
+  try {
+    localStorage.setItem(NFD_CACHE_KEY, JSON.stringify(nfdLines));
+    console.log('[NFD] Cache sauvegardé : ' + nfdLines.length + ' lignes');
+  } catch(e) {
+    console.warn('[NFD] Erreur cache:', e);
+  }
 }
 function nfdLoadCache() {
   try {
     var s = localStorage.getItem(NFD_CACHE_KEY);
     if (s) {
       var loaded = JSON.parse(s);
-      if (Array.isArray(loaded)) nfdLines = loaded;
+      if (Array.isArray(loaded)) {
+        nfdLines = loaded;
+        console.log('[NFD] ' + loaded.length + ' lignes restaurées depuis le cache local');
+      }
+    } else {
+      console.log('[NFD] Aucun cache local');
     }
-  } catch(e) {}
+  } catch(e) { console.warn('[NFD] Erreur lecture cache:', e); }
 }
 
 function nfdSaveLine(line) {
-  if (typeof firebase === 'undefined' || !firebase.firestore || !firebase.auth) return;
-  var u = firebase.auth().currentUser;
-  if (!u) return;
+  if (typeof firebase === 'undefined' || !firebase.firestore || !firebase.auth) {
+    console.log('[NFD] Firebase indisponible, ligne sauvée localement seulement');
+    return;
+  }
+  if (!firebase.apps || !firebase.apps.length) {
+    console.log('[NFD] Firebase non initialisé, ligne sauvée localement seulement');
+    return;
+  }
+  var u;
+  try { u = firebase.auth().currentUser; } catch(e) { return; }
+  if (!u) {
+    console.log('[NFD] Pas connecté, ligne sauvée localement seulement');
+    return;
+  }
   try {
-    firebase.firestore().collection('notes_frais').doc(line.id).set(line, { merge:true });
-  } catch(e) { console.warn('NFD save Firestore:', e); }
+    firebase.firestore().collection('notes_frais').doc(line.id).set(line, { merge:true })
+      .then(function(){ console.log('[NFD] Ligne sauvée Firestore : ' + line.id); })
+      .catch(function(e){ console.warn('[NFD] Erreur sauvegarde Firestore:', e); });
+  } catch(e) { console.warn('[NFD] Save Firestore exception:', e); }
 }
 function nfdDeleteLineFs(id) {
   if (typeof firebase === 'undefined' || !firebase.firestore || !firebase.auth) return;
@@ -1943,7 +1966,14 @@ function nfdAddLine() {
   document.getElementById('nfd-new-ht').focus();
 
   nfdRender();
-  toast('✅ Ligne ajoutée', 'ok');
+  toast('✅ Ligne ajoutée et sauvegardée', 'ok');
+
+  // Indicateur visuel "sauvegardé"
+  var statEl = document.getElementById('nfd-save-status');
+  if (statEl) {
+    statEl.style.display = 'inline-block';
+    setTimeout(function(){ statEl.style.display = 'none'; }, 2500);
+  }
 }
 
 // Supprimer ligne
@@ -2210,6 +2240,7 @@ function nfdGeneratePDF() {
     }
     nfdLoadCache();
     nfdLoadIdentity();
+    console.log('[NFD] Cache chargé : ' + nfdLines.length + ' lignes');
 
     // Initialiser le mois en cours
     var now = new Date();
@@ -2219,6 +2250,9 @@ function nfdGeneratePDF() {
     if (moisEl) moisEl.value = String(now.getMonth()+1).padStart(2,'0');
     if (anneeEl) anneeEl.value = now.getFullYear();
     if (dateEl) dateEl.value = now.toISOString().slice(0,10);
+
+    // Afficher les lignes du mois courant
+    nfdRender();
 
     // Sync Firestore en arrière-plan
     function waitAuth() {
@@ -3941,7 +3975,7 @@ function dashCaProcess(rows) {
 
 // ═══════════════════════════════════════════════
 // VERSION DU CODE — pour vérifier le déploiement
-console.log('%c[MDM CRM] Version chargée : v5.5-centrage-final' + Date.now(), 'color:#2563b0;font-weight:bold;font-size:14px');
+console.log('%c[MDM CRM] Version chargée : v5.6-nfd-save' + Date.now(), 'color:#2563b0;font-weight:bold;font-size:14px');
 
 // ═══════════════════════════════════════════════
 // SAUVEGARDE / CHARGEMENT FIRESTORE DES COMMANDES
