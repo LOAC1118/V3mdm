@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>MDM 2026 — CRM v6.0 [9709]</title>
+<title>MDM 2026 — CRM v6.2 [5108]</title>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Lora:ital,wght@0,500;0,600;1,400&display=swap" rel="stylesheet">
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Lora:ital,wght@0,500;0,600;1,400&display=swap');
@@ -2472,8 +2472,11 @@ async function saveFrais() {
 }
 
 function renderFrais() {
-  const q=(g('search-frais')||'').toLowerCase(), ft=g('filter-frais-type'), fs=g('filter-frais-statut'), fm=g('filter-frais-mois');
+  // Section frais commerciaux supprimée — on ne fait rien si les éléments n'existent pas
+  const tbody=document.getElementById('tbody-frais');
   const moisSel=document.getElementById('filter-frais-mois');
+  if (!tbody || !moisSel) return;
+  const q=(g('search-frais')||'').toLowerCase(), ft=g('filter-frais-type'), fs=g('filter-frais-statut'), fm=g('filter-frais-mois');
   const moisSet=[...new Set(cache.frais.map(f=>f.dateFrais?.slice(0,7)).filter(Boolean))].sort().reverse();
   const curVal=moisSel.value;
   moisSel.innerHTML='<option value="">Tous les mois</option>'+moisSet.map(m=>`<option value="${m}" ${m===curVal?'selected':''}>${fmtMois(m)}</option>`).join('');
@@ -2481,8 +2484,6 @@ function renderFrais() {
     (!q||(f.commercial||'').toLowerCase().includes(q)||(f.motif||'').toLowerCase().includes(q)||(f.clientVisite||'').toLowerCase().includes(q))&&
     (!ft||f.typeFrais===ft)&&(!fs||f.statut===fs)&&(!fm||f.dateFrais?.startsWith(fm))
   );
-  const tbody=document.getElementById('tbody-frais');
-  if (!tbody) return;
   if (!list.length) { tbody.innerHTML=`<tr><td colspan="9"><div class="empty"><div class="empty-icon">💳</div><div class="empty-title">Aucun frais enregistré</div><div class="empty-sub">Cliquez sur "+ Saisir des frais"</div></div></td></tr>`; return; }
   tbody.innerHTML=list.map(f=>{
     const detail=f.typeFrais==='Déplacement'&&f.km?`${f.km} km`:f.typeFrais==='Hébergement'&&f.nuits?`${f.nuits} nuit(s)`:f.typeFrais==='Repas'&&f.couverts?`${f.couverts} couvert(s)`:'—';
@@ -3978,7 +3979,7 @@ function dashCaProcess(rows) {
 
 // ═══════════════════════════════════════════════
 // VERSION DU CODE — pour vérifier le déploiement
-console.log('%c[MDM CRM] Version chargée : v6.0-full-width' + Date.now(), 'color:#2563b0;font-weight:bold;font-size:14px');
+console.log('%c[MDM CRM] Version chargée : v6.2-no-dup' + Date.now(), 'color:#2563b0;font-weight:bold;font-size:14px');
 
 // ═══════════════════════════════════════════════
 // SAUVEGARDE / CHARGEMENT FIRESTORE DES COMMANDES
