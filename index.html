@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>MDM 2026 — CRM v7.0 [3622]</title>
+<title>MDM 2026 — CRM v7.1 [3824]</title>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Lora:ital,wght@0,500;0,600;1,400&display=swap" rel="stylesheet">
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Lora:ital,wght@0,500;0,600;1,400&display=swap');
@@ -1691,6 +1691,15 @@ async function showApp() {
   document.getElementById('f-commercial').value = nom;
 
   startListeners();
+
+  // ═══ Synchronisation cloud des 3 nouveaux modules ═══
+  // Charge depuis Firestore les données : contacts, notes de frais, commandes stats
+  setTimeout(function() {
+    console.log('[Cloud] Démarrage sync multi-modules...');
+    try { if (typeof cdbInit === 'function') cdbInit(); } catch(e) { console.warn('cdbInit err:', e); }
+    try { if (typeof nfdSyncFromFirestore === 'function') nfdSyncFromFirestore(); } catch(e) { console.warn('nfdSync err:', e); }
+    try { if (typeof dashCaLoadFromFirestore === 'function') dashCaLoadFromFirestore(); } catch(e) { console.warn('dashCaLoad err:', e); }
+  }, 500);
 }
 
 // ═══════════════════════════════════════════════
@@ -3983,7 +3992,7 @@ function dashCaProcess(rows) {
 
 // ═══════════════════════════════════════════════
 // VERSION DU CODE — pour vérifier le déploiement
-console.log('%c[MDM CRM] Version chargée : v7.0-clean' + Date.now(), 'color:#2563b0;font-weight:bold;font-size:14px');
+console.log('%c[MDM CRM] Version chargée : v7.1-cloud-sync' + Date.now(), 'color:#2563b0;font-weight:bold;font-size:14px');
 
 // ═══════════════════════════════════════════════
 // SAUVEGARDE / CHARGEMENT FIRESTORE DES COMMANDES
