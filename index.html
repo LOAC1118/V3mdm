@@ -829,23 +829,9 @@ textarea { resize:vertical; min-height:80px; }
     </div>
     <div class="stats-row">
       <div class="stat-card"><div class="stat-label">Prospects</div><div class="stat-val" id="stat-prospects">—</div><div class="stat-delta">en qualification</div></div>
-      <div class="stat-card"><div class="stat-label">Clients actifs</div><div class="stat-val" id="stat-clients">—</div><div class="stat-delta">comptes ouverts</div></div>
-      <div class="stat-card"><div class="stat-label">Commandes</div><div class="stat-val" id="stat-commandes">—</div><div class="stat-delta">total enregistrées</div></div>
-      <div class="stat-card"><div class="stat-label">CA Total</div><div class="stat-val" id="stat-ca">—</div><div class="stat-delta">toutes commandes</div></div>
-    </div>
-    <div class="dash-grid">
-      <div class="card">
-        <div class="card-head"><span class="card-title">Activité récente</span></div>
-        <div class="activity-list" id="activity-list"><div class="empty"><div class="empty-icon">📋</div><div class="empty-title">Chargement…</div></div></div>
-      </div>
-      <div class="card">
-        <div class="card-head"><span class="card-title">Répartition</span></div>
-        <div style="padding:1rem;">
-          <div style="margin-bottom:.8rem;"><div style="display:flex;justify-content:space-between;margin-bottom:4px;font-size:.75rem;"><span style="color:var(--s400)">Prospects</span><span id="rp-count" class="text-em">0</span></div><div style="background:rgba(255,255,255,.06);border-radius:4px;height:6px;"><div id="rp-bar" style="background:var(--amber);height:6px;border-radius:4px;width:0%;transition:width .4s;"></div></div></div>
-          <div style="margin-bottom:.8rem;"><div style="display:flex;justify-content:space-between;margin-bottom:4px;font-size:.75rem;"><span style="color:var(--s400)">Clients</span><span id="rc-count" class="text-em">0</span></div><div style="background:rgba(255,255,255,.06);border-radius:4px;height:6px;"><div id="rc-bar" style="background:var(--em500);height:6px;border-radius:4px;width:0%;transition:width .4s;"></div></div></div>
-          <div><div style="display:flex;justify-content:space-between;margin-bottom:4px;font-size:.75rem;"><span style="color:var(--g500)">Frais du mois</span><span id="ro-count" class="text-em">0 €</span></div><div style="background:var(--g200);border-radius:4px;height:6px;"><div id="ro-bar" style="background:var(--blue-p600);height:6px;border-radius:4px;width:0%;transition:width .4s;"></div></div></div>
-        </div>
-      </div>
+      <div class="stat-card"><div class="stat-label">Contacts</div><div class="stat-val" id="stat-clients">—</div><div class="stat-delta">base clients</div></div>
+      <div class="stat-card"><div class="stat-label">BDC saisis</div><div class="stat-val" id="stat-commandes">—</div><div class="stat-delta">bons de commande</div></div>
+      <div class="stat-card"><div class="stat-label">Frais du mois</div><div class="stat-val" id="ro-count" style="font-size:1.1rem;">—</div><div class="stat-delta">note de frais</div></div>
     </div>
 
     <!-- ═══ ANALYSE CA MENSUELLE (upload Excel) ═══ -->
@@ -868,8 +854,8 @@ textarea { resize:vertical; min-height:80px; }
 
       <div id="dash-ca-content" style="display:none;padding:0 1rem 1rem;">
 
-        <!-- Filtres -->
-        <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;padding:.6rem .8rem;background:var(--surface2);border-radius:8px;margin-bottom:1rem;">
+        <!-- ── FILTRES ─────────────────────────────────────────── -->
+        <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;padding:.6rem .8rem;background:var(--surface2);border-radius:8px;margin-bottom:1.25rem;">
           <span style="font-size:.7rem;font-weight:600;color:var(--g600);text-transform:uppercase;letter-spacing:.05em;">Filtres :</span>
           <select class="filter-select" id="dash-ca-datecol" onchange="dashCaChangeDateCol(this.value)" style="font-size:.75rem;">
             <option value="facture" selected>📅 Date Facture</option>
@@ -887,138 +873,151 @@ textarea { resize:vertical; min-height:80px; }
             <option value="11">Novembre</option><option value="12">Décembre</option>
           </select>
           <select class="filter-select" id="dash-ca-op"     onchange="dashCaRender()" style="font-size:.75rem;"><option value="">Tous opérateurs</option></select>
-          <select class="filter-select" id="dash-ca-trans"  onchange="dashCaRender()" style="font-size:.75rem;"><option value="">Tous transporteurs</option></select>
-          <select class="filter-select" id="dash-ca-client" onchange="dashCaRender()" style="font-size:.75rem;max-width:200px;"><option value="">Tous clients</option></select>
+          <select class="filter-select" id="dash-ca-client" onchange="dashCaRender()" style="font-size:.75rem;max-width:180px;"><option value="">Tous clients</option></select>
           <label style="display:flex;align-items:center;gap:6px;padding:4px 10px;background:var(--blue-p100);border:1px solid var(--blue-p300);border-radius:6px;cursor:pointer;font-size:.74rem;color:var(--blue-p800);font-weight:600;margin-left:auto;">
             <input type="checkbox" id="dash-ca-only-fac" onchange="dashCaRender()" style="accent-color:var(--blue-p700);cursor:pointer;"/>
             Facturées uniquement
           </label>
         </div>
 
-        <!-- BLOC MOIS EN COURS -->
-        <div style="background:linear-gradient(135deg, var(--blue-p50), #fff);border:1.5px solid var(--blue-p300);border-radius:12px;padding:1rem 1.2rem;margin-bottom:1rem;position:relative;overflow:hidden;">
-          <div style="position:absolute;top:0;right:0;width:100px;height:100px;background:radial-gradient(circle, rgba(59,130,212,.08) 0%, transparent 70%);pointer-events:none;"></div>
-          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.8rem;position:relative;">
-            <div>
-              <span style="font-size:.65rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--blue-p700);">⭐ Mois en cours</span>
-              <span id="dash-cur-month-label" style="font-family:var(--fdisp);font-size:1.1rem;color:var(--g900);font-weight:600;margin-left:8px;">—</span>
-            </div>
-            <span id="dash-cur-progress" style="font-size:.68rem;color:var(--g500);"></span>
-          </div>
-          <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:10px;position:relative;">
-            <div style="background:#fff;border-radius:8px;padding:.65rem .8rem;box-shadow:var(--shadow-xs);">
-              <div style="font-size:.6rem;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--g500);margin-bottom:3px;">Nb cmds</div>
-              <div style="font-size:1.25rem;font-weight:700;color:var(--g900);" id="cur-nb">—</div>
-              <div style="font-size:.65rem;color:var(--g500);" id="cur-nb-vs">—</div>
-            </div>
-            <div style="background:#fff;border-radius:8px;padding:.65rem .8rem;box-shadow:var(--shadow-xs);border-left:3px solid #7c3aed;">
-              <div style="font-size:.6rem;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--g500);margin-bottom:3px;">CA en cours</div>
-              <div style="font-size:1.1rem;font-weight:700;color:#7c3aed;" id="cur-cours">—</div>
-              <div style="font-size:.65rem;color:var(--g500);" id="cur-cours-vs">—</div>
-            </div>
-            <div style="background:#fff;border-radius:8px;padding:.65rem .8rem;box-shadow:var(--shadow-xs);border-left:3px solid #f59e0b;">
-              <div style="font-size:.6rem;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--g500);margin-bottom:3px;">Reste à fact.</div>
-              <div style="font-size:1.1rem;font-weight:700;color:#b45309;" id="cur-livre">—</div>
-              <div style="font-size:.65rem;color:var(--g500);" id="cur-livre-vs">—</div>
-            </div>
-            <div style="background:#fff;border-radius:8px;padding:.65rem .8rem;box-shadow:var(--shadow-xs);border-left:3px solid var(--blue-p600);">
-              <div style="font-size:.6rem;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--g500);margin-bottom:3px;">Facturé</div>
-              <div style="font-size:1.1rem;font-weight:700;color:var(--blue-p700);" id="cur-fac">—</div>
-              <div style="font-size:.65rem;color:var(--g500);" id="cur-fac-vs">—</div>
-            </div>
-            <div style="background:#fff;border-radius:8px;padding:.65rem .8rem;box-shadow:var(--shadow-xs);border-left:3px solid #f59e0b;">
-              <div style="font-size:.6rem;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--g500);margin-bottom:3px;">Ticket moy.</div>
-              <div style="font-size:1.1rem;font-weight:700;color:#b45309;" id="cur-ticket">—</div>
-              <div style="font-size:.65rem;color:var(--g500);" id="cur-ticket-vs">—</div>
-            </div>
-          </div>
-          <div id="cur-top-clients" style="margin-top:.8rem;font-size:.7rem;color:var(--g700);display:none;"></div>
+        <!-- ── 4 KPIs PRINCIPAUX (fichier importé) ─────────────── -->
+        <div style="margin-bottom:.4rem;">
+          <span style="font-size:.62rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--g400);">📊 Analyse fichier importé</span>
         </div>
-
-        <!-- 5 KPIs -->
-        <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-bottom:1rem;">
-          <div class="stat-card" style="padding:.9rem 1rem;border-top:3px solid var(--g700)!important;">
-            <div class="stat-label">Nb commandes</div>
-            <div class="stat-val" id="dashk-nb" style="font-size:1.3rem;">—</div>
-            <div class="stat-delta" id="dashk-nb-sub">—</div>
+        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:.75rem;">
+          <div style="background:#fff;border-radius:12px;padding:1.1rem 1.2rem;border:1px solid var(--border);border-top:4px solid var(--blue-p600);box-shadow:var(--shadow-sm);">
+            <div style="font-size:.65rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--g500);margin-bottom:6px;">CA Total fichier</div>
+            <div style="font-size:1.6rem;font-weight:800;color:var(--blue-p700);line-height:1;" id="dashk-cours">—</div>
+            <div style="font-size:.7rem;color:var(--g500);margin-top:5px;" id="dashk-nb-sub">— commandes</div>
           </div>
-          <div class="stat-card" style="padding:.9rem 1rem;border-top:3px solid #7c3aed!important;">
-            <div class="stat-label">CA en cours</div>
-            <div class="stat-val" id="dashk-cours" style="font-size:1.3rem;color:#7c3aed;">—</div>
-            <div class="stat-delta">Activité du mois</div>
+          <div style="background:#fff;border-radius:12px;padding:1.1rem 1.2rem;border:1px solid var(--border);border-top:4px solid #059669;box-shadow:var(--shadow-sm);">
+            <div style="font-size:.65rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--g500);margin-bottom:6px;">CA Facturé</div>
+            <div style="font-size:1.6rem;font-weight:800;color:#059669;line-height:1;" id="dashk-fac">—</div>
+            <div style="font-size:.7rem;color:var(--g500);margin-top:5px;">N° facture émis</div>
           </div>
-          <div class="stat-card" style="padding:.9rem 1rem;border-top:3px solid #f59e0b!important;">
-            <div class="stat-label">Reste à facturer</div>
-            <div class="stat-val" id="dashk-livre" style="font-size:1.3rem;color:#b45309;">—</div>
-            <div class="stat-delta">Sans N° Facture</div>
+          <div style="background:#fff;border-radius:12px;padding:1.1rem 1.2rem;border:1px solid var(--border);border-top:4px solid #f59e0b;box-shadow:var(--shadow-sm);">
+            <div style="font-size:.65rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--g500);margin-bottom:6px;">Reste à facturer</div>
+            <div style="font-size:1.6rem;font-weight:800;color:#b45309;line-height:1;" id="dashk-livre">—</div>
+            <div style="font-size:.7rem;color:var(--g500);margin-top:5px;">En cours sans facture</div>
           </div>
-          <div class="stat-card" style="padding:.9rem 1rem;border-top:3px solid var(--blue-p600)!important;">
-            <div class="stat-label">CA Facturé</div>
-            <div class="stat-val" id="dashk-fac" style="font-size:1.3rem;color:var(--blue-p700);">—</div>
-            <div class="stat-delta">N° facture émis</div>
-          </div>
-          <div class="stat-card" style="padding:.9rem 1rem;border-top:3px solid #dc2626!important;">
-            <div class="stat-label">Avoirs</div>
-            <div class="stat-val" id="dashk-avoirs" style="font-size:1.3rem;color:#dc2626;">—</div>
-            <div class="stat-delta" id="dashk-avoirs-sub">—</div>
+          <div style="background:#fff;border-radius:12px;padding:1.1rem 1.2rem;border:1px solid var(--border);border-top:4px solid #dc2626;box-shadow:var(--shadow-sm);">
+            <div style="font-size:.65rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--g500);margin-bottom:6px;">Avoirs</div>
+            <div style="font-size:1.6rem;font-weight:800;color:#dc2626;line-height:1;" id="dashk-avoirs">—</div>
+            <div style="font-size:.7rem;color:var(--g500);margin-top:5px;" id="dashk-avoirs-sub">—</div>
           </div>
         </div>
 
-        <!-- Debug info -->
-        <div id="dash-ca-debug" style="font-size:.68rem;color:var(--g600);padding:.4rem .7rem;background:#fff7ed;border:1px solid #fed7aa;border-radius:6px;margin-bottom:.6rem;font-family:ui-monospace,monospace;"></div>
-
-        <!-- Graphique évolution mensuelle -->
-        <div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:1rem;margin-bottom:1rem;">
-          <div style="font-size:.78rem;font-weight:600;color:var(--g700);margin-bottom:.5rem;">Évolution mensuelle (CA en cours · Reste à facturer · Facturé)</div>
-          <div style="height:260px;"><canvas id="dash-chart-evo"></canvas></div>
+        <!-- ── KPI BDC SAISIS (séparé, source Firestore) ──────── -->
+        <div style="background:#f0fdf4;border:1.5px solid #bbf7d0;border-radius:10px;padding:.75rem 1rem;margin-bottom:1.25rem;display:flex;align-items:center;gap:1.5rem;">
+          <div style="font-size:.62rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#166534;">📝 BDC saisis manuellement</div>
+          <div style="display:flex;align-items:baseline;gap:.5rem;">
+            <span style="font-size:1.35rem;font-weight:800;color:#166534;" id="dash-bdc-ca">—</span>
+            <span style="font-size:.7rem;color:#4ade80;" id="dash-bdc-nb">—</span>
+          </div>
+          <div style="margin-left:auto;font-size:.68rem;color:#15803d;">Source : Firestore (BDC saisis dans l'onglet Bon de Commande)</div>
         </div>
 
-        <!-- Ticket moyen + répartition en 2 colonnes -->
-        <div style="display:grid;grid-template-columns:2fr 1fr;gap:12px;margin-bottom:1rem;">
-          <div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:1rem;">
-            <div style="font-size:.78rem;font-weight:600;color:var(--g700);margin-bottom:.5rem;">Ticket moyen par mois</div>
-            <div style="height:200px;"><canvas id="dash-chart-ticket"></canvas></div>
+        <!-- ── MOIS EN COURS + GRAPHIQUE côte à côte ─────────── -->
+        <div style="display:grid;grid-template-columns:1fr 2fr;gap:12px;margin-bottom:1.25rem;">
+
+          <!-- Mois en cours -->
+          <div style="background:linear-gradient(145deg,#eff6ff,#fff);border:1.5px solid var(--blue-p300);border-radius:12px;padding:1rem 1.1rem;">
+            <div style="font-size:.6rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--blue-p700);margin-bottom:2px;">⭐ Mois en cours</div>
+            <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:.8rem;">
+              <span id="dash-cur-month-label" style="font-size:1rem;font-weight:700;color:var(--g900);">—</span>
+              <span id="dash-cur-progress" style="font-size:.62rem;color:var(--g500);"></span>
+            </div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+              <div style="background:#fff;border-radius:8px;padding:.55rem .7rem;border:1px solid var(--border);">
+                <div style="font-size:.58rem;font-weight:700;text-transform:uppercase;color:var(--g400);margin-bottom:2px;">Nb cmds</div>
+                <div style="font-size:1.3rem;font-weight:800;color:var(--g900);" id="cur-nb">—</div>
+                <div style="font-size:.6rem;color:var(--g400);" id="cur-nb-vs"></div>
+              </div>
+              <div style="background:#fff;border-radius:8px;padding:.55rem .7rem;border:1px solid var(--border);">
+                <div style="font-size:.58rem;font-weight:700;text-transform:uppercase;color:var(--g400);margin-bottom:2px;">Ticket moy.</div>
+                <div style="font-size:1rem;font-weight:700;color:#b45309;" id="cur-ticket">—</div>
+                <div style="font-size:.6rem;color:var(--g400);" id="cur-ticket-vs"></div>
+              </div>
+              <div style="background:#fff;border-radius:8px;padding:.55rem .7rem;border:1px solid var(--blue-p200);grid-column:1/-1;">
+                <div style="font-size:.58rem;font-weight:700;text-transform:uppercase;color:var(--blue-p600);margin-bottom:2px;">CA Facturé</div>
+                <div style="font-size:1.15rem;font-weight:800;color:var(--blue-p700);" id="cur-fac">—</div>
+                <div style="font-size:.6rem;color:var(--g400);" id="cur-fac-vs"></div>
+              </div>
+              <div style="background:#fff8f0;border-radius:8px;padding:.55rem .7rem;border:1px solid #fde68a;">
+                <div style="font-size:.58rem;font-weight:700;text-transform:uppercase;color:#b45309;margin-bottom:2px;">En cours</div>
+                <div style="font-size:.95rem;font-weight:700;color:#b45309;" id="cur-cours">—</div>
+                <div style="font-size:.6rem;color:var(--g400);" id="cur-cours-vs"></div>
+              </div>
+              <div style="background:#fff8f0;border-radius:8px;padding:.55rem .7rem;border:1px solid #fde68a;">
+                <div style="font-size:.58rem;font-weight:700;text-transform:uppercase;color:#b45309;margin-bottom:2px;">Reste à fact.</div>
+                <div style="font-size:.95rem;font-weight:700;color:#b45309;" id="cur-livre">—</div>
+                <div style="font-size:.6rem;color:var(--g400);" id="cur-livre-vs"></div>
+              </div>
+            </div>
+            <div id="cur-top-clients" style="margin-top:.6rem;font-size:.68rem;color:var(--g600);display:none;"></div>
           </div>
-          <div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:1rem;">
-            <div style="font-size:.78rem;font-weight:600;color:var(--g700);margin-bottom:.5rem;">Répartition des statuts</div>
-            <div style="height:200px;"><canvas id="dash-chart-pie"></canvas></div>
+
+          <!-- Graphique évolution mensuelle -->
+          <div style="background:#fff;border:1px solid var(--border);border-radius:12px;padding:1rem;">
+            <div style="font-size:.75rem;font-weight:600;color:var(--g700);margin-bottom:.5rem;">📈 Évolution mensuelle CA</div>
+            <div style="height:240px;"><canvas id="dash-chart-evo"></canvas></div>
           </div>
         </div>
 
-        <!-- Top 10 clients + Top opérateurs + Top transporteurs -->
-        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:1rem;">
-          <div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:1rem;">
-            <div style="font-size:.78rem;font-weight:600;color:var(--g700);margin-bottom:.5rem;">Top 10 clients</div>
-            <div id="dash-top-clients" style="font-size:.75rem;"></div>
+        <!-- ── TOP CLIENTS (grand format) + Répartition ────────── -->
+        <div style="display:grid;grid-template-columns:2fr 1fr;gap:12px;margin-bottom:1.25rem;">
+
+          <!-- Top clients CA -->
+          <div style="background:#fff;border:1px solid var(--border);border-radius:12px;padding:1rem;">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.75rem;">
+              <div style="font-size:.78rem;font-weight:700;color:var(--g800);">🏆 CA par client — fichier importé</div>
+              <span id="dash-ca-nb-clients" style="font-size:.68rem;color:var(--g500);"></span>
+            </div>
+            <div id="dash-top-clients" style="font-size:.78rem;"></div>
           </div>
-          <div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:1rem;">
-            <div style="font-size:.78rem;font-weight:600;color:var(--g700);margin-bottom:.5rem;">Top opérateurs</div>
-            <div id="dash-top-ops" style="font-size:.75rem;"></div>
-          </div>
-          <div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:1rem;">
-            <div style="font-size:.78rem;font-weight:600;color:var(--g700);margin-bottom:.5rem;">Top transporteurs</div>
-            <div id="dash-top-trans" style="font-size:.75rem;"></div>
+
+          <!-- Répartition statuts + top opérateurs -->
+          <div style="display:flex;flex-direction:column;gap:12px;">
+            <div style="background:#fff;border:1px solid var(--border);border-radius:12px;padding:1rem;flex:1;">
+              <div style="font-size:.75rem;font-weight:600;color:var(--g700);margin-bottom:.5rem;">Répartition statuts</div>
+              <div style="height:150px;"><canvas id="dash-chart-pie"></canvas></div>
+            </div>
+            <div style="background:#fff;border:1px solid var(--border);border-radius:12px;padding:1rem;flex:1;">
+              <div style="font-size:.75rem;font-weight:600;color:var(--g700);margin-bottom:.5rem;">Top opérateurs</div>
+              <div id="dash-top-ops" style="font-size:.75rem;"></div>
+            </div>
           </div>
         </div>
 
-        <!-- Tableau mensuel détaillé -->
-        <div style="font-size:.78rem;font-weight:600;color:var(--g700);margin-bottom:.5rem;">Détail mensuel</div>
-        <div class="tbl-wrap">
-          <table>
-            <thead>
-              <tr>
-                <th>Mois</th>
-                <th style="text-align:right;">Nb cmds</th>
-                <th style="text-align:right;">Ticket moyen</th>
-                <th style="text-align:right;color:#7c3aed;">CA en cours</th>
-                <th style="text-align:right;color:#b45309;">Reste à fact.</th>
-                <th style="text-align:right;color:var(--blue-p700);">CA Facturé</th>
-                <th style="text-align:right;color:#dc2626;">Avoirs</th>
-              </tr>
-            </thead>
-            <tbody id="dash-ca-tbody"></tbody>
-          </table>
+        <!-- ── TABLEAU MENSUEL DÉTAILLÉ ───────────────────────── -->
+        <div style="background:#fff;border:1px solid var(--border);border-radius:12px;overflow:hidden;">
+          <div style="padding:.75rem 1rem;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;">
+            <div style="font-size:.78rem;font-weight:700;color:var(--g800);">📅 Détail par mois</div>
+            <div id="dashk-nb" style="font-size:.72rem;color:var(--g500);font-weight:600;"></div>
+          </div>
+          <div class="tbl-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Mois</th>
+                  <th style="text-align:right;">Nb cmds</th>
+                  <th style="text-align:right;">Ticket moy.</th>
+                  <th style="text-align:right;color:#059669;">CA Total</th>
+                  <th style="text-align:right;color:#b45309;">En cours</th>
+                  <th style="text-align:right;color:var(--blue-p700);">Facturé</th>
+                  <th style="text-align:right;color:#dc2626;">Avoirs</th>
+                </tr>
+              </thead>
+              <tbody id="dash-ca-tbody"></tbody>
+            </table>
+          </div>
         </div>
+
+        <!-- Hidden canvas for ticket chart (kept for JS compat) -->
+        <canvas id="dash-chart-ticket" style="display:none;"></canvas>
+        <!-- Hidden transport top (kept for JS compat) -->
+        <div id="dash-top-trans" style="display:none;"></div>
+
       </div>
     </div>
   </div>
@@ -2726,19 +2725,27 @@ function exportFraisCSV() {
 // ═══════════════════════════════════════════════
 function refreshDashboard() {
   const np=cache.prospects.length, nc=cache.clients.length, no=cache.commandes.length;
-  const ca=cache.commandes.reduce((t,o)=>t+(o.montant||0),0);
-  const tot=np+nc;
-  s2('stat-prospects',np); s2('stat-clients',nc); s2('stat-commandes',no); s2('stat-ca',ca.toFixed(2)+' €');
-  s2('rp-count',np); s2('rc-count',nc);
-  document.getElementById('rp-bar').style.width=tot?(np/tot*100)+'%':'0%';
-  document.getElementById('rc-bar').style.width=tot?(nc/tot*100)+'%':'0%';
+  const caBDC=cache.commandes.reduce((t,o)=>t+(o.montant||0),0);
+
+  // KPIs sidebar top
+  var clEl = document.getElementById('stat-clients');
+  if (clEl) clEl.textContent = (cdbContacts && cdbContacts.length) ? cdbContacts.length.toLocaleString('fr-FR') : nc;
+  var cmdEl = document.getElementById('stat-commandes');
+  if (cmdEl) cmdEl.textContent = no;
+
+  // Frais du mois en cours
   const now=new Date(), mc=`${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
   const fm=cache.frais.filter(f=>f.dateFrais?.startsWith(mc)).reduce((t,f)=>t+(f.montant||0),0);
-  s2('ro-count',fm.toFixed(2)+' €');
-  document.getElementById('ro-bar').style.width=fm>0?'55%':'0%';
-  const al=document.getElementById('activity-list');
-  if (!cache.activite.length) { al.innerHTML=`<div class="empty"><div class="empty-icon">📋</div><div class="empty-title">Aucune activité</div><div class="empty-sub">Commencez à saisir des données</div></div>`; return; }
-  al.innerHTML=cache.activite.slice(0,10).map(a=>`<div class="act-item"><div class="act-dot ${a.couleur||'em'}"></div><div class="act-text">${a.texte}</div><div class="act-time">${fd(a.createdAt)}</div></div>`).join('');
+  var roEl = document.getElementById('ro-count');
+  if (roEl) roEl.textContent = fm.toFixed(2)+' €';
+
+  // KPI BDC dans le dashboard (séparé du CA fichier)
+  var bdcKpiEl = document.getElementById('dash-bdc-ca');
+  if (bdcKpiEl) bdcKpiEl.textContent = caBDC > 0
+    ? caBDC.toLocaleString('fr-FR',{minimumFractionDigits:2,maximumFractionDigits:2})+' €'
+    : '—';
+  var bdcNbEl = document.getElementById('dash-bdc-nb');
+  if (bdcNbEl) bdcNbEl.textContent = no + ' BDC';
 }
 
 async function logActivite(texte, couleur='em') {
@@ -4584,14 +4591,20 @@ function dashCaRender() {
   var ticketMoy = totNb > 0 ? totPos / totNb : 0;
   var nbAvoirs = filtered.filter(function(r){ return r.statut==='avoir'; }).length;
 
-  // KPIs
-  document.getElementById('dashk-nb').textContent = totNb.toLocaleString('fr-FR');
-  document.getElementById('dashk-nb-sub').textContent = 'Ticket moy. ' + dashCaFmt(ticketMoy);
-  document.getElementById('dashk-cours').textContent = dashCaFmt(totCours + totFac);  // total activité
-  document.getElementById('dashk-livre').textContent = dashCaFmt(totCours);            // reste à facturer
-  document.getElementById('dashk-fac').textContent   = dashCaFmt(totFac);
+  // KPIs — nouvelle disposition dashboard
+  var nbClientsUniq = new Set(filtered.map(function(r){ return r.client; }).filter(Boolean)).size;
+  document.getElementById('dashk-cours').textContent  = dashCaFmt(totCours + totFac);   // CA Total
+  document.getElementById('dashk-nb-sub').textContent = totNb.toLocaleString('fr-FR') + ' commandes · ' + nbClientsUniq + ' clients';
+  document.getElementById('dashk-fac').textContent    = dashCaFmt(totFac);               // CA Facturé
+  document.getElementById('dashk-livre').textContent  = dashCaFmt(totCours);             // Reste à facturer
   document.getElementById('dashk-avoirs').textContent = dashCaFmt(totAvoirs);
   document.getElementById('dashk-avoirs-sub').textContent = nbAvoirs + ' ligne' + (nbAvoirs>1?'s':'');
+  // Nb total dans le header du tableau
+  var nbEl = document.getElementById('dashk-nb');
+  if (nbEl) nbEl.textContent = totNb.toLocaleString('fr-FR') + ' commandes · ticket moy. ' + dashCaFmt(ticketMoy);
+  // Nb clients
+  var nbClEl = document.getElementById('dash-ca-nb-clients');
+  if (nbClEl) nbClEl.textContent = nbClientsUniq + ' clients';
 
   // Tableau détail
   var moisNames = ['Jan','Fév','Mar','Avr','Mai','Juin','Juil','Août','Sep','Oct','Nov','Déc'];
@@ -4632,35 +4645,6 @@ function dashCaRender() {
   dashCaDrawCharts(filtered, months, moisNames);
   dashCaDrawTops(filtered);
 
-  // ═══ DEBUG INFO ═══
-  var dbg = document.getElementById('dash-ca-debug');
-  if (dbg) {
-    // Stats brutes sur dashCaRows (avant filtres UI)
-    var rawFac = 0, rawEc = 0, rawAv = 0, rawOther = 0;
-    dashCaRows.forEach(function(r) {
-      if (r.statut === 'facturee') rawFac += r.ca;
-      else if (r.statut === 'en_cours') rawEc += r.ca;
-      else if (r.statut === 'avoir') rawAv += r.ca;
-      else rawOther += r.ca;
-    });
-    // Avril 2026 brut (sans filtre UI)
-    var avr = dashCaRows.filter(function(r){ return r.mois === '2026-04'; });
-    var avrFac = avr.filter(function(r){ return r.statut === 'facturee'; }).reduce(function(s,r){return s+r.ca;},0);
-    var avrEc  = avr.filter(function(r){ return r.statut === 'en_cours'; }).reduce(function(s,r){return s+r.ca;},0);
-    var avrAv  = avr.filter(function(r){ return r.statut === 'avoir'; }).reduce(function(s,r){return s+r.ca;},0);
-
-    dbg.innerHTML =
-      '<div><strong>📊 Fichier brut :</strong> ' + dashCaRows.length + ' lignes · ' +
-      'Facturé=' + Math.round(rawFac).toLocaleString('fr-FR') + '€ · ' +
-      'En cours=' + Math.round(rawEc).toLocaleString('fr-FR') + '€ · ' +
-      'Avoirs=' + Math.round(rawAv).toLocaleString('fr-FR') + '€ · ' +
-      'Autre=' + Math.round(rawOther).toLocaleString('fr-FR') + '€</div>' +
-      '<div><strong>📅 Avril 2026 (brut) :</strong> ' + avr.length + ' cmds · ' +
-      'Facturé=' + Math.round(avrFac).toLocaleString('fr-FR') + '€ · ' +
-      'En cours=' + Math.round(avrEc).toLocaleString('fr-FR') + '€ · ' +
-      'Avoirs=' + Math.round(avrAv).toLocaleString('fr-FR') + '€</div>' +
-      '<div><strong>🎯 Filtres actifs :</strong> ' + filtered.length + ' / ' + dashCaRows.length + ' lignes</div>';
-  }
 }
 
 function dashCaRenderCurrentMonth(filtered, byMonth, months) {
@@ -4830,36 +4814,122 @@ function dashCaDrawTops(filtered) {
   function topN(field, n) {
     var agg = {};
     filtered.forEach(function(r) {
-      if (r.statut === 'avoir') return; // exclure avoirs
-      var k = r[field];
-      if (!agg[k]) agg[k] = { label:k, nb:0, ca:0 };
+      if (r.statut === 'avoir') return;
+      var k = r[field] || '(inconnu)';
+      if (!agg[k]) agg[k] = { label:k, nb:0, ca:0, fac:0, cours:0 };
       agg[k].nb++;
       agg[k].ca += r.ca;
+      if (r.statut === 'facturee') agg[k].fac += r.ca;
+      else agg[k].cours += r.ca;
     });
     return Object.values(agg).sort(function(a,b){ return b.ca - a.ca; }).slice(0, n);
   }
 
-  function render(el, items) {
-    if (!items.length) { el.innerHTML = '<div style="color:var(--g400);font-size:.72rem;text-align:center;padding:1rem;">Aucune donnée</div>'; return; }
+  // ─── Top clients : affichage grand format avec CA fichier + CA BDC saisis ──
+  function renderClients(el, items) {
+    if (!items.length) { el.innerHTML = '<div style="color:var(--g400);font-size:.75rem;text-align:center;padding:1.5rem;">Aucune donnée — importez un fichier</div>'; return; }
+
+    // Agréger les BDC saisis par nom de client (cache.commandes)
+    var bdcByClient = {};
+    if (typeof cache !== 'undefined' && cache.commandes) {
+      cache.commandes.forEach(function(o) {
+        var k = (o.clientNom || '').trim().toUpperCase();
+        if (!k) return;
+        if (!bdcByClient[k]) bdcByClient[k] = { ca:0, nb:0 };
+        bdcByClient[k].ca += o.montant || 0;
+        bdcByClient[k].nb++;
+      });
+    }
+
     var max = items[0].ca;
-    el.innerHTML = items.map(function(it, i) {
-      var pct = max > 0 ? (it.ca / max * 100) : 0;
-      return '<div style="margin-bottom:.5rem;">' +
-        '<div style="display:flex;justify-content:space-between;gap:8px;font-size:.72rem;margin-bottom:2px;">' +
-          '<span style="color:var(--g800);font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:60%;" title="'+it.label+'">' + (i+1) + '. ' + it.label + '</span>' +
-          '<span style="color:var(--g700);font-variant-numeric:tabular-nums;">' + dashCaFmt(it.ca) + '</span>' +
+    var totalCA = items.reduce(function(s,it){ return s + it.ca; }, 0);
+    var hasBDC = Object.keys(bdcByClient).length > 0;
+
+    // En-tête colonnes si BDC présents
+    var header = hasBDC
+      ? '<div style="display:grid;grid-template-columns:1fr 140px 130px;gap:8px;padding:.3rem 0;border-bottom:2px solid var(--border);margin-bottom:.3rem;">' +
+          '<div style="font-size:.6rem;font-weight:700;text-transform:uppercase;color:var(--g400);">Client</div>' +
+          '<div style="font-size:.6rem;font-weight:700;text-transform:uppercase;color:var(--blue-p600);text-align:right;">CA Fichier importé</div>' +
+          '<div style="font-size:.6rem;font-weight:700;text-transform:uppercase;color:#166534;text-align:right;">CA BDC saisis</div>' +
+        '</div>'
+      : '';
+
+    el.innerHTML = header + items.map(function(it, i) {
+      var pct    = max > 0 ? (it.ca / max * 100) : 0;
+      var pctFac = it.ca > 0 ? (it.fac / it.ca * 100) : 0;
+      var share  = totalCA > 0 ? (it.ca / totalCA * 100).toFixed(1) : '0';
+      var medal  = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : '<span style="color:var(--g400);font-size:.7rem;">'+(i+1)+'.</span>';
+
+      // Chercher BDC correspondant (comparaison nom normalisé)
+      var clientKey = it.label.trim().toUpperCase();
+      var bdc = bdcByClient[clientKey] || null;
+      // Fallback: cherche si le nom du fichier est contenu dans un nom BDC ou vice versa
+      if (!bdc) {
+        var clientWords = clientKey.split(/\s+/).filter(function(w){ return w.length > 3; });
+        Object.keys(bdcByClient).forEach(function(k) {
+          if (!bdc && clientWords.some(function(w){ return k.indexOf(w) >= 0; })) {
+            bdc = bdcByClient[k];
+          }
+        });
+      }
+
+      var bdcCol = hasBDC
+        ? '<div style="text-align:right;">' +
+            (bdc
+              ? '<span style="font-size:.82rem;font-weight:700;color:#166534;">' + dashCaFmt(bdc.ca) + '</span>' +
+                '<div style="font-size:.58rem;color:#4ade80;">' + bdc.nb + ' BDC</div>'
+              : '<span style="font-size:.7rem;color:var(--g300);">—</span>'
+            ) +
+          '</div>'
+        : '';
+
+      var row = hasBDC
+        ? '<div style="display:grid;grid-template-columns:1fr 140px 130px;gap:8px;align-items:center;padding:.45rem 0;border-bottom:1px solid var(--border);">'
+        : '<div style="padding:.45rem 0;border-bottom:1px solid var(--border);">';
+
+      return row +
+        '<div>' +
+          '<div style="display:flex;align-items:center;gap:6px;margin-bottom:3px;">' +
+            '<span style="font-size:.8rem;font-weight:600;color:var(--g900);">' + medal + ' ' + it.label + '</span>' +
+            '<span style="font-size:.6rem;color:var(--g400);">' + share + '%</span>' +
+          '</div>' +
+          '<div style="background:var(--g100);border-radius:3px;height:5px;overflow:hidden;">' +
+            '<div style="height:5px;border-radius:3px;background:linear-gradient(90deg,#059669 '+pctFac+'%,var(--blue-p400) '+pctFac+'%);width:'+pct+'%;transition:width .4s;"></div>' +
+          '</div>' +
+          '<div style="display:flex;gap:10px;font-size:.6rem;color:var(--g500);margin-top:2px;">' +
+            '<span>' + it.nb + ' cmd' + (it.nb>1?'s':'') + '</span>' +
+            '<span style="color:#059669;">✓ ' + dashCaFmt(it.fac) + '</span>' +
+            (it.cours > 0 ? '<span style="color:#b45309;">⏳ ' + dashCaFmt(it.cours) + '</span>' : '') +
+          '</div>' +
         '</div>' +
-        '<div style="background:var(--g100);border-radius:3px;height:4px;overflow:hidden;">' +
-          '<div style="background:var(--blue-p500);height:4px;width:'+pct+'%;"></div>' +
+        '<div style="text-align:right;">' +
+          '<span style="font-size:.88rem;font-weight:700;color:var(--blue-p700);">' + dashCaFmt(it.ca) + '</span>' +
         '</div>' +
-        '<div style="font-size:.62rem;color:var(--g500);margin-top:1px;">' + it.nb + ' commande' + (it.nb>1?'s':'') + '</div>' +
+        bdcCol +
       '</div>';
     }).join('');
   }
 
-  render(document.getElementById('dash-top-clients'), topN('client', 10));
-  render(document.getElementById('dash-top-ops'),     topN('operateur', 5));
-  render(document.getElementById('dash-top-trans'),   topN('transporteur', 5));
+  // ─── Top ops/trans : format compact ─────────────────────────────────────
+  function renderSmall(el, items) {
+    if (!el || !items.length) { if(el) el.innerHTML = '<div style="color:var(--g400);font-size:.72rem;text-align:center;padding:.5rem;">—</div>'; return; }
+    var max = items[0].ca;
+    el.innerHTML = items.map(function(it, i) {
+      var pct = max > 0 ? (it.ca / max * 100) : 0;
+      return '<div style="margin-bottom:.45rem;">' +
+        '<div style="display:flex;justify-content:space-between;font-size:.72rem;margin-bottom:2px;">' +
+          '<span style="color:var(--g800);font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:55%;">' + (i+1) + '. ' + it.label + '</span>' +
+          '<span style="color:var(--g700);font-variant-numeric:tabular-nums;">' + dashCaFmt(it.ca) + '</span>' +
+        '</div>' +
+        '<div style="background:var(--g100);border-radius:3px;height:4px;"><div style="background:var(--blue-p400);height:4px;border-radius:3px;width:'+pct+'%;"></div></div>' +
+      '</div>';
+    }).join('');
+  }
+
+  // Tous les clients (pas de limite) pour la vue CA par client
+  renderClients(document.getElementById('dash-top-clients'), topN('client', 999));
+  renderSmall(document.getElementById('dash-top-ops'),   topN('operateur', 6));
+  renderSmall(document.getElementById('dash-top-trans'), topN('transporteur', 5));
 }
 
 
