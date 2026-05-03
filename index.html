@@ -1125,6 +1125,7 @@ textarea { resize:vertical; min-height:80px; }
       <div>
         <div class="page-title">Note de frais <span id="nfd-save-status" style="font-size:.65rem;font-weight:400;background:#dcfce7;color:#15803d;padding:2px 8px;border-radius:10px;margin-left:8px;display:none;">✓ sauvegardé</span></div>
         <div class="page-sub">Saisie ligne par ligne · sauvegarde automatique · génération PDF mensuel</div>
+        <div id="nfd-period-label" style="font-size:.72rem;color:var(--blue-p700);font-weight:600;margin-top:2px;"></div>
       </div>
       <div style="display:flex;gap:8px;">
         <button class="btn btn-ghost" onclick="nfdExportCSV()" style="font-size:.78rem;">↓ Export CSV</button>
@@ -1825,6 +1826,31 @@ function closeModal(type) { document.getElementById('modal-'+type).classList.add
 //  NOTE DE FRAIS PERSO — saisie + PDF
 // ═══════════════════════════════════════════════
 var nfdLines = [];      // toutes les dépenses, tous mois confondus
+
+// Calcule la période du 17 au 16 du mois suivant selon mois/annee sélectionnés
+// et retourne les lignes filtrées + les labels de période
+function nfdGetPeriod(mois, annee) {
+  var m = parseInt(mois), y = parseInt(annee);
+  // Début : 17 du mois sélectionné
+  var dateDebut = new Date(y, m - 1, 17);
+  // Fin : 16 du mois suivant
+  var nextM = m === 12 ? 1 : m + 1;
+  var nextY = m === 12 ? y + 1 : y;
+  var dateFin = new Date(nextY, nextM - 1, 16);
+
+  var filtered = nfdLines.filter(function(l) {
+    if (!l.date) return false;
+    var d = new Date(l.date);
+    return d >= dateDebut && d <= dateFin;
+  }).sort(function(a,b){ return a.date.localeCompare(b.date); });
+
+  var moisNoms = ['','JANVIER','FEVRIER','MARS','AVRIL','MAI','JUIN','JUILLET','AOUT','SEPTEMBRE','OCTOBRE','NOVEMBRE','DECEMBRE'];
+  var labelDebut = '17 ' + moisNoms[m] + ' ' + y;
+  var labelFin = '16 ' + moisNoms[nextM] + ' ' + nextY;
+  var periodLabel = labelDebut + ' AU ' + labelFin;
+
+  return { filtered: filtered, periodLabel: periodLabel, dateDebut: dateDebut, dateFin: dateFin };
+}
 var NFD_CACHE_KEY = 'mdm_nfd_lines_v1';
 var NFD_IDENTITY_KEY = 'mdm_nfd_identity_v1';
 
@@ -2046,11 +2072,13 @@ function nfdEsc(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&l
 function nfdRender() {
   var mois = document.getElementById('nfd-mois').value;
   var annee = document.getElementById('nfd-annee').value;
-  var prefix = annee + '-' + mois;
 
-  var filtered = nfdLines.filter(function(l) {
-    return l.date && l.date.indexOf(prefix) === 0;
-  }).sort(function(a,b){ return a.date.localeCompare(b.date); });
+  var period = nfdGetPeriod(mois, annee);
+  var filtered = period.filtered;
+
+  // Afficher la période active sous le titre
+  var periodEl = document.getElementById('nfd-period-label');
+  if (periodEl) periodEl.textContent = 'Période : 17 ' + ['','Jan','Fév','Mars','Avr','Mai','Juin','Juil','Août','Sep','Oct','Nov','Déc'][parseInt(mois)] + ' → 16 du mois suivant';
 
   // KPIs
   var totHt=0, totTva=0, totTtc=0;
@@ -2110,9 +2138,8 @@ function nfdRender() {
 function nfdExportCSV() {
   var mois = document.getElementById('nfd-mois').value;
   var annee = document.getElementById('nfd-annee').value;
-  var prefix = annee + '-' + mois;
-  var filtered = nfdLines.filter(function(l){ return l.date && l.date.indexOf(prefix) === 0; })
-    .sort(function(a,b){ return a.date.localeCompare(b.date); });
+  var period = nfdGetPeriod(mois, annee);
+  var filtered = period.filtered;
   if (!filtered.length) { toast('Aucune ligne', 'err'); return; }
 
   var header = 'Date,Catégorie,HT,TVA,TTC,Description';
@@ -2131,144 +2158,257 @@ function nfdExportCSV() {
   toast('Export CSV : ' + filtered.length + ' lignes', 'ok');
 }
 
-// Génération PDF
+// Génération PDF — reproduit exactement le modèle NOTE DE FRAIS MDM
 function nfdGeneratePDF() {
   if (typeof jspdf === 'undefined') { toast('jsPDF non chargé', 'err'); return; }
 
   var mois = document.getElementById('nfd-mois').value;
   var annee = document.getElementById('nfd-annee').value;
-  var prefix = annee + '-' + mois;
   var nom = document.getElementById('nfd-nom').value || 'SPOTO';
   var prenom = document.getElementById('nfd-prenom').value || 'Christophe';
 
-  var filtered = nfdLines.filter(function(l){ return l.date && l.date.indexOf(prefix) === 0; })
-    .sort(function(a,b){ return a.date.localeCompare(b.date); });
+  var period = nfdGetPeriod(mois, annee);
+  var filtered = period.filtered;
 
-  if (!filtered.length) { toast('Aucune dépense pour ce mois', 'err'); return; }
+  if (!filtered.length) { toast('Aucune dépense pour cette période', 'err'); return; }
 
-  var moisNoms = ['','JANVIER','FEVRIER','MARS','AVRIL','MAI','JUIN','JUILLET','AOUT','SEPTEMBRE','OCTOBRE','NOVEMBRE','DECEMBRE'];
-  var moisLabel = moisNoms[parseInt(mois)];
-
-  // Cumul par catégorie
+  // Cumul par catégorie (ordre fixe comme sur le modèle)
+  var ordreFixe = ['Carburant','Déjeuner','Péage','Stationnement','Auto','Missions','Timbres / Impressions','Hôtel','Divers','SNCF Transport'];
   var byCat = {};
+  var totalHt = 0, totalTva = 0, totalTtc = 0;
+
   filtered.forEach(function(l) {
     if (!byCat[l.categorie]) byCat[l.categorie] = { ht:0, tva:0, ttc:0 };
-    byCat[l.categorie].ht += l.ht||0;
-    byCat[l.categorie].tva += l.tva||0;
-    byCat[l.categorie].ttc += l.ttc||0;
+    byCat[l.categorie].ht  += l.ht  || 0;
+    byCat[l.categorie].tva += l.tva || 0;
+    byCat[l.categorie].ttc += l.ttc || 0;
+    totalHt  += l.ht  || 0;
+    totalTva += l.tva || 0;
+    totalTtc += l.ttc || 0;
   });
 
-  // Catégories dans l'ordre fixe
-  var ordreFixe = ['Carburant','Déjeuner','Péage','Stationnement','Auto','Missions','Timbres / Impressions','Hôtel','Divers','SNCF Transport'];
-
-  // Initialise jsPDF
-  var doc = new jspdf.jsPDF({ orientation:'portrait', unit:'mm', format:'a4' });
-  var pageW = doc.internal.pageSize.getWidth();
-
-  // En-tête
-  doc.setFont('helvetica','bold');
-  doc.setFontSize(18);
-  doc.text('NOTE DE FRAIS', pageW/2, 18, { align:'center' });
-
-  doc.setFontSize(11);
-  doc.setFont('helvetica','normal');
-  doc.text('Mois : ' + moisLabel, 20, 30);
-  doc.text('Année : ' + annee, 20, 36);
-  doc.text('Nom : ' + nom, 120, 30);
-  doc.text('Prénom : ' + prenom, 120, 36);
-
-  // Tableau récapitulatif par catégorie (style fiche Excel)
-  var totalHt=0, totalTva=0, totalTtc=0;
-  var rowsRecap = ordreFixe.map(function(c) {
-    var v = byCat[c] || { ht:0, tva:0, ttc:0 };
-    totalHt += v.ht; totalTva += v.tva; totalTtc += v.ttc;
-    return [c,
-      v.ht ? v.ht.toFixed(2).replace('.',',') + ' €' : '',
-      v.tva ? v.tva.toFixed(2).replace('.',',') + ' €' : '',
-      v.ttc ? v.ttc.toFixed(2).replace('.',',') + ' €' : '',
-      v.ttc ? v.ttc.toFixed(2).replace('.',',') + ' €' : ''
-    ];
-  });
-  // Ajouter catégories non listées
-  Object.keys(byCat).forEach(function(c) {
-    if (ordreFixe.indexOf(c) < 0) {
-      var v = byCat[c];
-      rowsRecap.push([c,
-        v.ht.toFixed(2).replace('.',',') + ' €',
-        v.tva.toFixed(2).replace('.',',') + ' €',
-        v.ttc.toFixed(2).replace('.',',') + ' €',
-        v.ttc.toFixed(2).replace('.',',') + ' €'
-      ]);
-    }
-  });
-
-  doc.autoTable({
-    startY: 44,
-    head: [['Catégorie','H.T.','TVA','TTC','TOTAUX']],
-    body: rowsRecap,
-    foot: [['TOTAUX DES FRAIS AVEC JUSTIFICATIFS',
-      totalHt.toFixed(2).replace('.',',') + ' €',
-      totalTva.toFixed(2).replace('.',',') + ' €',
-      totalTtc.toFixed(2).replace('.',',') + ' €',
-      totalTtc.toFixed(2).replace('.',',') + ' €']],
-    theme: 'grid',
-    headStyles: { fillColor:[230,230,230], textColor:[0,0,0], fontStyle:'bold' },
-    footStyles: { fillColor:[200,220,255], textColor:[0,0,0], fontStyle:'bold' },
-    columnStyles: {
-      0: { cellWidth: 60, fontStyle:'bold' },
-      1: { halign:'right', cellWidth: 28 },
-      2: { halign:'right', cellWidth: 28 },
-      3: { halign:'right', cellWidth: 28 },
-      4: { halign:'right', cellWidth: 28 }
-    },
-    margin: { left: 20, right: 20 }
-  });
-
-  var afterRecapY = doc.lastAutoTable.finalY + 8;
-
-  // Détail des lignes
-  doc.setFont('helvetica','bold');
-  doc.setFontSize(11);
-  doc.text('Détail des dépenses', 20, afterRecapY);
-
-  doc.autoTable({
-    startY: afterRecapY + 3,
-    head: [['Date','Catégorie','H.T.','TVA','TTC','Description']],
-    body: filtered.map(function(l) {
-      return [
-        nfdFmtDate(l.date),
-        l.categorie,
-        (l.ht||0).toFixed(2).replace('.',',') + ' €',
-        (l.tva||0).toFixed(2).replace('.',',') + ' €',
-        (l.ttc||0).toFixed(2).replace('.',',') + ' €',
-        l.description || ''
-      ];
-    }),
-    theme: 'striped',
-    headStyles: { fillColor:[37,99,176], textColor:255, fontStyle:'bold' },
-    columnStyles: {
-      0: { cellWidth: 22 },
-      1: { cellWidth: 32 },
-      2: { halign:'right', cellWidth: 22 },
-      3: { halign:'right', cellWidth: 20 },
-      4: { halign:'right', cellWidth: 22 },
-      5: { cellWidth: 'auto' }
-    },
-    margin: { left: 20, right: 20 },
-    styles: { fontSize: 9 }
-  });
-
-  // Pied de page sur chaque page
-  var pageCount = doc.internal.getNumberOfPages();
-  for (var p=1; p<=pageCount; p++) {
-    doc.setPage(p);
-    doc.setFontSize(8);
-    doc.setTextColor(100);
-    doc.text('NDF ' + nom + ' ' + prenom + ' — ' + moisLabel + ' ' + annee + '  |  Page ' + p + '/' + pageCount,
-      pageW/2, doc.internal.pageSize.getHeight() - 8, { align:'center' });
+  function fmtE(n) {
+    if (!n || Math.abs(n) < 0.005) return '';
+    return n.toFixed(2).replace('.', ',') + ' €';
+  }
+  function fmtEZ(n) { // toujours afficher, même 0
+    return (n||0).toFixed(2).replace('.', ',') + ' €';
   }
 
-  // Sauvegarder
+  var doc = new jspdf.jsPDF({ orientation:'portrait', unit:'mm', format:'a4' });
+  var W = 210, H = 297;
+
+  // ── Couleurs ──────────────────────────────────────────────────────────
+  var BORDER  = [80, 80, 80];
+  var BG_HEAD = [245, 245, 245];
+  var BG_TOT  = [220, 230, 245];
+  var TXT     = [0, 0, 0];
+
+  // ── Layout ────────────────────────────────────────────────────────────
+  var marginL = 15, marginR = 15;
+  var tableW  = W - marginL - marginR;  // 180mm
+  // Colonnes: Catégorie | H.T. | TVA | TTC | TOTAUX
+  var col0 = 72, col1 = 27, col2 = 27, col3 = 27, col4 = 27;
+  // total = 180
+
+  var rowH = 8.5;    // hauteur de ligne standard
+  var headH = 9;     // hauteur ligne en-tête tableau
+
+  // ── Titre ─────────────────────────────────────────────────────────────
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(15);
+  doc.setTextColor(...TXT);
+  doc.text('NOTE DE FRAIS', W / 2, 18, { align: 'center' });
+
+  // ── En-tête identité ──────────────────────────────────────────────────
+  // Cadre global d'identité : zone 2 lignes
+  var idY = 22;
+  var idH = 24;
+  doc.setDrawColor(...BORDER);
+  doc.setLineWidth(0.3);
+  doc.rect(marginL, idY, tableW, idH);
+
+  // Ligne de séparation horizontale milieu
+  doc.line(marginL, idY + idH/2, marginL + tableW, idY + idH/2);
+
+  // Ligne MOIS / ANNEE à gauche, NOM / PRENOM à droite
+  doc.setFontSize(9);
+  var midX = marginL + tableW / 2;
+  var lblX = marginL + 3;
+  var valX = marginL + 22;
+
+  // Ligne 1 : MOIS et NOM
+  var row1Y = idY + idH/2 - 3.5;
+  doc.setFont('helvetica', 'bold');
+  doc.text('MOIS :', lblX, row1Y + 4);
+  doc.setFont('helvetica', 'normal');
+  doc.text(period.periodLabel, valX, row1Y + 4);
+
+  doc.setFont('helvetica', 'bold');
+  doc.text('Nom :', midX + 3, row1Y + 4);
+  doc.setFont('helvetica', 'normal');
+  doc.text(nom, midX + 16, row1Y + 4);
+
+  // Séparateur vertical au milieu
+  doc.line(midX, idY, midX, idY + idH);
+
+  // Ligne 2 : ANNEE et PRENOM
+  var row2Y = idY + idH/2 + idH/2 - 3.5;
+  doc.setFont('helvetica', 'bold');
+  doc.text('ANNEE :', lblX, row2Y + 4);
+  doc.setFont('helvetica', 'normal');
+  doc.text(String(annee), valX + 5, row2Y + 4);
+
+  doc.setFont('helvetica', 'bold');
+  doc.text('Prénom :', midX + 3, row2Y + 4);
+  doc.setFont('helvetica', 'normal');
+  doc.text(prenom, midX + 20, row2Y + 4);
+
+  // ── Tableau principal par catégorie ──────────────────────────────────
+  var tblY = idY + idH + 5;
+
+  // En-tête tableau
+  doc.setFillColor(...BG_HEAD);
+  doc.rect(marginL, tblY, tableW, headH, 'FD');
+
+  // Traits verticaux en-tête
+  var cols = [col0, col1, col2, col3, col4];
+  var xPos = marginL;
+  doc.setDrawColor(...BORDER);
+  doc.setLineWidth(0.25);
+  for (var ci = 0; ci < cols.length - 1; ci++) {
+    xPos += cols[ci];
+    doc.line(xPos, tblY, xPos, tblY + headH);
+  }
+  // Trait droit
+  doc.rect(marginL, tblY, tableW, headH);
+
+  // Libellés en-tête
+  var headers = ['', 'H.T.', 'TVA', 'TTC', 'TOTAUX'];
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(9);
+  xPos = marginL;
+  for (var hi = 0; hi < headers.length; hi++) {
+    var cx = xPos + cols[hi] / 2;
+    doc.text(headers[hi], cx, tblY + headH / 2 + 3.5, { align: 'center' });
+    xPos += cols[hi];
+  }
+
+  // Lignes de catégories
+  var curY = tblY + headH;
+  for (var ri = 0; ri < ordreFixe.length; ri++) {
+    var cat = ordreFixe[ri];
+    var v   = byCat[cat] || { ht:0, tva:0, ttc:0 };
+    var isData = v.ttc > 0 || v.ht > 0;
+
+    // Fond blanc
+    doc.setFillColor(255, 255, 255);
+    doc.rect(marginL, curY, tableW, rowH, 'F');
+
+    // Cadre + séparateurs verticaux
+    doc.setDrawColor(...BORDER);
+    doc.setLineWidth(0.2);
+    doc.rect(marginL, curY, tableW, rowH);
+    xPos = marginL;
+    for (var vci = 0; vci < cols.length - 1; vci++) {
+      xPos += cols[vci];
+      doc.line(xPos, curY, xPos, curY + rowH);
+    }
+
+    // Texte catégorie (gauche)
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(8.5);
+    doc.text(cat.toUpperCase(), marginL + 3, curY + rowH/2 + 3);
+
+    // Valeurs (droite dans chaque colonne)
+    var vals = [fmtE(v.ht), fmtE(v.tva), fmtE(v.ttc), fmtE(v.ttc)];
+    doc.setFont('helvetica', 'normal');
+    xPos = marginL + col0;
+    for (var vi = 0; vi < vals.length; vi++) {
+      if (vals[vi]) {
+        doc.text(vals[vi], xPos + cols[vi+1] - 2, curY + rowH/2 + 3, { align: 'right' });
+      }
+      xPos += cols[vi+1];
+    }
+
+    curY += rowH;
+  }
+
+  // Ligne TOTAUX
+  doc.setFillColor(...BG_TOT);
+  doc.rect(marginL, curY, tableW, rowH + 1, 'FD');
+  doc.setDrawColor(...BORDER);
+  doc.rect(marginL, curY, tableW, rowH + 1);
+  xPos = marginL;
+  for (var tci = 0; tci < cols.length - 1; tci++) {
+    xPos += cols[tci];
+    doc.line(xPos, curY, xPos, curY + rowH + 1);
+  }
+
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(7.5);
+  doc.text('TOTAUX DES FRAIS AVEC JUSTIFICATIFS', marginL + 3, curY + (rowH+1)/2 + 2.5);
+
+  var totVals = [fmtEZ(totalHt), fmtEZ(totalTva), fmtEZ(totalTtc), fmtEZ(totalTtc)];
+  doc.setFontSize(8.5);
+  xPos = marginL + col0;
+  for (var tvi = 0; tvi < totVals.length; tvi++) {
+    doc.text(totVals[tvi], xPos + cols[tvi+1] - 2, curY + (rowH+1)/2 + 2.5, { align: 'right' });
+    xPos += cols[tvi+1];
+  }
+
+  curY += rowH + 1 + 10;
+
+  // ── Détail des dépenses ───────────────────────────────────────────────
+  if (filtered.length) {
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(10);
+    doc.text('Détail des dépenses — ' + period.periodLabel, marginL, curY);
+    curY += 4;
+
+    doc.autoTable({
+      startY: curY,
+      head: [['Date', 'Catégorie', 'H.T.', 'TVA', 'TTC', 'Description']],
+      body: filtered.map(function(l) {
+        return [
+          nfdFmtDate(l.date),
+          l.categorie,
+          fmtEZ(l.ht),
+          fmtEZ(l.tva),
+          fmtEZ(l.ttc),
+          l.description || ''
+        ];
+      }),
+      theme: 'grid',
+      headStyles: { fillColor:[37,99,176], textColor:255, fontStyle:'bold', fontSize:8 },
+      bodyStyles: { fontSize: 8 },
+      columnStyles: {
+        0: { cellWidth: 22 },
+        1: { cellWidth: 34 },
+        2: { halign:'right', cellWidth: 22 },
+        3: { halign:'right', cellWidth: 20 },
+        4: { halign:'right', cellWidth: 22 },
+        5: { cellWidth: 'auto' }
+      },
+      margin: { left: marginL, right: marginR }
+    });
+  }
+
+  // ── Pied de page ──────────────────────────────────────────────────────
+  var pageCount = doc.internal.getNumberOfPages();
+  for (var p = 1; p <= pageCount; p++) {
+    doc.setPage(p);
+    doc.setFontSize(7.5);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(120);
+    doc.text(
+      'Note de frais — ' + nom + ' ' + prenom + '  |  ' + period.periodLabel + '  |  Page ' + p + '/' + pageCount,
+      W / 2, H - 7, { align: 'center' }
+    );
+    doc.setTextColor(...TXT);
+  }
+
+  // ── Sauvegarde ────────────────────────────────────────────────────────
   var moisAbbr = ['','JAN','FEV','MAR','AVR','MAI','JUN','JUL','AOU','SEP','OCT','NOV','DEC'][parseInt(mois)];
   doc.save('NDF_' + nom + '_' + moisAbbr + '_' + annee + '.pdf');
   toast('✅ PDF généré', 'ok');
