@@ -447,6 +447,13 @@ tr:hover td { background:var(--blue-p50); }
   width:100%; max-width:540px; max-height:90vh; overflow-y:auto;
   box-shadow: var(--shadow-xl);
 }
+.modal-wide {
+  max-width: 880px !important;
+  width: 95vw !important;
+}
+.modal-wide .modal-body {
+  padding: 0 !important;
+}
 .modal-head {
   padding: 1.3rem 1.5rem;
   border-bottom: 1px solid var(--border);
@@ -1320,12 +1327,12 @@ textarea { resize:vertical; min-height:80px; }
   </div></div>
 
   <!-- MODAL FICHE CONTACT -->
-  <div class="modal-bg hidden" id="cdb-modal-edit"><div class="modal" style="max-width:860px;width:95vw;">
+  <div class="modal-bg hidden" id="cdb-modal-edit"><div class="modal modal-wide">
     <div class="modal-head">
       <span class="modal-title" id="cdb-edit-title">Fiche contact</span>
       <button class="close-btn" onclick="document.getElementById('cdb-modal-edit').classList.add('hidden')">✕</button>
     </div>
-    <div class="modal-body" style="padding:0;">
+    <div class="modal-body">
 
       <!-- Onglets -->
       <div style="display:flex;border-bottom:1px solid var(--border);padding:0 1.25rem;gap:0;">
@@ -6113,14 +6120,25 @@ function cdbShowMenu(anchor, id) {
   menu.id = 'cdb-ctx-menu';
   menu.style.cssText = 'position:fixed;background:#fff;border:1px solid var(--border);border-radius:8px;box-shadow:0 6px 20px rgba(30,45,78,.15);z-index:400;padding:.25rem;min-width:200px;font-family:var(--fd);';
 
+  var c = cdbContacts.find(function(x){ return x.id === id; });
   var actions = [
-    { icon: '✏️', label: 'Modifier la fiche', fn: function(){ cdbOpenEdit(id); } },
-    { icon: '🛒', label: 'Nouvelle commande', fn: function(){ cdbNewOrder(id); } },
-    { icon: '📊', label: 'Voir le CA', fn: function(){ cdbShowCA(id); } }
+    { icon: '✏️', label: 'Modifier la fiche',  fn: function(){ cdbOpenEdit(id); } },
+    { icon: '📊', label: 'CA & commandes',     fn: function(){ cdbOpenEdit(id); setTimeout(function(){ cdbSwitchTab('ca'); }, 50); } },
+    { icon: '📋', label: 'Copier l\'email',    fn: function(){
+        if (c && c.email) { navigator.clipboard.writeText(c.email).then(function(){ toast('Email copié', 'ok'); }); }
+        else toast('Pas d\'email renseigné', 'err');
+    }},
+    { icon: '🗑', label: 'Supprimer',          fn: function(){
+        if (confirm('Supprimer ce contact ?')) {
+          document.getElementById('cdb-edit-id').value = id;
+          cdbDelete();
+        }
+    }, danger: true }
   ];
 
   menu.innerHTML = actions.map(function(a, i) {
-    return '<button type="button" data-idx="' + i + '" style="display:block;width:100%;text-align:left;padding:.55rem .8rem;border:none;background:none;cursor:pointer;font-size:.82rem;color:var(--g800);border-radius:5px;">' +
+    var col = a.danger ? '#dc2626' : 'var(--g800)';
+    return '<button type="button" data-idx="' + i + '" style="display:block;width:100%;text-align:left;padding:.55rem .8rem;border:none;background:none;cursor:pointer;font-size:.82rem;color:'+col+';border-radius:5px;">' +
       '<span style="margin-right:6px;">' + a.icon + '</span>' + a.label + '</button>';
   }).join('');
 
