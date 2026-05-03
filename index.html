@@ -1320,28 +1320,56 @@ textarea { resize:vertical; min-height:80px; }
   </div></div>
 
   <!-- MODAL FICHE CONTACT -->
-  <div class="modal-bg hidden" id="cdb-modal-edit"><div class="modal" style="max-width:720px;">
-    <div class="modal-head"><span class="modal-title" id="cdb-edit-title">Fiche contact</span><button class="close-btn" onclick="document.getElementById('cdb-modal-edit').classList.add('hidden')">✕</button></div>
-    <div class="modal-body">
-      <input type="hidden" id="cdb-edit-id"/>
-      <div class="form-grid">
-        <div><label class="lb">Code Client *</label><input type="text" id="cdb-edit-numClient" placeholder="4401"/></div>
-        <div><label class="lb">Prospect</label><select id="cdb-edit-prospect"><option value="0">Client</option><option value="1">Prospect</option></select></div>
-        <div style="grid-column:span 2;"><label class="lb">Raison sociale *</label><input type="text" id="cdb-edit-nom"/></div>
-        <div style="grid-column:span 2;"><label class="lb">Email</label><input type="email" id="cdb-edit-email"/></div>
-        <div><label class="lb">Téléphone</label><input type="text" id="cdb-edit-tel"/></div>
-        <div><label class="lb">Groupe</label><input type="text" id="cdb-edit-groupe" placeholder="Ex: ACCORD BIO"/></div>
-        <div style="grid-column:span 2;"><label class="lb">Adresse</label><input type="text" id="cdb-edit-adresse"/></div>
-        <div><label class="lb">Code postal</label><input type="text" id="cdb-edit-cp"/></div>
-        <div><label class="lb">Ville</label><input type="text" id="cdb-edit-ville"/></div>
-        <div style="grid-column:span 2;"><label class="lb">Notes</label><textarea id="cdb-edit-notes" style="min-height:60px;"></textarea></div>
+  <div class="modal-bg hidden" id="cdb-modal-edit"><div class="modal" style="max-width:860px;width:95vw;">
+    <div class="modal-head">
+      <span class="modal-title" id="cdb-edit-title">Fiche contact</span>
+      <button class="close-btn" onclick="document.getElementById('cdb-modal-edit').classList.add('hidden')">✕</button>
+    </div>
+    <div class="modal-body" style="padding:0;">
+
+      <!-- Onglets -->
+      <div style="display:flex;border-bottom:1px solid var(--border);padding:0 1.25rem;gap:0;">
+        <button type="button" class="cdb-tab active" data-tab="infos" onclick="cdbSwitchTab('infos')"
+          style="padding:.65rem 1rem;border:none;background:none;cursor:pointer;font-size:.8rem;font-weight:600;color:var(--blue-p700);border-bottom:2px solid var(--blue-p600);margin-bottom:-1px;">
+          📋 Informations
+        </button>
+        <button type="button" class="cdb-tab" data-tab="ca" onclick="cdbSwitchTab('ca')"
+          style="padding:.65rem 1rem;border:none;background:none;cursor:pointer;font-size:.8rem;font-weight:600;color:var(--g500);border-bottom:2px solid transparent;margin-bottom:-1px;">
+          📊 CA & Commandes
+        </button>
       </div>
-      <div id="cdb-edit-history" style="margin-top:1rem;"></div>
+
+      <!-- Tab Infos -->
+      <div id="cdb-tab-infos" style="padding:1.25rem;">
+        <input type="hidden" id="cdb-edit-id"/>
+        <div class="form-grid">
+          <div><label class="lb">Code Client</label><input type="text" id="cdb-edit-numClient" placeholder="4401"/></div>
+          <div><label class="lb">Statut</label><select id="cdb-edit-prospect"><option value="0">✅ Client</option><option value="1">🔵 Prospect</option></select></div>
+          <div style="grid-column:span 2;"><label class="lb">Raison sociale *</label><input type="text" id="cdb-edit-nom"/></div>
+          <div style="grid-column:span 2;"><label class="lb">Email</label><input type="email" id="cdb-edit-email"/></div>
+          <div><label class="lb">Téléphone</label><input type="text" id="cdb-edit-telephone"/></div>
+          <div><label class="lb">Groupe / Réseau</label><input type="text" id="cdb-edit-groupe" placeholder="Ex: BIOCOOP"/></div>
+          <div style="grid-column:span 2;"><label class="lb">Adresse</label><input type="text" id="cdb-edit-adresse"/></div>
+          <div><label class="lb">Code postal</label><input type="text" id="cdb-edit-cp"/></div>
+          <div><label class="lb">Ville</label><input type="text" id="cdb-edit-ville"/></div>
+          <div style="grid-column:span 2;"><label class="lb">Notes</label><textarea id="cdb-edit-notes" style="min-height:60px;"></textarea></div>
+        </div>
+      </div>
+
+      <!-- Tab CA -->
+      <div id="cdb-tab-ca" style="display:none;padding:1.25rem;">
+        <div id="cdb-edit-ca-content">
+          <div style="text-align:center;padding:2rem;color:var(--g400);font-size:.85rem;">
+            Importez un fichier de commandes depuis le Dashboard pour voir le CA de ce client.
+          </div>
+        </div>
+      </div>
+
     </div>
     <div class="modal-foot">
       <button class="btn btn-ghost" id="cdb-edit-delete" onclick="cdbDelete()" style="margin-right:auto;color:#dc2626;">🗑 Supprimer</button>
       <button class="btn btn-ghost" onclick="document.getElementById('cdb-modal-edit').classList.add('hidden')">Annuler</button>
-      <button class="btn btn-primary" onclick="cdbSave()">Enregistrer</button>
+      <button class="btn btn-primary" onclick="cdbSave()">💾 Enregistrer</button>
     </div>
   </div></div>
 
@@ -5868,44 +5896,211 @@ function cdbImportApply() {
 }
 
 // ─── FICHE CONTACT ───
+// ── Switcher d'onglets dans la modale fiche client ────────────────────────
+function cdbSwitchTab(tab) {
+  document.getElementById('cdb-tab-infos').style.display = tab === 'infos' ? '' : 'none';
+  document.getElementById('cdb-tab-ca').style.display    = tab === 'ca'    ? '' : 'none';
+  document.querySelectorAll('.cdb-tab').forEach(function(btn) {
+    var active = btn.getAttribute('data-tab') === tab;
+    btn.style.color        = active ? 'var(--blue-p700)' : 'var(--g500)';
+    btn.style.borderBottom = active ? '2px solid var(--blue-p600)' : '2px solid transparent';
+    btn.style.fontWeight   = active ? '600' : '500';
+  });
+}
+
 function cdbOpenEdit(id) {
-  console.log('[CDB] cdbOpenEdit appelée, id=', id, 'contacts:', cdbContacts.length);
   var c = id ? cdbContacts.find(function(x){ return x.id === id; }) : null;
-  if (id && !c) {
-    console.error('[CDB] Contact introuvable pour id=', id);
-    alert('Contact introuvable (id=' + id + '). Rechargez la page.');
-    return;
-  }
+  if (id && !c) { toast('Contact introuvable — rechargez la page', 'err'); return; }
+
   var modalEl = document.getElementById('cdb-modal-edit');
-  if (!modalEl) {
-    console.error('[CDB] Modal cdb-modal-edit introuvable dans le DOM');
-    alert('Erreur : modale introuvable. Rechargez la page.');
-    return;
-  }
+  if (!modalEl) { toast('Erreur : modale introuvable', 'err'); return; }
+
+  // Remplir les champs infos
   document.getElementById('cdb-edit-id').value = id || '';
-  document.getElementById('cdb-edit-title').textContent = c ? 'Fiche : ' + (c.nom || c.numClient) : 'Nouveau contact';
+  document.getElementById('cdb-edit-title').textContent = c ? (c.nom || c.numClient || 'Fiche client') : 'Nouveau contact';
   document.getElementById('cdb-edit-delete').style.display = c ? '' : 'none';
-  ['numClient','nom','email','telephone','adresse','cp','ville','groupe','notes'].forEach(function(f){
-    document.getElementById('cdb-edit-'+f).value = c ? (c[f] || '') : '';
+
+  var fields = ['numClient','nom','email','telephone','adresse','cp','ville','groupe','notes'];
+  fields.forEach(function(f) {
+    var el = document.getElementById('cdb-edit-' + f);
+    if (el) el.value = c ? (c[f] || '') : '';
   });
   document.getElementById('cdb-edit-prospect').value = c && c.prospect ? '1' : '0';
 
-  // Historique des commandes (recherche dans dashCaRows si dispo)
-  var histEl = document.getElementById('cdb-edit-history');
-  if (c && typeof dashCaRows !== 'undefined' && dashCaRows.length && c.numClient) {
-    var cmds = dashCaRows.filter(function(r) {
-      return String(r.client||'').toLowerCase().indexOf(String(c.nom||'').toLowerCase()) >= 0;
-    });
-    if (cmds.length) {
-      var totCA = cmds.reduce(function(s,r){ return s + r.ca; }, 0);
-      histEl.innerHTML = '<div style="margin-top:.8rem;padding-top:.8rem;border-top:1px solid var(--border);">' +
-        '<div style="font-weight:600;font-size:.82rem;color:var(--g800);margin-bottom:.4rem;">📊 Historique : ' + cmds.length + ' commande' + (cmds.length>1?'s':'') + ' · ' + cdbFmtCA(totCA) + ' (dans le fichier Suivi)</div>' +
-        '<div style="font-size:.72rem;color:var(--g500);">Importez un fichier de commandes dans l\'onglet Dashboard pour voir le détail par contact.</div>' +
-        '</div>';
-    } else histEl.innerHTML = '';
-  } else histEl.innerHTML = '';
+  // Onglet infos par défaut
+  cdbSwitchTab('infos');
 
-  document.getElementById('cdb-modal-edit').classList.remove('hidden');
+  // Construire le bloc CA si on a des données
+  cdbBuildCATab(c);
+
+  modalEl.classList.remove('hidden');
+}
+
+function cdbBuildCATab(c) {
+  var el = document.getElementById('cdb-edit-ca-content');
+  if (!el) return;
+
+  if (!c) {
+    el.innerHTML = '<div style="text-align:center;padding:2rem;color:var(--g400);">Nouveau contact — aucun historique disponible.</div>';
+    return;
+  }
+
+  var hasDashRows = typeof dashCaRows !== 'undefined' && dashCaRows.length > 0;
+  if (!hasDashRows) {
+    el.innerHTML = '<div style="text-align:center;padding:2rem;color:var(--g400);font-size:.85rem;">📂 Importez un fichier de commandes depuis le Dashboard pour voir le CA de ce client.</div>';
+    return;
+  }
+
+  // Matcher les commandes de ce client
+  var normName = function(s){ return String(s||'').toLowerCase().replace(/\s+/g,' ').trim(); };
+  var normCode = function(s){ var v=String(s||'').trim(); if(v.endsWith('.0')) v=v.slice(0,-2); return v; };
+
+  var cmds = dashCaRows.filter(function(r) {
+    if (c.numClient && r.codeClient && normCode(r.codeClient) === normCode(c.numClient)) return true;
+    if (c.nom && r.clientNomKey && normName(r.clientNomKey).indexOf(normName(c.nom)) >= 0) return true;
+    if (c.nom && r.clientNomKey && normName(c.nom).indexOf(normName(r.clientNomKey)) >= 0) return true;
+    return false;
+  });
+
+  if (!cmds.length) {
+    el.innerHTML = '<div style="text-align:center;padding:2rem;color:var(--g400);font-size:.85rem;">Aucune commande trouvée dans le fichier importé pour ce client.<br/><span style="font-size:.75rem;">Code : ' + (c.numClient||'—') + ' · Nom : ' + (c.nom||'—') + '</span></div>';
+    return;
+  }
+
+  var NOW_YEAR = new Date().getFullYear(); // 2026
+  var PREV_YEAR = NOW_YEAR - 1;           // 2025
+
+  // Agréger par année + mois
+  var byYearMonth = {};
+  var totYear = {}, totYearFac = {};
+  cmds.forEach(function(r) {
+    var y = r.annee, m = r.mois; // mois = "2026-04"
+    if (!y || !m) return;
+    if (!byYearMonth[y]) byYearMonth[y] = {};
+    if (!byYearMonth[y][m]) byYearMonth[y][m] = { ca:0, fac:0, nb:0 };
+    byYearMonth[y][m].ca  += r.ca;
+    byYearMonth[y][m].nb  += 1;
+    if (r.statut === 'facturee') byYearMonth[y][m].fac += r.ca;
+    if (!totYear[y]) totYear[y] = 0;
+    if (!totYearFac[y]) totYearFac[y] = 0;
+    totYear[y] += r.ca;
+    if (r.statut === 'facturee') totYearFac[y] += r.ca;
+  });
+
+  var moisNoms = ['','Jan','Fév','Mar','Avr','Mai','Juin','Juil','Août','Sep','Oct','Nov','Déc'];
+  var fmtCA = function(n){ return n > 0 ? n.toLocaleString('fr-FR',{minimumFractionDigits:2,maximumFractionDigits:2})+' €' : '—'; };
+  var fmtPct = function(curr, prev) {
+    if (!prev || prev === 0) return curr > 0 ? '<span style="color:#059669;font-size:.65rem;font-weight:700;">NEW</span>' : '';
+    var p = ((curr - prev) / Math.abs(prev) * 100);
+    var col = p > 0 ? '#059669' : '#dc2626';
+    var arrow = p > 0 ? '▲' : '▼';
+    return '<span style="color:'+col+';font-size:.65rem;font-weight:700;">'+arrow+' '+(p>0?'+':'')+p.toFixed(0)+'%</span>';
+  };
+
+  var html = '';
+
+  // ── KPIs globaux ────────────────────────────────────────────────────────
+  var totCurr = totYear[NOW_YEAR] || 0;
+  var totPrev = totYear[PREV_YEAR] || 0;
+  var totCurrFac = totYearFac[NOW_YEAR] || 0;
+  var nbCmds = cmds.filter(function(r){ return r.annee === NOW_YEAR; }).length;
+
+  html += '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:1.1rem;">';
+  html +=   '<div style="background:var(--blue-p50);border:1px solid var(--blue-p200);border-radius:10px;padding:.8rem 1rem;">';
+  html +=     '<div style="font-size:.6rem;font-weight:700;text-transform:uppercase;color:var(--blue-p600);margin-bottom:4px;">CA Total '+NOW_YEAR+'</div>';
+  html +=     '<div style="font-size:1.4rem;font-weight:800;color:var(--blue-p700);">'+fmtCA(totCurr)+'</div>';
+  html +=     '<div style="font-size:.68rem;color:var(--g500);margin-top:3px;">vs '+PREV_YEAR+' : '+fmtCA(totPrev)+' '+fmtPct(totCurr,totPrev)+'</div>';
+  html +=   '</div>';
+  html +=   '<div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:10px;padding:.8rem 1rem;">';
+  html +=     '<div style="font-size:.6rem;font-weight:700;text-transform:uppercase;color:#166534;margin-bottom:4px;">CA Facturé '+NOW_YEAR+'</div>';
+  html +=     '<div style="font-size:1.4rem;font-weight:800;color:#166534;">'+fmtCA(totCurrFac)+'</div>';
+  html +=     '<div style="font-size:.68rem;color:var(--g500);margin-top:3px;">'+(totCurr>0?(totCurrFac/totCurr*100).toFixed(0)+'% facturé':'—')+'</div>';
+  html +=   '</div>';
+  html +=   '<div style="background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:.8rem 1rem;">';
+  html +=     '<div style="font-size:.6rem;font-weight:700;text-transform:uppercase;color:var(--g500);margin-bottom:4px;">Nb commandes '+NOW_YEAR+'</div>';
+  html +=     '<div style="font-size:1.4rem;font-weight:800;color:var(--g800);">'+nbCmds+'</div>';
+  html +=     '<div style="font-size:.68rem;color:var(--g500);margin-top:3px;">'+(nbCmds>0?fmtCA(totCurr/nbCmds)+' / cmd':'—')+'</div>';
+  html +=   '</div>';
+  html += '</div>';
+
+  // ── Tableau mois par mois avec évolution ────────────────────────────────
+  html += '<div style="font-size:.72rem;font-weight:700;color:var(--g700);margin-bottom:.4rem;">Évolution mois par mois — '+NOW_YEAR+' vs '+PREV_YEAR+'</div>';
+  html += '<div style="overflow-x:auto;"><table style="width:100%;border-collapse:collapse;font-size:.76rem;">';
+  html += '<thead><tr style="background:var(--surface2);">';
+  html += '<th style="padding:.4rem .6rem;text-align:left;font-weight:600;color:var(--g600);">Mois</th>';
+  html += '<th style="padding:.4rem .6rem;text-align:right;color:var(--blue-p700);">CA '+NOW_YEAR+'</th>';
+  html += '<th style="padding:.4rem .6rem;text-align:right;color:#059669;">Facturé</th>';
+  html += '<th style="padding:.4rem .6rem;text-align:right;color:var(--g500);">CA '+PREV_YEAR+'</th>';
+  html += '<th style="padding:.4rem .6rem;text-align:right;">Évol.</th>';
+  html += '</tr></thead><tbody>';
+
+  var maxCA = 0;
+  for (var mi = 1; mi <= 12; mi++) {
+    var mk = NOW_YEAR + '-' + String(mi).padStart(2,'0');
+    var mk2 = PREV_YEAR + '-' + String(mi).padStart(2,'0');
+    var curr = (byYearMonth[NOW_YEAR] && byYearMonth[NOW_YEAR][mk]) || null;
+    var prev = (byYearMonth[PREV_YEAR] && byYearMonth[PREV_YEAR][mk2]) || null;
+    if (!curr && !prev) continue;
+    if (curr && curr.ca > maxCA) maxCA = curr.ca;
+  }
+
+  for (var mi2 = 1; mi2 <= 12; mi2++) {
+    var mk3 = NOW_YEAR + '-' + String(mi2).padStart(2,'0');
+    var mk4 = PREV_YEAR + '-' + String(mi2).padStart(2,'0');
+    var cur = (byYearMonth[NOW_YEAR] && byYearMonth[NOW_YEAR][mk3]) || null;
+    var prv = (byYearMonth[PREV_YEAR] && byYearMonth[PREV_YEAR][mk4]) || null;
+    if (!cur && !prv) continue;
+
+    var barW = (cur && maxCA > 0) ? Math.round(cur.ca / maxCA * 100) : 0;
+    var isCurrentMonth = mk3 === (NOW_YEAR + '-' + String(new Date().getMonth()+1).padStart(2,'0'));
+    var rowBg = isCurrentMonth ? 'background:#eff6ff;' : (mi2%2===0 ? 'background:var(--surface2);' : '');
+
+    html += '<tr style="'+rowBg+'">';
+    html += '<td style="padding:.35rem .6rem;font-weight:'+(isCurrentMonth?'700':'500')+';color:var(--g900);">'+moisNoms[mi2]+(isCurrentMonth?' ⭐':'')+'</td>';
+    html += '<td style="padding:.35rem .6rem;text-align:right;">';
+    if (cur) {
+      html += '<div style="font-weight:700;color:var(--blue-p700);">'+fmtCA(cur.ca)+'</div>';
+      html += '<div style="background:var(--g100);border-radius:2px;height:3px;margin-top:2px;"><div style="background:var(--blue-p400);height:3px;border-radius:2px;width:'+barW+'%;"></div></div>';
+    } else html += '<span style="color:var(--g300);">—</span>';
+    html += '</td>';
+    html += '<td style="padding:.35rem .6rem;text-align:right;color:#059669;font-size:.72rem;">'+(cur&&cur.fac>0?fmtCA(cur.fac):'—')+'</td>';
+    html += '<td style="padding:.35rem .6rem;text-align:right;color:var(--g400);font-size:.72rem;">'+(prv?fmtCA(prv.ca):'—')+'</td>';
+    html += '<td style="padding:.35rem .6rem;text-align:right;">'+fmtPct(cur?cur.ca:0, prv?prv.ca:0)+'</td>';
+    html += '</tr>';
+  }
+
+  html += '</tbody></table></div>';
+
+  // ── Liste des commandes ──────────────────────────────────────────────────
+  var recent = cmds.filter(function(r){ return r.annee === NOW_YEAR; })
+    .sort(function(a,b){ return (b.dateRef||new Date(0)) - (a.dateRef||new Date(0)); })
+    .slice(0, 20);
+
+  if (recent.length) {
+    html += '<div style="font-size:.72rem;font-weight:700;color:var(--g700);margin:1rem 0 .4rem;">Commandes '+NOW_YEAR+' ('+recent.length+' affichées)</div>';
+    html += '<div style="max-height:200px;overflow-y:auto;border:1px solid var(--border);border-radius:8px;">';
+    html += '<table style="width:100%;border-collapse:collapse;font-size:.72rem;">';
+    html += '<thead style="position:sticky;top:0;background:#fff;"><tr>';
+    html += '<th style="padding:.3rem .5rem;text-align:left;color:var(--g600);">N° Cmd</th>';
+    html += '<th style="padding:.3rem .5rem;text-align:left;color:var(--g600);">Date</th>';
+    html += '<th style="padding:.3rem .5rem;text-align:right;color:var(--g600);">CA HT</th>';
+    html += '<th style="padding:.3rem .5rem;text-align:center;color:var(--g600);">Statut</th>';
+    html += '</tr></thead><tbody>';
+    recent.forEach(function(r) {
+      var statColor = r.statut==='facturee' ? '#059669' : r.statut==='avoir' ? '#dc2626' : '#b45309';
+      var statLabel = r.statut==='facturee' ? 'Facturé' : r.statut==='avoir' ? 'Avoir' : 'En cours';
+      var dateStr = r.dateRef ? r.dateRef.toLocaleDateString('fr-FR') : '—';
+      html += '<tr style="border-top:1px solid var(--border);">';
+      html += '<td style="padding:.3rem .5rem;font-family:monospace;color:var(--g700);">'+r.numCmd+'</td>';
+      html += '<td style="padding:.3rem .5rem;color:var(--g600);">'+dateStr+'</td>';
+      html += '<td style="padding:.3rem .5rem;text-align:right;font-weight:600;color:var(--g900);">'+fmtCA(r.ca)+'</td>';
+      html += '<td style="padding:.3rem .5rem;text-align:center;"><span style="font-size:.65rem;font-weight:700;color:'+statColor+';background:'+statColor+'18;padding:1px 6px;border-radius:10px;">'+statLabel+'</span></td>';
+      html += '</tr>';
+    });
+    html += '</tbody></table></div>';
+  }
+
+  el.innerHTML = html;
 }
 
 // ═══ MENU CONTEXTUEL ACTIONS ═══
