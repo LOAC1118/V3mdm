@@ -1280,6 +1280,7 @@ textarea { resize:vertical; min-height:80px; }
           <tbody id="cdb-tbody"></tbody>
         </table>
       </div>
+      <div id="cdb-pagination"></div>
     </div>
   </div>
 
@@ -1766,6 +1767,15 @@ function setSyncing(on) {
   document.getElementById('sync-dot').className = 'sync-dot'+(on?' loading':'');
   s2('sync-label', on ? 'Sync…' : 'Connecté');
 }
+
+// ── Initialisation anticipée des variables CDB ────────────────────────────────
+// Ces variables sont déclarées ici (avant que onSnapshot puisse appeler cdbRender)
+// pour éviter le problème de hoisting JS (var déclaré plus bas = undefined au premier appel)
+if (typeof cdbContacts === 'undefined')  window.cdbContacts  = [];
+if (typeof cdbSelection === 'undefined') window.cdbSelection = {};
+if (typeof cdbFiltered  === 'undefined') window.cdbFiltered  = [];
+if (typeof cdbPage      === 'undefined') window.cdbPage      = 0;
+if (typeof cdbPageSize  === 'undefined') window.cdbPageSize  = 50;
 
 // ═══════════════════════════════════════════════
 //  NAVIGATION
@@ -5029,7 +5039,24 @@ function cdbFmtDate(d) {
   } catch(e) { return '—'; }
 }
 
+// ─── PAGINATION BASE CLIENTS ──────────────────────────────────────────────────
+var cdbPage = 0;
+var cdbPageSize = 50;
+var cdbFiltered = [];   // tableau filtré courant (pour pagination)
+// Assurer que cdbSelection est initialisé (peut être appelé avant la déclaration plus bas)
+if (typeof cdbSelection === 'undefined') var cdbSelection = {};
+
 function cdbRender() {
+  cdbPage = 0;  // reset à la page 0 à chaque nouveau filtre
+  cdbApplyFilters();
+  cdbRenderPage();
+}
+
+function cdbApplyFilters() {
+  // Guard: DOM pas encore prêt ou variables pas initialisées
+  if (!document.getElementById('cdb-search')) return;
+  if (typeof cdbContacts === 'undefined') return;
+  if (typeof cdbFiltered === 'undefined') { cdbFiltered = []; }
   var s = (document.getElementById('cdb-search').value || '').toLowerCase().trim();
   var gF = document.getElementById('cdb-filter-group').value;
   var dF = document.getElementById('cdb-filter-dept').value;
@@ -5048,9 +5075,8 @@ function cdbRender() {
       depts.map(function(d){ return '<option value="'+d+'">'+d+'</option>'; }).join('');
   }
 
-  // Filtrage
   var now = new Date();
-  var filtered = cdbContacts.filter(function(c) {
+  cdbFiltered = cdbContacts.filter(function(c) {
     if (s) {
       var hay = ((c.numClient||'') + ' ' + (c.nom||'') + ' ' + (c.ville||'') +
                  ' ' + (c.email||'') + ' ' + (c.groupe||'') + ' ' + (c.cp||'')).toLowerCase();
@@ -5071,34 +5097,43 @@ function cdbRender() {
         var days = parseInt(aF.split('-')[1]);
         var d = c.dateDerniereCmd ? new Date(c.dateDerniereCmd) : null;
         if (!d || isNaN(d)) return false;
-        var diff = (now - d) / (86400000);
-        if (diff > days) return false;
+        if ((now - d) / 86400000 > days) return false;
       }
       if (aF.startsWith('inactive-')) {
         var days = parseInt(aF.split('-')[1]);
         var d = c.dateDerniereCmd ? new Date(c.dateDerniereCmd) : null;
         if (!d || isNaN(d)) return true;
-        var diff = (now - d) / (86400000);
-        if (diff <= days) return false;
+        if ((now - d) / 86400000 <= days) return false;
       }
     }
     return true;
   });
 
-  // Tri par raison sociale
-  filtered.sort(function(a,b){ return (a.nom||'').localeCompare(b.nom||''); });
+  cdbFiltered.sort(function(a,b){ return (a.nom||'').localeCompare(b.nom||''); });
 
   document.getElementById('cdb-total').textContent = cdbContacts.length + ' contact' + (cdbContacts.length>1?'s':'');
-  document.getElementById('cdb-count-filtered').textContent = filtered.length + ' résultat' + (filtered.length>1?'s':'');
+  document.getElementById('cdb-count-filtered').textContent = cdbFiltered.length + ' résultat' + (cdbFiltered.length>1?'s':'');
+}
 
+function cdbRenderPage() {
   var tbody = document.getElementById('cdb-tbody');
-  if (!filtered.length) {
+  var paginationEl = document.getElementById('cdb-pagination');
+
+  if (!cdbFiltered.length) {
     tbody.innerHTML = '<tr><td colspan="10" style="text-align:center;padding:3rem;color:var(--g500);">Aucun contact. ' +
       (cdbContacts.length ? 'Modifiez les filtres.' : '<br/>Cliquez sur <b>Importer Excel</b> pour démarrer.') + '</td></tr>';
+    if (paginationEl) paginationEl.innerHTML = '';
     return;
   }
-  tbody.innerHTML = filtered.map(function(c) {
-    var checked = cdbSelection[c.id] ? 'checked' : '';
+
+  var start = cdbPage * cdbPageSize;
+  var end   = Math.min(start + cdbPageSize, cdbFiltered.length);
+  var page  = cdbFiltered.slice(start, end);
+  var totalPages = Math.ceil(cdbFiltered.length / cdbPageSize);
+
+  // Rendu des lignes de la page courante
+  tbody.innerHTML = page.map(function(c) {
+    var checked = (cdbSelection && cdbSelection[c.id]) ? 'checked' : '';
     var groupe = c.groupe ? '<span style="display:inline-block;padding:1px 7px;background:var(--blue-p100);color:var(--blue-p800);border-radius:10px;font-size:.68rem;font-weight:500;">'+cdbEsc(c.groupe)+'</span>' : '';
     var prospectBadge = c.prospect ? '<span style="display:inline-block;padding:1px 6px;background:#fef3c7;color:#92400e;border-radius:10px;font-size:.65rem;margin-left:4px;">Prospect</span>' : '';
     var idAttr = cdbEsc(c.id);
@@ -5116,30 +5151,48 @@ function cdbRender() {
     '</tr>';
   }).join('');
 
-  // Attacher DIRECTEMENT les handlers sur chaque élément (plus fiable que la delegation)
-  // Lien sur le nom : ouvre directement en mode édition
-  document.querySelectorAll('#cdb-tbody [data-cdb-edit]').forEach(function(el) {
-    el.onclick = function(e) {
-      e.preventDefault();
-      e.stopPropagation();
-      cdbOpenEdit(el.getAttribute('data-cdb-edit'));
-      return false;
-    };
-  });
-  // Bouton menu ⋮ : ouvre un menu contextuel
-  document.querySelectorAll('#cdb-tbody .cdb-menu-btn').forEach(function(el) {
-    el.onclick = function(e) {
-      e.preventDefault();
-      e.stopPropagation();
-      cdbShowMenu(el, el.getAttribute('data-cdb-id'));
-      return false;
-    };
-  });
-  document.querySelectorAll('#cdb-tbody [data-cdb-check]').forEach(function(el) {
-    el.onchange = function() {
-      cdbToggleOne(el.getAttribute('data-cdb-check'), el.checked);
-    };
-  });
+  // Event delegation sur tbody (beaucoup plus performant que forEach)
+  tbody.onclick = function(e) {
+    var editEl = e.target.closest('[data-cdb-edit]');
+    var menuEl = e.target.closest('.cdb-menu-btn');
+    if (editEl) { e.preventDefault(); cdbOpenEdit(editEl.getAttribute('data-cdb-edit')); }
+    else if (menuEl) { e.preventDefault(); cdbShowMenu(menuEl, menuEl.getAttribute('data-cdb-id')); }
+  };
+  tbody.onchange = function(e) {
+    var chk = e.target.closest('[data-cdb-check]');
+    if (chk) cdbToggleOne(chk.getAttribute('data-cdb-check'), chk.checked);
+  };
+
+  // Pagination
+  if (paginationEl) {
+    if (totalPages <= 1) { paginationEl.innerHTML = ''; return; }
+    var html = '<div style="display:flex;align-items:center;gap:6px;padding:.6rem 1rem;border-top:1px solid var(--border);font-size:.78rem;color:var(--g600);">';
+    html += '<button class="btn btn-ghost" style="font-size:.75rem;padding:.25rem .6rem;" '+(cdbPage===0?'disabled':'')+' onclick="cdbGoPage('+(cdbPage-1)+')">← Préc.</button>';
+    // Pages proches
+    var showPages = [];
+    for (var pi = 0; pi < totalPages; pi++) {
+      if (pi === 0 || pi === totalPages-1 || Math.abs(pi - cdbPage) <= 2) showPages.push(pi);
+    }
+    var lastShown = -1;
+    for (var si = 0; si < showPages.length; si++) {
+      var pp = showPages[si];
+      if (lastShown >= 0 && pp > lastShown + 1) html += '<span>…</span>';
+      html += '<button class="btn '+(pp===cdbPage?'btn-primary':'btn-ghost')+'" style="font-size:.75rem;padding:.25rem .5rem;min-width:28px;" onclick="cdbGoPage('+pp+')">'+(pp+1)+'</button>';
+      lastShown = pp;
+    }
+    html += '<button class="btn btn-ghost" style="font-size:.75rem;padding:.25rem .6rem;" '+(cdbPage===totalPages-1?'disabled':'')+' onclick="cdbGoPage('+(cdbPage+1)+')">Suiv. →</button>';
+    html += '<span style="margin-left:auto;">' + (start+1) + '–' + end + ' / ' + cdbFiltered.length + '</span>';
+    html += '</div>';
+    paginationEl.innerHTML = html;
+  }
+}
+
+function cdbGoPage(p) {
+  cdbPage = p;
+  cdbRenderPage();
+  // Remonter en haut du tableau
+  var wrap = document.querySelector('#sec-contacts-db .tbl-wrap');
+  if (wrap) wrap.scrollTop = 0;
 }
 
 function cdbEsc(s) { return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;').replace(/\\'/g,'&#39;'); }
