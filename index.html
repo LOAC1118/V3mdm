@@ -4072,60 +4072,105 @@ function parseNum(v) {
   return isNaN(n) ? 0 : n;
 }
 
+function dashCaDetectCols(row) {
+  // Détecteur automatique : trouve les colonnes du fichier quelle que soit leur casse/orthographe
+  var keys = Object.keys(row);
+  function find(patterns) {
+    for (var i=0; i<keys.length; i++) {
+      var k = keys[i].toLowerCase().replace(/[^a-z0-9]/g,'');
+      for (var j=0; j<patterns.length; j++) {
+        if (k.indexOf(patterns[j]) >= 0) return keys[i];
+      }
+    }
+    return null;
+  }
+  var cols = {
+    numCmd:      find(['ncmd','ndecommande','numcommande','numcmd','commandeno','orderno','num']),
+    etat:        find(['etat','statut','status','state']),
+    caHT:        find(['caht','ca','montant','ht','amount','total']),
+    numFac:      find(['nfacture','factureno','invoiceno','numfacture','facture']),
+    dateCmd:     find(['commande','ordered','orderdate','datecommande']),
+    dateFac:     find(['facture','invoicedate','datefacture','billed']),
+    dateLiv:     find(['livr','delivery','delivered','datelivraison','shipped']),
+    codeClient:  find(['codeclient','clientcode','codclient','code']),
+    nomClient:   find(['nomclient','clientnom','client','raison','raisonsociale','company','nom']),
+    operateur:   find(['operateur','operator','commercial','vendeur','rep']),
+    transporteur:find(['transporteur','transport','carrier','livreur']),
+  };
+  console.log('[DashCA] Colonnes détectées :', cols);
+  return cols;
+}
+
 function dashCaProcess(rows) {
+  if (!rows || !rows.length) {
+    toast('Fichier vide ou non reconnu', 'err');
+    return;
+  }
+
+  // ── Détection automatique des colonnes sur la 1ère ligne non vide ──
+  var sampleRow = rows.find(function(r){ return r && Object.keys(r).length > 2; }) || rows[0];
+  var C = dashCaDetectCols(sampleRow);
+
+  // Log diagnostic dans la console
+  var allKeys = Object.keys(sampleRow);
+  console.log('[DashCA] Colonnes du fichier :', allKeys);
+  console.log('[DashCA] Mapping retenu :', C);
+
+  // Si on ne trouve pas de colonne numéro de commande, afficher un warning mais continuer
+  if (!C.numCmd && !C.nomClient) {
+    toast('⚠️ Format non reconnu — vérifiez les colonnes du fichier', 'err');
+    console.warn('[DashCA] Colonnes disponibles :', allKeys.join(', '));
+    return;
+  }
+
   dashCaRows = rows
     .filter(function(r) {
       if (!r) return false;
-      var etat = String(r['Etat']||'').trim();
-      if (etat === 'Total') return false;
-      return r['N° de cmd'] !== null && r['N° de cmd'] !== undefined;
+      // Exclure les lignes de total
+      var etat = C.etat ? String(r[C.etat]||'').trim() : '';
+      if (etat === 'Total' || etat === 'TOTAL') return false;
+      // Garder si au moins un N° de commande ou un nom client
+      var hasCmd = C.numCmd && r[C.numCmd] !== null && r[C.numCmd] !== undefined && r[C.numCmd] !== '';
+      var hasClient = C.nomClient && r[C.nomClient] !== null && r[C.nomClient] !== undefined && r[C.nomClient] !== '';
+      return hasCmd || hasClient;
     })
     .map(function(r) {
-      var etat = String(r['Etat']||'').trim();
-      var dCmd = suiviParseDate(r['Commandé']);
-      var dFac = suiviParseDate(r['Facture']);
-      var dLiv = suiviParseDate(r['Livré']);
-      var numFac = r['N° Facture'];
-      var ca = parseNum(r['CA HT']);
-      // Règle métier : le statut dépend UNIQUEMENT de la présence du N° Facture
+      var numFac = C.numFac ? r[C.numFac] : null;
+      var ca = C.caHT ? parseNum(r[C.caHT]) : 0;
+
       var statut;
       if (ca < 0) statut = 'avoir';
-      else if (numFac) statut = 'facturee';
+      else if (numFac && String(numFac).trim()) statut = 'facturee';
       else statut = 'en_cours';
 
-      // Date de référence paramétrable via le sélecteur "dash-ca-datecol"
-      //   par défaut : date de facture (correspond à votre tableau Excel)
+      var dCmd = C.dateCmd ? suiviParseDate(r[C.dateCmd]) : null;
+      var dFac = C.dateFac ? suiviParseDate(r[C.dateFac]) : null;
+      var dLiv = C.dateLiv ? suiviParseDate(r[C.dateLiv]) : null;
+
       var dateCol = (typeof dashCaDateCol !== 'undefined') ? dashCaDateCol : 'facture';
       var dRef;
       if (dateCol === 'livraison') dRef = dLiv || dFac || dCmd;
       else if (dateCol === 'commande') dRef = dCmd || dFac || dLiv;
       else dRef = dFac || dLiv || dCmd;
 
-      // Normalisation code client pour matching
-      var rawCode = r['Code client'];
+      var rawCode = C.codeClient ? r[C.codeClient] : null;
       var codeNorm = '';
       if (rawCode !== null && rawCode !== undefined && rawCode !== '') {
-        // Retire le .0 final (Excel lit 11461 comme 11461.0)
         codeNorm = String(rawCode).trim();
         if (codeNorm.endsWith('.0')) codeNorm = codeNorm.slice(0, -2);
-        // Garder l'original pour 4702.01 etc. (vraies décimales)
       }
 
-      var clientNom = String(r['Nom client']||'').trim() || '—';
-      var refDate = dRef;
+      var clientNom = C.nomClient ? (String(r[C.nomClient]||'').trim() || '—') : '—';
 
       return {
         ca: ca, statut: statut,
         client: clientNom,
         codeClient: codeNorm,
         clientNomKey: clientNom.toLowerCase().replace(/\s+/g,' ').trim(),
-        numCmd: String(r['N° de cmd']||'').trim(),
-        dateCmd: dCmd,
-        dateLiv: dLiv,
-        dateFac: dFac,
-        dateRef: refDate,
-        operateur: String(r['Opérateur']||'').trim() || '—',
-        transporteur: String(r['Transporteur']||'').trim() || '—',
+        numCmd: C.numCmd ? String(r[C.numCmd]||'').trim() : '',
+        dateCmd: dCmd, dateLiv: dLiv, dateFac: dFac, dateRef: dRef,
+        operateur:    C.operateur    ? (String(r[C.operateur]||'').trim()    || '—') : '—',
+        transporteur: C.transporteur ? (String(r[C.transporteur]||'').trim() || '—') : '—',
         mois: dRef ? (dRef.getFullYear() + '-' + String(dRef.getMonth()+1).padStart(2,'0')) : '(inconnu)',
         annee: dRef ? dRef.getFullYear() : null
       };
@@ -4147,6 +4192,37 @@ function dashCaProcess(rows) {
   fill('dash-ca-op',     ops,     'Tous opérateurs');
   fill('dash-ca-trans',  trans,   'Tous transporteurs');
   fill('dash-ca-client', clients, 'Tous clients');
+
+  // ── Diagnostic si aucune ligne reconnue ──────────────────────────────────
+  if (!dashCaRows.length) {
+    var colsList = sampleRow ? Object.keys(sampleRow).join(' · ') : '(aucune)';
+    var diagHtml =
+      '<div style="padding:1rem;background:#fff7ed;border:1px solid #fed7aa;border-radius:8px;margin:1rem;">' +
+        '<div style="font-weight:700;color:#9a3412;margin-bottom:.5rem;">⚠️ Aucune commande reconnue dans ce fichier</div>' +
+        '<div style="font-size:.78rem;color:#7c2d12;margin-bottom:.5rem;">Colonnes trouvées dans le fichier :<br/>' +
+          '<code style="font-size:.72rem;background:#fff;padding:3px 6px;border-radius:4px;display:block;margin-top:4px;word-break:break-all;">' + colsList + '</code>' +
+        '</div>' +
+        '<div style="font-size:.75rem;color:#9a3412;">Colonnes attendues (exemples) : <em>N° de cmd, CA HT, Nom client, Code client, Facture, Commandé, Opérateur</em></div>' +
+      '</div>';
+    document.getElementById('dash-ca-upload').style.display = 'none';
+    document.getElementById('dash-ca-content').style.display = '';
+    document.getElementById('dash-ca-reload').style.display = '';
+    var statusEl = document.getElementById('dash-ca-status');
+    if (statusEl) statusEl.innerHTML = '<span style="color:#dc2626;">❌ 0 commande reconnue</span>';
+    // Injecter le diagnostic dans la zone content
+    var contentEl = document.getElementById('dash-ca-content');
+    var diagEl = document.getElementById('dash-ca-diag');
+    if (!diagEl) {
+      diagEl = document.createElement('div');
+      diagEl.id = 'dash-ca-diag';
+      contentEl.insertBefore(diagEl, contentEl.firstChild);
+    }
+    diagEl.innerHTML = diagHtml;
+    return;
+  }
+  // Effacer diagnostic précédent si OK
+  var diagEl = document.getElementById('dash-ca-diag');
+  if (diagEl) diagEl.innerHTML = '';
 
   document.getElementById('dash-ca-upload').style.display = 'none';
   document.getElementById('dash-ca-content').style.display = '';
