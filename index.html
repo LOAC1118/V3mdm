@@ -1705,7 +1705,7 @@ async function showApp() {
   // Charge depuis Firestore les données : contacts, notes de frais, commandes stats
   setTimeout(function() {
     console.log('[Cloud] Démarrage sync multi-modules...');
-    try { if (typeof cdbInit === 'function') cdbInit(); } catch(e) { console.warn('cdbInit err:', e); }
+    // cdbInit() remplacé par le listener onSnapshot dans startListeners()
     try { if (typeof nfdSyncFromFirestore === 'function') nfdSyncFromFirestore(); } catch(e) { console.warn('nfdSync err:', e); }
     try { if (typeof dashCaLoadFromFirestore === 'function') dashCaLoadFromFirestore(); } catch(e) { console.warn('dashCaLoad err:', e); }
   }, 500);
@@ -1717,7 +1717,7 @@ async function showApp() {
 function startListeners() {
   setSyncing(true);
   let loaded = 0;
-  const onLoad = () => { loaded++; if(loaded>=5){ setSyncing(false); refreshDashboard(); updateBadges(); } };
+  const onLoad = () => { loaded++; if(loaded>=6){ setSyncing(false); refreshDashboard(); updateBadges(); } };
 
   const listen = (col, cacheKey, cb) => {
     const u = db.collection(col).orderBy('createdAt','desc').onSnapshot(snap => {
@@ -1734,6 +1734,24 @@ function startListeners() {
   listen('clients','clients', renderClients);
   listen('commandes','commandes', renderCommandes);
   listen('frais','frais', () => { renderFrais(); refreshFraisStats(); });
+
+  // ─── CONTACTS (Base clients) — listener temps réel ───────────────────────
+  // Pas de orderBy('createdAt') car les contacts importés depuis Excel n'ont pas ce champ
+  const uContacts = db.collection('contacts').onSnapshot(function(snap) {
+    cdbContacts = snap.docs.map(function(d){ var data = d.data(); data.id = d.id; return data; });
+    try { localStorage.setItem(CDB_CACHE_KEY, JSON.stringify(cdbContacts)); } catch(e){}
+    console.log('[CDB] onSnapshot : ' + cdbContacts.length + ' contacts (temps réel)');
+    if (typeof cdbRender === 'function') cdbRender();
+    if (typeof dashCaRows !== 'undefined' && dashCaRows.length && typeof cdbEnrichFromOrders === 'function') {
+      cdbEnrichFromOrders(dashCaRows);
+    }
+    cdbFsLoaded = true;
+    onLoad();
+  }, function(err) {
+    console.warn('[CDB] onSnapshot erreur:', err);
+    onLoad();
+  });
+  listeners.push(uContacts);
 
   // Activité (limitée)
   const uAct = db.collection('activite').orderBy('createdAt','desc').limit(20).onSnapshot(snap => {
@@ -4843,14 +4861,10 @@ function cdbSyncFromFirestore() {
         data.id = doc.id;
         loaded.push(data);
       });
-      // Ne remplace que si Firestore a des données (sinon on garde le cache local)
-      if (loaded.length > 0) {
-        cdbContacts = loaded;
-        try { localStorage.setItem(CDB_CACHE_KEY, JSON.stringify(cdbContacts)); } catch(e){}
-        console.log('[CDB] ' + cdbContacts.length + ' contacts chargés depuis Firestore');
-      } else {
-        console.log('[CDB] Firestore vide, cache local conservé');
-      }
+      // Firestore fait autorité : écrase toujours le cache local (garantit la synchro multi-appareils)
+      cdbContacts = loaded;
+      try { localStorage.setItem(CDB_CACHE_KEY, JSON.stringify(cdbContacts)); } catch(e){}
+      console.log('[CDB] ' + cdbContacts.length + ' contacts chargés depuis Firestore (source de vérité)');
       if (typeof cdbRender === 'function') cdbRender();
       if (typeof dashCaRows !== 'undefined' && dashCaRows.length && typeof cdbEnrichFromOrders === 'function') {
         cdbEnrichFromOrders(dashCaRows);
