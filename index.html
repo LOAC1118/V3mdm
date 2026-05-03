@@ -4220,6 +4220,7 @@ function dashCaProcess(rows) {
 
   function fill(id, list, placeholder) {
     var el = document.getElementById(id);
+    if (!el) return; // élément absent du DOM (ex: filtre supprimé)
     el.innerHTML = '<option value="">'+placeholder+'</option>' +
       list.map(function(v){ return '<option value="'+String(v).replace(/"/g,'&quot;')+'">'+String(v)+'</option>'; }).join('');
   }
@@ -4465,15 +4466,12 @@ function dashCaLoadFromFirestore() {
     setTimeout(dashCaLoadFromFirestore, 1000);
     return;
   }
-  if (typeof currentUser !== 'undefined' && !currentUser) {
-    console.warn('[DashCA] Pas connecté, sync Firestore reportée');
-    return;
-  }
   var fdb;
   try { fdb = firebase.firestore(); } catch(e) { return; }
 
+  console.log('[DashCA] Chargement Firestore commandes_stats...');
   fdb.collection('commandes_stats').get().then(function(snap) {
-    if (snap.empty) return;
+    if (snap.empty) { console.log('[DashCA] Firestore vide - aucune commande sauvegardée'); return; }
     var rows = [];
     snap.forEach(function(doc) {
       var r = doc.data();
@@ -4493,7 +4491,9 @@ function dashCaLoadFromFirestore() {
     // Si on a des données plus récentes que le cache local (ou aucun cache), on remplace
     var meta = {};
     try { meta = JSON.parse(localStorage.getItem(DASHCA_META_KEY) || '{}'); } catch(e){}
-    if (rows.length > dashCaRows.length || !dashCaRows.length) {
+    // Firestore fait autorité si plus de données OU si pas de cache local
+    if (rows.length > 0 && (rows.length >= dashCaRows.length || !dashCaRows.length)) {
+      console.log('[DashCA] ' + rows.length + ' commandes chargées depuis Firestore');
       dashCaSilentLoad = true;
       dashCaRows = rows;
       dashCaShowContent();
@@ -4536,12 +4536,19 @@ function dashCaAutoLoadCache() {
   }
   // Refresh "il y a X min" toutes les minutes
   setInterval(dashCaUpdateLastImportLabel, 60000);
+  // Déclencher Firestore dès que Firebase est prêt (même si auth pas encore connue)
+  (function tryFsLoad() {
+    if (typeof firebase !== 'undefined' && firebase.apps && firebase.apps.length) {
+      setTimeout(dashCaAutoLoadFirestore, 500);
+    } else {
+      setTimeout(tryFsLoad, 400);
+    }
+  })();
 }
 
 function dashCaAutoLoadFirestore() {
   if (dashCaFsLoaded) return;
   if (typeof firebase === 'undefined' || !firebase.firestore) return;
-  if (typeof currentUser === 'undefined' || !currentUser) return;
   dashCaFsLoaded = true;
   console.log('[DashCA] Sync Firestore...');
   dashCaLoadFromFirestore();
@@ -4661,15 +4668,18 @@ function dashCaFmt(n) {
 }
 
 function dashCaRender() {
+  // Guard : si le DOM du dashboard n'est pas encore prêt, on annule silencieusement
+  if (!document.getElementById('dash-ca-year')) return;
+
   var yearF   = document.getElementById('dash-ca-year').value;
-  var opF     = document.getElementById('dash-ca-op').value;
-  var transF  = document.getElementById('dash-ca-trans').value;
-  var clientF = document.getElementById('dash-ca-client').value;
+  var opF     = (document.getElementById('dash-ca-op')     || {value:''}).value;
+  var transF  = (document.getElementById('dash-ca-trans')  || {value:''}).value;
+  var clientF = (document.getElementById('dash-ca-client') || {value:''}).value;
 
   var onlyFacEl = document.getElementById('dash-ca-only-fac');
   var onlyFac  = onlyFacEl ? onlyFacEl.checked : false;
 
-  var monthF = document.getElementById('dash-ca-month').value;
+  var monthF = (document.getElementById('dash-ca-month') || {value:''}).value;
 
   var filtered = dashCaRows.filter(function(r) {
     if (yearF   && String(r.annee)   !== yearF)   return false;
