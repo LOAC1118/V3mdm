@@ -1375,6 +1375,9 @@ textarea { resize:vertical; min-height:80px; }
     </div>
     <div class="modal-foot">
       <button class="btn btn-ghost" id="cdb-edit-delete" onclick="cdbDelete()" style="margin-right:auto;color:#dc2626;">🗑 Supprimer</button>
+      <button class="btn btn-ghost" id="cdb-btn-new-bdc" onclick="(function(){ var id=document.getElementById('cdb-edit-id').value; var c=cdbContacts.find(function(x){return x.id===id;}); if(c) cdbNewOrderFromClient(c); else toast('Enregistrez d\'abord le contact','err'); })()" style="color:var(--blue-p700);border-color:var(--blue-p300);background:var(--blue-p50);">
+        🛒 Nouveau BDC
+      </button>
       <button class="btn btn-ghost" onclick="document.getElementById('cdb-modal-edit').classList.add('hidden')">Annuler</button>
       <button class="btn btn-primary" onclick="cdbSave()">💾 Enregistrer</button>
     </div>
@@ -5965,6 +5968,42 @@ function cdbSwitchTab(tab) {
   });
 }
 
+// Crée un nouveau BDC pré-rempli depuis une fiche client
+function cdbNewOrderFromClient(c) {
+  if (!c) return;
+
+  // Si le BDC a déjà des quantités, demander confirmation
+  if (Object.keys(bdcQtys).filter(function(k){ return bdcQtys[k] > 0; }).length > 0) {
+    if (!confirm('Un BDC est déjà en cours. Effacer et créer un nouveau BDC pour ' + c.nom + ' ?')) return;
+    bdcQtys = {}; bdcRemiseLigne = {};
+  }
+
+  // Fermer la modale fiche client
+  document.getElementById('cdb-modal-edit').classList.add('hidden');
+
+  // Naviguer vers le BDC
+  showSection('bdc', null);
+
+  // Pré-remplir les champs après que la section soit visible
+  setTimeout(function() {
+    var set = function(id, val) {
+      var el = document.getElementById(id);
+      if (el && val) el.value = val;
+    };
+    set('bdc-magasin',   c.nom       || '');
+    set('bdc-numclient', c.numClient || '');
+    set('bdc-email',     c.email     || '');
+    set('bdc-tel',       c.telephone || '');
+    // Contact : nom propre du contact si renseigné, sinon vide
+    set('bdc-contact',   c.contact   || '');
+
+    // Rebuilder le tableau (rafraîchit l'affichage)
+    if (typeof buildTable === 'function') buildTable();
+
+    toast('📋 BDC pré-rempli pour ' + c.nom, 'ok');
+  }, 150);
+}
+
 function cdbOpenEdit(id) {
   var c = id ? cdbContacts.find(function(x){ return x.id === id; }) : null;
   if (id && !c) { toast('Contact introuvable — rechargez la page', 'err'); return; }
@@ -6173,6 +6212,7 @@ function cdbShowMenu(anchor, id) {
   var c = cdbContacts.find(function(x){ return x.id === id; });
   var actions = [
     { icon: '✏️', label: 'Modifier la fiche',  fn: function(){ cdbOpenEdit(id); } },
+    { icon: '🛒', label: 'Nouveau BDC',        fn: function(){ if(c) cdbNewOrderFromClient(c); } },
     { icon: '📊', label: 'CA & commandes',     fn: function(){ cdbOpenEdit(id); setTimeout(function(){ cdbSwitchTab('ca'); }, 50); } },
     { icon: '📋', label: 'Copier l\'email',    fn: function(){
         if (c && c.email) { navigator.clipboard.writeText(c.email).then(function(){ toast('Email copié', 'ok'); }); }
