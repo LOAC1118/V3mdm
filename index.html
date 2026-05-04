@@ -4039,6 +4039,8 @@ function suiviRender() {
 // ═══ ANALYSE CA MENSUELLE — dashboard intégré (version enrichie) ═══
 var dashCaRows = [];
 var dashCharts = {};
+var dashObjectifs = {};   // { '2026-01': 50000, ... } — déclaré tôt pour éviter le hoisting
+var dashObjLoaded = false;
 var dashCaDateCol = 'facture'; // par défaut : date de facture
 var dashCaRawJson = null;      // garde le JSON brut pour reparser au changement de date
 
@@ -4717,8 +4719,7 @@ function dashCaFmt(n) {
 // ═══════════════════════════════════════════════════════════════════════════
 //  OBJECTIFS CA MENSUELS
 // ═══════════════════════════════════════════════════════════════════════════
-var dashObjectifs = {};  // { '2026-01': 50000, '2026-02': 55000, ... }
-var dashObjLoaded = false;
+// dashObjectifs et dashObjLoaded déclarés plus haut (ligne ~4040)
 
 // ── Chargement depuis Firestore ──────────────────────────────────────────────
 function dashLoadObjectifs() {
@@ -4774,12 +4775,14 @@ function dashOpenObjectifs() {
 
   for (var m = 1; m <= 12; m++) {
     var key = year + '-' + String(m).padStart(2,'0');
-    var val = dashObjectifs[key] || '';
+    var val = (dashObjectifs && dashObjectifs[key]) || '';
     var caReel = 0;
     // Calculer le CA réel de ce mois depuis dashCaRows
-    dashCaRows.forEach(function(r) {
-      if (r.mois === key && r.statut !== 'avoir') caReel += r.ca;
-    });
+    if (typeof dashCaRows !== 'undefined') {
+      dashCaRows.forEach(function(r) {
+        if (r.mois === key && r.statut !== 'avoir') caReel += r.ca;
+      });
+    }
     var pct = (val && caReel > 0) ? Math.min(Math.round(caReel / val * 100), 999) : 0;
     var barColor = pct >= 100 ? '#059669' : pct >= 75 ? '#f59e0b' : '#e5e7eb';
     var labelColor = pct >= 100 ? '#059669' : pct >= 75 ? '#b45309' : '#6b7280';
@@ -4915,7 +4918,7 @@ function dashCaRender() {
     var label = moisNames[parseInt(parts[1])-1] + ' ' + parts[0];
     var tk = m.nb > 0 ? m.totalPositif / m.nb : 0;
     var caTotal = m.en_cours + m.facture;
-    var obj = dashObjectifs[m.mois] || 0;
+    var obj = (dashObjectifs && dashObjectifs[m.mois]) || 0;
     totalObj += obj;
     function td(val, color) {
       var style = val ? ('color:'+color+';font-weight:500;') : 'color:var(--g400);';
@@ -5083,7 +5086,7 @@ function dashCaDrawCharts(filtered, months, moisNames) {
         datasets: [
           { label:'CA Total (activité)',   data: months.map(function(m){return m.en_cours + m.facture;}), borderColor:'#7c3aed', backgroundColor:'rgba(124,58,237,.1)', tension:.3, fill:true, pointRadius:4 },
           { label:'CA Facturé',           data: months.map(function(m){return m.facture;}), borderColor:'#2563b0', backgroundColor:'rgba(37,99,176,.1)', tension:.3, fill:true, pointRadius:3 },
-          { label:'🎯 Objectif',          data: months.map(function(m){ return dashObjectifs[m.mois] || null; }), borderColor:'#f59e0b', backgroundColor:'transparent', borderDash:[6,4], tension:0, fill:false, pointRadius:3, pointStyle:'crossRot', borderWidth:2.5 }
+          { label:'🎯 Objectif',          data: months.map(function(m){ return (dashObjectifs && dashObjectifs[m.mois]) || null; }), borderColor:'#f59e0b', backgroundColor:'transparent', borderDash:[6,4], tension:0, fill:false, pointRadius:3, pointStyle:'crossRot', borderWidth:2.5 }
         ]
       },
       options: {
