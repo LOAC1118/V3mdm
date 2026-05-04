@@ -861,6 +861,24 @@ textarea { resize:vertical; min-height:80px; }
 
       <div id="dash-ca-content" style="display:none;padding:0 1rem 1rem;">
 
+        <!-- ── OBJECTIFS MENSUELS ─────────────────────────────── -->
+        <div id="dash-objectifs-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:9999;align-items:center;justify-content:center;">
+          <div style="background:#fff;border-radius:14px;width:min(680px,95vw);max-height:90vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,.3);">
+            <div style="display:flex;justify-content:space-between;align-items:center;padding:1rem 1.25rem;border-bottom:1px solid #e5e7eb;">
+              <div>
+                <div style="font-size:.95rem;font-weight:700;color:#111;">🎯 Objectifs CA mensuels</div>
+                <div style="font-size:.72rem;color:#6b7280;margin-top:2px;">Saisir le CA objectif par mois · sauvegardé automatiquement</div>
+              </div>
+              <button onclick="dashCloseObjectifs()" style="border:none;background:none;font-size:1.2rem;cursor:pointer;color:#9ca3af;padding:.25rem .5rem;">✕</button>
+            </div>
+            <div style="padding:1.25rem;" id="dash-obj-grid"></div>
+            <div style="padding:.75rem 1.25rem;border-top:1px solid #e5e7eb;display:flex;justify-content:flex-end;gap:8px;">
+              <button onclick="dashCloseObjectifs()" style="padding:.45rem 1rem;border:1px solid #d1d5db;border-radius:7px;background:#fff;cursor:pointer;font-size:.82rem;">Fermer</button>
+              <button onclick="dashSaveObjectifs()" style="padding:.45rem 1.1rem;border:none;border-radius:7px;background:#2563b0;color:#fff;cursor:pointer;font-size:.82rem;font-weight:600;">💾 Enregistrer</button>
+            </div>
+          </div>
+        </div>
+
         <!-- ── FILTRES ─────────────────────────────────────────── -->
         <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;padding:.6rem .8rem;background:var(--surface2);border-radius:8px;margin-bottom:1.25rem;">
           <span style="font-size:.7rem;font-weight:600;color:var(--g600);text-transform:uppercase;letter-spacing:.05em;">Filtres :</span>
@@ -885,6 +903,7 @@ textarea { resize:vertical; min-height:80px; }
             <input type="checkbox" id="dash-ca-only-fac" onchange="dashCaRender()" style="accent-color:var(--blue-p700);cursor:pointer;"/>
             Facturées uniquement
           </label>
+          <button onclick="dashOpenObjectifs()" style="padding:4px 12px;border:1px solid #f59e0b;border-radius:6px;background:#fffbeb;color:#b45309;font-size:.74rem;font-weight:600;cursor:pointer;white-space:nowrap;">🎯 Objectifs</button>
         </div>
 
         <!-- ── 4 KPIs PRINCIPAUX (fichier importé) ─────────────── -->
@@ -1013,6 +1032,8 @@ textarea { resize:vertical; min-height:80px; }
                   <th style="text-align:right;color:#b45309;">En cours</th>
                   <th style="text-align:right;color:var(--blue-p700);">Facturé</th>
                   <th style="text-align:right;color:#dc2626;">Avoirs</th>
+                  <th style="text-align:right;color:#f59e0b;">🎯 Objectif</th>
+                  <th style="text-align:right;">Atteinte</th>
                 </tr>
               </thead>
               <tbody id="dash-ca-tbody"></tbody>
@@ -1738,6 +1759,7 @@ async function showApp() {
   setTimeout(function() {
     console.log('[Cloud] Démarrage sync multi-modules...');
     // cdbInit() remplacé par le listener onSnapshot dans startListeners()
+    try { if (typeof dashLoadObjectifs === 'function') dashLoadObjectifs(); } catch(e) { console.warn('dashLoadObjectifs err:', e); }
     try { if (typeof nfdSyncFromFirestore === 'function') nfdSyncFromFirestore(); } catch(e) { console.warn('nfdSync err:', e); }
     try { if (typeof dashCaLoadFromFirestore === 'function') dashCaLoadFromFirestore(); } catch(e) { console.warn('dashCaLoad err:', e); }
   }, 500);
@@ -4710,6 +4732,138 @@ function dashCaFmt(n) {
   return n.toLocaleString('fr-FR',{minimumFractionDigits:2,maximumFractionDigits:2}) + ' €';
 }
 
+// ═══════════════════════════════════════════════════════════════════════════
+//  OBJECTIFS CA MENSUELS
+// ═══════════════════════════════════════════════════════════════════════════
+var dashObjectifs = {};  // { '2026-01': 50000, '2026-02': 55000, ... }
+var dashObjLoaded = false;
+
+// ── Chargement depuis Firestore ──────────────────────────────────────────────
+function dashLoadObjectifs() {
+  if (dashObjLoaded) return;
+  if (typeof firebase === 'undefined' || !firebase.apps || !firebase.apps.length) {
+    setTimeout(dashLoadObjectifs, 600); return;
+  }
+  try {
+    var fdb = firebase.firestore();
+    fdb.collection('objectifs_ca').get().then(function(snap) {
+      snap.forEach(function(doc) {
+        var d = doc.data();
+        if (d.mois && d.objectif !== undefined) dashObjectifs[d.mois] = d.objectif;
+      });
+      dashObjLoaded = true;
+      if (dashCaRows.length) dashCaRender(); // rafraîchir si données déjà chargées
+    }).catch(function(e){ console.warn('[Obj] Firestore:', e); dashObjLoaded = true; });
+  } catch(e) { console.warn('[Obj] init:', e); dashObjLoaded = true; }
+}
+
+// ── Sauvegarde Firestore ──────────────────────────────────────────────────────
+function dashSaveObjectifs() {
+  if (typeof firebase === 'undefined' || !firebase.apps || !firebase.apps.length) {
+    toast('Firestore non disponible', 'err'); return;
+  }
+  var fdb = firebase.firestore();
+  var batch = fdb.batch();
+  var inputs = document.querySelectorAll('#dash-obj-grid input[data-mois]');
+  var count = 0;
+  inputs.forEach(function(inp) {
+    var mois = inp.getAttribute('data-mois');
+    var val = parseFloat(inp.value.replace(',','.').replace(/\s/g,'')) || 0;
+    dashObjectifs[mois] = val;
+    var ref = fdb.collection('objectifs_ca').doc(mois);
+    batch.set(ref, { mois: mois, objectif: val });
+    count++;
+  });
+  batch.commit().then(function() {
+    toast('✅ ' + count + ' objectifs enregistrés', 'ok');
+    dashCloseObjectifs();
+    dashCaRender();
+  }).catch(function(e) { toast('Erreur : ' + e.message, 'err'); });
+}
+
+// ── Ouvrir la modale ──────────────────────────────────────────────────────────
+function dashOpenObjectifs() {
+  // Construire la grille : 12 mois de l'année sélectionnée (ou année courante)
+  var yearEl = document.getElementById('dash-ca-year');
+  var year = (yearEl && yearEl.value) ? parseInt(yearEl.value) : new Date().getFullYear();
+
+  var moisNoms = ['Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août','Septembre','Octobre','Novembre','Décembre'];
+  var html = '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;">';
+
+  for (var m = 1; m <= 12; m++) {
+    var key = year + '-' + String(m).padStart(2,'0');
+    var val = dashObjectifs[key] || '';
+    var caReel = 0;
+    // Calculer le CA réel de ce mois depuis dashCaRows
+    dashCaRows.forEach(function(r) {
+      if (r.mois === key && r.statut !== 'avoir') caReel += r.ca;
+    });
+    var pct = (val && caReel > 0) ? Math.min(Math.round(caReel / val * 100), 999) : 0;
+    var barColor = pct >= 100 ? '#059669' : pct >= 75 ? '#f59e0b' : '#e5e7eb';
+    var labelColor = pct >= 100 ? '#059669' : pct >= 75 ? '#b45309' : '#6b7280';
+
+    html += '<div style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:10px;padding:.75rem .9rem;">';
+    html += '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.4rem;">';
+    html += '<span style="font-size:.78rem;font-weight:600;color:#374151;">' + moisNoms[m-1] + ' ' + year + '</span>';
+    if (caReel > 0) {
+      html += '<span style="font-size:.62rem;color:' + labelColor + ';font-weight:600;">' + pct + '%</span>';
+    }
+    html += '</div>';
+    html += '<input type="number" data-mois="' + key + '" value="' + val + '" placeholder="Objectif €" min="0" step="1000" ';
+    html += 'style="width:100%;padding:.4rem .6rem;border:1px solid #d1d5db;border-radius:6px;font-size:.82rem;color:#111;outline:none;box-sizing:border-box;">';
+    if (caReel > 0 && val) {
+      html += '<div style="margin-top:.4rem;">';
+      html += '<div style="display:flex;justify-content:space-between;font-size:.6rem;color:#6b7280;margin-bottom:2px;">';
+      html += '<span>Réel : ' + dashCaFmt(caReel) + '</span><span>/' + dashCaFmt(parseFloat(val)) + '</span>';
+      html += '</div>';
+      html += '<div style="background:#e5e7eb;border-radius:3px;height:4px;">';
+      html += '<div style="background:' + barColor + ';border-radius:3px;height:4px;width:' + Math.min(pct, 100) + '%;transition:width .3s;"></div>';
+      html += '</div></div>';
+    }
+    html += '</div>';
+  }
+  html += '</div>';
+
+  // Ajouter les années disponibles comme navigation rapide
+  var years = [];
+  if (dashCaRows.length) {
+    dashCaRows.forEach(function(r){ if (r.annee && years.indexOf(r.annee) < 0) years.push(r.annee); });
+    years.sort(function(a,b){ return b-a; });
+  }
+  if (years.indexOf(new Date().getFullYear()) < 0) years.unshift(new Date().getFullYear());
+
+  var navHtml = '<div style="display:flex;gap:6px;margin-bottom:.75rem;flex-wrap:wrap;">';
+  navHtml += '<span style="font-size:.72rem;color:#6b7280;align-self:center;">Année :</span>';
+  years.forEach(function(y) {
+    var active = y === year;
+    navHtml += '<button onclick="dashOpenObjectifsYear(' + y + ')" style="padding:3px 10px;border-radius:20px;border:1px solid ' + (active?'#2563b0':'#d1d5db') + ';background:' + (active?'#dbeafe':'#fff') + ';color:' + (active?'#1d4ed8':'#374151') + ';font-size:.75rem;font-weight:' + (active?'700':'500') + ';cursor:pointer;">' + y + '</button>';
+  });
+  navHtml += '</div>';
+
+  document.getElementById('dash-obj-grid').innerHTML = navHtml + html;
+  var modal = document.getElementById('dash-objectifs-modal');
+  modal.style.display = 'flex';
+}
+
+function dashOpenObjectifsYear(year) {
+  // Changer l'année sélectionnée et rouvrir
+  var yearEl = document.getElementById('dash-ca-year');
+  if (yearEl) {
+    // Chercher l'option correspondante
+    for (var i = 0; i < yearEl.options.length; i++) {
+      if (parseInt(yearEl.options[i].value) === year) {
+        yearEl.value = yearEl.options[i].value;
+        break;
+      }
+    }
+  }
+  dashOpenObjectifs();
+}
+
+function dashCloseObjectifs() {
+  document.getElementById('dash-objectifs-modal').style.display = 'none';
+}
+
 function dashCaRender() {
   // Guard : si le DOM du dashboard n'est pas encore prêt, on annule silencieusement
   if (!document.getElementById('dash-ca-year')) return;
@@ -4773,22 +4927,42 @@ function dashCaRender() {
   // Tableau détail
   var moisNames = ['Jan','Fév','Mar','Avr','Mai','Juin','Juil','Août','Sep','Oct','Nov','Déc'];
   var tbody = document.getElementById('dash-ca-tbody');
+  var totalObj = 0;
   tbody.innerHTML = months.map(function(m) {
     var parts = m.mois.split('-');
     var label = moisNames[parseInt(parts[1])-1] + ' ' + parts[0];
     var tk = m.nb > 0 ? m.totalPositif / m.nb : 0;
+    var caTotal = m.en_cours + m.facture;
+    var obj = dashObjectifs[m.mois] || 0;
+    totalObj += obj;
     function td(val, color) {
       var style = val ? ('color:'+color+';font-weight:500;') : 'color:var(--g400);';
       return '<td style="text-align:right;font-variant-numeric:tabular-nums;'+style+'">'+dashCaFmt(val)+'</td>';
     }
+    var objCell = obj
+      ? '<td style="text-align:right;color:#b45309;font-weight:600;font-variant-numeric:tabular-nums;">'+dashCaFmt(obj)+'</td>'
+      : '<td style="text-align:right;color:var(--g300);"><button onclick="dashOpenObjectifs()" style="font-size:.65rem;color:var(--blue-p600);border:none;background:none;cursor:pointer;padding:0;">+ Ajouter</button></td>';
+    var attCell = '<td style="text-align:right;">';
+    if (obj > 0 && caTotal > 0) {
+      var pct = Math.round(caTotal / obj * 100);
+      var col = pct >= 100 ? '#059669' : pct >= 75 ? '#f59e0b' : '#dc2626';
+      var icon = pct >= 100 ? '✅' : pct >= 75 ? '⚡' : '⚠️';
+      attCell += '<div style="display:flex;flex-direction:column;align-items:flex-end;gap:2px;">';
+      attCell += '<span style="font-size:.78rem;font-weight:700;color:'+col+';">' + icon + ' ' + pct + '%</span>';
+      attCell += '<div style="background:#e5e7eb;border-radius:3px;height:3px;width:60px;">';
+      attCell += '<div style="background:'+col+';border-radius:3px;height:3px;width:'+Math.min(pct,100)+'%;"></div></div>';
+      attCell += '</div>';
+    } else { attCell += '<span style="color:var(--g300);">—</span>'; }
+    attCell += '</td>';
     return '<tr>' +
       '<td style="font-weight:600;color:var(--g900);">' + label + '</td>' +
       '<td style="text-align:right;">' + m.nb + '</td>' +
       '<td style="text-align:right;color:var(--g700);">' + dashCaFmt(tk) + '</td>' +
-      td(m.en_cours + m.facture, '#7c3aed') +
+      td(caTotal, '#7c3aed') +
       td(m.en_cours, '#b45309') +
       td(m.facture, 'var(--blue-p700)') +
       td(m.avoirs, '#dc2626') +
+      objCell + attCell +
     '</tr>';
   }).join('') + (months.length ? (
     '<tr style="background:var(--blue-p50);border-top:2px solid var(--blue-p600);font-weight:700;">' +
@@ -4799,8 +4973,12 @@ function dashCaRender() {
       '<td style="text-align:right;">' + dashCaFmt(totCours) + '</td>' +
       '<td style="text-align:right;">' + dashCaFmt(totFac) + '</td>' +
       '<td style="text-align:right;">' + dashCaFmt(totAvoirs) + '</td>' +
+      '<td style="text-align:right;color:#b45309;">'+(totalObj ? dashCaFmt(totalObj) : '—')+'</td>' +
+      '<td style="text-align:right;">' + (totalObj > 0 && (totCours+totFac) > 0 ?
+        '<span style="font-weight:700;color:'+(Math.round((totCours+totFac)/totalObj*100)>=100?'#059669':'#b45309')+';font-size:.85rem;">' +
+        Math.round((totCours+totFac)/totalObj*100) + '%</span>' : '—') + '</td>' +
     '</tr>'
-  ) : '<tr><td colspan="7" style="text-align:center;padding:2rem;color:var(--g500);">Aucune donnée</td></tr>');
+  ) : '<tr><td colspan="9" style="text-align:center;padding:2rem;color:var(--g500);">Aucune donnée</td></tr>');
 
   // ═══ BLOC MOIS EN COURS ═══
   dashCaRenderCurrentMonth(filtered, byMonth, months);
@@ -4921,9 +5099,9 @@ function dashCaDrawCharts(filtered, months, moisNames) {
       data: {
         labels: labels,
         datasets: [
-          { label:'CA en cours (activité)',  data: months.map(function(m){return m.en_cours + m.facture;}), borderColor:'#7c3aed', backgroundColor:'rgba(124,58,237,.1)', tension:.3, fill:true },
-          { label:'Reste à facturer', data: months.map(function(m){return m.en_cours;}), borderColor:'#b45309', backgroundColor:'rgba(180,83,9,.08)', tension:.3, fill:true },
-          { label:'CA Facturé',   data: months.map(function(m){return m.facture;}),  borderColor:'#2563b0', backgroundColor:'rgba(37,99,176,.1)', tension:.3, fill:true }
+          { label:'CA Total (activité)',   data: months.map(function(m){return m.en_cours + m.facture;}), borderColor:'#7c3aed', backgroundColor:'rgba(124,58,237,.1)', tension:.3, fill:true, pointRadius:4 },
+          { label:'CA Facturé',           data: months.map(function(m){return m.facture;}), borderColor:'#2563b0', backgroundColor:'rgba(37,99,176,.1)', tension:.3, fill:true, pointRadius:3 },
+          { label:'🎯 Objectif',          data: months.map(function(m){ return dashObjectifs[m.mois] || null; }), borderColor:'#f59e0b', backgroundColor:'transparent', borderDash:[6,4], tension:0, fill:false, pointRadius:3, pointStyle:'crossRot', borderWidth:2.5 }
         ]
       },
       options: {
