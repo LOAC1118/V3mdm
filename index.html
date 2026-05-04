@@ -3542,13 +3542,13 @@ function applyStockImport() {
       if (tr.dataset.code === code) {
         // Trouver la cellule stock (7ème td = index 6)
         var tds = tr.querySelectorAll('td');
-        if (tds[6]) {
+        if (tds[7]) {
           var stkH;
           if (stk === null) stkH = '<span style="color:var(--s700)">—</span>';
           else if (stk <= 0) stkH = '<span style="color:#fca5a5;font-size:.68rem;">⚠ Rupture</span>';
           else if (stk <= 5) stkH = '<span style="color:var(--amber);font-weight:600;">'+stk+'</span>';
           else stkH = '<span style="color:var(--em400);font-weight:600;">'+stk+'</span>';
-          tds[6].innerHTML = stkH;
+          tds[7].innerHTML = stkH;
           updated++;
         }
       }
@@ -3886,9 +3886,20 @@ function suiviParseDate(v) {
   if (!v) return null;
   if (v instanceof Date) return isNaN(v) ? null : v;
   var s = String(v).trim();
-  if (!s) return null;
+  if (!s || s === 'null') return null;
+  // Numéro de série Excel (ex: 45782) → date JS
+  if (/^\d{4,6}$/.test(s)) {
+    var serial = parseInt(s, 10);
+    if (serial > 1000 && serial < 100000) {
+      // Excel base : 1899-12-30
+      var d = new Date(Date.UTC(1899, 11, 30) + serial * 86400000);
+      return isNaN(d) ? null : d;
+    }
+  }
+  // ISO yyyy-mm-dd ou yyyy/mm/dd
   var m = s.match(/^(\d{4})[-\/](\d{1,2})[-\/](\d{1,2})/);
   if (m) return new Date(+m[1], +m[2]-1, +m[3]);
+  // FR dd/mm/yyyy ou dd-mm-yyyy
   m = s.match(/^(\d{1,2})[-\/](\d{1,2})[-\/](\d{4})/);
   if (m) return new Date(+m[3], +m[2]-1, +m[1]);
   var d = new Date(s);
@@ -4108,31 +4119,60 @@ function parseNum(v) {
 }
 
 function dashCaDetectCols(row) {
-  // Détecteur automatique : trouve les colonnes du fichier quelle que soit leur casse/orthographe
   var keys = Object.keys(row);
-  function find(patterns) {
-    for (var i=0; i<keys.length; i++) {
-      var k = keys[i].toLowerCase().replace(/[^a-z0-9]/g,'');
-      for (var j=0; j<patterns.length; j++) {
-        if (k.indexOf(patterns[j]) >= 0) return keys[i];
+  // Normalise : minuscules, retire accents, espaces, ponctuation, °
+  function norm(s) {
+    return s.toLowerCase()
+      .replace(/[°\.\(\)]/g,'')
+      .replace(/[éèêë]/g,'e').replace(/[àâ]/g,'a').replace(/[ùû]/g,'u')
+      .replace(/[îï]/g,'i').replace(/[ôö]/g,'o').replace(/[çc]/g,function(c){return c==='ç'?'c':c;})
+      .replace(/\s+/g,'');
+  }
+
+  // findExact : cherche d'abord une correspondance exacte, puis partielle
+  function find(exact, patterns) {
+    // Priorité 1 : correspondance exacte normalisée
+    if (exact) {
+      for (var i=0; i<keys.length; i++) {
+        if (norm(keys[i]) === norm(exact)) return keys[i];
+      }
+    }
+    // Priorité 2 : patterns inclusifs dans l'ordre fourni
+    for (var j=0; j<patterns.length; j++) {
+      for (var i=0; i<keys.length; i++) {
+        if (norm(keys[i]).indexOf(patterns[j]) >= 0) return keys[i];
       }
     }
     return null;
   }
+
+  // Les colonnes sont détectées avec correspondance exacte EN PRIORITÉ
+  // (noms exacts de l'export MDM), puis fallback patterns génériques
   var cols = {
-    numCmd:      find(['ncmd','ndecommande','numcommande','numcmd','commandeno','orderno','num']),
-    etat:        find(['etat','statut','status','state']),
-    caHT:        find(['caht','ca','montant','ht','amount','total']),
-    numFac:      find(['nfacture','factureno','invoiceno','numfacture','facture']),
-    dateCmd:     find(['commande','ordered','orderdate','datecommande']),
-    dateFac:     find(['facture','invoicedate','datefacture','billed']),
-    dateLiv:     find(['livr','delivery','delivered','datelivraison','shipped']),
-    codeClient:  find(['codeclient','clientcode','codclient','code']),
-    nomClient:   find(['nomclient','clientnom','client','raison','raisonsociale','company','nom']),
-    operateur:   find(['operateur','operator','commercial','vendeur','rep']),
-    transporteur:find(['transporteur','transport','carrier','livreur']),
+    numCmd:       find('N° de cmd',    ['ndecommande','numcmd','ncmd','commandeno','orderno']),
+    etat:         find('Etat',         ['etat','statut','status','state']),
+    caHT:         find('CA HT',        ['caht','montantht','ca','montant','amount','total']),
+    numFac:       find('N° Facture',   ['nfacture','numfacture','invoiceno','factureno']),
+    dateCmd:      find('Commandé',     ['commande','orderdate','datecommande','ordered']),
+    dateFac:      find('Facture',      ['datefacture','invoicedate','billed']),
+    dateLiv:      find('Livré',        ['livre','livraison','delivery','delivered','shipped']),
+    codeClient:   find('Code client',  ['codeclient','clientcode','codclient']),
+    nomClient:    find('Nom client',   ['nomclient','clientnom','raisonsociale','company']),
+    operateur:    find('Opérateur',    ['operateur','operator','commercial','vendeur']),
+    transporteur: find('Transporteur', ['transporteur','transport','carrier','livreur']),
   };
-  console.log('[DashCA] Colonnes détectées :', cols);
+
+  // Fallback nomClient si non trouvé : éviter de prendre Code client
+  if (!cols.nomClient) {
+    for (var i=0; i<keys.length; i++) {
+      var n = norm(keys[i]);
+      if (n.indexOf('nom') >= 0 && n.indexOf('client') >= 0) { cols.nomClient = keys[i]; break; }
+      if (n.indexOf('client') >= 0 && n.indexOf('code') < 0)  { cols.nomClient = keys[i]; break; }
+    }
+  }
+
+  console.log('[DashCA] Colonnes du fichier :', keys);
+  console.log('[DashCA] Mapping retenu :', cols);
   return cols;
 }
 
