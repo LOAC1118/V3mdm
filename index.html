@@ -4262,7 +4262,10 @@ function dashCaProcess(rows) {
 
   // Peupler filtres
   function uniq(arr){ return [...new Set(arr)].filter(Boolean).sort(); }
-  var years = uniq(dashCaRows.map(function(r){ return r.annee ? String(r.annee) : null; })).filter(function(y){ return y && /^\d{4}$/.test(y); }).sort().reverse();
+  var years = uniq(dashCaRows.map(function(r) {
+    var y = parseInt(r.annee);
+    return (y >= 2020 && y <= 2035) ? String(y) : null;
+  })).filter(Boolean).sort().reverse();
   var ops   = uniq(dashCaRows.map(function(r){ return r.operateur; }));
   var trans = uniq(dashCaRows.map(function(r){ return r.transporteur; }));
   var clients = uniq(dashCaRows.map(function(r){ return r.client; }));
@@ -4407,7 +4410,10 @@ function dashCaShowContent() {
 
 function dashCaPopulateFilters() {
   function uniq(arr){ return [...new Set(arr)].filter(Boolean).sort(); }
-  var years = uniq(dashCaRows.map(function(r){ return r.annee ? String(r.annee) : null; })).filter(function(y){ return y && /^\d{4}$/.test(y); }).sort().reverse();
+  var years = uniq(dashCaRows.map(function(r) {
+    var y = parseInt(r.annee);
+    return (y >= 2020 && y <= 2035) ? String(y) : null;
+  })).filter(Boolean).sort().reverse();
   var ops   = uniq(dashCaRows.map(function(r){ return r.operateur; }));
   var trans = uniq(dashCaRows.map(function(r){ return r.transporteur; }));
   var clients = uniq(dashCaRows.map(function(r){ return r.client; }));
@@ -4464,7 +4470,7 @@ function dashCaSaveToFirestore() {
         dFac: r.dateFac ? r.dateFac.getTime() : null,
         dRef: r.dateRef ? r.dateRef.getTime() : null,
         operateur: r.operateur || '', transporteur: r.transporteur || '',
-        mois: r.mois || '(inconnu)', annee: r.annee,
+        mois: r.mois || '(inconnu)', annee: (r.annee >= 2020 && r.annee <= 2035) ? r.annee : null,
         updated: Date.now()
       }
     };
@@ -4534,7 +4540,7 @@ function dashCaLoadFromFirestore() {
         dateFac: r.dFac ? new Date(r.dFac) : null,
         dateRef: r.dRef ? new Date(r.dRef) : null,
         operateur: r.operateur || '', transporteur: r.transporteur || '',
-        mois: r.mois || '(inconnu)', annee: r.annee
+        mois: r.mois || '(inconnu)', annee: (parseInt(r.annee) >= 2020 && parseInt(r.annee) <= 2035) ? parseInt(r.annee) : null
       });
     });
     // Si on a des données plus récentes que le cache local (ou aucun cache), on remplace
@@ -4765,10 +4771,16 @@ function dashSaveObjectifs() {
 }
 
 // ── Ouvrir la modale ──────────────────────────────────────────────────────────
-function dashOpenObjectifs() {
-  // Construire la grille : 12 mois de l'année sélectionnée (ou année courante)
+function dashOpenObjectifs(forceYear) {
+  // ── Déterminer l'année à afficher ────────────────────────────────────────
   var yearEl = document.getElementById('dash-ca-year');
-  var year = (yearEl && yearEl.value) ? parseInt(yearEl.value) : new Date().getFullYear();
+  var selYear = (yearEl && yearEl.value) ? parseInt(yearEl.value) : 0;
+  // N'accepter QUE des années entre 2024 et 2036 — tout le reste (numCmd, null) est ignoré
+  var YEAR_MIN = 2024, YEAR_MAX = 2036;
+  var isValidYear = function(y) { return Number.isInteger(y) && y >= YEAR_MIN && y <= YEAR_MAX; };
+  var year = forceYear
+    ? (isValidYear(forceYear) ? forceYear : new Date().getFullYear())
+    : (isValidYear(selYear)   ? selYear   : new Date().getFullYear());
 
   var moisNoms = ['Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août','Septembre','Octobre','Novembre','Décembre'];
   var html = '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;">';
@@ -4777,14 +4789,13 @@ function dashOpenObjectifs() {
     var key = year + '-' + String(m).padStart(2,'0');
     var val = (dashObjectifs && dashObjectifs[key]) || '';
     var caReel = 0;
-    // Calculer le CA réel de ce mois depuis dashCaRows
     if (typeof dashCaRows !== 'undefined') {
       dashCaRows.forEach(function(r) {
         if (r.mois === key && r.statut !== 'avoir') caReel += r.ca;
       });
     }
     var pct = (val && caReel > 0) ? Math.min(Math.round(caReel / val * 100), 999) : 0;
-    var barColor = pct >= 100 ? '#059669' : pct >= 75 ? '#f59e0b' : '#e5e7eb';
+    var barColor   = pct >= 100 ? '#059669' : pct >= 75 ? '#f59e0b' : '#e5e7eb';
     var labelColor = pct >= 100 ? '#059669' : pct >= 75 ? '#b45309' : '#6b7280';
 
     html += '<div style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:10px;padding:.75rem .9rem;">';
@@ -4802,47 +4813,34 @@ function dashOpenObjectifs() {
       html += '<span>Réel : ' + dashCaFmt(caReel) + '</span><span>/' + dashCaFmt(parseFloat(val)) + '</span>';
       html += '</div>';
       html += '<div style="background:#e5e7eb;border-radius:3px;height:4px;">';
-      html += '<div style="background:' + barColor + ';border-radius:3px;height:4px;width:' + Math.min(pct, 100) + '%;transition:width .3s;"></div>';
+      html += '<div style="background:' + barColor + ';border-radius:3px;height:4px;width:' + Math.min(pct,100) + '%;transition:width .3s;"></div>';
       html += '</div></div>';
     }
     html += '</div>';
   }
   html += '</div>';
 
-  // Ajouter les années disponibles comme navigation rapide
-  var years = [];
-  if (dashCaRows.length) {
-    dashCaRows.forEach(function(r){ if (r.annee && years.indexOf(r.annee) < 0) years.push(r.annee); });
-    years.sort(function(a,b){ return b-a; });
-  }
-  if (years.indexOf(new Date().getFullYear()) < 0) years.unshift(new Date().getFullYear());
+  // ── Liste d'années FIXE 2024→2036 (indépendant de Firestore) ─────────────
+  var fixedYears = [];
+  for (var y = YEAR_MAX; y >= YEAR_MIN; y--) fixedYears.push(y);
 
-  var navHtml = '<div style="display:flex;gap:6px;margin-bottom:.75rem;flex-wrap:wrap;">';
-  navHtml += '<span style="font-size:.72rem;color:#6b7280;align-self:center;">Année :</span>';
-  years.forEach(function(y) {
-    var active = y === year;
-    navHtml += '<button onclick="dashOpenObjectifsYear(' + y + ')" style="padding:3px 10px;border-radius:20px;border:1px solid ' + (active?'#2563b0':'#d1d5db') + ';background:' + (active?'#dbeafe':'#fff') + ';color:' + (active?'#1d4ed8':'#374151') + ';font-size:.75rem;font-weight:' + (active?'700':'500') + ';cursor:pointer;">' + y + '</button>';
+  var navHtml = '<div style="display:flex;gap:6px;margin-bottom:1rem;flex-wrap:wrap;align-items:center;">';
+  navHtml += '<span style="font-size:.72rem;color:#6b7280;font-weight:600;">Année :</span>';
+  fixedYears.forEach(function(y) {
+    var active = (y === year);
+    navHtml += '<button onclick="dashOpenObjectifs(' + y + ')" style="padding:4px 14px;border-radius:20px;border:1.5px solid ' +
+      (active ? '#2563b0' : '#d1d5db') + ';background:' + (active ? '#dbeafe' : '#fff') + ';color:' +
+      (active ? '#1d4ed8' : '#374151') + ';font-size:.78rem;font-weight:' + (active ? '700' : '500') +
+      ';cursor:pointer;">' + y + '</button>';
   });
   navHtml += '</div>';
 
   document.getElementById('dash-obj-grid').innerHTML = navHtml + html;
-  var modal = document.getElementById('dash-objectifs-modal');
-  modal.style.display = 'flex';
+  document.getElementById('dash-objectifs-modal').style.display = 'flex';
 }
 
 function dashOpenObjectifsYear(year) {
-  // Changer l'année sélectionnée et rouvrir
-  var yearEl = document.getElementById('dash-ca-year');
-  if (yearEl) {
-    // Chercher l'option correspondante
-    for (var i = 0; i < yearEl.options.length; i++) {
-      if (parseInt(yearEl.options[i].value) === year) {
-        yearEl.value = yearEl.options[i].value;
-        break;
-      }
-    }
-  }
-  dashOpenObjectifs();
+  dashOpenObjectifs(year); // redirige vers dashOpenObjectifs avec forceYear
 }
 
 function dashCloseObjectifs() {
