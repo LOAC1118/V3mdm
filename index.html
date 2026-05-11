@@ -3352,9 +3352,28 @@ function bdcParseRows(rows) {
 function bdcParseCSV(text) { bdcParseRows(bdcCSVtoRows(text)); }
 
 
+function bdcDetectUnit() {
+  // Détection automatique : si les quantités semblent être des UVC,
+  // elles seront typiquement multiples du PCB ou > PCB
+  // Si au moins 50% des articles ont une quantité > leur PCB, c'est probablement en UVC
+  var unitEl = document.querySelector('input[name="bdc-import-unit"]:checked');
+  if (unitEl) return unitEl.value; // respecter le choix manuel si fait
+
+  var nbUVC = 0, nbTotal = 0;
+  Object.keys(bdcImportedQtys).forEach(function(code) {
+    var qty = bdcImportedQtys[code];
+    var prod = PRODUCTS.find(function(p){ return p.code === code; });
+    var pcb = prod && parseFloat(prod.pcb) ? parseFloat(prod.pcb) : 1;
+    nbTotal++;
+    // Si la quantité est > PCB ET est un multiple du PCB → probablement en UVC
+    if (pcb > 1 && qty >= pcb) nbUVC++;
+  });
+  return (nbTotal > 0 && nbUVC / nbTotal >= 0.5) ? 'uvc' : 'colis';
+}
+
 function bdcApplyImport() {
   var unitEl = document.querySelector('input[name="bdc-import-unit"]:checked');
-  var unit = unitEl ? unitEl.value : 'colis';
+  var unit = unitEl ? unitEl.value : bdcDetectUnit();
   var converted = {};
   Object.keys(bdcImportedQtys).forEach(function(code){
     var qty = bdcImportedQtys[code];
@@ -3371,7 +3390,7 @@ function bdcApplyImport() {
   buildTable();
   closeBdcImport();
   var msg = '✅ '+count+' articles importés. Complétez les infos client puis envoyez.';
-  if (unit === 'uvc') msg += ' (UVC convertis en colis)';
+  if (unit === 'uvc') msg += ' (quantités en UVC converties automatiquement en colis)';
   bdcShowAlert(msg, 'ok');
   bdcImportedQtys={};
 }
@@ -3394,7 +3413,7 @@ function bdcApplyImport() {
         <input type="radio" name="bdc-import-unit" value="colis" checked style="accent-color:var(--blue-p600);"> Colis
       </label>
       <label style="display:flex;align-items:center;gap:5px;cursor:pointer;font-size:.78rem;color:var(--g800);">
-        <input type="radio" name="bdc-import-unit" value="uvc" style="accent-color:var(--blue-p600);"> UVC (unités)
+        <input type="radio" name="bdc-import-unit" value="uvc" style="accent-color:var(--blue-p600);"> UVC → converti en colis (÷ PCB)
       </label>
     </div>
     <div id="bdc-import-result" style="display:none;margin-top:.8rem;">
