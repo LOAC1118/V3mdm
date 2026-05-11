@@ -3738,162 +3738,174 @@ function normalizeCode(s) {
 }
 
 function parsePdfText(text) {
-  // ─── Index produits : code exact + code normalisé + EAN ───
-  var byCode    = {};   // code exact (MAJ)
-  var byNorm    = {};   // code normalisé (0->O)
-  var byNormAlt = {};   // code normalisé (O->0)
-  var byEan     = {};
-
+  // ─── Index produits ───────────────────────────────────────────────────────
+  var byCode = {}, byNorm = {}, byEan = {};
   PRODUCTS.forEach(function(p) {
     var cu = p.code.toUpperCase();
     byCode[cu] = p;
-    byNorm[normalizeCode(cu)] = p;
-    // variante O->0
-    var alt = cu.replace(/O/g, '0');
-    byNormAlt[alt] = p;
+    // normalisation : retire non-alphanum, 0<->O interchangeable
+    var norm = cu.replace(/[^A-Z0-9]/g,'').replace(/0/g,'O');
+    byNorm[norm] = p;
     if (p.ean) byEan[String(p.ean).trim()] = p;
   });
+
+  function findProduct(codeStr, eanStr) {
+    var cu = codeStr.toUpperCase();
+    // 1. Code exact
+    if (byCode[cu]) return byCode[cu];
+    // 2. EAN
+    if (eanStr && byEan[eanStr]) return byEan[eanStr];
+    if (eanStr && byEan[eanStr.replace(/^0+/,'')]) return byEan[eanStr.replace(/^0+/,'')];
+    // 3. Normalisé
+    var norm = cu.replace(/[^A-Z0-9]/g,'').replace(/0/g,'O');
+    if (byNorm[norm]) return byNorm[norm];
+    // variante O->0
+    var norm0 = cu.replace(/[^A-Z0-9]/g,'').replace(/O/g,'0');
+    var norm1 = norm0.replace(/0/g,'O');
+    if (byNorm[norm0] || byNorm[norm1]) return byNorm[norm0] || byNorm[norm1];
+    // 4. Partiel (code PDF commence par code catalogue ou inversement)
+    var found = null;
+    PRODUCTS.some(function(p) {
+      var nc = p.code.toUpperCase().replace(/[^A-Z0-9]/g,'').replace(/0/g,'O');
+      if (nc === norm || nc.startsWith(norm) || norm.startsWith(nc) ||
+          (norm.length >= 5 && nc.includes(norm.substring(0,5)))) {
+        found = p; return true;
+      }
+    });
+    return found;
+  }
 
   pdfImportedQtys = {};
   var results = [];
   var seen = {};
 
-  var lines = text.split('\n');
+  // ─── Détection du format PDF ───────────────────────────────────────────────
+  // Format commande client MDM :
+  //   EAN(13 ch)  CodeRef  Désignation...  Qté  PA_HT  Remise%  %  TVA%  %
+  // La Qté est en UVC dans ce format → toujours convertir en colis (÷ PCB)
+  var FORMAT_CLIENT = /^\d{8,14}\s+[A-Z][A-Z0-9]{2,}/;
+  var nbFormatClient = 0;
+  text.split('
+').forEach(function(l){ if (FORMAT_CLIENT.test(l.trim())) nbFormatClient++; });
+  var isClientFormat = nbFormatClient >= 2; // ≥2 lignes = format commande client
+
+  var lines = text.split('
+');
+  var skip = ['REFERENCE','DATE','PAGE','CLIENT','COMMANDE','DESIGNATION','BASE','TOTAUX',
+              'EUROS','MODE','REGLEMENT','ECHEANCE','COND','PORT','TVA','TOTAL','VENDEUR',
+              'CLAUSE','CODE','FAX','EMAIL','DELAI','MOULIN','NOMBRE','MONTANT','LIGNES'];
 
   lines.forEach(function(line) {
     line = line.trim();
-    if (!line) return;
-
+    if (!line || line.length < 8) return;
     var parts = line.split(/\s+/);
     if (parts.length < 3) return;
 
-    var firstWord = parts[0];
+    var ean = '', codeStr = '', qty = null;
 
-    // Le premier mot doit ressembler à un code MDM ou EAN
-    // Code MDM : lettres+chiffres, 3-20 chars, commence par une lettre ou chiffre
-    // EAN : 12-13 chiffres
-    var isCode = /^[A-Z][A-Z0-9_,.-]{2,20}$/i.test(firstWord) || /^\d{12,13}$/.test(firstWord);
-    if (!isCode) return;
+    if (isClientFormat && /^\d{8,14}$/.test(parts[0])) {
+      // Format client : EAN CodeRef Designation... Qté PA% %
+      ean = parts[0];
+      codeStr = parts[1] || '';
+      // Extraire les décimaux de la ligne
+      var nums = line.match(/\d+\.\d+/g) || [];
+      nums = nums.map(Number);
+      // Qté est le premier nombre (ex: 36.00, 504.00, 10.00)
+      if (nums.length >= 1) qty = nums[0];
 
-    // Exclure les mots-clés entête/pied de page
-    var skip = ['REFERENCE','DATE','PAGE','CLIENT','COMMANDE','DESIGNATION','BASE','TOTAUX','EUROS',
-                'MODE','REGLEMENT','ECHEANCE','COND','PORT','TVA','TOTAL','VENDEUR','CLAUSE'];
-    if (skip.indexOf(firstWord.toUpperCase()) >= 0) return;
+    } else {
+      // Format générique : CodeRef Designation... Qté ...
+      codeStr = parts[0];
+      if (skip.indexOf(codeStr.toUpperCase()) >= 0) return;
+      if (!/^[A-Z][A-Z0-9_.-]{2,}$/i.test(codeStr) && !/^\d{12,13}$/.test(codeStr)) return;
 
-    // Extraire tous les nombres de la ligne (après le premier mot)
-    var rest = parts.slice(1).join(' ');
-    var nums = rest.match(/\b(\d+(?:[.,]\d+)?)\b/g) || [];
-    nums = nums.map(function(n){ return parseFloat(n.replace(',','.')); });
+      var nums = line.match(/\d+(?:[.,]\d+)?/g) || [];
+      nums = nums.map(function(n){ return parseFloat(n.replace(',','.')); });
+      if (nums.length < 1) return;
 
-    // Il faut au minimum 4 nombres (qty, pu_b, pu_n, total)
-    if (nums.length < 4) return;
+      // Stratégie : parmi tous les nombres, le plus petit entier > 0 est probablement la Qté
+      // mais si format client, prendre le premier
+      if (nums.length >= 5) qty = nums[nums.length - 5];
+      else if (nums.length >= 4) qty = nums[nums.length - 4];
+      else qty = nums[0];
+    }
 
-    // Extraction de la quantité selon le format MDM :
-    // [desc_num?] qty pu_b [rem?] pu_n total tva
-    // Les 4 dernières valeurs sont toujours : pu_n, total, tva(1-4), et avant = pu_b
-    // La quantité est le premier nombre qui n'est pas un prix (<= total/pu_b)
-    // Stratégie : prendre nums[n-5] comme qty (5 valeurs depuis la fin)
-    var qty = null;
-    if (nums.length >= 5) {
-      var candidate = nums[nums.length - 5];
-      // Valider : qty doit être un entier ou multiple de 0.5, et < 10000
-      if (candidate > 0 && candidate < 10000 && (candidate * 2) === Math.round(candidate * 2)) {
-        qty = candidate;
+    if (!qty || qty <= 0 || qty > 99999) return;
+
+    var found = findProduct(codeStr, ean);
+    if (!found) return;
+    if (seen[found.code]) return;
+    seen[found.code] = true;
+
+    // ── Conversion UVC → colis ────────────────────────────────────────────
+    var pcb = parseFloat(found.pcb) || 1;
+    var qtyFinal, isUVC = false;
+
+    if (isClientFormat) {
+      // Format commande client = quantités en UVC, toujours convertir
+      isUVC = true;
+      qtyFinal = Math.ceil(qty / pcb);
+    } else {
+      // Format générique : auto-détecter selon PCB
+      if (pcb > 1 && qty % pcb === 0 && qty >= pcb) {
+        isUVC = true;
+        qtyFinal = qty / pcb;
+      } else {
+        qtyFinal = qty;
       }
     }
-    // Fallback: prendre nums[n-4]
-    if (!qty && nums.length >= 4) {
-      var candidate2 = nums[nums.length - 4];
-      if (candidate2 > 0 && candidate2 < 10000) qty = candidate2;
-    }
-    if (!qty) return;
 
-    // ─── Matching du code ───
-    var code = firstWord.toUpperCase().replace(/,/g, '.');
-    var found = null;
-
-    // 1. Code exact
-    found = byCode[code];
-
-    // 2. EAN (13 chiffres)
-    if (!found && /^\d{12,13}$/.test(firstWord)) {
-      found = byEan[firstWord] || byEan[firstWord.replace(/^0+/, '')];
-    }
-
-    // 3. Code normalisé (0<->O)
-    if (!found) found = byNorm[normalizeCode(code)];
-    if (!found) found = byNormAlt[code.replace(/O/g, '0')];
-
-    // 4. Correspondance partielle : le code PDF commence par le code catalogue (ou inversement)
-    if (!found) {
-      var normCode = normalizeCode(code);
-      PRODUCTS.some(function(p) {
-        var normCat = normalizeCode(p.code);
-        if (normCat === normCode ||
-            normCat.startsWith(normCode) ||
-            normCode.startsWith(normCat) ||
-            (normCode.length >= 5 && normCat.includes(normCode.substring(0,5)))) {
-          found = p;
-          return true;
-        }
-        return false;
-      });
-    }
-
-    if (!found) return; // Code non reconnu dans le catalogue MDM
-    if (seen[found.code]) return; // Doublon
-
-    seen[found.code] = true;
-    var qtyInt = Math.round(qty * 10) / 10; // garder 1 décimale max
-    pdfImportedQtys[found.code] = qtyInt;
-    results.push({ code: found.code, rawCode: firstWord, qty: qtyInt, libelle: found.libelle });
+    pdfImportedQtys[found.code] = qtyFinal;
+    results.push({
+      code: found.code, rawCode: codeStr, qty: qtyFinal,
+      qtyOrig: qty, isUVC: isUVC, pcb: pcb, libelle: found.libelle
+    });
   });
 
-  // ─── Affichage résultats ───
+  // ─── Affichage résultats ──────────────────────────────────────────────────
   var ok = results.length;
+  var hasUVC = results.some(function(r){ return r.isUVC; });
+
   document.getElementById('pdf-import-summary').innerHTML =
     '<div style="flex:1;background:rgba(30,41,59,.7);border-radius:6px;padding:.5rem;text-align:center;">' +
       '<div style="font-size:1.1rem;font-weight:600;color:#93c5fd;">'+ok+'</div>' +
       '<div style="font-size:.6rem;color:var(--s600);text-transform:uppercase;">Articles trouvés</div></div>' +
     '<div style="flex:2;background:rgba(30,41,59,.7);border-radius:6px;padding:.5rem;text-align:center;">' +
-      '<div style="font-size:.8rem;font-weight:500;color:var(--s300);">Bon de commande MDM</div>' +
-      '<div style="font-size:.6rem;color:var(--s600);">Référence + Quantité extraites</div></div>';
+      '<div style="font-size:.8rem;font-weight:500;color:var(--s300);">'+
+        (hasUVC ? '⚡ UVC → Colis (÷ PCB)' : 'Quantités en colis') +
+      '</div>' +
+      '<div style="font-size:.6rem;color:var(--s600);">'+
+        (hasUVC ? 'Conversion automatique appliquée' : 'Référence + Quantité extraites') +
+      '</div></div>';
 
-  if (ok === 0) {
-    document.getElementById('pdf-import-rows').innerHTML =
-      '<div style="padding:1rem;text-align:center;color:var(--s500);font-size:.78rem;">Aucun article MDM détecté.<br>Vérifiez que le PDF est un bon de commande MDM non scanné.</div>';
-  } else {
-    document.getElementById('pdf-import-rows').innerHTML = results.map(function(r){
-      return '<div style="display:flex;align-items:center;gap:7px;padding:.38rem .7rem;border-bottom:1px solid rgba(255,255,255,.04);font-size:.72rem;">' +
-        '<span style="font-family:monospace;color:var(--s500);width:110px;flex-shrink:0;font-size:.68rem;">'+r.rawCode+'</span>' +
-        '<span style="flex:1;color:var(--s300);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+r.libelle+'</span>' +
-        '<span style="font-weight:600;color:var(--em400);width:32px;text-align:right;flex-shrink:0;">'+r.qty+'</span>' +
-        '<span style="width:14px;text-align:center;color:var(--em400);">✓</span></div>';
-    }).join('');
+  document.getElementById('pdf-import-rows').innerHTML = ok === 0
+    ? '<div style="padding:1rem;text-align:center;color:var(--s600);font-size:.8rem;">Aucun produit MDM reconnu dans ce PDF.</div>'
+    : results.map(function(r) {
+        var uvcLabel = r.isUVC
+          ? '<span style="font-size:.65rem;color:#f59e0b;margin-left:4px;">' + r.qtyOrig + ' UVC ÷ ' + r.pcb + ' = ' + r.qty + ' colis</span>'
+          : '';
+        return '<div style="display:flex;align-items:center;gap:8px;padding:.35rem .6rem;border-bottom:1px solid rgba(255,255,255,.05);">' +
+          '<span style="font-family:monospace;font-size:.72rem;color:#93c5fd;min-width:80px;">' + r.code + '</span>' +
+          '<span style="flex:1;font-size:.76rem;color:var(--s300);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + r.libelle + '</span>' +
+          '<span style="font-size:.8rem;font-weight:600;color:#e2e8f0;min-width:30px;text-align:right;">' + r.qty + '</span>' +
+          uvcLabel +
+        '</div>';
+      }).join('');
+
+  if (ok > 0) {
     document.getElementById('pdf-import-foot').style.display = 'flex';
   }
   document.getElementById('pdf-import-result').style.display = 'block';
 }
 
 function applyPdfImport() {
-  var unitEl = document.querySelector('input[name="pdf-import-unit"]:checked');
-  var unit = unitEl ? unitEl.value : 'colis';
-  var converted = {};
-  Object.keys(pdfImportedQtys).forEach(function(code){
-    var qty = pdfImportedQtys[code];
-    if (unit === 'uvc') {
-      var prod = PRODUCTS.find(function(p){ return p.code === code; });
-      var pcb = prod && parseFloat(prod.pcb) ? parseFloat(prod.pcb) : 1;
-      converted[code] = Math.ceil(qty / pcb);
-    } else {
-      converted[code] = qty;
-    }
-  });
-  var count = Object.keys(converted).length;
-  Object.assign(bdcQtys, converted);
+  // pdfImportedQtys contient déjà les quantités en COLIS
+  // (la conversion UVC→colis est faite dans parsePdfText)
+  var count = Object.keys(pdfImportedQtys).length;
+  Object.assign(bdcQtys, pdfImportedQtys);
   buildTable();
   closePdfImport();
-  toast('✅ ' + count + ' articles importés' + (unit === 'uvc' ? ' (UVC → colis)' : ''));
+  toast('✅ ' + count + ' articles importés en colis');
   pdfImportedQtys = {};
   showSection('bdc');
 }
