@@ -3808,7 +3808,7 @@ function parsePdfText(text) {
       ean = parts[0];
       codeStr = parts[1] || '';
       // Extraire les décimaux de la ligne
-      var nums = line.match(/\d+\.\d+/g) || [];
+      var nums = line.match(/\d+\.\d+/g) || [];
       nums = nums.map(Number);
       // Qté est le premier nombre (ex: 36.00, 504.00, 10.00)
       if (nums.length >= 1) qty = nums[0];
@@ -3819,7 +3819,7 @@ function parsePdfText(text) {
       if (skip.indexOf(codeStr.toUpperCase()) >= 0) return;
       if (!/^[A-Z][A-Z0-9_.-]{2,}$/i.test(codeStr) && !/^\d{12,13}$/.test(codeStr)) return;
 
-      var nums = line.match(/\d+(?:[.,]\d+)?/g) || [];
+      var nums = line.match(/\d+(?:[.,]\d+)?/g) || [];
       nums = nums.map(function(n){ return parseFloat(n.replace(',','.')); });
       if (nums.length < 1) return;
 
