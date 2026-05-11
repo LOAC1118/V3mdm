@@ -3689,9 +3689,12 @@ function pdfImportDrop(e) {
 
 async function pdfImportFile(file) {
   if (!file) return;
+  console.log('[PDF] Import démarré:', file.name, file.size, 'bytes');
   if (typeof pdfjsLib === 'undefined') {
+    toast('pdf.js non chargé - réessayez dans 2 secondes', 'err');
     bdcShowAlert('pdf.js non chargé, réessayez dans quelques secondes.', 'err'); return;
   }
+  console.log('[PDF] pdfjsLib OK, lecture...');
   document.getElementById('pdf-progress').style.display = 'block';
   document.getElementById('pdf-import-result').style.display = 'none';
   document.getElementById('pdf-import-foot').style.display = 'none';
@@ -3778,6 +3781,8 @@ function parsePdfText(text) {
   pdfImportedQtys = {};
   var results = [];
   var seen = {};
+  console.log('[PDF] parsePdfText - texte longueur:', text.length, 'chars');
+  console.log('[PDF] Premières lignes:', text.substring(0, 300));
 
   // ─── Détection du format PDF ───────────────────────────────────────────────
   // Format commande client MDM :
@@ -3867,6 +3872,8 @@ function parsePdfText(text) {
   });
 
   // ─── Affichage résultats ──────────────────────────────────────────────────
+  console.log('[PDF] Résultats:', results.length, 'articles trouvés, format client:', isClientFormat);
+  results.forEach(function(r){ console.log('[PDF]  ', r.code, '←', r.rawCode, 'qty:', r.qtyOrig, '÷', r.pcb, '=', r.qty, 'colis'); });
   var ok = results.length;
   var hasUVC = results.some(function(r){ return r.isUVC; });
 
