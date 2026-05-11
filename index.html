@@ -3808,10 +3808,16 @@ function parsePdfText(text) {
       ean = parts[0];
       codeStr = parts[1] || '';
       // Extraire les décimaux de la ligne
-      var nums = line.match(/\d+\.\d+/g) || [];
-      nums = nums.map(Number);
-      // Qté est le premier nombre (ex: 36.00, 504.00, 10.00)
-      if (nums.length >= 1) qty = nums[0];
+      // Quantités = nombres entiers (xx.00), les prix ont des décimales (1.06, 0.63)
+      // Les dimensions dans les noms (1.5L, 33CL) sont ignorées car pas en .00
+      var numsInt = (line.match(/\b(\d+)\.00\b/g) || []).map(function(n){ return parseInt(n); });
+      // Fallback : tous les décimaux si aucun .00 trouvé
+      var numsAll = (line.match(/\d+\.\d+/g) || []).map(Number);
+      if (numsInt.length >= 1) {
+        qty = numsInt[0]; // premier entier .00 = quantité
+      } else if (numsAll.length >= 1) {
+        qty = numsAll[0];
+      }
 
     } else {
       // Format générique : CodeRef Designation... Qté ...
@@ -4099,6 +4105,7 @@ var dashCaRows = [];
 var dashCharts = {};
 var dashObjectifs = {};   // { '2026-01': 50000, ... } — déclaré tôt pour éviter le hoisting
 var dashObjLoaded = false;
+var dashCaSilentLoad = false;  // évite la re-sauvegarde lors d'un chargement
 var dashCaDateCol = 'facture'; // par défaut : date de facture
 var dashCaRawJson = null;      // garde le JSON brut pour reparser au changement de date
 
@@ -4400,7 +4407,6 @@ console.log('%c[MDM CRM] Version chargée : v7.1-cloud-sync' + Date.now(), 'colo
 // ═══════════════════════════════════════════════
 var DASHCA_CACHE_KEY = 'mdm_commandes_stats_cache_v1';
 var DASHCA_META_KEY  = 'mdm_commandes_stats_meta_v1';
-var dashCaSilentLoad = false;  // évite la re-sauvegarde lors d'un chargement
 
 function dashCaSaveCache() {
   try {
