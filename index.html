@@ -1274,26 +1274,15 @@ textarea { resize:vertical; min-height:80px; }
       <select id="cdb-filter-dept"  onchange="cdbRender()" style="font-size:.78rem;"><option value="">Tous départements</option></select>
       <select id="cdb-filter-act"   onchange="cdbRender()" style="font-size:.78rem;">
         <option value="">Toute activité</option>
-        <optgroup label="── Clients actifs ──">
-          <option value="active-30">Actif ce mois-ci</option>
-          <option value="active-90">Actif (3 mois)</option>
-          <option value="active-180">Actif (6 mois)</option>
-          <option value="active-365">Actif (12 mois)</option>
-        </optgroup>
-        <optgroup label="── Clients inactifs ⚠ ──">
-          <option value="inactive-30">Inactif &gt; 1 mois</option>
-          <option value="inactive-90">Inactif &gt; 3 mois</option>
-          <option value="inactive-180">Inactif &gt; 6 mois</option>
-          <option value="inactive-365">Inactif &gt; 1 an</option>
-          <option value="never">Jamais commandé</option>
-        </optgroup>
-        <optgroup label="── Autres ──">
-          <option value="prospect">Prospects</option>
-          <option value="has-email">Avec email</option>
-          <option value="no-email">Sans email</option>
-          <option value="with-orders">Avec commandes (fichier)</option>
-          <option value="orphan">Sans commande ⚠</option>
-        </optgroup>
+        <option value="active-90">Actif (90 j)</option>
+        <option value="active-180">Actif (6 mois)</option>
+        <option value="active-365">Actif (12 mois)</option>
+        <option value="inactive-365">Inactif (&gt; 1 an)</option>
+        <option value="prospect">Prospects</option>
+        <option value="has-email">Avec email</option>
+        <option value="no-email">Sans email</option>
+        <option value="with-orders">Avec commandes (dans fichier)</option>
+        <option value="orphan">Sans commande (orphelins) ⚠</option>
       </select>
       <button onclick="cdbShowInactifPanel()" style="padding:4px 10px;border:1px solid #f59e0b;border-radius:6px;background:#fffbeb;color:#b45309;font-size:.74rem;font-weight:600;cursor:pointer;white-space:nowrap;">⚠️ Inactifs</button>
       <span style="font-size:.72rem;color:var(--g600);" id="cdb-count-filtered">—</span>
@@ -1315,7 +1304,6 @@ textarea { resize:vertical; min-height:80px; }
               <th>Email</th>
               <th>Téléphone</th>
               <th style="text-align:right;">Dernière cde</th>
-              <th style="text-align:center;">Inactivité</th>
               <th style="text-align:right;">CA 2026</th>
               <th>Actions</th>
             </tr>
@@ -3217,88 +3205,19 @@ function closeBdcImport(){document.getElementById('bdc-import-modal').classList.
 function bdcImportDrag(e,on){e.preventDefault();document.getElementById('bdc-import-drop').style.borderColor=on?'var(--em600)':'rgba(255,255,255,.15)';}
 function bdcImportDrop(e){e.preventDefault();bdcImportDrag(e,false);if(e.dataTransfer.files[0])bdcImportFile(e.dataTransfer.files[0]);}
 
-// Parse le format XLS SpreadsheetML (XML déguisé en .xls — format MDM BDC)
-// Structure : Ligne 8 = headers, lignes 9+ = articles (Code, Désignation, EAN, ..., Qté colis)
-function bdcParseSpreadsheetML(xmlStr) {
-  try {
-    var parser = new DOMParser();
-    var doc = parser.parseFromString(xmlStr, 'text/xml');
-    var ns = 'urn:schemas-microsoft-com:office:spreadsheet';
-
-    var rows = doc.getElementsByTagNameNS(ns, 'Row');
-    var headerRow = null, headers = [], dataRows = [];
-
-    // Trouver la ligne d'en-tête (contient "Code" et "Qté (colis)")
-    for (var i = 0; i < rows.length; i++) {
-      var cells = rows[i].getElementsByTagNameNS(ns, 'Cell');
-      var vals = [];
-      for (var j = 0; j < cells.length; j++) {
-        var d = cells[j].getElementsByTagNameNS(ns, 'Data')[0];
-        vals.push(d ? (d.textContent || '') : '');
-      }
-      if (vals.indexOf('Code') >= 0 && vals.some(function(v){ return v.indexOf('Qté') >= 0 || v.indexOf('Qte') >= 0; })) {
-        headers = vals;
-        headerRow = i;
-      } else if (headerRow !== null && i > headerRow) {
-        dataRows.push(vals);
-      }
-    }
-
-    if (!headers.length) {
-      bdcShowAlert('Format XLS non reconnu — colonne "Code" introuvable', 'err');
-      return;
-    }
-
-    console.log('[XLS] Headers:', headers);
-    var iCode = headers.indexOf('Code');
-    var iQty  = headers.findIndex(function(h){ return h.indexOf('Qté') >= 0 || h.indexOf('Qte') >= 0; });
-    if (iCode < 0 || iQty < 0) {
-      bdcShowAlert('Colonnes Code ou Qté introuvables dans ce fichier', 'err');
-      return;
-    }
-
-    // Convertir en format attendu par bdcParseRows
-    var json = dataRows
-      .filter(function(r){ return r[iCode] && r[iCode].trim() && r[iQty] && parseFloat(r[iQty]) > 0; })
-      .map(function(r){
-        var obj = {};
-        headers.forEach(function(h, idx){ obj[h] = r[idx] || ''; });
-        return obj;
-      });
-
-    console.log('[XLS] Lignes articles:', json.length);
-    bdcParseRows(json);
-  } catch(e) {
-    bdcShowAlert('Erreur lecture XLS : ' + e.message, 'err');
-  }
-}
 
 function bdcImportFile(file) {
   if (!file) return;
   var ext = file.name.split('.').pop().toLowerCase();
   if (ext === 'pdf') { closeBdcImport(); setTimeout(function(){ openPdfImport(); setTimeout(function(){ pdfImportFile(file); }, 100); }, 200); return; }
-
+  var reader = new FileReader();
   if (ext === 'csv') {
-    var r = new FileReader();
-    r.onload = function(e) { bdcParseRows(bdcCSVtoRows(e.target.result)); };
-    r.readAsText(file, 'UTF-8');
-    return;
-  }
-
-  // Pour XLS/XLSX : lire d'abord en texte pour détecter SpreadsheetML
-  var r1 = new FileReader();
-  r1.onload = function(e) {
-    var txt = e.target.result;
-    // XLS SpreadsheetML = fichier XML déguisé en .xls
-    if (txt.indexOf('<?xml') === 0 || txt.indexOf('<Workbook') >= 0 && txt.indexOf('<Workbook') < 200) {
-      bdcParseSpreadsheetML(txt);
-      return;
-    }
-    // Sinon : lire en binaire pour XLSX/XLS classique
-    var r2 = new FileReader();
-    r2.onload = function(e2) {
+    reader.onload = function(e) { bdcParseRows(bdcCSVtoRows(e.target.result)); };
+    reader.readAsText(file, 'UTF-8');
+  } else {
+    reader.onload = function(e) {
       try {
-        var wb = XLSX.read(e2.target.result, {type:'binary'});
+        var wb = XLSX.read(e.target.result, {type:'binary'});
         var ws = wb.Sheets[wb.SheetNames[0]];
         var json = XLSX.utils.sheet_to_json(ws, {defval:''});
         bdcParseRows(json);
@@ -3306,9 +3225,8 @@ function bdcImportFile(file) {
         bdcShowAlert('Erreur lecture Excel : ' + err.message, 'err');
       }
     };
-    r2.readAsBinaryString(file);
-  };
-  r1.readAsText(file, 'UTF-8');
+    reader.readAsBinaryString(file);
+  }
 }
 
 // Convertit CSV en tableau d'objets {header: valeur}
@@ -3773,34 +3691,26 @@ function pdfImportDrop(e) {
 
 async function pdfImportFile(file) {
   if (!file) return;
-  console.log('[PDF] Import:', file.name, file.size, 'bytes');
+  console.log('[PDF] Import:', file.name);
   if (typeof pdfjsLib === 'undefined') {
-    toast('pdf.js non charge - reessayez dans 2s', 'err'); return;
+    bdcShowAlert('pdf.js non chargé, réessayez dans quelques secondes.', 'err'); return;
   }
   document.getElementById('pdf-progress').style.display = 'block';
   document.getElementById('pdf-import-result').style.display = 'none';
   document.getElementById('pdf-import-foot').style.display = 'none';
-
   try {
     var arrayBuffer = await file.arrayBuffer();
     var pdf = await pdfjsLib.getDocument({data: arrayBuffer}).promise;
     var fullText = '';
-
     for (var p = 1; p <= pdf.numPages; p++) {
-      document.getElementById('pdf-progress-bar').style.width = Math.round(p/pdf.numPages*90)+'%';
-      document.getElementById('pdf-progress-label').textContent = 'Page '+p+' / '+pdf.numPages+'...';
+      document.getElementById('pdf-progress-bar').style.width = Math.round(p/pdf.numPages*100)+'%';
       var page = await pdf.getPage(p);
       var tc = await page.getTextContent();
-
-      // ── Reconstruction par positions X et Y ──────────────────────────────
-      // Trier par Y décroissant (haut en bas) puis X croissant (gauche à droite)
       var items = tc.items.filter(function(it){ return it.str && it.str.trim(); });
-      items.sort(function(a, b) {
+      items.sort(function(a,b){
         var dy = Math.round(b.transform[5]) - Math.round(a.transform[5]);
         return dy !== 0 ? dy : a.transform[4] - b.transform[4];
       });
-
-      // Grouper par ligne (Y avec tolérance ±4px)
       var lineGroups = [], curLine = [], lastY = null;
       items.forEach(function(item) {
         var y = Math.round(item.transform[5]);
@@ -3812,15 +3722,12 @@ async function pdfImportFile(file) {
         lastY = y;
       });
       if (curLine.length) lineGroups.push(curLine);
-
-      // Pour chaque ligne : grouper les chars en mots selon le gap X
       lineGroups.forEach(function(lineItems) {
-        lineItems.sort(function(a, b){ return a.x - b.x; });
+        lineItems.sort(function(a,b){ return a.x - b.x; });
         var words = [], word = '';
         var lastX = null, lastW = 0;
         lineItems.forEach(function(it) {
           var gap = lastX !== null ? (it.x - lastX - lastW) : 0;
-          // Gap > 2px = séparateur entre chars espacés; > 8px = vrai espace entre mots
           if (lastX !== null && gap > 8) {
             if (word.trim()) words.push(word.trim());
             word = it.str;
@@ -3834,25 +3741,15 @@ async function pdfImportFile(file) {
         if (words.length) fullText += words.join(' ') + '\n';
       });
     }
-
-    document.getElementById('pdf-progress-bar').style.width = '100%';
-    document.getElementById('pdf-progress-label').textContent = 'Analyse...';
-    var previewEl = document.getElementById('pdf-text-preview');
-    if (previewEl) previewEl.textContent = fullText.substring(0, 600);
-    console.log('[PDF] Texte reconstruit (300 chars):', fullText.substring(0, 300));
-
-    setTimeout(function() {
-      document.getElementById('pdf-progress').style.display = 'none';
-      parsePdfText(fullText);
-    }, 150);
-
+    console.log('[PDF] Texte:', fullText.substring(0, 200));
+    document.getElementById('pdf-progress').style.display = 'none';
+    parsePdfText(fullText);
   } catch(err) {
     document.getElementById('pdf-progress').style.display = 'none';
     console.error('[PDF] Erreur:', err);
-    toast('Erreur lecture PDF: ' + err.message, 'err');
+    bdcShowAlert('Erreur lecture PDF: ' + err.message, 'err');
   }
 }
-
 
 function normalizeCode(s) {
   return s.toUpperCase()
@@ -5572,130 +5469,8 @@ var cdbFiltered = [];   // tableau filtré courant (pour pagination)
 if (typeof cdbSelection === 'undefined') var cdbSelection = {};
 
 
-// ── Badge inactivité pour une ligne client ────────────────────────────────
-function cdbInactifBadge(c) {
-  var d = null;
-  if (c._stats && c._stats.derniereCmd) d = new Date(c._stats.derniereCmd);
-  else if (c.dateDerniereCmd) d = new Date(c.dateDerniereCmd);
 
-  if (!d || isNaN(d)) {
-    return '<span style="display:inline-block;padding:2px 7px;border-radius:10px;font-size:.65rem;font-weight:600;background:#fee2e2;color:#991b1b;">Jamais</span>';
-  }
-
-  var jours = Math.floor((new Date() - d) / 86400000);
-
-  if (jours <= 30) {
-    return '<span style="display:inline-block;padding:2px 7px;border-radius:10px;font-size:.65rem;font-weight:600;background:#dcfce7;color:#166534;">' + jours + 'j</span>';
-  } else if (jours <= 90) {
-    return '<span style="display:inline-block;padding:2px 7px;border-radius:10px;font-size:.65rem;font-weight:600;background:#fef9c3;color:#854d0e;">' + jours + 'j</span>';
-  } else if (jours <= 180) {
-    return '<span style="display:inline-block;padding:2px 7px;border-radius:10px;font-size:.65rem;font-weight:600;background:#ffedd5;color:#9a3412;">' + jours + 'j</span>';
-  } else {
-    return '<span style="display:inline-block;padding:2px 7px;border-radius:10px;font-size:.65rem;font-weight:600;background:#fee2e2;color:#991b1b;">' + jours + 'j ⚠</span>';
-  }
-}
-
-// ── Panneau analyse inactifs ─────────────────────────────────────────────
-function cdbShowInactifPanel() {
-  var now = new Date();
-  var buckets = { jamais: [], m1: [], m3: [], m6: [], an1: [], actifs: [] };
-
-  cdbContacts.forEach(function(c) {
-    var d = null;
-    if (c._stats && c._stats.derniereCmd) d = new Date(c._stats.derniereCmd);
-    else if (c.dateDerniereCmd) d = new Date(c.dateDerniereCmd);
-    if (!d || isNaN(d)) { buckets.jamais.push(c); return; }
-    var j = Math.floor((now - d) / 86400000);
-    if (j <= 30)       buckets.actifs.push(c);
-    else if (j <= 90)  buckets.m1.push(c);
-    else if (j <= 180) buckets.m3.push(c);
-    else if (j <= 365) buckets.m6.push(c);
-    else               buckets.an1.push(c);
-  });
-
-  var total = cdbContacts.length || 1;
-
-  // Supprimer l'ancien panneau si présent
-  var old = document.getElementById('cdb-inactif-overlay');
-  if (old) old.remove();
-
-  // Créer le panneau via DOM (évite les problèmes de guillemets)
-  var overlay = document.createElement('div');
-  overlay.id = 'cdb-inactif-overlay';
-  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:99999;display:flex;align-items:center;justify-content:center;';
-
-  var panel = document.createElement('div');
-  panel.style.cssText = 'background:#fff;border-radius:14px;width:min(520px,95vw);max-height:90vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,.3);';
-
-  // Header
-  var header = document.createElement('div');
-  header.style.cssText = 'display:flex;justify-content:space-between;align-items:center;padding:1rem 1.25rem;border-bottom:1px solid #e5e7eb;position:sticky;top:0;background:#fff;';
-  header.innerHTML = '<div><div style="font-size:.95rem;font-weight:700;color:#111;">⚠️ Analyse des clients inactifs</div>' +
-    '<div style="font-size:.72rem;color:#6b7280;margin-top:2px;">' + total + ' clients · Clique sur une ligne pour filtrer</div></div>';
-  var closeBtn = document.createElement('button');
-  closeBtn.textContent = '✕';
-  closeBtn.style.cssText = 'border:none;background:none;font-size:1.3rem;cursor:pointer;color:#9ca3af;';
-  closeBtn.onclick = function() { overlay.remove(); };
-  header.appendChild(closeBtn);
-  panel.appendChild(header);
-
-  // Body
-  var body = document.createElement('div');
-  body.style.cssText = 'padding:1.25rem;';
-
-  // KPIs
-  var kpiGrid = document.createElement('div');
-  kpiGrid.style.cssText = 'display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:1.25rem;';
-  [
-    { bg:'#dcfce7', col:'#166534', n: buckets.actifs.length, label:'Actifs ce mois' },
-    { bg:'#fef9c3', col:'#854d0e', n: buckets.m1.length + buckets.m3.length, label:'1 à 6 mois' },
-    { bg:'#fee2e2', col:'#991b1b', n: buckets.m6.length + buckets.an1.length + buckets.jamais.length, label:'+6 mois ou jamais' }
-  ].forEach(function(k) {
-    var kpi = document.createElement('div');
-    kpi.style.cssText = 'background:' + k.bg + ';border-radius:8px;padding:.75rem;text-align:center;';
-    kpi.innerHTML = '<div style="font-size:1.4rem;font-weight:700;color:' + k.col + ';">' + k.n + '</div>' +
-      '<div style="font-size:.68rem;color:' + k.col + ';font-weight:500;">' + k.label + '</div>';
-    kpiGrid.appendChild(kpi);
-  });
-  body.appendChild(kpiGrid);
-
-  // Lignes cliquables
-  function makeRow(label, clients, col, filterVal) {
-    if (!clients.length) return;
-    var emails = clients.filter(function(c){ return c.email; }).length;
-    var pct = Math.round(clients.length / total * 100);
-    var row = document.createElement('div');
-    row.style.cssText = 'padding:.7rem 1rem;border-radius:8px;cursor:pointer;margin-bottom:4px;border:1px solid #e5e7eb;';
-    row.onmouseover = function() { row.style.background = '#f9fafb'; };
-    row.onmouseout  = function() { row.style.background = '#fff'; };
-    row.onclick = function() {
-      var el = document.getElementById('cdb-filter-act');
-      if (el) { el.value = filterVal; cdbRender(); }
-      overlay.remove();
-    };
-    row.innerHTML = '<div style="display:flex;justify-content:space-between;align-items:center;">' +
-      '<span style="font-size:.82rem;font-weight:600;color:#374151;">' + label + '</span>' +
-      '<div style="display:flex;align-items:center;gap:8px;">' +
-        '<span style="font-size:.72rem;color:#6b7280;">' + emails + ' emails</span>' +
-        '<span style="font-size:.95rem;font-weight:700;color:' + col + ';">' + clients.length + '</span>' +
-      '</div></div>' +
-      '<div style="background:#e5e7eb;border-radius:4px;height:6px;margin-top:4px;">' +
-        '<div style="background:' + col + ';border-radius:4px;height:6px;width:' + pct + '%;"></div></div>';
-    body.appendChild(row);
-  }
-
-  makeRow('✅ Actifs — commande dans les 30 derniers jours', buckets.actifs, '#16a34a', 'active-30');
-  makeRow('🟡 Inactifs 1 à 3 mois',       buckets.m1,    '#ca8a04', 'inactive-30');
-  makeRow('🟠 Inactifs 3 à 6 mois',       buckets.m3,    '#ea580c', 'inactive-90');
-  makeRow('🔴 Inactifs 6 mois à 1 an',    buckets.m6,    '#dc2626', 'inactive-180');
-  makeRow('🚨 Inactifs plus d'1 an',      buckets.an1,   '#991b1b', 'inactive-365');
-  makeRow('⬛ Jamais commandé',            buckets.jamais,'#374151', 'never');
-
-  panel.appendChild(body);
-  overlay.appendChild(panel);
-  document.body.appendChild(overlay);
-}
-
+function cdbShowInactifPanel() { toast('Fonctionnalité temporairement désactivée', 'warn'); }
 
 function cdbRender() {
   cdbPage = 0;  // reset à la page 0 à chaque nouveau filtre
@@ -5801,7 +5576,6 @@ function cdbRenderPage() {
       '<td><a href="mailto:' + cdbEsc(c.email||'') + '" style="font-size:.78rem;color:var(--blue-p700);">' + cdbEsc(c.email||'') + '</a></td>' +
       '<td style="font-size:.78rem;">' + cdbEsc(c.telephone||'') + '</td>' +
       '<td style="text-align:right;font-size:.75rem;color:' + (c._stats && c._stats.orphan ? '#dc2626' : 'var(--g700)') + ';">' + (c._stats && c._stats.derniereCmd ? cdbFmtDate(c._stats.derniereCmd) : cdbFmtDate(c.dateDerniereCmd)) + (c._stats && c._stats.orphan ? ' ⚠' : '') + '</td>' +
-      '<td style="text-align:center;">' + cdbInactifBadge(c) + '</td>' +
       '<td style="text-align:right;font-variant-numeric:tabular-nums;">' + (c._stats && c._stats.nbCmds > 0 ? ('<strong>' + cdbFmtCA(c._stats.caTotal) + '</strong><div style="font-size:.62rem;color:var(--g500);">' + c._stats.nbCmds + ' cmd' + (c._stats.nbCmds>1?'s':'') + '</div>') : cdbFmtCA(c.cumul2026)) + '</td>' +
       '<td style="position:relative;"><button type="button" class="btn btn-ghost cdb-menu-btn" data-cdb-id="' + idAttr + '" style="font-size:.9rem;padding:.18rem .45rem;cursor:pointer;line-height:1;" title="Actions">⋮</button></td>' +
     '</tr>';
@@ -7295,24 +7069,9 @@ window.addEventListener('load', function() {
 <script>
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', function() {
-    // Forcer la mise à jour du SW si une nouvelle version est disponible
-    navigator.serviceWorker.getRegistrations().then(function(regs) {
-      regs.forEach(function(reg) { reg.update(); });
-    });
     navigator.serviceWorker.register('sw.js', { scope: '/V3mdm/' })
       .then(function(reg) {
         console.log('[PWA] Service Worker enregistré, scope:', reg.scope);
-        reg.update(); // forcer la vérification de mise à jour
-        reg.addEventListener('updatefound', function() {
-          var newWorker = reg.installing;
-          newWorker.addEventListener('statechange', function() {
-            if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-              // Forcer le rechargement automatique pour appliquer la nouvelle version
-              newWorker.postMessage({ type: 'SKIP_WAITING' });
-              window.location.reload();
-            }
-          });
-        });
       })
       .catch(function(err) {
         console.warn('[PWA] Service Worker non enregistré :', err);
