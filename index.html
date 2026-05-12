@@ -1259,9 +1259,10 @@ textarea { resize:vertical; min-height:80px; }
         <div class="page-title">Base clients <span id="cdb-total" style="font-size:.72rem;font-weight:400;color:var(--g500);margin-left:8px;">0 contacts</span></div>
         <div class="page-sub">Clients — import Excel, liaison avec les commandes, génération mailing</div>
       </div>
-      <div style="display:flex;gap:8px;">
+      <div style="display:flex;gap:8px;flex-wrap:wrap;">
         <button class="btn btn-ghost" onclick="cdbExportCsv()" style="font-size:.78rem;">📥 Export CSV</button>
         <button class="btn btn-ghost" onclick="cdbOpenImport()" style="font-size:.78rem;">📂 Importer Excel</button>
+        <button class="btn btn-ghost" onclick="showSection('bdc',null);setTimeout(function(){ openPdfImport(); },200);" style="font-size:.78rem;color:var(--blue-p700);border-color:var(--blue-p300);background:var(--blue-p50);">📄 Importer commande PDF</button>
         <button class="btn btn-primary" onclick="cdbOpenEdit(null)" style="font-size:.78rem;">+ Nouveau contact</button>
       </div>
     </div>
@@ -6443,6 +6444,7 @@ function cdbShowMenu(anchor, id) {
   var actions = [
     { icon: '✏️', label: 'Modifier la fiche',  fn: function(){ cdbOpenEdit(id); } },
     { icon: '🛒', label: 'Nouveau BDC',        fn: function(){ if(c) cdbNewOrderFromClient(c); } },
+    { icon: '📄', label: 'Importer commande PDF', fn: function(){ showSection('bdc',null); setTimeout(function(){ openPdfImport(); }, 200); } },
     { icon: '📊', label: 'CA & commandes',     fn: function(){ cdbOpenEdit(id); setTimeout(function(){ cdbSwitchTab('ca'); }, 50); } },
     { icon: '📋', label: 'Copier l\'email',    fn: function(){
         if (c && c.email) { navigator.clipboard.writeText(c.email).then(function(){ toast('Email copié', 'ok'); }); }
