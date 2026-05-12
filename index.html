@@ -3204,6 +3204,62 @@ function closeBdcImport(){document.getElementById('bdc-import-modal').classList.
 function bdcImportDrag(e,on){e.preventDefault();document.getElementById('bdc-import-drop').style.borderColor=on?'var(--em600)':'rgba(255,255,255,.15)';}
 function bdcImportDrop(e){e.preventDefault();bdcImportDrag(e,false);if(e.dataTransfer.files[0])bdcImportFile(e.dataTransfer.files[0]);}
 
+// Parse le format XLS SpreadsheetML (XML déguisé en .xls — format MDM BDC)
+// Structure : Ligne 8 = headers, lignes 9+ = articles (Code, Désignation, EAN, ..., Qté colis)
+function bdcParseSpreadsheetML(xmlStr) {
+  try {
+    var parser = new DOMParser();
+    var doc = parser.parseFromString(xmlStr, 'text/xml');
+    var ns = 'urn:schemas-microsoft-com:office:spreadsheet';
+
+    var rows = doc.getElementsByTagNameNS(ns, 'Row');
+    var headerRow = null, headers = [], dataRows = [];
+
+    // Trouver la ligne d'en-tête (contient "Code" et "Qté (colis)")
+    for (var i = 0; i < rows.length; i++) {
+      var cells = rows[i].getElementsByTagNameNS(ns, 'Cell');
+      var vals = [];
+      for (var j = 0; j < cells.length; j++) {
+        var d = cells[j].getElementsByTagNameNS(ns, 'Data')[0];
+        vals.push(d ? (d.textContent || '') : '');
+      }
+      if (vals.indexOf('Code') >= 0 && vals.some(function(v){ return v.indexOf('Qté') >= 0 || v.indexOf('Qte') >= 0; })) {
+        headers = vals;
+        headerRow = i;
+      } else if (headerRow !== null && i > headerRow) {
+        dataRows.push(vals);
+      }
+    }
+
+    if (!headers.length) {
+      bdcShowAlert('Format XLS non reconnu — colonne "Code" introuvable', 'err');
+      return;
+    }
+
+    console.log('[XLS] Headers:', headers);
+    var iCode = headers.indexOf('Code');
+    var iQty  = headers.findIndex(function(h){ return h.indexOf('Qté') >= 0 || h.indexOf('Qte') >= 0; });
+    if (iCode < 0 || iQty < 0) {
+      bdcShowAlert('Colonnes Code ou Qté introuvables dans ce fichier', 'err');
+      return;
+    }
+
+    // Convertir en format attendu par bdcParseRows
+    var json = dataRows
+      .filter(function(r){ return r[iCode] && r[iCode].trim() && r[iQty] && parseFloat(r[iQty]) > 0; })
+      .map(function(r){
+        var obj = {};
+        headers.forEach(function(h, idx){ obj[h] = r[idx] || ''; });
+        return obj;
+      });
+
+    console.log('[XLS] Lignes articles:', json.length);
+    bdcParseRows(json);
+  } catch(e) {
+    bdcShowAlert('Erreur lecture XLS : ' + e.message, 'err');
+  }
+}
+
 function bdcImportFile(file) {
   if (!file) return;
   var ext = file.name.split('.').pop().toLowerCase();
@@ -3216,12 +3272,21 @@ function bdcImportFile(file) {
     // Excel → sheet_to_json pour éviter les problèmes de séparateur
     reader.onload = function(e) {
       try {
-        var wb = XLSX.read(e.target.result, {type:'binary'});
+        // Détecter si c'est un XLS SpreadsheetML (XML déguisé en XLS)
+        var raw = e.target.result;
+        var firstBytes = typeof raw === 'string' ? raw.substring(0,6) : '';
+        if (firstBytes.startsWith('<?xml') || firstBytes.startsWith('<Workb')) {
+          bdcParseSpreadsheetML(raw);
+          return;
+        }
+        var wb = XLSX.read(raw, {type:'binary'});
         var ws = wb.Sheets[wb.SheetNames[0]];
         var json = XLSX.utils.sheet_to_json(ws, {defval:''});
         bdcParseRows(json);
       } catch(err) {
-        bdcShowAlert('Erreur lecture Excel : ' + err.message, 'err');
+        // Fallback : essayer comme texte XML
+        try { bdcParseSpreadsheetML(e.target.result); }
+        catch(e2) { bdcShowAlert('Erreur lecture Excel : ' + err.message, 'err'); }
       }
     };
     reader.readAsBinaryString(file);
@@ -3742,7 +3807,7 @@ function normalizeCode(s) {
 }
 
 function parsePdfText(text) {
-  // ── Index produits ─────────────────────────────────────────────────────────
+  // ── Index produits ───────────────────────────────────────────────────────
   var byCode = {}, byEan = {};
   PRODUCTS.forEach(function(p) {
     byCode[p.code.toUpperCase()] = p;
@@ -3751,83 +3816,84 @@ function parsePdfText(text) {
 
   pdfImportedQtys = {};
   var results = [];
+  var seen = {};
 
-  // ── Stratégie : pdf.js extrait le texte colonne par colonne
-  //   Col1 : EAN (8-14 chiffres)
-  //   Col2 : Code produit MDM (ex: BIOVERCITBER)
-  //   Col3 : Désignation (texte libre)
-  //   Col4 : Quantités (xx.00)  ← séparées des codes dans le texte extrait
-  //
-  //   On extrait chaque type de token indépendamment, dans l'ordre d'apparition
-  //   puis on les zippe : EAN[i] + Code[i] + Qté[i] = ligne i
+  console.log('[PDF] Texte recu:', text.length, 'chars');
 
-  var tokens = text.split('\n').map(function(t){ return t.trim(); }).filter(Boolean);
+  // Afficher un apercu du texte dans la modale pour debug
+  var previewEl = document.getElementById('pdf-text-preview');
+  if (previewEl) previewEl.textContent = text.substring(0, 400);
 
-  // Extraire EAN (8-14 chiffres consécutifs)
-  var eans = tokens.filter(function(t){ return /^\d{8,14}$/.test(t); });
+  // ── Stratégie : pdf.js reconstruit les lignes par position Y
+  // Chaque ligne a le format : "EAN CODE DESIGNATION QTE PA REMISE TVA"
+  // Ex: "4053400200859 BIOVERCITBER BIONADE CITRON/BERGAMOTE 36.00 0.00 5.00 % 5.50 %"
+  // On détecte les lignes qui commencent par un EAN (8-14 chiffres)
 
-  // Extraire codes produit MDM : commence par lettre, que lettres+chiffres, 4-15 chars
-  // Exclure les mots courants du PDF
-  var skipWords = {'CODE':1,'COMMANDE':1,'DESIGNATION':1,'REFERENCE':1,'REMISE':1,
-                   'EUROS':1,'MODE':1,'BASE':1,'TOTAL':1,'TVA':1,'NOMBRE':1,
-                   'FAX':1,'EMAIL':1,'DELAI':1,'MOULIN':1,'MOINES':1,'REF':1,
-                   'FOU':1,'QTE':1,'MONTANT':1,'LIGNES':1,'CLIENT':1,'PAGE':1,
-                   'DATE':1,'PORT':1,'VENDEUR':1,'COND':1,'HT':1,'TTC':1,'PA':1,
-                   'BL':1,'TX':1,'ECHEANCE':1,'REGLEMENT':1};
-  var codes = tokens.filter(function(t){
-    return /^[A-Z][A-Z0-9]{3,14}$/.test(t) && !skipWords[t];
+  var lines = text.split('\n');
+  var EAN_RE   = /^\d{8,14}$/;
+  var CODE_RE  = /^[A-Z][A-Z0-9]{2,14}$/;
+  var NUM_RE   = /\d+\.\d+/g;
+
+  // Mots à ignorer comme codes produit
+  var SKIP = {CODE:1,REF:1,FOU:1,DESIGNATION:1,QTE:1,HT:1,REMISE:1,TVA:1,
+              PA:1,COMMANDE:1,CLIENT:1,MOULIN:1,MOINES:1,FAX:1,EMAIL:1,
+              DELAI:1,NOMBRE:1,BASE:1,TOTAL:1,MONTANT:1,TX:1,BL:1};
+
+  lines.forEach(function(line) {
+    line = line.trim();
+    if (!line) return;
+
+    var parts = line.split(/\s+/);
+    if (parts.length < 3) return;
+
+    var ean = '', codeRef = '', qtyUVC = null;
+
+    // Cas 1 : ligne commence par EAN (8-14 chiffres)
+    if (EAN_RE.test(parts[0])) {
+      ean = parts[0];
+      codeRef = parts[1] || '';
+      // Quantité = premier nombre se terminant par .00
+      var nums00 = line.match(/\b(\d+)\.00\b/g) || [];
+      if (nums00.length > 0) qtyUVC = parseFloat(nums00[0]);
+
+    // Cas 2 : ligne commence par un code produit MDM
+    } else if (CODE_RE.test(parts[0]) && !SKIP[parts[0]]) {
+      codeRef = parts[0];
+      var nums00 = line.match(/\b(\d+)\.00\b/g) || [];
+      if (nums00.length > 0) qtyUVC = parseFloat(nums00[0]);
+    }
+
+    if (!codeRef || qtyUVC === null || qtyUVC <= 0) return;
+
+    // Chercher le produit
+    var prod = byEan[ean] || byCode[codeRef.toUpperCase()];
+
+    // Fallback : recherche partielle si code pas trouvé exactement
+    if (!prod && codeRef.length >= 4) {
+      var cu = codeRef.toUpperCase();
+      PRODUCTS.some(function(p) {
+        var pc = p.code.toUpperCase();
+        if (pc.startsWith(cu) || cu.startsWith(pc)) { prod = p; return true; }
+      });
+    }
+
+    if (!prod || seen[prod.code]) return;
+    seen[prod.code] = true;
+
+    var pcb = parseFloat(prod.pcb) || 1;
+    var colis = Math.ceil(qtyUVC / pcb);
+
+    pdfImportedQtys[prod.code] = colis;
+    results.push({
+      code: prod.code, rawCode: codeRef,
+      qty: colis, qtyOrig: qtyUVC, pcb: pcb, libelle: prod.libelle
+    });
+    console.log('[PDF]', prod.code, '<-', codeRef, qtyUVC, 'UVC /', pcb, '=', colis, 'colis');
   });
 
-  // Extraire quantités : nombre entier suivi de .00 (les qtés commandées sont toujours entières)
-  var qtys = tokens.filter(function(t){ return /^\d+\.00$/.test(t); });
+  console.log('[PDF] Total:', results.length, 'articles trouvés');
 
-  console.log('[PDF] Tokens EAN:', eans.length, 'Codes:', codes.length, 'Qtés:', qtys.length);
-  console.log('[PDF] EAN:', eans);
-  console.log('[PDF] Codes:', codes);
-  console.log('[PDF] Qtés:', qtys);
-
-  // Aligner les 3 listes — prendre le min pour éviter les dépassements
-  var nb = Math.min(eans.length, codes.length, qtys.length);
-
-  // Si les longueurs ne correspondent pas, essayer sans EAN (certains PDFs n'ont pas d'EAN)
-  if (nb === 0 && codes.length > 0 && qtys.length > 0) {
-    nb = Math.min(codes.length, qtys.length);
-    for (var i = 0; i < nb; i++) {
-      var code = codes[i].toUpperCase();
-      var prod = byCode[code];
-      if (!prod) continue;
-      var qtyUVC = parseFloat(qtys[i]);
-      var pcb = parseFloat(prod.pcb) || 1;
-      var colis = Math.ceil(qtyUVC / pcb);
-      if (pdfImportedQtys[prod.code]) continue;
-      pdfImportedQtys[prod.code] = colis;
-      results.push({ code: prod.code, rawCode: code, qty: colis, qtyOrig: qtyUVC, pcb: pcb, libelle: prod.libelle });
-    }
-  } else {
-    for (var i = 0; i < nb; i++) {
-      var ean  = eans[i];
-      var code = codes[i].toUpperCase();
-      var prod = byEan[ean] || byCode[code];
-      if (!prod) {
-        // Essai sans EAN
-        prod = byCode[code];
-      }
-      if (!prod) continue;
-      var qtyUVC = parseFloat(qtys[i]);
-      var pcb = parseFloat(prod.pcb) || 1;
-      var colis = Math.ceil(qtyUVC / pcb);
-      if (pdfImportedQtys[prod.code]) continue;
-      pdfImportedQtys[prod.code] = colis;
-      results.push({ code: prod.code, rawCode: code, qty: colis, qtyOrig: qtyUVC, pcb: pcb, libelle: prod.libelle });
-    }
-  }
-
-  console.log('[PDF] Résultats:', results.length, 'articles');
-  results.forEach(function(r){
-    console.log('[PDF]', r.code, '←', r.rawCode, r.qtyOrig, 'UVC ÷', r.pcb, '=', r.qty, 'colis');
-  });
-
-  // ── Affichage résultats ────────────────────────────────────────────────────
+  // ── Affichage ────────────────────────────────────────────────────────────
   var ok = results.length;
 
   document.getElementById('pdf-import-summary').innerHTML =
@@ -3839,13 +3905,13 @@ function parsePdfText(text) {
       '<div style="font-size:.6rem;color:var(--s600);">Conversion automatique appliquée</div></div>';
 
   document.getElementById('pdf-import-rows').innerHTML = ok === 0
-    ? '<div style="padding:1rem;text-align:center;color:var(--s600);font-size:.8rem;">Aucun produit MDM reconnu dans ce PDF.<br><small>Vérifiez que les codes produit du PDF correspondent au catalogue MDM.</small></div>'
+    ? '<div style="padding:1rem;text-align:center;color:var(--s600);font-size:.8rem;">Aucun produit MDM reconnu dans ce PDF.<br><small>Vérifiez que les codes du PDF correspondent au catalogue.</small></div>'
     : results.map(function(r) {
         var label = r.pcb > 1
           ? '<span style="font-size:.65rem;color:#f59e0b;margin-left:4px;">' + r.qtyOrig + ' UVC ÷ ' + r.pcb + ' = ' + r.qty + ' colis</span>'
           : '';
         return '<div style="display:flex;align-items:center;gap:8px;padding:.35rem .6rem;border-bottom:1px solid rgba(255,255,255,.05);">' +
-          '<span style="font-family:monospace;font-size:.72rem;color:#93c5fd;min-width:80px;">' + r.code + '</span>' +
+          '<span style="font-family:monospace;font-size:.72rem;color:#93c5fd;min-width:100px;">' + r.code + '</span>' +
           '<span style="flex:1;font-size:.76rem;color:var(--s300);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + r.libelle + '</span>' +
           '<span style="font-size:.8rem;font-weight:600;color:#e2e8f0;min-width:30px;text-align:right;">' + r.qty + '</span>' +
           label + '</div>';
