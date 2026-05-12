@@ -3277,33 +3277,38 @@ function bdcImportFile(file) {
   if (!file) return;
   var ext = file.name.split('.').pop().toLowerCase();
   if (ext === 'pdf') { closeBdcImport(); setTimeout(function(){ openPdfImport(); setTimeout(function(){ pdfImportFile(file); }, 100); }, 200); return; }
-  var reader = new FileReader();
+
   if (ext === 'csv') {
-    reader.onload = function(e) { bdcParseRows(bdcCSVtoRows(e.target.result)); };
-    reader.readAsText(file, 'UTF-8');
-  } else {
-    // Excel → sheet_to_json pour éviter les problèmes de séparateur
-    reader.onload = function(e) {
+    var r = new FileReader();
+    r.onload = function(e) { bdcParseRows(bdcCSVtoRows(e.target.result)); };
+    r.readAsText(file, 'UTF-8');
+    return;
+  }
+
+  // Pour XLS/XLSX : lire d'abord en texte pour détecter SpreadsheetML
+  var r1 = new FileReader();
+  r1.onload = function(e) {
+    var txt = e.target.result;
+    // XLS SpreadsheetML = fichier XML déguisé en .xls
+    if (txt.indexOf('<?xml') === 0 || txt.indexOf('<Workbook') >= 0 && txt.indexOf('<Workbook') < 200) {
+      bdcParseSpreadsheetML(txt);
+      return;
+    }
+    // Sinon : lire en binaire pour XLSX/XLS classique
+    var r2 = new FileReader();
+    r2.onload = function(e2) {
       try {
-        // Détecter si c'est un XLS SpreadsheetML (XML déguisé en XLS)
-        var raw = e.target.result;
-        var firstBytes = typeof raw === 'string' ? raw.substring(0,6) : '';
-        if (firstBytes.startsWith('<?xml') || firstBytes.startsWith('<Workb')) {
-          bdcParseSpreadsheetML(raw);
-          return;
-        }
-        var wb = XLSX.read(raw, {type:'binary'});
+        var wb = XLSX.read(e2.target.result, {type:'binary'});
         var ws = wb.Sheets[wb.SheetNames[0]];
         var json = XLSX.utils.sheet_to_json(ws, {defval:''});
         bdcParseRows(json);
       } catch(err) {
-        // Fallback : essayer comme texte XML
-        try { bdcParseSpreadsheetML(e.target.result); }
-        catch(e2) { bdcShowAlert('Erreur lecture Excel : ' + err.message, 'err'); }
+        bdcShowAlert('Erreur lecture Excel : ' + err.message, 'err');
       }
     };
-    reader.readAsBinaryString(file);
-  }
+    r2.readAsBinaryString(file);
+  };
+  r1.readAsText(file, 'UTF-8');
 }
 
 // Convertit CSV en tableau d'objets {header: valeur}
