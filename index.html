@@ -3768,12 +3768,10 @@ function pdfImportDrop(e) {
 
 async function pdfImportFile(file) {
   if (!file) return;
-  console.log('[PDF] Import démarré:', file.name, file.size, 'bytes');
+  console.log('[PDF] Import:', file.name, file.size, 'bytes');
   if (typeof pdfjsLib === 'undefined') {
-    toast('pdf.js non chargé - réessayez dans 2 secondes', 'err');
-    bdcShowAlert('pdf.js non chargé, réessayez dans quelques secondes.', 'err'); return;
+    toast('pdf.js non charge - reessayez dans 2s', 'err'); return;
   }
-  console.log('[PDF] pdfjsLib OK, lecture...');
   document.getElementById('pdf-progress').style.display = 'block';
   document.getElementById('pdf-import-result').style.display = 'none';
   document.getElementById('pdf-import-foot').style.display = 'none';
@@ -3781,38 +3779,76 @@ async function pdfImportFile(file) {
   try {
     var arrayBuffer = await file.arrayBuffer();
     var pdf = await pdfjsLib.getDocument({data: arrayBuffer}).promise;
-    var totalPages = pdf.numPages;
     var fullText = '';
 
-    for (var p = 1; p <= totalPages; p++) {
-      document.getElementById('pdf-progress-bar').style.width = Math.round(p/totalPages*90)+'%';
-      document.getElementById('pdf-progress-label').textContent = 'Page '+p+' / '+totalPages+'…';
+    for (var p = 1; p <= pdf.numPages; p++) {
+      document.getElementById('pdf-progress-bar').style.width = Math.round(p/pdf.numPages*90)+'%';
+      document.getElementById('pdf-progress-label').textContent = 'Page '+p+' / '+pdf.numPages+'...';
       var page = await pdf.getPage(p);
       var tc = await page.getTextContent();
-      // Reconstruire le texte ligne par ligne en respectant la mise en page
-      var lastY = null, lineText = '';
-      tc.items.forEach(function(item) {
+
+      // ── Reconstruction par positions X et Y ──────────────────────────────
+      // Trier par Y décroissant (haut en bas) puis X croissant (gauche à droite)
+      var items = tc.items.filter(function(it){ return it.str && it.str.trim(); });
+      items.sort(function(a, b) {
+        var dy = Math.round(b.transform[5]) - Math.round(a.transform[5]);
+        return dy !== 0 ? dy : a.transform[4] - b.transform[4];
+      });
+
+      // Grouper par ligne (Y avec tolérance ±4px)
+      var lineGroups = [], curLine = [], lastY = null;
+      items.forEach(function(item) {
         var y = Math.round(item.transform[5]);
-        if (lastY !== null && Math.abs(y - lastY) > 3) { fullText += lineText + '\n'; lineText = ''; }
-        lineText += item.str + ' ';
+        if (lastY !== null && Math.abs(y - lastY) > 4) {
+          if (curLine.length) lineGroups.push(curLine);
+          curLine = [];
+        }
+        curLine.push({ x: item.transform[4], w: item.width || (item.str.length * 5), str: item.str });
         lastY = y;
       });
-      if (lineText.trim()) fullText += lineText + '\n';
+      if (curLine.length) lineGroups.push(curLine);
+
+      // Pour chaque ligne : grouper les chars en mots selon le gap X
+      lineGroups.forEach(function(lineItems) {
+        lineItems.sort(function(a, b){ return a.x - b.x; });
+        var words = [], word = '';
+        var lastX = null, lastW = 0;
+        lineItems.forEach(function(it) {
+          var gap = lastX !== null ? (it.x - lastX - lastW) : 0;
+          // Gap > 2px = séparateur entre chars espacés; > 8px = vrai espace entre mots
+          if (lastX !== null && gap > 8) {
+            if (word.trim()) words.push(word.trim());
+            word = it.str;
+          } else {
+            word += it.str;
+          }
+          lastX = it.x;
+          lastW = it.w || (it.str.length * 4);
+        });
+        if (word.trim()) words.push(word.trim());
+        if (words.length) fullText += words.join(' ') + '\n';
+      });
     }
 
     document.getElementById('pdf-progress-bar').style.width = '100%';
-    document.getElementById('pdf-progress-label').textContent = 'Analyse du contenu…';
+    document.getElementById('pdf-progress-label').textContent = 'Analyse...';
+    var previewEl = document.getElementById('pdf-text-preview');
+    if (previewEl) previewEl.textContent = fullText.substring(0, 600);
+    console.log('[PDF] Texte reconstruit (300 chars):', fullText.substring(0, 300));
+
     setTimeout(function() {
       document.getElementById('pdf-progress').style.display = 'none';
       parsePdfText(fullText);
     }, 150);
+
   } catch(err) {
     document.getElementById('pdf-progress').style.display = 'none';
-    bdcShowAlert('Erreur lecture PDF : ' + err.message, 'err');
+    console.error('[PDF] Erreur:', err);
+    toast('Erreur lecture PDF: ' + err.message, 'err');
   }
 }
 
-// ── Normalisation de code pour matching fuzzy
+
 function normalizeCode(s) {
   return s.toUpperCase()
     .replace(/[^A-Z0-9]/g, '')   // garder seulement alphanum
