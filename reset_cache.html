@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MDM CRM — Réinitialisation cache</title>
+<style>
+  body { font-family: Arial, sans-serif; display: flex; align-items: center; justify-content: center; min-height: 100vh; margin: 0; background: #0f172a; color: #fff; }
+  .box { text-align: center; padding: 2rem; max-width: 400px; }
+  .icon { font-size: 3rem; margin-bottom: 1rem; }
+  h1 { font-size: 1.3rem; margin-bottom: 0.5rem; }
+  p { color: #94a3b8; font-size: .9rem; margin-bottom: 1.5rem; }
+  .btn { display: inline-block; padding: .75rem 2rem; background: #2563eb; color: #fff; border: none; border-radius: 8px; font-size: 1rem; cursor: pointer; text-decoration: none; }
+  .log { text-align: left; background: #1e293b; border-radius: 8px; padding: 1rem; font-size: .75rem; color: #94a3b8; margin-top: 1rem; min-height: 80px; font-family: monospace; }
+  .ok { color: #4ade80; }
+  .err { color: #f87171; }
+</style>
+</head>
+<body>
+<div class="box">
+  <div class="icon">🔄</div>
+  <h1>Réinitialisation du cache MDM CRM</h1>
+  <p>Supprime le Service Worker et le cache pour charger la dernière version.</p>
+  <div class="log" id="log">Démarrage...</div>
+  <br>
+  <a class="btn" id="btn" href="https://loac1118.github.io/V3mdm/" style="display:none;">▶ Ouvrir MDM CRM</a>
+</div>
+<script>
+var log = document.getElementById('log');
+var btn = document.getElementById('btn');
+
+function write(msg, cls) {
+  var line = document.createElement('div');
+  line.className = cls || '';
+  line.textContent = msg;
+  log.appendChild(line);
+}
+
+async function reset() {
+  try {
+    // 1. Désinstaller tous les Service Workers
+    if ('serviceWorker' in navigator) {
+      var regs = await navigator.serviceWorker.getRegistrations();
+      write('Service Workers trouvés : ' + regs.length);
+      for (var reg of regs) {
+        await reg.unregister();
+        write('✓ SW désinstallé : ' + reg.scope, 'ok');
+      }
+    } else {
+      write('Service Worker non supporté');
+    }
+
+    // 2. Vider tous les caches
+    if ('caches' in window) {
+      var keys = await caches.keys();
+      write('Caches trouvés : ' + keys.length);
+      for (var key of keys) {
+        await caches.delete(key);
+        write('✓ Cache supprimé : ' + key, 'ok');
+      }
+    }
+
+    // 3. Vider localStorage lié au CRM
+    var toRemove = [];
+    for (var i = 0; i < localStorage.length; i++) {
+      var k = localStorage.key(i);
+      if (k && (k.includes('mdm') || k.includes('commandes') || k.includes('stats'))) {
+        toRemove.push(k);
+      }
+    }
+    toRemove.forEach(function(k) {
+      localStorage.removeItem(k);
+      write('✓ Cache local supprimé : ' + k, 'ok');
+    });
+
+    write('');
+    write('✅ Réinitialisation terminée !', 'ok');
+    write('Clique sur le bouton pour ouvrir MDM CRM.', 'ok');
+    btn.style.display = 'inline-block';
+
+  } catch(e) {
+    write('Erreur : ' + e.message, 'err');
+    btn.style.display = 'inline-block';
+  }
+}
+
+reset();
+</script>
+</body>
+</html>
