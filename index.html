@@ -5626,9 +5626,9 @@ function cdbShowInactifPanel() {
     var n = clients.length;
     if (n === 0) return '';
     var emails = clients.filter(function(c){ return c.email; }).length;
-    return '<div onclick="document.getElementById('cdb-filter-act').value='' + filterVal + '';cdbRender();" ' +
+    return '<div onclick="document.getElementById(\'cdb-filter-act\').value=\'' + filterVal + '\';cdbRender();" ' +
       'style="padding:.7rem 1rem;border-radius:8px;cursor:pointer;transition:background .15s;margin-bottom:4px;border:1px solid #e5e7eb;"' +
-      ' onmouseover="this.style.background='#f9fafb'" onmouseout="this.style.background='#fff'">' +
+      ' onmouseover="this.style.background=\'#f9fafb\'" onmouseout="this.style.background=\'#fff\'">' +
       '<div style="display:flex;justify-content:space-between;align-items:center;">' +
         '<span style="font-size:.82rem;font-weight:600;color:#374151;">' + label + '</span>' +
         '<div style="display:flex;align-items:center;gap:8px;">' +
