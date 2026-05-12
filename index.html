@@ -4471,7 +4471,7 @@ function dashCaProcess(rows) {
 
 // ═══════════════════════════════════════════════
 // VERSION DU CODE — pour vérifier le déploiement
-console.log('%c[MDM CRM] Version chargée : v7.1-cloud-sync' + Date.now(), 'color:#2563b0;font-weight:bold;font-size:14px');
+var MDM_VERSION = 'v7.2-fix-' + Date.now(); console.log('%c[MDM CRM] Version chargée : ' + MDM_VERSION, 'color:#2563b0;font-weight:bold;font-size:14px');
 
 // ═══════════════════════════════════════════════
 // SAUVEGARDE / CHARGEMENT FIRESTORE DES COMMANDES
@@ -5647,7 +5647,7 @@ function cdbShowInactifPanel() {
           '<div style="font-size:.95rem;font-weight:700;color:#111;">⚠️ Analyse des clients inactifs</div>' +
           '<div style="font-size:.72rem;color:#6b7280;margin-top:2px;">' + total + ' clients au total · Clique sur une ligne pour filtrer</div>' +
         '</div>' +
-        '<button onclick="document.getElementById('cdb-inactif-overlay').remove()" style="border:none;background:none;font-size:1.3rem;cursor:pointer;color:#9ca3af;">✕</button>' +
+        '<button onclick="document.getElementById(\'cdb-inactif-overlay\').remove()" style="border:none;background:none;font-size:1.3rem;cursor:pointer;color:#9ca3af;">✕</button>' +
       '</div>' +
       '<div style="padding:1.25rem;">' +
         // Résumé visuel
@@ -7280,19 +7280,21 @@ window.addEventListener('load', function() {
 <script>
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', function() {
+    // Forcer la mise à jour du SW si une nouvelle version est disponible
+    navigator.serviceWorker.getRegistrations().then(function(regs) {
+      regs.forEach(function(reg) { reg.update(); });
+    });
     navigator.serviceWorker.register('sw.js', { scope: '/V3mdm/' })
       .then(function(reg) {
         console.log('[PWA] Service Worker enregistré, scope:', reg.scope);
-        // Vérifier les mises à jour
+        reg.update(); // forcer la vérification de mise à jour
         reg.addEventListener('updatefound', function() {
           var newWorker = reg.installing;
           newWorker.addEventListener('statechange', function() {
             if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-              console.log('[PWA] Mise à jour disponible');
-              // Optionnel : proposer un rechargement
-              if (typeof toast === 'function') {
-                toast('🔄 Mise à jour disponible — rechargez la page', 'ok');
-              }
+              // Forcer le rechargement automatique pour appliquer la nouvelle version
+              newWorker.postMessage({ type: 'SKIP_WAITING' });
+              window.location.reload();
             }
           });
         });
