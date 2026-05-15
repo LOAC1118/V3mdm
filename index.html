@@ -1070,6 +1070,12 @@ textarea { resize:vertical; min-height:80px; }
       <button class="btn btn-ghost" style="font-size:.72rem;padding:.3rem .7rem;" onclick="resetBDC()">🗑 Effacer</button>
       <button class="btn btn-primary" style="font-size:.72rem;padding:.3rem .7rem;" onclick="bdcSendOrder()">Envoyer la commande</button>
     </div>
+    <!-- Bandeau articles saisis (sticky) -->
+    <div id="bdc-recap-bar" style="display:none;background:#1e3a5f;border-bottom:2px solid var(--blue-p600);padding:.4rem .8rem;overflow-x:auto;white-space:nowrap;flex-shrink:0;">
+      <span style="font-size:.65rem;font-weight:700;color:#93c5fd;text-transform:uppercase;letter-spacing:.08em;margin-right:.6rem;">📋 En cours :</span>
+      <span id="bdc-recap-items" style="font-size:.72rem;color:#e2e8f0;"></span>
+      <span id="bdc-recap-total" style="font-size:.75rem;font-weight:700;color:#4ade80;margin-left:1rem;"></span>
+    </div>
     <div style="display:flex;flex:1;overflow:hidden;">
       <!-- Sidebar BDC -->
       <div style="width:255px;background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;flex-shrink:0;overflow-y:auto;padding:.9rem;">
@@ -1771,6 +1777,19 @@ async function showApp() {
     console.log('[Cloud] Démarrage sync multi-modules...');
     // cdbInit() remplacé par le listener onSnapshot dans startListeners()
     try { if (typeof dashLoadObjectifs === 'function') dashLoadObjectifs(); } catch(e) { console.warn('dashLoadObjectifs err:', e); }
+  // Restaurer commande BDC en cours depuis localStorage au démarrage
+  try {
+    var bdcRaw = localStorage.getItem('mdm_bdc_encours_v1');
+    if (bdcRaw) {
+      var bdcSaved = JSON.parse(bdcRaw);
+      if (bdcSaved && bdcSaved.qtys && Object.keys(bdcSaved.qtys).filter(function(k){ return bdcSaved.qtys[k] > 0; }).length > 0) {
+        bdcQtys = bdcSaved.qtys;
+        bdcRemiseLigne = bdcSaved.remiseLigne || {};
+        bdcRemise = bdcSaved.remise || 0;
+        console.log('[BDC] Commande en cours restaurée depuis localStorage');
+      }
+    }
+  } catch(e) { console.warn('[BDC] Restore err:', e); }
     try { if (typeof nfdSyncFromFirestore === 'function') nfdSyncFromFirestore(); } catch(e) { console.warn('nfdSync err:', e); }
     try { if (typeof dashCaLoadFromFirestore === 'function') dashCaLoadFromFirestore(); } catch(e) { console.warn('dashCaLoad err:', e); }
   }, 500);
@@ -2969,6 +2988,104 @@ function bdcOnRemiseLigne(input) {
   bdcUpdateTotals();
 }
 
+
+// ── Bandeau récapitulatif BDC + persistance localStorage ─────────────────
+var BDC_STORAGE_KEY = 'mdm_bdc_encours_v1';
+
+function bdcSaveLocal() {
+  try {
+    var data = {
+      qtys: bdcQtys,
+      remiseLigne: bdcRemiseLigne,
+      remise: bdcRemise,
+      magasin:      (document.getElementById('bdc-magasin')      || {}).value || '',
+      numClient:    (document.getElementById('bdc-numclient')     || {}).value || '',
+      contact:      (document.getElementById('bdc-contact')       || {}).value || '',
+      email:        (document.getElementById('bdc-email')         || {}).value || '',
+      tel:          (document.getElementById('bdc-tel')           || {}).value || '',
+      datelivraison:(document.getElementById('bdc-datelivraison') || {}).value || '',
+      comment:      (document.getElementById('bdc-comment')       || {}).value || '',
+      savedAt: new Date().toISOString()
+    };
+    localStorage.setItem(BDC_STORAGE_KEY, JSON.stringify(data));
+  } catch(e) { console.warn('bdcSaveLocal:', e); }
+}
+
+function bdcLoadLocal() {
+  try {
+    var raw = localStorage.getItem(BDC_STORAGE_KEY);
+    if (!raw) return false;
+    var data = JSON.parse(raw);
+    if (!data || !data.qtys) return false;
+    var nbArticles = Object.keys(data.qtys).filter(function(k){ return data.qtys[k] > 0; }).length;
+    if (nbArticles === 0) return false;
+
+    // Restaurer les quantités et remises
+    bdcQtys = data.qtys || {};
+    bdcRemiseLigne = data.remiseLigne || {};
+    bdcRemise = data.remise || 0;
+
+    // Restaurer les champs client
+    var set = function(id, val) { var el = document.getElementById(id); if (el && val) el.value = val; };
+    set('bdc-magasin',      data.magasin);
+    set('bdc-numclient',    data.numClient);
+    set('bdc-contact',      data.contact);
+    set('bdc-email',        data.email);
+    set('bdc-tel',          data.tel);
+    set('bdc-datelivraison',data.datelivraison);
+    set('bdc-comment',      data.comment);
+
+    // Restaurer le bouton remise
+    if (bdcRemise > 0) {
+      var btns = document.querySelectorAll('.bdc-rem-btn');
+      btns.forEach(function(b) { b.classList.remove('active'); });
+      var custom = document.getElementById('bdc-remise-custom');
+      if (custom) custom.value = bdcRemise;
+    }
+
+    buildTable();
+    bdcUpdateRecapBar();
+    var saved = data.savedAt ? new Date(data.savedAt).toLocaleTimeString('fr-FR') : '';
+    toast('📋 Commande en cours restaurée (' + nbArticles + ' articles' + (saved ? ' · ' + saved : '') + ')', 'ok');
+    return true;
+  } catch(e) { console.warn('bdcLoadLocal:', e); return false; }
+}
+
+function bdcClearLocal() {
+  try { localStorage.removeItem(BDC_STORAGE_KEY); } catch(e) {}
+}
+
+function bdcUpdateRecapBar() {
+  var bar   = document.getElementById('bdc-recap-bar');
+  var items = document.getElementById('bdc-recap-items');
+  var totalEl = document.getElementById('bdc-recap-total');
+  if (!bar || !items || !totalEl) return;
+
+  var lines = [];
+  var totalNet = 0;
+  PRODUCTS.forEach(function(p) {
+    var q = bdcQtys[p.code] || 0;
+    if (q <= 0) return;
+    var pcb = parseFloat(p.pcb) || 1;
+    var pNet = bdcPrixNet(p);
+    var montant = pNet * q * pcb;
+    totalNet += montant;
+    // Nom court : max 20 chars
+    var nom = (p.libelle || p.code).substring(0, 22);
+    lines.push('<span style="display:inline-block;background:rgba(255,255,255,.12);border-radius:4px;padding:1px 7px;margin-right:4px;font-size:.7rem;">' +
+      '<strong>' + q + '</strong> × ' + nom + '</span>');
+  });
+
+  if (lines.length === 0) {
+    bar.style.display = 'none';
+    return;
+  }
+
+  bar.style.display = 'block';
+  items.innerHTML = lines.join('');
+  totalEl.textContent = '→ ' + bdcFmt(totalNet) + ' HT';
+}
+
 function buildTable() {
   var rows = '';
   for (var i = 0; i < PRODUCTS.length; i++) {
@@ -3031,6 +3148,8 @@ function bdcOnQty(input) {
 }
 
 function bdcUpdateTotals() {
+  bdcUpdateRecapBar();
+  bdcSaveLocal();
   var nbR=0,nbC=0,nbU=0,tB=0,tN=0;
   PRODUCTS.forEach(function(p){
     var q = bdcQtys[p.code]||0;
@@ -3086,6 +3205,7 @@ function bdcClearSearch() {
 function resetBDC() {
   if (Object.keys(bdcQtys).length && !confirm('Effacer toutes les quantités ?')) return;
   bdcQtys = {}; bdcRemiseLigne = {};
+  bdcClearLocal();
   buildTable();
 }
 
@@ -3178,6 +3298,7 @@ function bdcSendOrder() {
   }).then(function(res){ return res.json(); })
   .then(function(data){
     if(data.success==='true'||data.success===true){
+      bdcClearLocal();
       bdcShowAlert('✅ Commande envoyée et enregistrée dans le dashboard !','ok');
       setTimeout(function(){
         if(confirm('Réinitialiser le bon de commande ?')){
