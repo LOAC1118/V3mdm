@@ -2341,7 +2341,9 @@ function nfdGeneratePDF() {
   doc.setFont('helvetica', 'bold');
   doc.text('MOIS :', lblX, row1Y + 4);
   doc.setFont('helvetica', 'normal');
-  doc.text(period.periodLabel, valX, row1Y + 4);
+  var moisNoms = ['Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août','Septembre','Octobre','Novembre','Décembre'];
+  var moisLabel = moisNoms[parseInt(mois) - 1] || period.periodLabel;
+  doc.text(moisLabel, valX, row1Y + 4);
 
   doc.setFont('helvetica', 'bold');
   doc.text('Nom :', midX + 3, row1Y + 4);
@@ -2458,40 +2460,7 @@ function nfdGeneratePDF() {
 
   curY += rowH + 1 + 10;
 
-  // ── Détail des dépenses ───────────────────────────────────────────────
-  if (filtered.length) {
-    doc.setFont('helvetica', 'bold');
-    doc.setFontSize(10);
-    doc.text('Détail des dépenses — ' + period.periodLabel, marginL, curY);
-    curY += 4;
-
-    doc.autoTable({
-      startY: curY,
-      head: [['Date', 'Catégorie', 'H.T.', 'TVA', 'TTC', 'Description']],
-      body: filtered.map(function(l) {
-        return [
-          nfdFmtDate(l.date),
-          l.categorie,
-          fmtEZ(l.ht),
-          fmtEZ(l.tva),
-          fmtEZ(l.ttc),
-          l.description || ''
-        ];
-      }),
-      theme: 'grid',
-      headStyles: { fillColor:[37,99,176], textColor:255, fontStyle:'bold', fontSize:8 },
-      bodyStyles: { fontSize: 8 },
-      columnStyles: {
-        0: { cellWidth: 22 },
-        1: { cellWidth: 34 },
-        2: { halign:'right', cellWidth: 22 },
-        3: { halign:'right', cellWidth: 20 },
-        4: { halign:'right', cellWidth: 22 },
-        5: { cellWidth: 'auto' }
-      },
-      margin: { left: marginL, right: marginR }
-    });
-  }
+  // Détail des dépenses supprimé à la demande
 
   // ── Pied de page ──────────────────────────────────────────────────────
   var pageCount = doc.internal.getNumberOfPages();
@@ -2501,7 +2470,7 @@ function nfdGeneratePDF() {
     doc.setFont('helvetica', 'normal');
     doc.setTextColor(120);
     doc.text(
-      'Note de frais — ' + nom + ' ' + prenom + '  |  ' + period.periodLabel + '  |  Page ' + p + '/' + pageCount,
+      'Note de frais — ' + nom + ' ' + prenom + '  |  ' + moisLabel + ' ' + annee + '  |  Page ' + p + '/' + pageCount,
       W / 2, H - 7, { align: 'center' }
     );
     doc.setTextColor(...TXT);
