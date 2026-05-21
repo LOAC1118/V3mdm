@@ -815,36 +815,37 @@ textarea { resize:vertical; min-height:80px; }
 
 <div class="app">
 <div class="sidebar">
+
   <div class="nav-section">
-    <div class="nav-label">Navigation</div>
+    <div class="nav-label">Principal</div>
     <div class="nav-item active" onclick="showSection('dashboard',null,this)">
       <svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="1" y="1" width="6" height="6" rx="1.5"/><rect x="9" y="1" width="6" height="6" rx="1.5"/><rect x="1" y="9" width="6" height="6" rx="1.5"/><rect x="9" y="9" width="6" height="6" rx="1.5"/></svg>
       Dashboard
     </div>
-    
-    
     <div class="nav-item" onclick="showSection('bdc',null,this)">
       <svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 2h12l-1 8H3z"/><circle cx="6" cy="14" r="1"/><circle cx="11" cy="14" r="1"/></svg>
       Bon de Commande
-    </div>
-    <div class="nav-item" onclick="showSection('frais',null,this)">
-      <svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="1" y="3" width="14" height="10" rx="2"/><path d="M1 6h14"/><circle cx="5" cy="9.5" r="1"/></svg>
-      Frais <span class="nav-badge" id="nb-frais">0</span>
     </div>
     <div class="nav-item" onclick="showSection('contacts-db',null,this)">
       <svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="5" cy="5" r="2.5"/><path d="M1 14c0-2.5 1.8-4.5 4-4.5s4 2 4 4.5"/><circle cx="12" cy="6" r="2"/><path d="M10 14c0-2 1-3.5 2-3.5s3 1.5 3 3.5"/></svg>
       Base clients
     </div>
-
+    <div class="nav-item" onclick="showSection('frais',null,this)">
+      <svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="1" y="3" width="14" height="10" rx="2"/><path d="M1 6h14"/><circle cx="5" cy="9.5" r="1"/></svg>
+      Frais <span class="nav-badge" id="nb-frais">0</span>
+    </div>
   </div>
+
+  <div class="nav-divider-sidebar"></div>
+
   <div class="nav-section">
     <div class="nav-label">Actions rapides</div>
     <div class="nav-item" onclick="showSection('bdc',null,this);setTimeout(resetBDC,50)">
-      <svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 2h8l2 4H2z"/><path d="M2 6v8h12V6"/><path d="M6 10h4"/></svg>
+      <svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M8 3v10M3 8h10"/></svg>
       Nouveau BDC
     </div>
     <div class="nav-item" onclick="showSection('frais',null,this)">
-      <svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="1" y="3" width="14" height="10" rx="2"/><path d="M1 6h14"/><circle cx="5" cy="9.5" r="1"/></svg>
+      <svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 3h10v2l-2 2 2 2v2H3v-2l2-2-2-2z"/></svg>
       Saisir des frais
     </div>
     <div class="nav-item" onclick="cdbOpenEdit(null);showSection('contacts-db',null,this)">
@@ -852,10 +853,14 @@ textarea { resize:vertical; min-height:80px; }
       Nouveau contact
     </div>
   </div>
+
   <div class="sidebar-footer">
     <div class="sf-row">
-      <div class="sf-avatar" id="sb-avatar">CS</div>
-      <div><div class="sf-name" id="sb-name">—</div><div class="sf-role" id="sb-role">—</div></div>
+      <div class="sf-avatar" id="sb-avatar" onclick="toggleAvatarMenu()" style="cursor:pointer;">CS</div>
+      <div>
+        <div class="sf-name" id="sb-name">Christophe S.</div>
+        <div class="sf-role" id="sb-role">Commercial MDM</div>
+      </div>
     </div>
   </div>
 </div>
@@ -1373,20 +1378,46 @@ textarea { resize:vertical; min-height:80px; }
 
   <!-- MODAL FICHE CONTACT -->
   <div class="modal-bg hidden" id="cdb-modal-edit"><div class="modal modal-wide">
-    <div class="modal-head">
-      <span class="modal-title" id="cdb-edit-title">Fiche contact</span>
-      <button class="close-btn" onclick="document.getElementById('cdb-modal-edit').classList.add('hidden')">✕</button>
+    <!-- Header coloré avec infos client -->
+    <div class="modal-head" style="flex-direction:column;align-items:flex-start;gap:.6rem;padding:1rem 1.5rem;">
+      <div style="display:flex;align-items:center;justify-content:space-between;width:100%;">
+        <div style="display:flex;align-items:center;gap:10px;">
+          <div id="cdb-edit-avatar" style="width:38px;height:38px;border-radius:10px;background:var(--blue-p600);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:#fff;flex-shrink:0;">?</div>
+          <div>
+            <div class="modal-title" id="cdb-edit-title" style="font-size:.95rem;">Fiche contact</div>
+            <div id="cdb-edit-subtitle" style="font-size:.72rem;color:var(--blue-p300);margin-top:1px;">—</div>
+          </div>
+        </div>
+        <div style="display:flex;align-items:center;gap:6px;">
+          <button onclick="(function(){ var id=document.getElementById('cdb-edit-id').value; var c=cdbContacts.find(function(x){return x.id===id;}); if(c) cdbNewOrderFromClient(c); else toast('Enregistrez le contact d abord','err'); })()" style="background:var(--blue-p600);border:none;border-radius:7px;padding:4px 10px;font-size:.72rem;color:#fff;cursor:pointer;font-weight:600;">🛒 BDC</button>
+          <button class="close-btn" onclick="document.getElementById('cdb-modal-edit').classList.add('hidden')" style="margin-left:4px;">✕</button>
+        </div>
+      </div>
+      <!-- Stats rapides -->
+      <div id="cdb-edit-stats" style="display:flex;gap:12px;width:100%;">
+        <div style="background:rgba(255,255,255,.12);border-radius:7px;padding:4px 10px;text-align:center;flex:1;">
+          <div id="cdb-stat-ca" style="font-size:.9rem;font-weight:700;color:#fff;">—</div>
+          <div style="font-size:.62rem;color:var(--blue-p300);">CA 2026</div>
+        </div>
+        <div style="background:rgba(255,255,255,.12);border-radius:7px;padding:4px 10px;text-align:center;flex:1;">
+          <div id="cdb-stat-cmds" style="font-size:.9rem;font-weight:700;color:#fff;">—</div>
+          <div style="font-size:.62rem;color:var(--blue-p300);">Commandes</div>
+        </div>
+        <div style="background:rgba(255,255,255,.12);border-radius:7px;padding:4px 10px;text-align:center;flex:1;">
+          <div id="cdb-stat-last" style="font-size:.9rem;font-weight:700;color:#fff;">—</div>
+          <div style="font-size:.62rem;color:var(--blue-p300);">Dernière cmd</div>
+        </div>
+      </div>
     </div>
     <div class="modal-body">
-
       <!-- Onglets -->
-      <div style="display:flex;border-bottom:1px solid var(--border);padding:0 1.25rem;gap:0;">
+      <div style="display:flex;border-bottom:1px solid var(--border);padding:0 1.25rem;gap:0;background:var(--blue-p50);">
         <button type="button" class="cdb-tab active" data-tab="infos" onclick="cdbSwitchTab('infos')"
-          style="padding:.65rem 1rem;border:none;background:none;cursor:pointer;font-size:.8rem;font-weight:600;color:var(--blue-p700);border-bottom:2px solid var(--blue-p600);margin-bottom:-1px;">
+          style="padding:.55rem 1rem;border:none;background:none;cursor:pointer;font-size:.78rem;font-weight:600;color:var(--blue-p700);border-bottom:2px solid var(--blue-p600);margin-bottom:-1px;">
           📋 Informations
         </button>
         <button type="button" class="cdb-tab" data-tab="ca" onclick="cdbSwitchTab('ca')"
-          style="padding:.65rem 1rem;border:none;background:none;cursor:pointer;font-size:.8rem;font-weight:600;color:var(--g500);border-bottom:2px solid transparent;margin-bottom:-1px;">
+          style="padding:.55rem 1rem;border:none;background:none;cursor:pointer;font-size:.78rem;font-weight:600;color:var(--g500);border-bottom:2px solid transparent;margin-bottom:-1px;">
           📊 CA & Commandes
         </button>
       </div>
@@ -1420,9 +1451,7 @@ textarea { resize:vertical; min-height:80px; }
     </div>
     <div class="modal-foot">
       <button class="btn btn-ghost" id="cdb-edit-delete" onclick="cdbDelete()" style="margin-right:auto;color:#dc2626;">🗑 Supprimer</button>
-      <button class="btn btn-ghost" id="cdb-btn-new-bdc" onclick="(function(){ var id=document.getElementById('cdb-edit-id').value; var c=cdbContacts.find(function(x){return x.id===id;}); if(c) cdbNewOrderFromClient(c); else toast('Enregistrez d\'abord le contact','err'); })()" style="color:var(--blue-p700);border-color:var(--blue-p300);background:var(--blue-p50);">
-        🛒 Nouveau BDC
-      </button>
+
       <button class="btn btn-ghost" onclick="document.getElementById('cdb-modal-edit').classList.add('hidden')">Annuler</button>
       <button class="btn btn-primary" onclick="cdbSave()">💾 Enregistrer</button>
     </div>
@@ -3103,7 +3132,13 @@ function buildTable() {
     else stkH='<span style="color:var(--em400);font-weight:600;">'+stk+'</span>';
     rows += '<td style="padding:.4rem .55rem;">'+stkH+'</td>';
     // Qty
-    rows += '<td class="bdc-td-qty" style="padding:.35rem .45rem;"><input type="number" min="0" step="1" value="'+(qty||'')+'" placeholder="0" data-code="'+dCode+'" data-pcb="'+(p.pcb||1)+'" oninput="bdcOnQty(this)" onchange="bdcOnQty(this)"></td>';
+    rows += '<td class="bdc-td-qty" style="padding:.25rem .45rem;">' +
+      '<div style="display:flex;align-items:center;gap:3px;">' +
+        '<button onclick="bdcStepQty(\''+dCode+'\','+pcb+',-1)" style="width:22px;height:22px;border-radius:5px;border:1px solid var(--border-med);background:var(--bg2);cursor:pointer;font-size:14px;line-height:1;display:flex;align-items:center;justify-content:center;color:var(--g700);flex-shrink:0;" tabindex="-1">−</button>' +
+        '<input type="number" min="0" step="1" value="'+(qty||'')+'" placeholder="0" data-code="'+dCode+'" data-pcb="'+(p.pcb||1)+'" oninput="bdcOnQty(this)" onchange="bdcOnQty(this)" style="width:38px;text-align:center;">' +
+        '<button onclick="bdcStepQty(\''+dCode+'\','+pcb+',1)" style="width:22px;height:22px;border-radius:5px;border:1px solid var(--border-med);background:var(--bg2);cursor:pointer;font-size:14px;line-height:1;display:flex;align-items:center;justify-content:center;color:var(--g700);flex-shrink:0;" tabindex="-1">+</button>' +
+      '</div>' +
+    '</td>';
     rows += '<td style="padding:.35rem .45rem;text-align:center;"><input type="number" min="0" max="100" step="0.5" value="'+rl+'" placeholder="—" data-code="'+dCode+'" oninput="bdcOnRemiseLigne(this)" onchange="bdcOnRemiseLigne(this)" style="width:55px;text-align:right;font-size:.78rem;padding:.25rem .4rem;" title="Remise % spécifique à cette ligne"></td>';
     var uvc = qty > 0 ? qty * (p.pcb||1) : '';
     rows += '<td id="bdc-uvc-'+dCode+'" style="padding:.4rem .55rem;font-size:.7rem;color:var(--s500);text-align:center;">'+(uvc||'—')+'</td>';
@@ -3112,6 +3147,15 @@ function buildTable() {
   }
   document.getElementById('bdc-tbody').innerHTML = rows;
   bdcUpdateTotals();
+}
+
+function bdcStepQty(code, pcb, direction) {
+  var current = parseInt(bdcQtys[code]) || 0;
+  var newVal = Math.max(0, current + direction);
+  bdcQtys[code] = newVal;
+  var input = document.querySelector('input[data-code="' + CSS.escape(code) + '"]');
+  if (input) { input.value = newVal || ''; bdcOnQty(input); }
+  else buildTable();
 }
 
 function bdcOnQty(input) {
@@ -6325,6 +6369,28 @@ function cdbOpenEdit(id) {
   document.getElementById('cdb-edit-id').value = id || '';
   document.getElementById('cdb-edit-title').textContent = c ? (c.nom || c.numClient || 'Fiche client') : 'Nouveau contact';
   document.getElementById('cdb-edit-delete').style.display = c ? '' : 'none';
+
+  // Avatar + subtitle + stats dans le header modal
+  var avatarEl   = document.getElementById('cdb-edit-avatar');
+  var subtitleEl = document.getElementById('cdb-edit-subtitle');
+  var statCa     = document.getElementById('cdb-stat-ca');
+  var statCmds   = document.getElementById('cdb-stat-cmds');
+  var statLast   = document.getElementById('cdb-stat-last');
+  if (c) {
+    var initiales = (c.nom || '?').replace(/[^A-Za-z\u00C0-\u024F\s]/g,'').split(/\s+/).filter(Boolean).map(function(w){ return w[0].toUpperCase(); }).slice(0,2).join('') || '?';
+    if (avatarEl) avatarEl.textContent = initiales;
+    if (subtitleEl) subtitleEl.textContent = (c.numClient ? 'Code ' + c.numClient : '') + (c.email ? '  ·  ' + c.email : '');
+    var s = c._stats;
+    if (statCa)   statCa.textContent   = s && s.caTotal     ? cdbFmtCA(s.caTotal)        : (c.cumul2026 ? cdbFmtCA(c.cumul2026) : '—');
+    if (statCmds) statCmds.textContent = s && s.nbCmds      ? s.nbCmds + ' cmd' + (s.nbCmds > 1 ? 's' : '') : '—';
+    if (statLast) statLast.textContent = s && s.derniereCmd  ? cdbFmtDate(s.derniereCmd) : (c.dateDerniereCmd ? cdbFmtDate(c.dateDerniereCmd) : '—');
+  } else {
+    if (avatarEl)   avatarEl.textContent   = '+';
+    if (subtitleEl) subtitleEl.textContent = 'Nouveau contact';
+    if (statCa)     statCa.textContent     = '—';
+    if (statCmds)   statCmds.textContent   = '—';
+    if (statLast)   statLast.textContent   = '—';
+  }
 
   var fields = ['numClient','nom','email','telephone','adresse','cp','ville','groupe','notes'];
   fields.forEach(function(f) {
