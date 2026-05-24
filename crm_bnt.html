@@ -1,0 +1,1730 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>BIO N TRUFFE — CRM Commercial</title>
+<meta name="description" content="CRM BIO N TRUFFE — Bons de commande, base clients, suivi commercial">
+<meta name="robots" content="noindex, nofollow">
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  /* Palette simple et joviale */
+  --brand:   #16a34a;   /* vert doux BNT */
+  --brand2:  #15803d;
+  --brand-bg:#f0fdf4;
+  --ink:     #18181b;
+  --sub:     #71717a;
+  --muted:   #a1a1aa;
+  --border:  #e4e4e7;
+  --white:   #ffffff;
+  --bg:      #fafafa;
+  --amber:   #d97706;
+  --amber-bg:#fffbeb;
+  --red:     #dc2626;
+  --red-bg:  #fef2f2;
+  --shadow:  0 1px 3px rgba(0,0,0,.06),0 1px 2px rgba(0,0,0,.04);
+  --shadow-md:0 4px 12px rgba(0,0,0,.08);
+  --shadow-lg:0 8px 24px rgba(0,0,0,.10);
+  --f: 'Plus Jakarta Sans', system-ui, sans-serif;
+  /* aliases compat */
+  --fd:var(--f);--fdisp:var(--f);--sans:var(--f);--inter:var(--f);--syne:var(--f);
+  --mid:var(--brand);--navy:var(--ink);--night:#000;--blue:var(--brand);
+  --sky:var(--brand);--light:var(--brand-bg);--mist:var(--bg);--surface:var(--white);
+  --surface2:var(--bg);--cream:var(--bg);--forest:var(--brand);--moss:var(--brand2);
+  --sage:var(--brand);--sage2:var(--brand);
+  --g900:var(--ink);--g800:var(--ink);--g700:#3f3f46;
+  --g600:var(--sub);--g500:var(--sub);--g400:var(--muted);
+  --g300:var(--border);--g200:#f4f4f5;--g100:var(--bg);
+  --blue-p900:var(--ink);--blue-p800:var(--ink);--blue-p700:var(--brand2);
+  --blue-p600:var(--brand);--blue-p500:var(--brand);--blue-p400:#4ade80;
+  --blue-p300:#86efac;--blue-p100:var(--brand-bg);--blue-p50:var(--brand-bg);
+  --green:var(--brand);--green-bg:var(--brand-bg);
+  --bnt:var(--brand);--bnt2:var(--brand2);--bnt-light:var(--brand-bg);
+  --border-med:#d4d4d8;
+  --shadow-sm:var(--shadow);--shadow-xl:var(--shadow-lg);
+}
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box;}
+body{font-family:var(--f);background:var(--bg);color:var(--ink);font-size:14px;min-height:100vh;display:flex;flex-direction:column;-webkit-font-smoothing:antialiased;}
+
+/* ── LOGIN ── */
+#login-screen{position:fixed;inset:0;background:var(--brand-bg);z-index:900;display:none;align-items:center;justify-content:center;padding:1rem;}
+.login-box{background:var(--white);border:1px solid var(--border);border-radius:20px;padding:2.5rem 2.2rem;width:100%;max-width:380px;box-shadow:var(--shadow-lg);}
+.login-logo{text-align:center;margin-bottom:2rem;}
+.login-logo-ico{width:52px;height:52px;border-radius:14px;background:var(--brand);display:flex;align-items:center;justify-content:center;font-size:24px;margin:0 auto .9rem;}
+.login-logo-name{font-size:1.2rem;font-weight:700;color:var(--ink);}
+.login-logo-sub{font-size:.7rem;color:var(--sub);margin-top:3px;}
+.login-subtitle{font-size:.84rem;color:var(--sub);text-align:center;margin-bottom:1.5rem;}
+.login-field{margin-bottom:1rem;}
+.login-field label{display:block;font-size:.72rem;font-weight:600;color:var(--ink);margin-bottom:.35rem;}
+.login-field input{width:100%;background:var(--bg);border:1.5px solid var(--border);border-radius:10px;padding:.65rem .9rem;color:var(--ink);font-family:var(--f);font-size:.9rem;outline:none;transition:all .2s;}
+.login-field input:focus{border-color:var(--brand);background:var(--white);box-shadow:0 0 0 3px var(--brand-bg);}
+.login-field input::placeholder{color:var(--muted);}
+.login-err{font-size:.78rem;color:var(--red);background:var(--red-bg);border:1px solid rgba(220,38,38,.15);border-radius:8px;padding:.5rem .9rem;margin-bottom:.9rem;display:none;}
+.btn-login{width:100%;padding:.8rem;background:var(--brand);color:#fff;border:none;border-radius:10px;font-family:var(--f);font-size:.9rem;font-weight:600;cursor:pointer;transition:background .18s;}
+.btn-login:hover{background:var(--brand2);}
+
+/* ── TOPBAR ── */
+.topbar{background:var(--white);border-bottom:1px solid var(--border);padding:0 1.5rem;height:54px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:200;flex-shrink:0;}
+.brand{display:flex;align-items:center;gap:9px;}
+.brand-ico{width:30px;height:30px;border-radius:8px;background:var(--brand);display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0;}
+.brand-name{font-size:.92rem;font-weight:700;color:var(--ink);}
+.brand-sub{font-size:.6rem;color:var(--muted);}
+.topbar-center{display:flex;gap:2px;}
+.t-tab{padding:.35rem .85rem;border-radius:7px;border:none;background:transparent;color:var(--sub);font-family:var(--f);font-size:.82rem;font-weight:500;cursor:pointer;transition:all .15s;}
+.t-tab:hover{background:var(--bg);color:var(--ink);}
+.t-tab.active{background:var(--brand-bg);color:var(--brand2);font-weight:600;}
+.topbar-right{display:flex;align-items:center;gap:10px;}
+.sync-indicator{display:flex;align-items:center;gap:5px;font-size:.72rem;color:var(--muted);}
+.sync-dot{width:6px;height:6px;border-radius:50%;background:var(--brand);}
+.sync-dot.loading{background:var(--amber);animation:pulse 1s infinite;}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+.badge-count{background:var(--brand-bg);color:var(--brand2);border-radius:99px;padding:2px 8px;font-size:11px;font-weight:600;border:1px solid #bbf7d0;}
+.avatar{width:30px;height:30px;border-radius:50%;background:var(--brand-bg);border:1.5px solid #bbf7d0;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:var(--brand2);cursor:pointer;position:relative;}
+.avatar-menu{position:absolute;top:38px;right:0;background:var(--white);border:1px solid var(--border);border-radius:12px;min-width:180px;padding:.3rem 0;z-index:300;box-shadow:var(--shadow-md);display:none;}
+.avatar-menu.open{display:block;}
+.avatar-menu-item{padding:.5rem .9rem;font-size:.8rem;color:var(--ink);cursor:pointer;transition:background .12s;}
+.avatar-menu-item:hover{background:var(--bg);}
+.avatar-menu-sep{border-top:1px solid var(--border);margin:.3rem 0;}
+.avatar-menu-item.danger{color:var(--red);}
+
+/* ── APP LAYOUT ── */
+.app{display:flex;flex:1;overflow:hidden;height:calc(100vh - 54px);width:100%;}
+.sidebar{width:200px;background:var(--white);border-right:1px solid var(--border);display:flex;flex-direction:column;flex-shrink:0;overflow-y:auto;}
+.nav-section{padding:.75rem 0 .25rem;}
+.nav-label{font-size:.62rem;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);padding:0 .85rem .35rem;}
+.nav-item{display:flex;align-items:center;gap:8px;padding:.48rem .85rem;cursor:pointer;transition:all .12s;color:var(--sub);font-family:var(--f);font-size:.82rem;font-weight:500;margin:0 .4rem;border-radius:8px;}
+.nav-item:hover{background:var(--bg);color:var(--ink);}
+.nav-item.active{background:var(--brand-bg);color:var(--brand2);font-weight:600;}
+.nav-badge{margin-left:auto;background:var(--bg);color:var(--sub);border-radius:99px;padding:1px 7px;font-size:.65rem;font-weight:600;border:1px solid var(--border);}
+.nav-item.active .nav-badge{background:#bbf7d0;color:var(--brand2);border-color:#86efac;}
+.nav-divider{height:1px;background:var(--border);margin:.4rem .85rem;}
+.sidebar-footer{margin-top:auto;padding:.85rem;border-top:1px solid var(--border);}
+.sf-avatar{width:28px;height:28px;border-radius:50%;background:var(--brand-bg);border:1px solid #bbf7d0;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:var(--brand2);flex-shrink:0;}
+.sf-name{font-size:.76rem;color:var(--ink);font-weight:500;}
+
+/* ── MAIN ── */
+.main{flex:1;overflow-y:auto;display:flex;flex-direction:column;background:var(--bg);}
+.section{display:flex;flex-direction:column;flex:1;padding:1.75rem 2rem;animation:fadeIn .2s ease;}
+.section.hidden{display:none!important;}
+.page-header{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:1.5rem;gap:1rem;flex-wrap:wrap;padding-bottom:1.25rem;border-bottom:1px solid var(--border);}
+.page-title{font-size:1.25rem;font-weight:700;color:var(--ink);}
+.page-sub{font-size:.78rem;color:var(--sub);margin-top:2px;}
+@keyframes fadeIn{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:translateY(0)}}
+
+/* ── BOUTONS ── */
+.btn{display:inline-flex;align-items:center;gap:6px;padding:.45rem .9rem;border-radius:8px;border:none;cursor:pointer;font-family:var(--f);font-size:.82rem;font-weight:600;transition:all .15s;}
+.btn-primary{background:var(--brand);color:#fff;}
+.btn-primary:hover{background:var(--brand2);}
+.btn-ghost{background:var(--white);border:1px solid var(--border);color:var(--sub);}
+.btn-ghost:hover{background:var(--bg);color:var(--ink);}
+.btn-danger{background:transparent;border:1px solid rgba(220,38,38,.2);color:var(--red);}
+.btn-danger:hover{background:var(--red-bg);}
+
+/* ── CARDS ── */
+.card{background:var(--white);border:1px solid var(--border);border-radius:12px;box-shadow:var(--shadow);overflow:hidden;}
+.card-head{padding:.75rem 1rem;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;}
+.card-title{font-size:.88rem;font-weight:600;color:var(--ink);}
+
+/* ── STATS ── */
+.stats-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:1.5rem;}
+.stat-card{background:var(--white);border:1px solid var(--border);border-radius:12px;padding:.9rem 1rem;box-shadow:var(--shadow);}
+.stat-label{font-size:.67rem;font-weight:600;color:var(--muted);margin-bottom:.3rem;text-transform:uppercase;letter-spacing:.06em;}
+.stat-val{font-size:1.7rem;font-weight:700;color:var(--ink);}
+.stat-delta{font-size:.72rem;color:var(--sub);margin-top:1px;}
+
+/* ── TABLEAU ── */
+table{width:100%;border-collapse:collapse;font-size:.82rem;}
+thead{position:sticky;top:0;z-index:5;}
+th{background:var(--bg);color:var(--muted);font-size:.67rem;font-weight:600;letter-spacing:.06em;text-transform:uppercase;padding:.5rem .75rem;text-align:left;border-bottom:1px solid var(--border);}
+td{padding:.6rem .75rem;border-bottom:1px solid var(--border);color:var(--ink);vertical-align:middle;}
+tr:last-child td{border-bottom:none;}
+tr:hover td{background:#f9f9f9;}
+.tbl-wrap{overflow-y:auto;max-height:calc(100vh - 300px);}
+
+/* ── MODALS ── */
+.modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.35);z-index:500;display:flex;align-items:center;justify-content:center;padding:1rem;backdrop-filter:blur(2px);}
+.modal-bg.hidden{display:none!important;}
+.modal{background:var(--white);border-radius:16px;width:100%;max-width:560px;max-height:90vh;display:flex;flex-direction:column;box-shadow:var(--shadow-lg);}
+.modal-wide{max-width:700px;}
+.modal-head{display:flex;align-items:center;justify-content:space-between;padding:.9rem 1.25rem;border-bottom:1px solid var(--border);border-radius:16px 16px 0 0;}
+.modal-title{font-size:.95rem;font-weight:700;color:var(--ink);}
+.close-btn{background:var(--bg);border:1px solid var(--border);color:var(--sub);width:28px;height:28px;border-radius:7px;cursor:pointer;font-size:.85rem;display:flex;align-items:center;justify-content:center;}
+.close-btn:hover{background:var(--border);color:var(--ink);}
+.modal-body{padding:1.25rem;overflow-y:auto;flex:1;}
+.modal-foot{padding:.75rem 1.25rem;border-top:1px solid var(--border);display:flex;justify-content:flex-end;gap:8px;}
+
+/* ── FORMULAIRES ── */
+.form-row{margin-bottom:.75rem;}
+.form-row label,.lb{display:block;font-size:.72rem;font-weight:600;color:var(--ink);margin-bottom:.3rem;}
+.form-row input,.form-row select,.form-row textarea,
+.form-row-2 input,.form-row-2 select,.form-row-2 textarea,
+.form-grid input,.form-grid select,.form-grid textarea{
+  width:100%;background:var(--bg);border:1.5px solid var(--border);border-radius:9px;
+  padding:.5rem .75rem;color:var(--ink);font-family:var(--f);font-size:.83rem;outline:none;transition:all .18s;
+}
+.form-row input:focus,.form-row select:focus,.form-row textarea:focus,
+.form-row-2 input:focus,.form-row-2 select:focus,
+.form-grid input:focus,.form-grid select:focus,.form-grid textarea:focus{
+  border-color:var(--brand);background:var(--white);box-shadow:0 0 0 3px var(--brand-bg);
+}
+.form-row textarea,.form-grid textarea{min-height:65px;resize:vertical;}
+.form-row-2{display:grid;grid-template-columns:1fr 1fr;gap:.75rem;margin-bottom:.75rem;}
+.form-row-2 label{display:block;font-size:.72rem;font-weight:600;color:var(--ink);margin-bottom:.3rem;}
+.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:.7rem;}
+
+/* ── TOAST ── */
+#toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%) translateY(100px);background:var(--ink);color:#fff;padding:.6rem 1.25rem;border-radius:99px;font-size:.82rem;font-weight:500;z-index:9999;transition:transform .25s;box-shadow:var(--shadow-md);white-space:nowrap;}
+#toast.show{transform:translateX(-50%) translateY(0);}
+
+/* ── BDC ── */
+.bdc-rem-btn{padding:.25rem .6rem;border-radius:6px;border:1px solid var(--border);background:var(--white);color:var(--sub);font-family:var(--f);font-size:.72rem;font-weight:500;cursor:pointer;transition:all .15s;}
+.bdc-rem-btn.active{background:var(--brand);color:#fff;border-color:var(--brand);}
+.bdc-rem-btn:hover:not(.active){background:var(--bg);color:var(--ink);}
+.bdc-mode-btn{padding:.25rem .6rem;border-radius:6px;border:1px solid var(--border);background:var(--white);color:var(--sub);font-family:var(--f);font-size:.72rem;font-weight:500;cursor:pointer;transition:all .15s;}
+.bdc-mode-btn.active{background:var(--brand);color:#fff;border-color:var(--brand);}
+.bdc-tr-has-qty td{background:var(--brand-bg)!important;}
+.bdc-tr-hidden{display:none!important;}
+input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none;}
+
+/* ── TAGS ── */
+.tag{display:inline-flex;align-items:center;padding:2px 9px;border-radius:99px;font-size:.68rem;font-weight:600;}
+.tag-green{background:var(--brand-bg);color:var(--brand2);}
+.tag-blue{background:#eff6ff;color:#1d4ed8;}
+.tag-amber{background:var(--amber-bg);color:var(--amber);}
+.tag-red{background:var(--red-bg);color:var(--red);}
+
+/* ── ACTIVITÉ ── */
+.act-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0;margin-top:5px;}
+
+/* ── RESPONSIVE ── */
+@media(max-width:768px){
+  .sidebar{display:none;}
+  .stats-grid{grid-template-columns:1fr 1fr;}
+  .topbar-center{display:none;}
+  .section{padding:1rem;}
+  .form-row-2,.form-grid{grid-template-columns:1fr;}
+}
+@keyframes spin{to{transform:rotate(360deg)}}
+</style>
+</head>
+<body>
+
+<!-- LOGIN -->
+<div id="login-screen">
+  <div class="login-box">
+    <div class="login-logo">
+      <div class="login-logo-ico">🌿</div>
+      <div class="login-logo-name">BIO N TRUFFE</div>
+      <div class="login-logo-sub">Espace commercial · Eridan BNT</div>
+    </div>
+    <div class="login-subtitle" id="login-subtitle">Connexion à votre espace</div>
+    <div class="login-err" id="login-err"></div>
+    <div class="login-field"><label>Email</label><input type="email" id="l-email" placeholder="votre@email.fr" onkeydown="if(event.key==='Enter')doLogin()"></div>
+    <div class="login-field"><label>Mot de passe</label><input type="password" id="l-pwd" placeholder="••••••••" onkeydown="if(event.key==='Enter')doLogin()"></div>
+    <button class="btn-login" onclick="doLogin()">Se connecter →</button>
+  </div>
+</div>
+
+<!-- APP SHELL -->
+<div id="app-shell" class="hidden" style="display:flex;flex-direction:column;flex:1;min-height:100vh;">
+
+<!-- TOPBAR -->
+<header class="topbar">
+  <div class="brand">
+    <div class="brand-ico">🌿</div>
+    <div>
+      <div class="brand-name">BIO N TRUFFE</div>
+      <div class="brand-sub">CRM Commercial · Eridan BNT</div>
+    </div>
+  </div>
+  <div class="topbar-center">
+    <button class="t-tab active" onclick="showSection('dashboard',this)">📊 Dashboard</button>
+    <button class="t-tab" onclick="showSection('bdc',this)">📋 Bon de commande</button>
+    <button class="t-tab" onclick="showSection('clients',this)">👥 Base clients</button>
+    <button class="t-tab" onclick="showSection('commandes',this)">📦 Commandes</button>
+    <button class="t-tab" onclick="showSection('mailing',this)">📧 Mailing</button>
+  </div>
+  <div class="topbar-right">
+    <div class="sync-indicator"><div class="sync-dot" id="sync-dot"></div><span id="sync-label">Connexion…</span></div>
+    <span class="badge-count" id="badge-prospects">0</span>
+    <div class="avatar" id="avatar-btn" onclick="toggleAvatarMenu()">
+      <span id="avatar-initials">CS</span>
+      <div class="avatar-menu" id="avatar-menu">
+        <div class="avatar-menu-item" style="font-weight:600;color:var(--g900);" id="menu-email">—</div>
+        <div class="avatar-menu-sep"></div>
+        <div class="avatar-menu-item danger" onclick="doLogout()">⏻ Déconnexion</div>
+      </div>
+    </div>
+  </div>
+</header>
+
+<div class="app">
+
+<!-- SIDEBAR -->
+<nav class="sidebar">
+  <div class="nav-section">
+    <div class="nav-label">Vue générale</div>
+    <div class="nav-item active" onclick="showSection('dashboard',this)">📊 Dashboard</div>
+    <div class="nav-item" onclick="showSection('bdc',this)">📋 Bon de commande</div>
+  </div>
+  <div class="nav-divider"></div>
+  <div class="nav-section">
+    <div class="nav-label">CRM</div>
+    <div class="nav-item" onclick="showSection('clients',this)">👥 Base clients <span class="nav-badge" id="nb-clients">0</span></div>
+    <div class="nav-item" onclick="showSection('commandes',this)">📦 Commandes <span class="nav-badge" id="nb-commandes">0</span></div>
+    <div class="nav-item" onclick="showSection('prospects',this)">🔵 Prospects <span class="nav-badge" id="nb-prospects">0</span></div>
+  </div>
+  <div class="nav-divider"></div>
+  <div class="nav-section">
+    <div class="nav-label">Outils</div>
+    <div class="nav-item" onclick="showSection('mailing',this)">📧 Mailing</div>
+  </div>
+  <div class="sidebar-footer">
+    <div style="display:flex;align-items:center;gap:9px;">
+      <div class="sf-avatar" id="sb-avatar">CS</div>
+      <div><div class="sf-name" id="sb-name">Christophe SPOTO</div><div style="font-size:.65rem;color:var(--blue-p400);">Administrateur</div></div>
+    </div>
+  </div>
+</nav>
+
+<!-- MAIN CONTENT -->
+<main class="main">
+
+<!-- ══ DASHBOARD ══ -->
+<div id="sec-dashboard" class="section">
+  <div class="page-header">
+    <div>
+      <div class="page-title">Tableau de bord</div>
+      <div class="page-sub">BIO N TRUFFE · Eridan BNT SARL · Tarif V15 — 01/03/2026</div>
+    </div>
+    <button class="btn btn-primary" onclick="showSection('bdc',null)">📋 Nouveau BDC</button>
+  </div>
+  <div class="stats-grid">
+    <div class="stat-card"><div class="stat-label">Clients</div><div class="stat-val" id="stat-clients">—</div><div class="stat-delta">base clients</div></div>
+    <div class="stat-card"><div class="stat-label">Prospects</div><div class="stat-val" id="stat-prospects">—</div><div class="stat-delta">en qualification</div></div>
+    <div class="stat-card"><div class="stat-label">Commandes</div><div class="stat-val" id="stat-commandes">—</div><div class="stat-delta">BDC envoyés</div></div>
+    <div class="stat-card"><div class="stat-label">CA Total HT</div><div class="stat-val" id="stat-ca">—</div><div class="stat-delta">toutes commandes</div></div>
+  </div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;">
+    <div class="card">
+      <div class="card-head"><span class="card-title">📦 Dernières commandes</span><button class="btn btn-ghost" style="font-size:.72rem" onclick="showSection('commandes',null)">Voir tout →</button></div>
+      <div style="padding:.5rem;" id="dash-last-commandes"><div style="padding:1rem;text-align:center;color:var(--g400);font-size:.8rem;">Aucune commande</div></div>
+    </div>
+    <div class="card">
+      <div class="card-head"><span class="card-title">🕐 Activité récente</span></div>
+      <div id="dash-activite" style="padding:.5rem;"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ BON DE COMMANDE ══ -->
+<div id="sec-bdc" class="section hidden" style="padding:0;overflow:hidden;">
+  <div style="background:var(--white);border-bottom:1px solid var(--border);padding:.55rem 1rem;display:flex;align-items:center;gap:8px;flex-shrink:0;flex-wrap:wrap;">
+    <div style="font-family:var(--fdisp);font-size:.9rem;color:var(--g900);flex:1;min-width:140px;">🌿 Bon de Commande BIO N TRUFFE — Tarif V15 2026</div>
+    <div style="display:flex;align-items:center;gap:6px;font-size:.72rem;color:var(--amber);">
+      <span>📄 PDF tarif joint automatiquement</span>
+    </div>
+    <button class="btn btn-ghost" style="font-size:.72rem;padding:.3rem .7rem;" onclick="resetBDC()">🗑 Effacer</button>
+    <button class="btn btn-primary" style="font-size:.72rem;padding:.3rem .7rem;" onclick="bdcSendOrder()">Envoyer la commande</button>
+  </div>
+  <!-- Bandeau recap sticky -->
+  <div id="bdc-recap-bar" style="display:none;background:var(--navy);border-bottom:2px solid var(--mid);padding:.4rem .8rem;overflow-x:auto;white-space:nowrap;flex-shrink:0;">
+    <span style="font-size:.65rem;font-weight:700;color:#93c5fd;text-transform:uppercase;letter-spacing:.08em;margin-right:.6rem;">📋 En cours :</span>
+    <span id="bdc-recap-items" style="font-size:.72rem;color:#e2e8f0;"></span>
+    <span id="bdc-recap-total" style="font-size:.75rem;font-weight:700;color:#4ade80;margin-left:1rem;"></span>
+  </div>
+  <div style="display:flex;flex:1;overflow:hidden;">
+    <!-- Sidebar BDC -->
+    <div style="width:255px;background:var(--white);border-right:1px solid var(--border);display:flex;flex-direction:column;flex-shrink:0;overflow-y:auto;padding:.9rem;">
+      <div style="font-size:.63rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--g500);margin-bottom:.5rem;">Informations client</div>
+      <div style="margin-bottom:.5rem;"><label style="display:block;font-size:.65rem;font-weight:600;color:var(--g600);letter-spacing:.04em;text-transform:uppercase;margin-bottom:.2rem;">Magasin *</label><input type="text" id="bdc-magasin" placeholder="Nom du magasin" style="width:100%;background:#f8faff;border:1px solid var(--border-med);border-radius:6px;padding:.4rem .6rem;color:var(--ink);font-family:var(--inter);font-size:.78rem;outline:none;"></div>
+      <div style="margin-bottom:.5rem;"><label style="display:block;font-size:.65rem;font-weight:600;color:var(--g600);letter-spacing:.04em;text-transform:uppercase;margin-bottom:.2rem;">N° Client</label><input type="text" id="bdc-numclient" placeholder="BNT-0001" style="width:100%;background:#f8faff;border:1px solid var(--border-med);border-radius:6px;padding:.4rem .6rem;color:var(--ink);font-family:var(--inter);font-size:.78rem;outline:none;"></div>
+      <div style="margin-bottom:.5rem;"><label style="display:block;font-size:.65rem;font-weight:600;color:var(--g600);letter-spacing:.04em;text-transform:uppercase;margin-bottom:.2rem;">Contact</label><input type="text" id="bdc-contact" placeholder="Prénom Nom" style="width:100%;background:#f8faff;border:1px solid var(--border-med);border-radius:6px;padding:.4rem .6rem;color:var(--ink);font-family:var(--inter);font-size:.78rem;outline:none;"></div>
+      <div style="margin-bottom:.5rem;"><label style="display:block;font-size:.65rem;font-weight:600;color:var(--g600);letter-spacing:.04em;text-transform:uppercase;margin-bottom:.2rem;">Email *</label><input type="email" id="bdc-email" placeholder="votre@email.fr" style="width:100%;background:#f8faff;border:1px solid var(--border-med);border-radius:6px;padding:.4rem .6rem;color:var(--ink);font-family:var(--inter);font-size:.78rem;outline:none;"></div>
+      <div style="margin-bottom:.5rem;"><label style="display:block;font-size:.65rem;font-weight:600;color:var(--g600);letter-spacing:.04em;text-transform:uppercase;margin-bottom:.2rem;">Téléphone</label><input type="tel" id="bdc-tel" placeholder="06 xx xx xx xx" style="width:100%;background:#f8faff;border:1px solid var(--border-med);border-radius:6px;padding:.4rem .6rem;color:var(--ink);font-family:var(--inter);font-size:.78rem;outline:none;"></div>
+      <div style="margin-bottom:.8rem;"><label style="display:block;font-size:.65rem;font-weight:600;color:var(--g600);letter-spacing:.04em;text-transform:uppercase;margin-bottom:.2rem;">Date livraison souhaitée</label><input type="date" id="bdc-datelivraison" style="width:100%;background:#f8faff;border:1px solid var(--border-med);border-radius:6px;padding:.4rem .6rem;color:var(--ink);font-family:var(--inter);font-size:.78rem;outline:none;"></div>
+      <div style="margin-bottom:.8rem;"><label style="display:block;font-size:.65rem;font-weight:600;color:var(--g600);letter-spacing:.04em;text-transform:uppercase;margin-bottom:.2rem;">Commentaire</label><input type="text" id="bdc-comment" placeholder="Instructions…" style="width:100%;background:#f8faff;border:1px solid var(--border-med);border-radius:6px;padding:.4rem .6rem;color:var(--ink);font-family:var(--inter);font-size:.78rem;outline:none;"></div>
+      <div style="font-size:.63rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--g500);margin-bottom:.5rem;">Remise groupement</div>
+      <div style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:.8rem;" id="bdc-remise-btns">
+        <button class="bdc-rem-btn active" onclick="bdcSetRemise(0,this)">Aucune</button>
+        <button class="bdc-rem-btn" onclick="bdcSetRemise(5,this)">−5%</button>
+        <button class="bdc-rem-btn" onclick="bdcSetRemise(10,this)">−10%</button>
+        <button class="bdc-rem-btn" onclick="bdcSetRemise(15,this)">−15%</button>
+        <button class="bdc-rem-btn" onclick="bdcSetRemise(20,this)">−20%</button>
+        <input type="number" id="bdc-remise-custom" min="0" max="99" step="0.5" placeholder="%" style="width:50px;padding:3px 5px;border:1.5px solid var(--border-med);border-radius:6px;background:var(--surface2);color:var(--g800);font-family:var(--fd);font-size:.72rem;outline:none;" oninput="bdcSetRemise(parseFloat(this.value)||0,null)">
+      </div>
+      <div style="font-size:.63rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--g500);margin-bottom:.5rem;">Récapitulatif</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:4px;margin-bottom:.6rem;">
+        <div style="background:var(--surface2);border-radius:6px;padding:.35rem;text-align:center;"><div style="font-size:.95rem;font-weight:600;color:var(--g900);" id="bdc-nb-refs">0</div><div style="font-size:.58rem;color:var(--g500);text-transform:uppercase;">Réf.</div></div>
+        <div style="background:var(--surface2);border-radius:6px;padding:.35rem;text-align:center;"><div style="font-size:.95rem;font-weight:600;color:var(--g900);" id="bdc-nb-colis">0</div><div style="font-size:.58rem;color:var(--g500);text-transform:uppercase;">Colis</div></div>
+        <div style="background:var(--surface2);border-radius:6px;padding:.35rem;text-align:center;"><div style="font-size:.95rem;font-weight:600;color:var(--g900);" id="bdc-nb-uvc">0</div><div style="font-size:.58rem;color:var(--g500);text-transform:uppercase;">UVC</div></div>
+      </div>
+      <div style="background:var(--light);border:1px solid rgba(37,99,235,.15);border-radius:7px;padding:.7rem;">
+        <div style="display:flex;justify-content:space-between;font-size:.72rem;color:var(--g500);padding:.15rem 0;">Total HT brut<span style="font-weight:600;color:var(--g800);" id="bdc-total-brut">0,00€</span></div>
+        <div style="display:flex;justify-content:space-between;font-size:.72rem;color:var(--g500);padding:.15rem 0;">Remise<span style="font-weight:600;color:var(--g800);" id="bdc-total-remise">0,00€</span></div>
+        <div style="display:flex;justify-content:space-between;font-size:.72rem;color:var(--g500);padding:.15rem 0;">TVA 5,5%<span style="font-weight:600;color:var(--g800);" id="bdc-total-tva">0,00€</span></div>
+        <div style="display:flex;justify-content:space-between;font-size:.82rem;font-weight:600;color:var(--mid);padding:.35rem 0;border-top:1px solid rgba(37,99,235,.15);margin-top:.25rem;">Total HT net<span id="bdc-total-net">0,00€</span></div>
+      </div>
+      <!-- Franco -->
+      <div id="bdc-franco-box" style="margin-top:.5rem;border-radius:6px;padding:.45rem .6rem;font-size:.71rem;background:rgba(37,99,235,.07);border:1px solid rgba(37,99,235,.15);color:var(--mid);">🚚 Franco : 5 colis ou 450€ HT</div>
+      <div id="bdc-alert" style="display:none;border-radius:6px;padding:.5rem .7rem;font-size:.72rem;margin-top:.6rem;line-height:1.4;"></div>
+      <button id="bdc-btn-send" class="btn btn-primary" style="width:100%;justify-content:center;margin-top:.7rem;" onclick="bdcSendOrder()">
+        <div id="bdc-spinner" style="display:none;width:11px;height:11px;border:2px solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;animation:spin .7s linear infinite;margin-right:5px;"></div>
+        <span id="bdc-send-label">📄 Envoyer + PDF joint</span>
+      </button>
+    </div>
+    <!-- Catalogue -->
+    <div style="flex:1;display:flex;flex-direction:column;overflow:hidden;">
+      <div style="padding:.5rem .7rem;background:#f8faff;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
+        <div style="display:flex;align-items:center;gap:6px;background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:.32rem .6rem;flex:1;min-width:180px;">
+          <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="#64748b" stroke-width="1.5"><circle cx="6.5" cy="6.5" r="4.5"/><path d="M10.5 10.5L14 14"/></svg>
+          <input type="text" id="bdc-search" placeholder="Rechercher produit (désignation, EAN…)" oninput="bdcDoSearch()" style="background:transparent;border:none;outline:none;color:var(--g800);font-family:var(--fd);font-size:.75rem;width:100%;">
+        </div>
+        <div style="display:flex;gap:3px;">
+          <button class="bdc-mode-btn active" data-mode="all" onclick="bdcSetMode(this)">Tout</button>
+          <button class="bdc-mode-btn" data-mode="libelle" onclick="bdcSetMode(this)">Nom</button>
+          <button class="bdc-mode-btn" data-mode="ean" onclick="bdcSetMode(this)">EAN</button>
+        </div>
+        <span id="bdc-search-count" style="font-size:.68rem;color:var(--g500);"></span>
+        <button onclick="bdcClearSearch()" style="padding:.22rem .55rem;border-radius:4px;border:1px solid rgba(239,68,68,.2);background:transparent;color:#ef4444;font-family:var(--fd);font-size:.68rem;cursor:pointer;">✕</button>
+      </div>
+      <div style="flex:1;overflow:auto;">
+        <table id="bdc-table" style="width:100%;border-collapse:collapse;font-size:.73rem;">
+          <thead style="position:sticky;top:0;z-index:10;">
+            <tr>
+              <th>EAN</th><th style="min-width:220px;">Désignation</th><th>Poids</th><th>PCB</th><th>TVA</th><th>Prix HT/colis</th><th id="th-qty">Qté (colis)</th><th>Rem.%</th><th id="th-uvc">UVC</th><th>Total HT</th>
+            </tr>
+          </thead>
+          <tbody id="bdc-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ BASE CLIENTS (style MDM V3) ══ -->
+<div id="sec-clients" class="section hidden">
+  <div class="page-header">
+    <div>
+      <div class="page-title">Base clients <span id="cdb-total" style="font-size:.72rem;font-weight:400;color:var(--sub);margin-left:8px;">0 contacts</span></div>
+      <div class="page-sub">Fiches clients BIO N TRUFFE · Eridan BNT</div>
+    </div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;">
+      <button class="btn btn-ghost" onclick="cdbExportCsv()" style="font-size:.78rem;">📥 Export CSV</button>
+      <button class="btn btn-primary" onclick="cdbOpenEdit(null)" style="font-size:.78rem;">+ Nouveau contact</button>
+    </div>
+  </div>
+  <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;padding:.65rem 1rem;background:var(--white);border-radius:10px;margin-bottom:.85rem;border:1px solid var(--border);">
+    <input type="text" id="cdb-search" oninput="cdbRender()" placeholder="🔎 Nom, ville, email, code…" style="flex:1;min-width:180px;background:var(--bg);border:1.5px solid var(--border);border-radius:8px;padding:.4rem .75rem;font-size:.82rem;font-family:var(--f);outline:none;color:var(--ink);">
+    <select id="cdb-filter-group" onchange="cdbRender()" style="font-size:.8rem;background:var(--bg);border:1.5px solid var(--border);border-radius:8px;padding:.4rem .6rem;font-family:var(--f);outline:none;color:var(--ink);"><option value="">Tous groupes</option></select>
+    <select id="cdb-filter-dept" onchange="cdbRender()" style="font-size:.8rem;background:var(--bg);border:1.5px solid var(--border);border-radius:8px;padding:.4rem .6rem;font-family:var(--f);outline:none;color:var(--ink);"><option value="">Tous dép.</option></select>
+    <select id="cdb-filter-act" onchange="cdbRender()" style="font-size:.8rem;background:var(--bg);border:1.5px solid var(--border);border-radius:8px;padding:.4rem .6rem;font-family:var(--f);outline:none;color:var(--ink);">
+      <option value="">Tous</option><option value="prospect">🔵 Prospects</option>
+      <option value="has-email">Avec email</option><option value="no-email">Sans email</option>
+      <option value="with-orders">Avec commandes</option>
+    </select>
+    <button class="btn btn-ghost" onclick="cdbClearFilters()" style="font-size:.74rem;padding:.35rem .7rem;">✕</button>
+    <span style="font-size:.72rem;color:var(--sub);" id="cdb-count-filtered">—</span>
+  </div>
+  <div class="card">
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr>
+          <th style="width:32px;"><input type="checkbox" id="cdb-check-all" onchange="cdbToggleAll(this.checked)" style="accent-color:var(--brand);"></th>
+          <th>Code</th><th>Raison sociale</th><th>Groupe</th><th>Ville</th>
+          <th>Email</th><th>Téléphone</th>
+          <th style="text-align:right;">Dernière cmd</th>
+          <th style="text-align:right;">CA BDC</th>
+          <th style="width:36px;"></th>
+        </tr></thead>
+        <tbody id="cdb-tbody"></tbody>
+      </table>
+    </div>
+    <div id="cdb-pagination"></div>
+  </div>
+</div>
+
+<!-- MODALE FICHE CLIENT (style MDM V3) -->
+<div class="modal-bg hidden" id="cdb-modal-edit">
+  <div class="modal modal-wide">
+    <div class="modal-head" style="background:var(--white);border-radius:16px 16px 0 0;">
+      <div style="display:flex;align-items:center;gap:10px;flex:1;min-width:0;">
+        <div id="cdb-edit-avatar" style="width:38px;height:38px;border-radius:10px;background:var(--brand-bg);border:1.5px solid #bbf7d0;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:var(--brand2);flex-shrink:0;">?</div>
+        <div style="min-width:0;flex:1;">
+          <div class="modal-title" id="cdb-edit-title" style="color:var(--ink);">Fiche contact</div>
+          <div id="cdb-edit-subtitle" style="font-size:.7rem;color:var(--sub);margin-top:1px;">—</div>
+        </div>
+        <div style="display:flex;gap:8px;flex-shrink:0;">
+          <div style="text-align:center;padding:.3rem .7rem;background:var(--brand-bg);border-radius:8px;border:1px solid #bbf7d0;">
+            <div style="font-size:.58rem;font-weight:600;color:var(--brand2);text-transform:uppercase;letter-spacing:.06em;">CA BDC</div>
+            <div style="font-size:.9rem;font-weight:700;color:var(--brand2);" id="cdb-stat-ca">—</div>
+          </div>
+          <div style="text-align:center;padding:.3rem .7rem;background:var(--bg);border-radius:8px;border:1px solid var(--border);">
+            <div style="font-size:.58rem;font-weight:600;color:var(--sub);text-transform:uppercase;letter-spacing:.06em;">Cmds</div>
+            <div style="font-size:.9rem;font-weight:700;color:var(--ink);" id="cdb-stat-cmds">—</div>
+          </div>
+          <div style="text-align:center;padding:.3rem .7rem;background:var(--bg);border-radius:8px;border:1px solid var(--border);">
+            <div style="font-size:.58rem;font-weight:600;color:var(--sub);text-transform:uppercase;letter-spacing:.06em;">Dernière</div>
+            <div style="font-size:.8rem;font-weight:600;color:var(--ink);" id="cdb-stat-last">—</div>
+          </div>
+          <button onclick="cdbOpenBDCFromModal()" style="background:var(--brand);border:none;border-radius:8px;padding:.3rem .9rem;font-size:.75rem;font-weight:600;color:#fff;cursor:pointer;flex-shrink:0;">🛒 BDC</button>
+        </div>
+      </div>
+      <button class="close-btn" onclick="document.getElementById('cdb-modal-edit').classList.add('hidden')" style="margin-left:8px;">✕</button>
+    </div>
+    <!-- Onglets -->
+    <div style="display:flex;border-bottom:1px solid var(--border);padding:0 1.25rem;background:var(--bg);">
+      <button class="cdb-tab" data-tab="infos" onclick="cdbSwitchTab('infos')" style="padding:.6rem 1rem;border:none;background:transparent;font-family:var(--f);font-size:.82rem;font-weight:600;cursor:pointer;color:var(--brand2);border-bottom:2px solid var(--brand);margin-bottom:-1px;">Informations</button>
+      <button class="cdb-tab" data-tab="ca" onclick="cdbSwitchTab('ca')" style="padding:.6rem 1rem;border:none;background:transparent;font-family:var(--f);font-size:.82rem;font-weight:500;cursor:pointer;color:var(--sub);border-bottom:2px solid transparent;margin-bottom:-1px;">CA & Historique</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="cdb-edit-id">
+      <!-- Onglet Infos -->
+      <div id="cdb-tab-infos">
+        <div class="form-grid">
+          <div><label class="lb">Code client</label><input type="text" id="cdb-edit-numClient" placeholder="BNT-0001"></div>
+          <div><label class="lb">Statut</label><select id="cdb-edit-prospect"><option value="0">✅ Client</option><option value="1">🔵 Prospect</option></select></div>
+          <div style="grid-column:span 2;"><label class="lb">Raison sociale *</label><input type="text" id="cdb-edit-nom"></div>
+          <div style="grid-column:span 2;"><label class="lb">Email</label><input type="email" id="cdb-edit-email"></div>
+          <div><label class="lb">Téléphone</label><input type="text" id="cdb-edit-telephone"></div>
+          <div><label class="lb">Groupe / Réseau</label><input type="text" id="cdb-edit-groupe" placeholder="Biocoop, Biomonde…"></div>
+          <div><label class="lb">Contact principal</label><input type="text" id="cdb-edit-contact" placeholder="Prénom Nom"></div>
+          <div><label class="lb">Remise client (%)</label><input type="number" id="cdb-edit-remise" min="0" max="50" step="0.5" value="0"></div>
+          <div style="grid-column:span 2;"><label class="lb">Adresse</label><input type="text" id="cdb-edit-adresse"></div>
+          <div><label class="lb">Code postal</label><input type="text" id="cdb-edit-cp"></div>
+          <div><label class="lb">Ville</label><input type="text" id="cdb-edit-ville"></div>
+          <div><label class="lb">SIRET</label><input type="text" id="cdb-edit-siret"></div>
+          <div><label class="lb">N° TVA intracommunautaire</label><input type="text" id="cdb-edit-tva" placeholder="FR00 123456789"></div>
+          <div style="grid-column:span 2;"><label class="lb">Notes internes</label><textarea id="cdb-edit-notes" style="min-height:60px;"></textarea></div>
+        </div>
+      </div>
+      <!-- Onglet CA -->
+      <div id="cdb-tab-ca" style="display:none;">
+        <div id="cdb-edit-ca-content">
+          <div style="text-align:center;padding:2rem;color:var(--sub);font-size:.85rem;">Les commandes BDC envoyées via ce CRM apparaîtront ici automatiquement.</div>
+        </div>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-danger" id="cdb-edit-delete" onclick="cdbDelete()" style="margin-right:auto;display:none;">🗑 Supprimer</button>
+      <button class="btn btn-ghost" onclick="document.getElementById('cdb-modal-edit').classList.add('hidden')">Annuler</button>
+      <button class="btn btn-primary" onclick="cdbSave()">💾 Enregistrer</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL CLIENT -->
+<div class="modal-bg hidden" id="modal-client">
+  <div class="modal modal-wide">
+    <div class="modal-head">
+      <span class="modal-title" id="modal-client-title">Nouveau client</span>
+      <button class="close-btn" onclick="closeModal('client')">✕</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="c-edit-id">
+      <div class="form-grid">
+        <div><label class="lb">Code Client (ex: BNT-0001)</label><input type="text" id="c-numClient" placeholder="BNT-0001"></div>
+        <div><label class="lb">Statut</label><select id="c-statut"><option value="client">✅ Client</option><option value="prospect">🔵 Prospect</option></select></div>
+        <div style="grid-column:span 2;"><label class="lb">Raison sociale *</label><input type="text" id="c-raison"></div>
+        <div><label class="lb">Contact principal</label><input type="text" id="c-contact" placeholder="Prénom Nom"></div>
+        <div><label class="lb">Téléphone</label><input type="tel" id="c-tel" placeholder="06 XX XX XX XX"></div>
+        <div style="grid-column:span 2;"><label class="lb">Email</label><input type="email" id="c-email"></div>
+        <div style="grid-column:span 2;"><label class="lb">Adresse</label><input type="text" id="c-adresse" placeholder="Rue et numéro"></div>
+        <div><label class="lb">Code postal</label><input type="text" id="c-cp" placeholder="84000"></div>
+        <div><label class="lb">Ville</label><input type="text" id="c-ville" placeholder="Avignon"></div>
+        <div><label class="lb">Profil revendeur</label>
+          <select id="c-profil">
+            <option>Biocoop</option><option>Biomonde</option><option>Indépendant</option>
+            <option>Restaurateur</option><option>Grossiste</option><option>Caviste</option><option>Épicerie fine</option>
+          </select>
+        </div>
+        <div><label class="lb">Remise (%)</label><input type="number" id="c-remise" min="0" max="50" step="0.5" value="0"></div>
+        <div><label class="lb">SIRET</label><input type="text" id="c-siret" placeholder="XXX XXX XXX XXXXX"></div>
+        <div><label class="lb">N° TVA intracommunautaire</label><input type="text" id="c-tva-intra" placeholder="FR 00 XXX XXX XXX"></div>
+        <div style="grid-column:span 2;"><label class="lb">Notes internes</label><textarea id="c-notes" placeholder="Historique, conditions particulières…"></textarea></div>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-danger" id="c-delete-btn" onclick="deleteClient()" style="margin-right:auto;display:none;">🗑 Supprimer</button>
+      <button class="btn btn-ghost" onclick="closeModal('client')">Annuler</button>
+      <button class="btn btn-primary" onclick="saveClient()">💾 Enregistrer</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL PROSPECT -->
+<div class="modal-bg hidden" id="modal-prospect">
+  <div class="modal">
+    <div class="modal-head"><span class="modal-title" id="modal-prospect-title">Nouveau prospect</span><button class="close-btn" onclick="closeModal('prospect')">✕</button></div>
+    <div class="modal-body">
+      <input type="hidden" id="p-edit-id">
+      <div class="form-row"><label>Raison sociale *</label><input type="text" id="p-raison" placeholder="Épicerie du Soleil"></div>
+      <div class="form-row-2"><div><label>Contact</label><input type="text" id="p-contact" placeholder="Prénom Nom"></div><div><label>Téléphone</label><input type="tel" id="p-tel" placeholder="06 XX XX XX XX"></div></div>
+      <div class="form-row"><label>Email</label><input type="email" id="p-email" placeholder="contact@magasin.fr"></div>
+      <div class="form-row-2"><div><label>Ville</label><input type="text" id="p-ville" placeholder="Avignon"></div><div><label>Code postal</label><input type="text" id="p-cp" placeholder="84000"></div></div>
+      <div class="form-row-2">
+        <div><label>Statut</label><select id="p-statut"><option>Nouveau</option><option>Contacté</option><option>Relancé</option><option>Qualifié</option></select></div>
+        <div><label>Profil</label><select id="p-profil"><option>Biocoop</option><option>Biomonde</option><option>Indépendant</option><option>Restaurateur</option><option>Grossiste</option></select></div>
+      </div>
+      <div class="form-row"><label>Notes</label><textarea id="p-notes" placeholder="Contexte, observations…"></textarea></div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-danger" id="p-delete-btn" onclick="deleteProspect()" style="margin-right:auto;display:none;">🗑 Supprimer</button>
+      <button class="btn btn-ghost" onclick="closeModal('prospect')">Annuler</button>
+      <button class="btn btn-primary" onclick="saveProspect()">Enregistrer</button>
+    </div>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div id="toast"></div>
+
+<!-- SCRIPTS -->
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+
+<script>
+// ══════════════════════════════════════════════════
+//  CONFIG FIREBASE BNT
+// ══════════════════════════════════════════════════
+// ⚠️ REMPLACER par votre projet Firebase BNT
+const BNT_FIREBASE_CONFIG = {
+  apiKey:            "AIzaSyBzJqYmivZ-dJxLDfPgujaTdPa4FsuRO4c",
+  authDomain:        "bio-n-truffe.firebaseapp.com",
+  projectId:         "bio-n-truffe",
+  storageBucket:     "bio-n-truffe.firebasestorage.app",
+  messagingSenderId: "129941520406",
+  appId:             "1:129941520406:web:bd70f730d72856e68a7537"
+};
+
+// ══════════════════════════════════════════════════
+//  CATALOGUE BNT — Tarif V15 — 01/03/2026
+//  Source : 2026-03-01_TG_MBS_BIONTRUFFE_2026_Pi_v15.pdf
+// ══════════════════════════════════════════════════
+const PRODUCTS = [
+  { code:'BNT-001', ean:'3770028175086', libelle:'TARTUFFADE À LA TRUFFE NOIRE 2% BIO',                poids:'80g',   pcb:12, pu_ht:8.50,  tva:5.5, certif:'AB Bio' },
+  { code:'BNT-002', ean:'3770028175079', libelle:'DÉLICE DE CÈPES ET TRUFFE NOIRE 2% BIO',             poids:'80g',   pcb:12, pu_ht:8.50,  tva:5.5, certif:'AB Bio' },
+  { code:'BNT-003', ean:'3770028175062', libelle:'SAUCE CRÉMÉE À LA TRUFFE NOIRE 1,5% BIO',            poids:'80g',   pcb:12, pu_ht:8.50,  tva:5.5, certif:'AB Bio' },
+  { code:'BNT-004', ean:'3770028175055', libelle:'CRÈME DE PARMESAN ET TRUFFE NOIRE 1,5% BIO',         poids:'80g',   pcb:12, pu_ht:8.50,  tva:5.5, certif:'AB Bio' },
+  { code:'BNT-005', ean:'3770028175017', libelle:'CRÈME DE BALSAMIQUE À LA TRUFFE NOIRE 1,1% BIO',     poids:'150ml', pcb:12, pu_ht:10.50, tva:5.5, certif:'AB Bio' },
+  { code:'BNT-006', ean:'3770028175147', libelle:'CRÈME DE BALSAMIQUE À LA TRUFFE NOIRE 1,1% BIO',     poids:'100ml', pcb:12, pu_ht:10.50, tva:5.5, certif:'AB Bio' },
+  { code:'BNT-007', ean:'3770028175109', libelle:"HUILE D'OLIVE VIERGE EXTRA Aromatisée TRUFFE NOIRE BIO", poids:'250ml', pcb:12, pu_ht:19.00, tva:5.5, certif:'AB Bio' },
+  { code:'BNT-008', ean:'3770028175116', libelle:"HUILE D'OLIVE VIERGE EXTRA Aromatisée TRUFFE NOIRE BIO", poids:'100ml', pcb:12, pu_ht:11.00, tva:5.5, certif:'AB Bio' },
+  { code:'BNT-009', ean:'3770028175000', libelle:"MIEL D'ACCACIA À LA TRUFFE NOIRE 1,1% BIO",          poids:'100g',  pcb:12, pu_ht:10.50, tva:5.5, certif:'AB Bio' },
+  { code:'BNT-010', ean:'3770028175130', libelle:'TRUFFES NOIRES "TUBER MELANO" BROSSÉES 1ÈRE CUISSON BIO', poids:'20g', pcb:6, pu_ht:25.00, tva:5.5, certif:'AB Bio' },
+  { code:'BNT-011', ean:'3770028175123', libelle:'TRUFFE NOIRE "TUBER MELANO" BRISURES 1ÈRE CUISSON BIO',  poids:'20g', pcb:6, pu_ht:20.00, tva:5.5, certif:'AB Bio' },
+  { code:'BNT-012', ean:'3770028175161', libelle:"DUO CAJOU AMANDE À LA TRUFFE D'ÉTÉ 1,4% BIO — Nouveauté !", poids:'100g', pcb:6, pu_ht:9.50, tva:5.5, certif:'AB Bio', new:true },
+  { code:'BNT-013', ean:'3770028175154', libelle:"CHIPS ARTISANALES À LA TRUFFE D'ÉTÉ 1% BIO — Pomme de Terre France", poids:'100g', pcb:16, pu_ht:3.90, tva:5.5, certif:'AB Bio', new:true },
+  { code:'BNT-014', ean:'3770028175093', libelle:"COFFRET FESTIF AIDES CULINAIRES À LA TRUFFE — Cadeaux clients / CSE / Séminaires (composition sur demande)", poids:'', pcb:1, pu_ht:0, tva:5.5, certif:'AB Bio', surDemande:true }
+];
+
+// Prix HT par unité (pu_ht = prix HT par unité vendue)
+// Pour le BDC on affiche le prix HT par carton = pu_ht * pcb
+// Franco : 5 colis ou 450€ HT
+const FRANCO_COLIS = 5;
+const FRANCO_HT    = 450;
+const TVA_TAUX     = 5.5;
+
+// ══════════════════════════════════════════════════
+//  INIT
+// ══════════════════════════════════════════════════
+let db = null, auth = null, currentUser = null;
+let cache = { clients:[], prospects:[], commandes:[], activite:[] };
+let listeners = [];
+let bdcQtys = {}, bdcRemiseLigne = {}, bdcRemise = 0, bdcSearchMode = 'all', bdcSaisieMode = 'colis';
+
+document.addEventListener('DOMContentLoaded', function() {
+  try {
+    if (!firebase.apps.length) firebase.initializeApp(BNT_FIREBASE_CONFIG);
+    auth = firebase.auth();
+    db   = firebase.firestore();
+    document.getElementById('login-screen').style.display = 'flex';
+    auth.onAuthStateChanged(user => {
+      if (user) { currentUser = user; showApp(); }
+    });
+  } catch(e) {
+    console.error('Firebase init error:', e);
+    // Mode démo sans Firebase
+    showAppDemo();
+  }
+});
+
+async function doLogin() {
+  const email = g('l-email'), pwd = g('l-pwd');
+  setLoginErr('');
+  try {
+    await auth.signInWithEmailAndPassword(email, pwd);
+  } catch(e) {
+    const map = {
+      'auth/user-not-found':'Aucun compte avec cet email.',
+      'auth/wrong-password':'Mot de passe incorrect.',
+      'auth/invalid-email':'Email invalide.',
+      'auth/too-many-requests':'Trop de tentatives. Réessayez plus tard.',
+    };
+    setLoginErr(map[e.code] || 'Erreur : ' + e.code);
+  }
+}
+
+function setLoginErr(msg) { const el=g2('login-err'); el.textContent=msg; el.style.display=msg?'block':'none'; }
+
+async function doLogout() {
+  listeners.forEach(u=>u()); listeners=[];
+  await auth.signOut();
+  cache = { clients:[], prospects:[], commandes:[], activite:[] };
+  document.getElementById('app-shell').classList.add('hidden');
+  document.getElementById('login-screen').style.display = 'flex';
+}
+
+function showApp() {
+  document.getElementById('login-screen').style.display = 'none';
+  const shell = document.getElementById('app-shell');
+  shell.classList.remove('hidden');
+  shell.style.display = 'flex';
+  const nom = currentUser.displayName || currentUser.email.split('@')[0];
+  const ini = nom.trim().split(/\s+/).slice(0,2).map(w=>w[0]).join('').toUpperCase();
+  s2('avatar-initials', ini); s2('sb-avatar', ini); s2('sb-name', nom); s2('menu-email', currentUser.email);
+  startListeners();
+  startContactsListener();
+  buildTable();
+}
+
+function showAppDemo() {
+  // Mode sans Firebase (pour tests)
+  document.getElementById('login-screen').style.display = 'none';
+  const shell = document.getElementById('app-shell');
+  shell.classList.remove('hidden');
+  shell.style.display = 'flex';
+  buildTable();
+  refreshDashboard();
+}
+
+// ══════════════════════════════════════════════════
+//  FIRESTORE LISTENERS
+// ══════════════════════════════════════════════════
+function startListeners() {
+  if (!db) return;
+  setSyncing(true);
+  let loaded = 0;
+  const onLoad = () => { loaded++; if(loaded>=3){ setSyncing(false); refreshDashboard(); updateBadges(); } };
+  const listen = (col, key, cb) => {
+    const u = db.collection(col).orderBy('createdAt','desc').onSnapshot(snap => {
+      cache[key] = snap.docs.map(d=>({id:d.id,...d.data()}));
+      cb && cb(); onLoad(); updateBadges(); refreshDashboard();
+    }, ()=>onLoad());
+    listeners.push(u);
+  };
+  listen('clients','clients', ()=>{ renderClients && renderClients(); });
+  listen('prospects','prospects', renderProspects);
+  listen('commandes','commandes', renderCommandes);
+  const uAct = db.collection('activite').orderBy('createdAt','desc').limit(15).onSnapshot(snap=>{
+    cache.activite = snap.docs.map(d=>({id:d.id,...d.data()}));
+    renderActivite(); onLoad();
+  }, ()=>onLoad());
+  listeners.push(uAct);
+}
+
+function setSyncing(on) {
+  g2('sync-dot').className = 'sync-dot'+(on?' loading':'');
+  s2('sync-label', on?'Sync…':'Connecté');
+}
+
+function logActivite(msg, color) {
+  if (!db||!currentUser) return;
+  db.collection('activite').add({ msg, color:color||'teal', user:currentUser.email, createdAt:firebase.firestore.FieldValue.serverTimestamp() }).catch(()=>{});
+}
+
+// ══════════════════════════════════════════════════
+//  NAVIGATION
+// ══════════════════════════════════════════════════
+function showSection(id, btn) {
+  document.querySelectorAll('.section').forEach(s=>s.classList.add('hidden'));
+  document.querySelectorAll('.t-tab,.nav-item').forEach(n=>n.classList.remove('active'));
+  document.getElementById('sec-'+id).classList.remove('hidden');
+  if (btn) btn.classList.add('active');
+}
+
+function updateBadges() {
+  s2('badge-prospects', cache.prospects.length);
+  s2('nb-clients', cache.clients.length);
+  s2('nb-commandes', cache.commandes.length);
+  s2('nb-prospects', cache.prospects.length);
+}
+
+function toggleAvatarMenu() {
+  document.getElementById('avatar-menu').classList.toggle('open');
+}
+document.addEventListener('click', e => {
+  if (!e.target.closest('#avatar-btn')) document.getElementById('avatar-menu').classList.remove('open');
+});
+
+// ══════════════════════════════════════════════════
+//  DASHBOARD
+// ══════════════════════════════════════════════════
+function refreshDashboard() {
+  s2('stat-clients', cache.clients.length);
+  s2('stat-prospects', cache.prospects.length);
+  s2('stat-commandes', cache.commandes.length);
+  const caTotal = cache.commandes.reduce((s,o)=>s+(o.montant||0),0);
+  s2('stat-ca', bdcFmt(caTotal));
+
+  // Dernières commandes
+  const lastEl = document.getElementById('dash-last-commandes');
+  const last5 = cache.commandes.slice(0,5);
+  if (!last5.length) { lastEl.innerHTML='<div style="padding:1rem;text-align:center;color:var(--g400);font-size:.8rem;">Aucune commande</div>'; }
+  else {
+    lastEl.innerHTML = last5.map(o=>`
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:.55rem .75rem;border-bottom:1px solid var(--border);">
+        <div>
+          <div style="font-size:.83rem;font-weight:600;color:var(--g900);">${esc(o.clientNom||'—')}</div>
+          <div style="font-size:.7rem;color:var(--g500);">${fmtDate(o.createdAt)} · ${o.nbRefs||0} réf. · ${o.nbColis||0} colis</div>
+        </div>
+        <div style="font-size:.85rem;font-weight:700;color:var(--mid);">${bdcFmt(o.montant||0)}</div>
+      </div>`).join('');
+  }
+  renderActivite();
+}
+
+function renderActivite() {
+  const el = document.getElementById('dash-activite');
+  const colors = {teal:'#2BB5A0',blue:'var(--blue-p500)',amber:'var(--amber)',red:'var(--red)'};
+  if (!cache.activite.length) { el.innerHTML='<div style="padding:1rem;text-align:center;color:var(--g400);font-size:.8rem;">Aucune activité</div>'; return; }
+  el.innerHTML = cache.activite.slice(0,8).map(a=>`
+    <div style="display:flex;align-items:flex-start;gap:.7rem;padding:.55rem .75rem;border-bottom:1px solid var(--border);">
+      <div class="act-dot" style="background:${colors[a.color]||colors.teal};margin-top:5px;"></div>
+      <div><div style="font-size:.8rem;color:var(--g800);">${esc(a.msg||'')}</div><div style="font-size:.68rem;color:var(--g500);margin-top:2px;">${fmtDate(a.createdAt)}</div></div>
+    </div>`).join('');
+}
+
+// ══════════════════════════════════════════════════
+//  BDC — BON DE COMMANDE
+// ══════════════════════════════════════════════════
+function bdcPrixNet(p) {
+  const rl = bdcRemiseLigne[p.code];
+  const rem = (rl!==undefined&&rl!==null&&rl!=='') ? parseFloat(rl)||0 : bdcRemise;
+  return parseFloat((p.pu_ht*(1-rem/100)).toFixed(4));
+}
+function bdcFmt(v) { return (parseFloat(v)||0).toLocaleString('fr-FR',{minimumFractionDigits:2,maximumFractionDigits:2})+'€'; }
+function bdcEsc(s) { return String(s||'').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;'); }
+
+function buildTable() {
+  let rows = '';
+  for (let i=0; i<PRODUCTS.length; i++) {
+    const p = PRODUCTS[i];
+    const qty = bdcQtys[p.code]||0;
+    const pcb = parseFloat(p.pcb)||1;
+    const pNet = bdcPrixNet(p);
+    const pCarton = pNet * pcb;
+    const total = qty ? pNet * qty * pcb : 0;
+    const hasQty = qty>0 ? ' bdc-tr-has-qty' : '';
+    const dCode = bdcEsc(p.code);
+    const dLib = bdcEsc((p.libelle||'').toLowerCase());
+    const dEan = bdcEsc((p.ean||'').toLowerCase());
+    const rl = bdcRemiseLigne[p.code]!==undefined ? bdcRemiseLigne[p.code] : '';
+
+    let prixCell = '';
+    if (p.surDemande) {
+      prixCell = '<span style="font-size:.7rem;color:var(--amber);font-style:italic;">Prix sur demande</span>';
+    } else {
+      prixCell = bdcFmt(pCarton);
+      if (bdcRemise > 0 || (rl!==''&&parseFloat(rl)>0)) {
+        const pBrut = p.pu_ht * pcb;
+        prixCell = `<strong style="color:var(--mid)">${bdcFmt(pCarton)}</strong> <span style="text-decoration:line-through;color:var(--g500);font-size:10px;">${bdcFmt(pBrut)}</span>`;
+      }
+    }
+
+    const newBadge = p.new ? '<span style="font-size:.6rem;font-weight:700;background:#dcfce7;color:#15803d;border-radius:3px;padding:1px 5px;margin-left:4px;">NOUVEAU</span>' : '';
+    const certif = p.certif ? `<span style="font-size:.62rem;padding:1px 5px;border-radius:3px;background:rgba(43,181,160,.15);color:var(--blue);">${p.certif}</span>` : '';
+
+    rows += `<tr class="${hasQty}" data-code="${dCode}" data-lib="${dLib}" data-ean="${dEan}" style="border-bottom:1px solid var(--border);">`;
+    rows += `<td style="padding:.4rem .55rem;color:var(--g500);font-family:monospace;font-size:.66rem;white-space:nowrap;">${bdcEsc(p.ean||'—')}</td>`;
+    rows += `<td style="padding:.4rem .55rem;max-width:280px;"><span style="font-size:.8rem;color:var(--g800);">${bdcEsc(p.libelle)}</span>${newBadge}</td>`;
+    rows += `<td style="padding:.4rem .55rem;color:var(--g500);font-size:.72rem;">${bdcEsc(p.poids||'—')}</td>`;
+    rows += `<td style="padding:.4rem .55rem;color:var(--g600);text-align:center;">${p.pcb}</td>`;
+    rows += `<td style="padding:.4rem .55rem;color:var(--g500);">${p.tva}%</td>`;
+    rows += `<td style="padding:.4rem .55rem;white-space:nowrap;font-weight:500;">${prixCell}</td>`;
+
+    if (p.surDemande) {
+      rows += `<td colspan="4" style="padding:.4rem .55rem;font-size:.72rem;color:var(--amber);font-style:italic;">Contactez Pierre BAUDIN · 06 99 19 58 65</td>`;
+    } else {
+      // Saisie : colis ou UVC selon le mode
+      const isUVC = bdcSaisieMode === 'uvc';
+      const saisieVal = isUVC ? (qty>0?qty*pcb:'') : (qty||'');
+      const saisieStep = isUVC ? 1 : 1;
+      const saisiePlaceholder = isUVC ? 'UVC' : 'Colis';
+      const uvcAffiche = isUVC ? '<span style="color:var(--sub);font-size:.7rem;">= '+(qty>0?qty+' col.':'—')+'</span>' : (qty>0?qty*pcb:'—');
+      rows += `<td class="bdc-td-qty" style="padding:.25rem .45rem;">
+        <div style="display:flex;align-items:center;gap:3px;">
+          <button onclick="bdcStepQty('${dCode}',${pcb},-1)" style="width:22px;height:22px;border-radius:5px;border:1px solid var(--border-med);background:#f0f4ff;cursor:pointer;font-size:14px;display:flex;align-items:center;justify-content:center;color:var(--navy);flex-shrink:0;">−</button>
+          <input type="number" min="0" step="${saisieStep}" value="${saisieVal}" placeholder="${saisiePlaceholder}" data-code="${dCode}" data-pcb="${pcb}" data-mode="${bdcSaisieMode}" oninput="bdcOnQty(this)" onchange="bdcOnQty(this)" style="width:48px;text-align:center;background:#f8faff;border:1.5px solid var(--border-med);border-radius:6px;padding:3px;font-family:var(--inter);font-size:.82rem;outline:none;color:var(--navy);">
+          <button onclick="bdcStepQty('${dCode}',${pcb},1)" style="width:22px;height:22px;border-radius:5px;border:1px solid var(--border-med);background:#f0f4ff;cursor:pointer;font-size:14px;display:flex;align-items:center;justify-content:center;color:var(--navy);flex-shrink:0;">+</button>
+        </div>
+      </td>`;
+      rows += `<td style="padding:.35rem .45rem;"><input type="number" min="0" max="100" step="0.5" value="${rl}" placeholder="—" data-code="${dCode}" oninput="bdcOnRemiseLigne(this)" style="width:50px;text-align:right;font-size:.75rem;padding:.25rem .4rem;background:#f8faff;border:1px solid var(--border-med);border-radius:5px;outline:none;font-family:var(--inter);" title="Remise % spécifique"></td>`;
+      rows += `<td id="bdc-uvc-${dCode}" style="padding:.4rem .55rem;font-size:.72rem;text-align:center;">${uvcAffiche}</td>`;
+      rows += `<td id="bdc-t-${dCode}" style="padding:.4rem .55rem;font-weight:600;color:var(--mid);white-space:nowrap;">${qty?bdcFmt(total):''}</td>`;
+    }
+    rows += '</tr>';
+  }
+  document.getElementById('bdc-tbody').innerHTML = rows;
+  bdcUpdateTotals();
+}
+
+function bdcOnQty(input) {
+  const code   = input.dataset.code;
+  const pcb    = parseFloat(input.dataset.pcb)||1;
+  const mode   = input.dataset.mode || bdcSaisieMode;
+  const rawVal = parseInt(input.value)||0;
+  // Convertir en colis selon le mode
+  let colis = 0;
+  if (mode === 'uvc') {
+    // Arrondir à l'unité PCB supérieure
+    colis = rawVal > 0 ? Math.max(1, Math.ceil(rawVal / pcb)) : 0;
+  } else {
+    colis = rawVal;
+  }
+  if (colis > 0) bdcQtys[code] = colis; else delete bdcQtys[code];
+  const tr = input.closest('tr');
+  if (tr) { tr.className = tr.className.replace(' bdc-tr-has-qty','')+(colis>0?' bdc-tr-has-qty':''); }
+  const p = PRODUCTS.find(x=>x.code===code);
+  if (!p) return;
+  // Mettre à jour l'affichage UVC / colis selon le mode
+  const uvcEl = document.getElementById('bdc-uvc-'+code);
+  if (uvcEl) {
+    if (mode === 'uvc') {
+      uvcEl.innerHTML = colis>0 ? '<span style="color:var(--sub);font-size:.7rem;">= '+colis+' col.</span>' : '—';
+    } else {
+      uvcEl.textContent = colis>0 ? colis*pcb : '—';
+    }
+  }
+  const cell = document.getElementById('bdc-t-'+code);
+  if (cell) cell.textContent = colis ? bdcFmt(bdcPrixNet(p)*colis*pcb) : '';
+  bdcUpdateTotals();
+}
+
+function bdcStepQty(code, pcb, dir) {
+  const curColis = parseInt(bdcQtys[code])||0;
+  const nv = Math.max(0, curColis + dir);
+  if (nv > 0) bdcQtys[code] = nv; else delete bdcQtys[code];
+  const input = document.querySelector(`input[data-code="${CSS.escape(code)}"]`);
+  if (input) {
+    // Afficher en UVC ou colis selon le mode
+    input.value = nv > 0 ? (bdcSaisieMode==='uvc' ? nv*pcb : nv) : '';
+    bdcOnQty(input);
+  } else buildTable();
+}
+
+function bdcSetSaisieMode(mode) {
+  bdcSaisieMode = mode;
+  const bC = document.getElementById('btn-mode-colis');
+  const bU = document.getElementById('btn-mode-uvc');
+  if (bC && bU) {
+    if (mode === 'colis') {
+      bC.style.background = 'var(--navy)'; bC.style.color = '#fff';
+      bU.style.background = 'transparent'; bU.style.color = 'var(--sub)';
+    } else {
+      bU.style.background = 'var(--navy)'; bU.style.color = '#fff';
+      bC.style.background = 'transparent'; bC.style.color = 'var(--sub)';
+    }
+  }
+  // Mettre à jour l'en-tête colonnes
+  const thQty = document.getElementById('th-qty');
+  const thUvc = document.getElementById('th-uvc');
+  if (thQty) thQty.textContent = mode === 'uvc' ? 'Qté (UVC)' : 'Qté (colis)';
+  if (thUvc) thUvc.textContent = mode === 'uvc' ? '→ Colis' : 'UVC';
+  buildTable();
+}
+
+function bdcOnRemiseLigne(input) {
+  const code = input.dataset.code;
+  const val  = input.value.trim();
+  if (val===''||val===null) delete bdcRemiseLigne[code];
+  else bdcRemiseLigne[code] = parseFloat(val)||0;
+  buildTable();
+}
+
+function bdcSetRemise(val, btn) {
+  bdcRemise = val;
+  document.querySelectorAll('.bdc-rem-btn').forEach(b=>b.classList.remove('active'));
+  if (btn) btn.classList.add('active');
+  buildTable();
+}
+
+function bdcSetMode(btn) {
+  bdcSearchMode = btn.dataset.mode;
+  document.querySelectorAll('.bdc-mode-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  bdcDoSearch();
+}
+
+function bdcDoSearch() {
+  const q = (document.getElementById('bdc-search').value||'').toLowerCase().trim();
+  const rows = document.querySelectorAll('#bdc-tbody tr');
+  let vis = 0;
+  rows.forEach(tr => {
+    let show = !q;
+    if (q) {
+      if (bdcSearchMode==='all') show = (tr.dataset.lib||'').includes(q)||(tr.dataset.ean||'').includes(q);
+      else if (bdcSearchMode==='libelle') show = (tr.dataset.lib||'').includes(q);
+      else if (bdcSearchMode==='ean') show = (tr.dataset.ean||'').includes(q);
+    }
+    tr.classList.toggle('bdc-tr-hidden', !show);
+    if (show) vis++;
+  });
+  s2('bdc-search-count', q?(vis+'/'+PRODUCTS.length+' produits'):'');
+}
+
+function bdcClearSearch() {
+  document.getElementById('bdc-search').value='';
+  bdcDoSearch();
+}
+
+function bdcUpdateTotals() {
+  let nbR=0,nbC=0,nbU=0,tB=0,tN=0,tTVA=0;
+  const recapItems=[];
+  PRODUCTS.forEach(p=>{
+    const q=bdcQtys[p.code]||0; if(!q||p.surDemande) return;
+    const pcb=parseFloat(p.pcb)||1;
+    nbR++; nbC+=q; nbU+=q*pcb;
+    tB+=p.pu_ht*q*pcb;
+    const net=bdcPrixNet(p)*q*pcb;
+    tN+=net; tTVA+=net*TVA_TAUX/100;
+    recapItems.push(q+'× '+p.libelle.slice(0,30));
+  });
+  s2('bdc-nb-refs',nbR); s2('bdc-nb-colis',nbC); s2('bdc-nb-uvc',nbU);
+  s2('bdc-total-brut',bdcFmt(tB));
+  s2('bdc-total-remise',bdcFmt(tB-tN));
+  s2('bdc-total-tva',bdcFmt(tTVA));
+  s2('bdc-total-net',bdcFmt(tN));
+  // Franco
+  const francoOk = nbC>=FRANCO_COLIS || tN>=FRANCO_HT;
+  const fb=document.getElementById('bdc-franco-box');
+  if (nbC>0) {
+    if (francoOk) { fb.style.background='rgba(5,150,105,.12)'; fb.style.borderColor='rgba(5,150,105,.25)'; fb.style.color='var(--green)'; fb.innerHTML='✅ Franco de port atteint !'; }
+    else { fb.style.background='rgba(201,124,26,.1)'; fb.style.borderColor='rgba(201,124,26,.2)'; fb.style.color='var(--amber)'; const mc=Math.max(0,FRANCO_COLIS-nbC), mht=Math.max(0,FRANCO_HT-tN); fb.innerHTML='🚚 Franco : encore '+mc+' colis ou '+bdcFmt(mht); }
+  } else { fb.style.background='rgba(201,124,26,.1)'; fb.style.color='var(--amber)'; fb.innerHTML='🚚 Franco : 5 colis ou 450€ HT'; }
+  // Recap bar
+  const bar=document.getElementById('bdc-recap-bar');
+  if (nbR>0) { bar.style.display='block'; s2('bdc-recap-items',recapItems.join(' · ')); s2('bdc-recap-total','→ '+bdcFmt(tN)+' HT'); }
+  else bar.style.display='none';
+}
+
+function resetBDC() {
+  if (Object.keys(bdcQtys).length && !confirm('Effacer toutes les quantités ?')) return;
+  bdcQtys={}; bdcRemiseLigne={}; bdcRemise=0;
+  document.querySelectorAll('.bdc-rem-btn').forEach(b=>b.classList.remove('active'));
+  document.querySelector('.bdc-rem-btn').classList.add('active');
+  buildTable();
+}
+
+function bdcBuildText() {
+  const mag=g('bdc-magasin'),mail=g('bdc-email'),nc=g('bdc-numclient');
+  const ct=g('bdc-contact'),tel=g('bdc-tel'),dl=g('bdc-datelivraison'),com=g('bdc-comment');
+  const today=new Date().toLocaleDateString('fr-FR');
+  let lines=['BON DE COMMANDE — BIO N TRUFFE','Tarif V15 — 01/03/2026','===================================','Magasin : '+mag];
+  if(nc) lines.push('N° Client : '+nc);
+  if(ct) lines.push('Contact : '+ct);
+  lines.push('Email : '+mail);
+  if(tel) lines.push('Tél : '+tel);
+  if(dl) lines.push('Livraison souhaitée : '+new Date(dl).toLocaleDateString('fr-FR'));
+  if(bdcRemise>0) lines.push('Remise globale : '+bdcRemise+'%');
+  if(com) lines.push('Commentaire : '+com);
+  lines.push('Date : '+today,'','---------- ARTICLES ----------','');
+  let tB=0,tN=0,nbC=0,nbR=0,nbU=0;
+  PRODUCTS.forEach(p=>{
+    const q=bdcQtys[p.code]||0; if(!q||p.surDemande) return;
+    const pcb=parseFloat(p.pcb)||1,pN=bdcPrixNet(p),tot=parseFloat((pN*q*pcb).toFixed(2));
+    tB+=p.pu_ht*q*pcb; tN+=tot; nbC+=q; nbR++; nbU+=q*pcb;
+    const remEff = (bdcRemiseLigne[p.code]!==undefined&&bdcRemiseLigne[p.code]!=='') ? parseFloat(bdcRemiseLigne[p.code])||0 : bdcRemise;
+    lines.push(p.code+' — '+p.libelle+' ('+p.poids+')');
+    lines.push('  EAN : '+p.ean+' | PCB : '+pcb+' | Qté : '+q+' colis = '+(q*pcb)+' UVC | Prix HT/u : '+bdcFmt(pN)+(remEff>0?' (remise '+remEff+'%)':'')+' | Total HT : '+bdcFmt(tot));
+  });
+  const tva = tN*TVA_TAUX/100;
+  lines.push('','---------- TOTAUX ----------','Références : '+nbR+' | Colis : '+nbC+' | UVC : '+nbU,'Total HT brut : '+bdcFmt(tB),'Remise : '+bdcFmt(tB-tN),'Total HT net : '+bdcFmt(tN),'TVA 5,5% : '+bdcFmt(tva),'Total TTC : '+bdcFmt(tN+tva));
+  const francoOk=nbC>=FRANCO_COLIS||tN>=FRANCO_HT;
+  lines.push('Franco de port : '+(francoOk?'OUI (atteint)':'NON — minimum 5 colis ou 450€ HT'));
+  lines.push('','📄 Tarif BIO N TRUFFE V15 joint en pièce jointe PDF');
+  lines.push('','---','ERIDAN BNT SARL | Christophe SPOTO | Pierre BAUDIN','contact@biontruffe.fr | 06 99 19 58 65');
+  return lines.join('\n');
+}
+
+function bdcShowAlert(msg,type) {
+  const el=document.getElementById('bdc-alert');
+  el.textContent=msg; el.style.display='block';
+  el.style.background=type==='ok'?'rgba(43,181,160,.12)':'rgba(239,68,68,.1)';
+  el.style.border=type==='ok'?'1px solid rgba(43,181,160,.3)':'1px solid rgba(239,68,68,.2)';
+  el.style.color=type==='ok'?'var(--bnt2)':'#fca5a5';
+  setTimeout(()=>el.style.display='none',7000);
+}
+
+async function bdcSendOrder() {
+  const mag=g('bdc-magasin'),mail=g('bdc-email');
+  if(!mag||!mail){bdcShowAlert('Veuillez renseigner le magasin et votre email.','err');return;}
+  const hasOrder=Object.keys(bdcQtys).some(k=>bdcQtys[k]>0);
+  if(!hasOrder){bdcShowAlert('Aucun article commandé.','err');return;}
+
+  const btn=document.getElementById('bdc-btn-send');
+  const spinner=document.getElementById('bdc-spinner');
+  btn.disabled=true; spinner.style.display='inline-block';
+  s2('bdc-send-label','Envoi…');
+
+  // Calculer les totaux
+  let tN=0,nbRefs=0,nbColis=0,nbUVC=0,lignes=[];
+  PRODUCTS.forEach(p=>{
+    const q=bdcQtys[p.code]||0; if(!q||p.surDemande) return;
+    const pcb=parseFloat(p.pcb)||1;
+    const montantLigne=parseFloat((bdcPrixNet(p)*q*pcb).toFixed(2));
+    tN+=montantLigne; nbRefs++; nbColis+=q; nbUVC+=q*pcb;
+    const remEff=(bdcRemiseLigne[p.code]!==undefined&&bdcRemiseLigne[p.code]!=='')?parseFloat(bdcRemiseLigne[p.code])||0:bdcRemise;
+    lignes.push({code:p.code,ean:p.ean||'',libelle:p.libelle,poids:p.poids||'',qty:q,pcb,pu_ht:bdcPrixNet(p),remise:remEff,total_ht:montantLigne});
+  });
+  tN=parseFloat(tN.toFixed(2));
+
+  const today=new Date().toLocaleDateString('fr-FR');
+  const nc=g('bdc-numclient'),ct=g('bdc-contact'),tel=g('bdc-tel'),dl=g('bdc-datelivraison'),com=g('bdc-comment');
+
+  // Sauvegarder dans Firestore
+  if(db&&currentUser){
+    try {
+      await db.collection('commandes').add({
+        clientNom:mag,numClient:nc||'',contact:ct||'',tel:tel||'',
+        email:mail,datelivraison:dl||'',commentaire:com||'',
+        statut:'Envoyée',montant:tN,nbRefs,nbColis,nbUVC,
+        remise:bdcRemise,lignes,
+        createdBy:currentUser.uid,
+        createdAt:firebase.firestore.FieldValue.serverTimestamp()
+      });
+      logActivite('BDC envoyé — '+mag+' — '+bdcFmt(tN)+' ('+nbRefs+' réf., '+nbColis+' colis)','teal');
+    } catch(e){ console.warn('Firestore save error',e); }
+  }
+
+  // Envoi email via Web3Forms avec PDF joint (URL publique GitHub Pages)
+  const pdfUrl = 'https://loac1118.github.io/BIONTRUFFE/2026-03-01_TG_MBS_BIONTRUFFE_2026_Pi_v15.pdf';
+  const payload = {
+    access_key: 'c9dce17b-a7cb-4190-a3d0-10fa4bf105e9',
+    from_name: 'BIO N TRUFFE CRM',
+    subject: 'Bon de commande BIO N TRUFFE — '+mag+' — '+today,
+    email: ['loacdev','outlook.fr'].join('@'),
+    _replyto: mail,
+    _captcha: 'false',
+    _template: 'table',
+    Magasin: mag,
+    'N_Client': nc||'—',
+    Contact: ct||'—',
+    Email_client: mail,
+    Telephone: tel||'—',
+    Livraison: dl ? new Date(dl).toLocaleDateString('fr-FR') : 'Sur accord',
+    Remise: bdcRemise>0?bdcRemise+'%':'Aucune',
+    Nb_refs: nbRefs,
+    Nb_colis: nbColis,
+    Nb_UVC: nbUVC,
+    Total_HT_net: bdcFmt(tN),
+    TVA_5_5: bdcFmt(tN*TVA_TAUX/100),
+    Total_TTC: bdcFmt(tN*(1+TVA_TAUX/100)),
+    Commentaire: com||'—',
+    Commande_detail: bdcBuildText(),
+    Tarif_PDF: pdfUrl
+  };
+
+  try {
+    const res = await fetch('https://api.web3forms.com/submit',{
+      method:'POST',
+      headers:{'Content-Type':'application/json','Accept':'application/json'},
+      body:JSON.stringify(payload)
+    });
+    const data = await res.json();
+    if(data.success===true||data.success==='true'){
+      bdcShowAlert('✅ Commande envoyée ! Email avec le tarif PDF envoyé à contact@biontruffe.fr','ok');
+      toast('✅ BDC envoyé — '+mag+' — '+bdcFmt(tN));
+      setTimeout(()=>{
+        if(confirm('Réinitialiser le bon de commande ?')){
+          bdcQtys={}; bdcRemiseLigne={}; bdcRemise=0; buildTable();
+        }
+      },1500);
+    } else { throw new Error('Réponse invalide'); }
+  } catch(e){
+    bdcShowAlert('⚠️ Erreur envoi email. La commande a été sauvegardée dans le CRM.','err');
+  } finally {
+    btn.disabled=false; spinner.style.display='none';
+    s2('bdc-send-label','📄 Envoyer + PDF joint');
+  }
+}
+
+// ══════════════════════════════════════════════════
+//  BASE CLIENTS — style MDM V3
+// ══════════════════════════════════════════════════
+const CDB_CACHE_KEY = 'bnt_cdb_contacts';
+var cdbContacts  = [];
+var cdbFiltered  = [];
+var cdbSelection = {};
+var cdbPage      = 0;
+var cdbPageSize  = 50;
+
+// Charger cache local au démarrage
+(function() {
+  try {
+    var raw = localStorage.getItem(CDB_CACHE_KEY);
+    if (raw) { cdbContacts = JSON.parse(raw); cdbRender(); }
+  } catch(e) {}
+})();
+
+function cdbFmtCA(n) {
+  if (!n || Math.abs(n) < 0.01) return '—';
+  return Number(n).toLocaleString('fr-FR', {minimumFractionDigits:2, maximumFractionDigits:2}) + ' €';
+}
+function cdbFmtDate(d) {
+  if (!d) return '—';
+  try { var dt = d.toDate ? d.toDate() : new Date(d); return isNaN(dt) ? '—' : dt.toLocaleDateString('fr-FR'); } catch(e) { return '—'; }
+}
+function cdbEsc(s) { return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;'); }
+
+// ── RENDER / FILTRES ─────────────────────────────
+function cdbRender() { cdbPage = 0; cdbApplyFilters(); cdbRenderPage(); }
+function renderClients() { cdbRender(); }
+
+function cdbApplyFilters() {
+  if (!document.getElementById('cdb-search')) return;
+  var s  = (document.getElementById('cdb-search').value || '').toLowerCase().trim();
+  var gF = document.getElementById('cdb-filter-group').value;
+  var dF = document.getElementById('cdb-filter-dept').value;
+  var aF = document.getElementById('cdb-filter-act').value;
+
+  // Peupler les filtres groupe et département (une fois)
+  if (document.getElementById('cdb-filter-group').options.length <= 1 && cdbContacts.length) {
+    var groupes = [...new Set(cdbContacts.map(c=>c.groupe).filter(Boolean))].sort();
+    document.getElementById('cdb-filter-group').innerHTML = '<option value="">Tous groupes</option>' +
+      groupes.map(g=>'<option value="'+cdbEsc(g)+'">'+cdbEsc(g)+'</option>').join('');
+    var depts = [...new Set(cdbContacts.map(c=>c.cp?String(c.cp).padStart(5,'0').slice(0,2):null).filter(Boolean))].sort();
+    document.getElementById('cdb-filter-dept').innerHTML = '<option value="">Tous dép.</option>' +
+      depts.map(d=>'<option value="'+d+'">'+d+'</option>').join('');
+  }
+
+  var now = new Date();
+  cdbFiltered = cdbContacts.filter(c=>{
+    if (s) {
+      var hay = ((c.numClient||'')+' '+(c.nom||'')+' '+(c.ville||'')+' '+(c.email||'')+' '+(c.groupe||'')+' '+(c.cp||'')).toLowerCase();
+      if (!hay.includes(s)) return false;
+    }
+    if (gF && c.groupe !== gF) return false;
+    if (dF) { var cp = c.cp ? String(c.cp).padStart(5,'0').slice(0,2) : ''; if (cp !== dF) return false; }
+    if (aF === 'prospect' && !c.prospect) return false;
+    if (aF === 'has-email' && !c.email) return false;
+    if (aF === 'no-email'  &&  c.email) return false;
+    if (aF === 'with-orders') {
+      var nbO = cache.commandes.filter(o=>o.numClient===c.numClient).length;
+      if (!nbO) return false;
+    }
+    return true;
+  });
+  cdbFiltered.sort((a,b)=>(a.nom||'').localeCompare(b.nom||''));
+  s2('cdb-total', cdbContacts.length + ' contact' + (cdbContacts.length>1?'s':''));
+  s2('cdb-count-filtered', cdbFiltered.length + ' résultat' + (cdbFiltered.length>1?'s':''));
+}
+
+function cdbRenderPage() {
+  var tbody = document.getElementById('cdb-tbody');
+  var paginEl = document.getElementById('cdb-pagination');
+  if (!tbody) return;
+  if (!cdbFiltered.length) {
+    tbody.innerHTML = '<tr><td colspan="10" style="text-align:center;padding:3rem;color:var(--sub);">Aucun contact. ' +
+      (cdbContacts.length ? 'Modifiez les filtres.' : 'Cliquez <b>+ Nouveau contact</b> pour commencer.') + '</td></tr>';
+    if (paginEl) paginEl.innerHTML = '';
+    return;
+  }
+  var start = cdbPage * cdbPageSize;
+  var end   = Math.min(start + cdbPageSize, cdbFiltered.length);
+  var page  = cdbFiltered.slice(start, end);
+  var totalPages = Math.ceil(cdbFiltered.length / cdbPageSize);
+
+  // Calcul CA depuis commandes Firestore
+  var caClient = function(c) {
+    return cache.commandes.filter(o=>o.numClient===c.numClient).reduce((s,o)=>s+(o.montant||0),0);
+  };
+  var nbCmds = function(c) {
+    return cache.commandes.filter(o=>o.numClient===c.numClient).length;
+  };
+  var lastCmd = function(c) {
+    var cmds = cache.commandes.filter(o=>o.numClient===c.numClient);
+    if (!cmds.length) return c.dateDerniereCmd ? cdbFmtDate(c.dateDerniereCmd) : '—';
+    return cdbFmtDate(cmds[0].createdAt);
+  };
+
+  tbody.innerHTML = page.map(c=>{
+    var checked = cdbSelection[c.id] ? 'checked' : '';
+    var idA = cdbEsc(c.id);
+    var groupe = c.groupe ? '<span style="padding:1px 7px;background:var(--brand-bg);color:var(--brand2);border-radius:10px;font-size:.68rem;font-weight:500;">'+cdbEsc(c.groupe)+'</span>' : '';
+    var prospBadge = c.prospect ? '<span style="padding:1px 6px;background:#fef3c7;color:#92400e;border-radius:10px;font-size:.65rem;margin-left:4px;">Prospect</span>' : '';
+    var ca = caClient(c), nb = nbCmds(c);
+    return '<tr>' +
+      '<td><input type="checkbox" data-cdb-check="'+idA+'" '+checked+' style="accent-color:var(--brand);"/></td>' +
+      '<td style="font-family:monospace;font-size:.75rem;color:var(--sub);">'+cdbEsc(c.numClient||'')+'</td>' +
+      '<td><a href="#" data-cdb-edit="'+idA+'" style="font-weight:600;color:var(--ink);text-decoration:none;">'+cdbEsc(c.nom||'—')+'</a>'+prospBadge+'</td>' +
+      '<td>'+groupe+'</td>' +
+      '<td style="font-size:.78rem;color:var(--sub);">'+cdbEsc(c.ville||'')+(c.cp?' <span style="color:var(--muted);font-size:.7rem;">('+cdbEsc(c.cp)+')</span>':'')+'</td>' +
+      '<td><a href="mailto:'+cdbEsc(c.email||'')+'" style="font-size:.78rem;color:var(--brand2);">'+cdbEsc(c.email||'')+'</a></td>' +
+      '<td style="font-size:.78rem;color:var(--sub);">'+cdbEsc(c.telephone||'')+'</td>' +
+      '<td style="text-align:right;font-size:.75rem;color:var(--sub);">'+lastCmd(c)+'</td>' +
+      '<td style="text-align:right;">'+(ca>0?('<strong style="color:var(--brand2);">'+cdbFmtCA(ca)+'</strong><div style="font-size:.62rem;color:var(--muted);">'+nb+' cmd'+(nb>1?'s':'')+'</div>'):cdbFmtCA(c.cumul2026||0))+'</td>' +
+      '<td><button type="button" class="btn btn-ghost cdb-menu-btn" data-cdb-id="'+idA+'" style="font-size:.9rem;padding:.18rem .4rem;cursor:pointer;line-height:1;color:var(--sub);">⋮</button></td>' +
+      '</tr>';
+  }).join('');
+
+  // Event delegation
+  tbody.onclick = e=>{
+    var editEl = e.target.closest('[data-cdb-edit]');
+    var menuEl = e.target.closest('.cdb-menu-btn');
+    if (editEl) { e.preventDefault(); cdbOpenEdit(editEl.getAttribute('data-cdb-edit')); }
+    else if (menuEl) { e.preventDefault(); cdbShowMenu(menuEl, menuEl.getAttribute('data-cdb-id')); }
+  };
+  tbody.onchange = e=>{
+    var chk = e.target.closest('[data-cdb-check]');
+    if (chk) { cdbToggleOne(chk.getAttribute('data-cdb-check'), chk.checked); cdbUpdateSelBar(); }
+  };
+
+  // Pagination
+  if (paginEl) {
+    if (totalPages <= 1) { paginEl.innerHTML = ''; return; }
+    var html = '<div style="display:flex;align-items:center;gap:6px;padding:.6rem 1rem;border-top:1px solid var(--border);font-size:.78rem;color:var(--sub);">';
+    html += '<button class="btn btn-ghost" style="font-size:.75rem;padding:.25rem .6rem;" '+(cdbPage===0?'disabled':'')+' onclick="cdbGoPage('+(cdbPage-1)+')">← Préc.</button>';
+    for (var pi=0;pi<totalPages;pi++) {
+      if (pi===0||pi===totalPages-1||Math.abs(pi-cdbPage)<=2) {
+        html += '<button class="btn '+(pi===cdbPage?'btn-primary':'btn-ghost')+'" style="font-size:.75rem;padding:.25rem .5rem;min-width:28px;" onclick="cdbGoPage('+pi+')">'+(pi+1)+'</button>';
+      }
+    }
+    html += '<button class="btn btn-ghost" style="font-size:.75rem;padding:.25rem .6rem;" '+(cdbPage===totalPages-1?'disabled':'')+' onclick="cdbGoPage('+(cdbPage+1)+')">Suiv. →</button>';
+    html += '<span style="margin-left:auto;">'+(start+1)+'–'+end+' / '+cdbFiltered.length+'</span></div>';
+    paginEl.innerHTML = html;
+  }
+}
+
+function cdbGoPage(p) { cdbPage=p; cdbRenderPage(); }
+function cdbClearFilters() {
+  ['cdb-search','cdb-filter-group','cdb-filter-dept','cdb-filter-act'].forEach(id=>{
+    var el=document.getElementById(id); if(el) el.value='';
+  });
+  cdbRender();
+}
+
+// ── SÉLECTION ────────────────────────────────────
+function cdbToggleOne(id, v) { if(v) cdbSelection[id]=true; else delete cdbSelection[id]; cdbUpdateSelBar(); }
+function cdbToggleAll(v) {
+  cdbFiltered.forEach(c=>{ if(v) cdbSelection[c.id]=true; else delete cdbSelection[c.id]; });
+  cdbRenderPage(); cdbUpdateSelBar();
+}
+function cdbClearSel() { cdbSelection={}; cdbRenderPage(); cdbUpdateSelBar(); }
+function cdbUpdateSelBar() {
+  var nb = Object.keys(cdbSelection).length;
+  var bar = document.getElementById('cdb-sel-bar');
+  if (!bar) return;
+  if (nb>0) { bar.style.display='flex'; s2('cdb-sel-count', nb+' sélectionné'+(nb>1?'s':'')); }
+  else bar.style.display='none';
+}
+function cdbSendToMailing() {
+  var emails = Object.keys(cdbSelection).map(id=>{ var c=cdbContacts.find(x=>x.id===id); return c&&c.email?c.email.toLowerCase().trim():null; }).filter(Boolean);
+  if (!emails.length) { toast('Aucun email dans la sélection','err'); return; }
+  showSection('mailing',null);
+  setTimeout(()=>{ var ta=document.getElementById('ml-recipients'); if(ta){ ta.value=emails.join('\n'); mlUpdateRecipients&&mlUpdateRecipients(); } },100);
+  toast('✅ '+emails.length+' email(s) ajoutés au mailing');
+  cdbClearSel();
+}
+
+// ── FICHE CLIENT ─────────────────────────────────
+function cdbSwitchTab(tab) {
+  document.getElementById('cdb-tab-infos').style.display = tab==='infos'?'':'none';
+  document.getElementById('cdb-tab-ca').style.display    = tab==='ca'?'':'none';
+  document.querySelectorAll('.cdb-tab').forEach(btn=>{
+    var active = btn.getAttribute('data-tab')===tab;
+    btn.style.color       = active?'var(--brand2)':'var(--sub)';
+    btn.style.borderBottom= active?'2px solid var(--brand)':'2px solid transparent';
+    btn.style.fontWeight  = active?'600':'500';
+  });
+}
+
+function cdbOpenEdit(id) {
+  var c = id ? cdbContacts.find(x=>x.id===id) : null;
+  if (id && !c) { toast('Contact introuvable','err'); return; }
+  var modal = document.getElementById('cdb-modal-edit');
+  if (!modal) return;
+
+  document.getElementById('cdb-edit-id').value = id||'';
+  s2('cdb-edit-title', c?(c.nom||c.numClient||'Fiche client'):'Nouveau contact');
+  document.getElementById('cdb-edit-delete').style.display = c?'':'none';
+
+  // Avatar + subtitle
+  var avatarEl = document.getElementById('cdb-edit-avatar');
+  var subtitleEl = document.getElementById('cdb-edit-subtitle');
+  if (c) {
+    var ini = (c.nom||'?').replace(/[^A-Za-zÀ-ɏ\s]/g,'').split(/\s+/).filter(Boolean).map(w=>w[0].toUpperCase()).slice(0,2).join('')||'?';
+    if (avatarEl) avatarEl.textContent = ini;
+    if (subtitleEl) subtitleEl.textContent = (c.numClient?'Code '+c.numClient:'')+(c.email?' · '+c.email:'');
+  } else {
+    if (avatarEl) avatarEl.textContent='+';
+    if (subtitleEl) subtitleEl.textContent='Nouveau contact';
+  }
+
+  // KPIs depuis commandes Firestore
+  var cmds = c ? cache.commandes.filter(o=>o.numClient===c.numClient) : [];
+  var caTotal = cmds.reduce((s,o)=>s+(o.montant||0),0);
+  var lastC = cmds.length ? cdbFmtDate(cmds[0].createdAt) : (c&&c.dateDerniereCmd?cdbFmtDate(c.dateDerniereCmd):'—');
+  s2('cdb-stat-ca', caTotal>0?cdbFmtCA(caTotal):'—');
+  s2('cdb-stat-cmds', cmds.length?(cmds.length+' cmd'+(cmds.length>1?'s':'')):'—');
+  s2('cdb-stat-last', lastC);
+
+  // Champs
+  ['numClient','nom','email','telephone','adresse','cp','ville','groupe','contact','siret','tva','notes'].forEach(f=>{
+    var el=document.getElementById('cdb-edit-'+f); if(el) el.value=c?(c[f]||''):'';
+  });
+  var remEl=document.getElementById('cdb-edit-remise'); if(remEl) remEl.value=c?(c.remise||0):0;
+  document.getElementById('cdb-edit-prospect').value=c&&c.prospect?'1':'0';
+
+  cdbSwitchTab('infos');
+  cdbBuildCATab(c);
+  modal.classList.remove('hidden');
+}
+
+function cdbOpenBDCFromModal() {
+  var id=document.getElementById('cdb-edit-id').value;
+  var c=cdbContacts.find(x=>x.id===id);
+  if(c) cdbNewOrderFromClient(c);
+  else toast('Enregistrez le contact d\'abord','err');
+}
+
+function cdbBuildCATab(c) {
+  var el=document.getElementById('cdb-edit-ca-content'); if(!el) return;
+  if (!c) { el.innerHTML='<div style="text-align:center;padding:2rem;color:var(--sub);font-size:.85rem;">Nouveau contact — aucun historique disponible.</div>'; return; }
+  var cmds = cache.commandes.filter(o=>o.numClient===c.numClient).sort((a,b)=>{ var da=a.createdAt?new Date(a.createdAt):new Date(0); var db2=b.createdAt?new Date(b.createdAt):new Date(0); return db2-da; });
+  var caTotal = cmds.reduce((s,o)=>s+(o.montant||0),0);
+  if (!cmds.length && !c.cumul2026) {
+    el.innerHTML='<div style="text-align:center;padding:2rem;color:var(--sub);font-size:.85rem;">Aucune commande enregistrée dans ce CRM pour ce client.</div>'; return;
+  }
+  var html='';
+  // KPIs
+  html+='<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:1rem;">';
+  html+='<div style="padding:.65rem .75rem;background:var(--brand-bg);border-radius:9px;border-left:3px solid var(--brand);"><div style="font-size:.62rem;color:var(--brand2);font-weight:600;text-transform:uppercase;margin-bottom:.2rem;">CA Total BDC</div><div style="font-size:1.05rem;font-weight:700;color:var(--brand2);">'+cdbFmtCA(caTotal)+'</div></div>';
+  html+='<div style="padding:.65rem .75rem;background:var(--bg);border-radius:9px;border-left:3px solid var(--border);"><div style="font-size:.62rem;color:var(--sub);font-weight:600;text-transform:uppercase;margin-bottom:.2rem;">Commandes</div><div style="font-size:1.05rem;font-weight:700;color:var(--ink);">'+cmds.length+'</div></div>';
+  if (c.cumul2026) html+='<div style="padding:.65rem .75rem;background:var(--bg);border-radius:9px;border-left:3px solid var(--border);"><div style="font-size:.62rem;color:var(--sub);font-weight:600;text-transform:uppercase;margin-bottom:.2rem;">Cumul 2026 (base)</div><div style="font-size:1.05rem;font-weight:700;color:var(--ink);">'+cdbFmtCA(c.cumul2026)+'</div></div>';
+  html+='</div>';
+  // Liste commandes
+  if (cmds.length) {
+    html+='<div style="font-size:.7rem;font-weight:700;color:var(--sub);margin-bottom:.4rem;text-transform:uppercase;letter-spacing:.06em;">Commandes BDC ('+cmds.length+')</div>';
+    html+='<div style="max-height:240px;overflow-y:auto;border:1px solid var(--border);border-radius:9px;">';
+    html+='<table style="width:100%;border-collapse:collapse;font-size:.78rem;"><thead style="position:sticky;top:0;background:var(--bg);"><tr><th style="padding:.35rem .65rem;text-align:left;color:var(--sub);font-size:.65rem;font-weight:600;text-transform:uppercase;">Date</th><th style="padding:.35rem .65rem;text-align:left;color:var(--sub);font-size:.65rem;font-weight:600;text-transform:uppercase;">Réf. / Magasin</th><th style="padding:.35rem .65rem;text-align:center;color:var(--sub);font-size:.65rem;font-weight:600;text-transform:uppercase;">Colis</th><th style="padding:.35rem .65rem;text-align:right;color:var(--sub);font-size:.65rem;font-weight:600;text-transform:uppercase;">CA HT</th></tr></thead><tbody>';
+    cmds.forEach(o=>{
+      html+='<tr style="border-top:1px solid var(--border);">';
+      html+='<td style="padding:.35rem .65rem;color:var(--sub);">'+cdbFmtDate(o.createdAt)+'</td>';
+      html+='<td style="padding:.35rem .65rem;font-weight:500;color:var(--ink);">'+(o.ref?cdbEsc(o.ref)+' · ':'')+cdbEsc(o.clientNom||'—')+'</td>';
+      html+='<td style="padding:.35rem .65rem;text-align:center;color:var(--sub);">'+(o.nbColis||'—')+'</td>';
+      html+='<td style="padding:.35rem .65rem;text-align:right;font-weight:700;color:var(--brand2);">'+cdbFmtCA(o.montant||0)+'</td>';
+      html+='</tr>';
+    });
+    html+='</tbody></table></div>';
+  }
+  el.innerHTML=html;
+}
+
+// ── MENU CONTEXTUEL ─────────────────────────────
+function cdbShowMenu(anchor, id) {
+  var existing=document.getElementById('cdb-ctx-menu'); if(existing) existing.remove();
+  var menu=document.createElement('div');
+  menu.id='cdb-ctx-menu';
+  menu.style.cssText='position:fixed;background:#fff;border:1px solid var(--border);border-radius:10px;box-shadow:0 6px 24px rgba(0,0,0,.12);z-index:400;padding:.3rem;min-width:195px;font-family:var(--f);';
+  var c=cdbContacts.find(x=>x.id===id);
+  var actions=[
+    {icon:'✏️',label:'Modifier la fiche',fn:()=>cdbOpenEdit(id)},
+    {icon:'🛒',label:'Nouveau BDC',fn:()=>{ if(c) cdbNewOrderFromClient(c); }},
+    {icon:'📊',label:'CA & Historique',fn:()=>{ cdbOpenEdit(id); setTimeout(()=>cdbSwitchTab('ca'),60); }},
+    {icon:'📋',label:"Copier l'email",fn:()=>{ if(c&&c.email) navigator.clipboard.writeText(c.email).then(()=>toast('Email copié')); else toast('Pas d\'email','err'); }},
+    {icon:'🗑',label:'Supprimer',fn:()=>{ if(confirm('Supprimer ce contact ?')){ document.getElementById('cdb-edit-id').value=id; cdbDelete(); } },danger:true}
+  ];
+  menu.innerHTML=actions.map((a,i)=>'<button type="button" data-idx="'+i+'" style="display:block;width:100%;text-align:left;padding:.5rem .8rem;border:none;background:none;cursor:pointer;font-size:.82rem;color:'+(a.danger?'var(--red)':'var(--ink)')+';border-radius:7px;font-family:var(--f);"><span style="margin-right:6px;">'+a.icon+'</span>'+a.label+'</button>').join('');
+  var rect=anchor.getBoundingClientRect();
+  menu.style.left=(rect.right+4)+'px'; menu.style.top=rect.top+'px';
+  document.body.appendChild(menu);
+  setTimeout(()=>{ var mr=menu.getBoundingClientRect(); if(mr.right>window.innerWidth-10) menu.style.left=(rect.left-mr.width-4)+'px'; if(mr.bottom>window.innerHeight-10) menu.style.top=(rect.bottom-mr.height)+'px'; },0);
+  menu.querySelectorAll('button').forEach(btn=>{
+    btn.onmouseover=()=>btn.style.background='var(--bg)';
+    btn.onmouseout=()=>btn.style.background='';
+    btn.onclick=e=>{ e.stopPropagation(); var idx=parseInt(btn.getAttribute('data-idx')); menu.remove(); actions[idx].fn(); };
+  });
+  setTimeout(()=>{ document.addEventListener('click',function close(ev){ if(!menu.contains(ev.target)){ menu.remove(); document.removeEventListener('click',close); } }); },50);
+}
+
+// ── NOUVEAU BDC DEPUIS FICHE ─────────────────────
+function cdbNewOrderFromClient(c) {
+  if (!c) return;
+  if (Object.keys(bdcQtys).filter(k=>bdcQtys[k]>0).length>0) {
+    if (!confirm('Un BDC est en cours. Effacer et créer un nouveau BDC pour '+c.nom+' ?')) return;
+    bdcQtys={}; bdcRemiseLigne={};
+  }
+  document.getElementById('cdb-modal-edit').classList.add('hidden');
+  showSection('bdc',null);
+  setTimeout(()=>{
+    var set=(id,val)=>{ var el=document.getElementById(id); if(el&&val!==undefined) el.value=val||''; };
+    set('bdc-magasin',   c.nom||'');
+    set('bdc-numclient', c.numClient||'');
+    set('bdc-email',     c.email||'');
+    set('bdc-tel',       c.telephone||'');
+    set('bdc-contact',   c.contact||c.nom||'');
+    // Appliquer remise client
+    if (c.remise>0) {
+      bdcRemise=c.remise;
+      var btns=document.querySelectorAll('.bdc-rem-btn'); var found=false;
+      btns.forEach(b=>{ b.classList.remove('active'); if(parseFloat(b.textContent)===c.remise){ b.classList.add('active'); found=true; } });
+      if (!found) { var ci=document.getElementById('bdc-remise-custom'); if(ci) ci.value=c.remise; }
+    }
+    buildTable();
+    toast('📋 BDC pré-rempli — '+(c.nom||'client')+(c.remise>0?' · Remise '+c.remise+'%':''));
+  },150);
+}
+
+// ── SAVE / DELETE ────────────────────────────────
+function cdbSave() {
+  var id=document.getElementById('cdb-edit-id').value;
+  var existing=id?cdbContacts.find(x=>x.id===id):null;
+  var contact=existing?{...existing}:{id:'c_'+Date.now()};
+  ['numClient','nom','email','telephone','adresse','cp','ville','groupe','contact','siret','tva','notes'].forEach(f=>{
+    var el=document.getElementById('cdb-edit-'+f); if(el) contact[f]=el.value.trim();
+  });
+  var remEl=document.getElementById('cdb-edit-remise'); if(remEl) contact.remise=parseFloat(remEl.value)||0;
+  contact.prospect=parseInt(document.getElementById('cdb-edit-prospect').value)||0;
+  if (!contact.nom) { toast('Raison sociale requise','err'); return; }
+  if (db&&currentUser) {
+    db.collection('contacts').doc(contact.id).set(contact).then(()=>{
+      if(!existing) cdbContacts.push(contact);
+      else { var idx=cdbContacts.findIndex(x=>x.id===contact.id); if(idx>=0) cdbContacts[idx]=contact; }
+      try { localStorage.setItem(CDB_CACHE_KEY,JSON.stringify(cdbContacts)); } catch(e){}
+      cdbRender(); document.getElementById('cdb-modal-edit').classList.add('hidden');
+      toast('✅ Contact enregistré');
+      logActivite((existing?'Contact modifié — ':'Nouveau contact — ')+contact.nom,'teal');
+    }).catch(e=>toast('Erreur : '+e.message,'err'));
+  } else {
+    if(!existing) cdbContacts.push(contact);
+    else { var idx=cdbContacts.findIndex(x=>x.id===contact.id); if(idx>=0) cdbContacts[idx]=contact; }
+    try { localStorage.setItem(CDB_CACHE_KEY,JSON.stringify(cdbContacts)); } catch(e){}
+    cdbRender(); document.getElementById('cdb-modal-edit').classList.add('hidden');
+    toast('✅ Contact enregistré (local)');
+  }
+}
+
+function cdbDelete() {
+  var id=document.getElementById('cdb-edit-id').value; if(!id) return;
+  if (!confirm('Supprimer ce contact définitivement ?')) return;
+  if (db) {
+    db.collection('contacts').doc(id).delete().then(()=>{
+      cdbContacts=cdbContacts.filter(x=>x.id!==id);
+      try { localStorage.setItem(CDB_CACHE_KEY,JSON.stringify(cdbContacts)); } catch(e){}
+      cdbRender(); document.getElementById('cdb-modal-edit').classList.add('hidden');
+      toast('Contact supprimé');
+    });
+  }
+}
+
+// ── EXPORT CSV ───────────────────────────────────
+function cdbExportCsv() {
+  if (!cdbContacts.length) { toast('Base vide','err'); return; }
+  var cols=['numClient','nom','email','telephone','adresse','cp','ville','groupe','contact','remise','siret','prospect','dateDerniereCmd','notes'];
+  var hd=cols.join(';');
+  var lines=cdbContacts.map(c=>cols.map(k=>{ var v=c[k]==null?'':String(c[k]); if(v.includes(';')||v.includes('"')||v.includes('\n')) v='"'+v.replace(/"/g,'""')+'"'; return v; }).join(';'));
+  var csv='\uFEFF'+hd+'\n'+lines.join('\n');
+  var a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8'}));
+  a.download='contacts_bnt_'+new Date().toISOString().slice(0,10)+'.csv'; a.click();
+  toast('Export CSV : '+cdbContacts.length+' contacts');
+}
+
+// Listener Firestore contacts (complète la collection existante)
+function startContactsListener() {
+  if (!db) return;
+  db.collection('contacts').onSnapshot(snap=>{
+    cdbContacts=snap.docs.map(d=>({id:d.id,...d.data()}));
+    try { localStorage.setItem(CDB_CACHE_KEY,JSON.stringify(cdbContacts)); } catch(e){}
+    cdbRender();
+    // Mettre à jour le badge nb prospects
+    s2('badge-prospects', cdbContacts.filter(c=>c.prospect).length||cache.prospects.length);
+  },e=>console.warn('contacts listener err',e));
+}
+
+// ══════════════════════════════════════════════════
+//  COMMANDES
+// ══════════════════════════════════════════════════
+function renderCommandes() {
+  const tb=document.getElementById('cmd-tbody'); if(!tb) return;
+  if(!cache.commandes.length){tb.innerHTML='<tr><td colspan="8" style="text-align:center;padding:2rem;color:var(--g400);">Aucune commande</td></tr>';return;}
+  tb.innerHTML=cache.commandes.map(o=>`
+    <tr>
+      <td style="font-size:.75rem;color:var(--g500);">${fmtDate(o.createdAt)}</td>
+      <td><strong>${esc(o.clientNom||'—')}</strong></td>
+      <td style="font-family:monospace;font-size:.72rem;color:var(--blue-p700);">${esc(o.numClient||'—')}</td>
+      <td style="text-align:center;">${o.nbRefs||0}</td>
+      <td style="text-align:center;">${o.nbColis||0}</td>
+      <td style="font-weight:600;color:var(--mid);">${bdcFmt(o.montant||0)}</td>
+      <td><span class="tag ${o.statut==='Envoyée'?'tag-green':'tag-amber'}">${esc(o.statut||'—')}</span></td>
+      <td><button class="btn btn-danger" style="font-size:.7rem;padding:.2rem .55rem;" onclick="deleteCommande('${o.id}')">🗑</button></td>
+    </tr>`).join('');
+}
+
+async function deleteCommande(id) {
+  if(!confirm('Supprimer cette commande ?')) return;
+  try { await db.collection('commandes').doc(id).delete(); toast('Commande supprimée'); } catch(e){ toast('Erreur','err'); }
+}
+
+// ══════════════════════════════════════════════════
+//  PROSPECTS
+// ══════════════════════════════════════════════════
+function renderProspects() {
+  const tb=document.getElementById('prsp-tbody'); if(!tb) return;
+  if(!cache.prospects.length){tb.innerHTML='<tr><td colspan="6" style="text-align:center;padding:2rem;color:var(--g400);">Aucun prospect</td></tr>';return;}
+  tb.innerHTML=cache.prospects.map(p=>`
+    <tr style="cursor:pointer;" onclick="openProspectModal('${p.id}')">
+      <td><strong>${esc(p.raison||'—')}</strong></td>
+      <td style="font-size:.78rem;">${esc(p.contact||'—')}<br><span style="color:var(--g500);font-size:.7rem;">${esc(p.email||'')}</span></td>
+      <td style="color:var(--g600);">${esc(p.ville||'—')} ${esc(p.cp||'')}</td>
+      <td><span class="tag tag-blue">${esc(p.profil||'—')}</span></td>
+      <td><span class="tag ${p.statut==='Qualifié'?'tag-green':p.statut==='Contacté'?'tag-amber':'tag-blue'}">${esc(p.statut||'—')}</span></td>
+      <td><div style="display:flex;gap:4px;">
+        <button class="btn btn-ghost" style="font-size:.72rem;padding:.25rem .55rem;" onclick="event.stopPropagation();convertProspect('${p.id}')">→ Client</button>
+        <button class="btn btn-danger" style="font-size:.72rem;padding:.25rem .55rem;" onclick="event.stopPropagation();deleteProspect('${p.id}')">🗑</button>
+      </div></td>
+    </tr>`).join('');
+}
+
+function openProspectModal(id) {
+  const isNew=!id;
+  s2('modal-prospect-title',isNew?'Nouveau prospect':'Fiche prospect');
+  document.getElementById('p-delete-btn').style.display=isNew?'none':'block';
+  if(isNew){['p-edit-id','p-raison','p-contact','p-tel','p-email','p-ville','p-cp','p-notes'].forEach(i=>sv(i,''));sv('p-statut','Nouveau');}
+  else{
+    const p=cache.prospects.find(x=>x.id===id);if(!p)return;
+    sv('p-edit-id',p.id);sv('p-raison',p.raison||'');sv('p-contact',p.contact||'');
+    sv('p-tel',p.tel||'');sv('p-email',p.email||'');sv('p-ville',p.ville||'');
+    sv('p-cp',p.cp||'');sv('p-notes',p.notes||'');sv('p-statut',p.statut||'Nouveau');
+    sv('p-profil',p.profil||'Indépendant');
+  }
+  openModal('prospect');
+}
+
+async function saveProspect() {
+  const raison=g('p-raison');if(!raison){toast('Raison sociale obligatoire','err');return;}
+  const data={
+    raison,contact:g('p-contact'),tel:g('p-tel'),email:g('p-email'),
+    ville:g('p-ville'),cp:g('p-cp'),notes:g('p-notes'),
+    statut:g2('p-statut')?.value||'Nouveau',profil:g2('p-profil')?.value||'Indépendant'
+  };
+  const id=g('p-edit-id');
+  try{
+    if(id){await db.collection('prospects').doc(id).update(data);logActivite('Prospect modifié — '+raison,'blue');}
+    else{data.createdAt=firebase.firestore.FieldValue.serverTimestamp();await db.collection('prospects').add(data);logActivite('Nouveau prospect — '+raison,'teal');}
+    closeModal('prospect');toast('✅ Prospect enregistré');
+  }catch(e){toast('Erreur : '+e.message,'err');}
+}
+
+async function deleteProspect(id) {
+  const p=cache.prospects.find(x=>x.id===id);
+  if(!confirm('Supprimer "'+( p?.raison||'ce prospect' )+'" ?'))return;
+  try{await db.collection('prospects').doc(id).delete();closeModal('prospect');toast('Prospect supprimé');}catch(e){toast('Erreur','err');}
+}
+
+async function convertProspect(id) {
+  const p=cache.prospects.find(x=>x.id===id);if(!p)return;
+  if(!confirm('Convertir "'+p.raison+'" en client ?'))return;
+  try{
+    const nc='BNT-'+String(cache.clients.length+1).padStart(4,'0');
+    await db.collection('clients').add({
+      raison:p.raison,contact:p.contact||'',tel:p.tel||'',email:p.email||'',
+      ville:p.ville||'',cp:p.cp||'',notes:p.notes||'',profil:p.profil||'',
+      numClient:nc,statut:'client',remise:0,
+      createdAt:firebase.firestore.FieldValue.serverTimestamp()
+    });
+    await db.collection('prospects').doc(id).delete();
+    logActivite('Prospect converti → Client — '+p.raison+' ('+nc+')','teal');
+    toast('✅ '+p.raison+' converti en client ('+nc+')');
+  }catch(e){toast('Erreur','err');}
+}
+
+// ══════════════════════════════════════════════════
+//  MAILING
+// ══════════════════════════════════════════════════
+function mlUpdateRecipients() {
+  const txt=document.getElementById('ml-recipients')?.value||'';
+  const mails=txt.split(/[\n,;]+/).map(m=>m.trim()).filter(m=>m.includes('@'));
+  s2('ml-recipients-count',mails.length+' destinataire(s)');
+  document.getElementById('ml-send-btn').disabled=mails.length===0;
+  s2('ml-send-summary',mails.length?mails.length+' destinataire(s) — PDF tarif joint':'Aucun destinataire');
+}
+
+function mlUpdatePreview() {
+  const subj=g('ml-subject');
+  s2('ml-preview-subject',subj||'(à saisir)');
+  const body=document.getElementById('ml-editor')?.innerHTML||'';
+  document.getElementById('ml-preview-body').innerHTML=body||'<em style="color:var(--g400);">Le contenu apparaîtra ici…</em>';
+}
+
+async function mlSendAll() {
+  const txt=document.getElementById('ml-recipients')?.value||'';
+  const mails=txt.split(/[\n,;]+/).map(m=>m.trim()).filter(m=>m.includes('@'));
+  if(!mails.length){toast('Aucun destinataire','err');return;}
+  const subj=g('ml-subject');if(!subj){toast('Objet manquant','err');return;}
+  const body=document.getElementById('ml-editor')?.innerText||'';if(!body.trim()){toast('Contenu manquant','err');return;}
+
+  const btn=document.getElementById('ml-send-btn');
+  btn.disabled=true;btn.textContent='Envoi…';
+  const pdfUrl='https://loac1118.github.io/BIONTRUFFE/2026-03-01_TG_MBS_BIONTRUFFE_2026_Pi_v15.pdf';
+  let sent=0,errors=0;
+  for(const mail of mails){
+    try{
+      const res=await fetch('https://api.web3forms.com/submit',{
+        method:'POST',headers:{'Content-Type':'application/json','Accept':'application/json'},
+        body:JSON.stringify({
+          access_key:'c9dce17b-a7cb-4190-a3d0-10fa4bf105e9',
+          from_name:'BIO N TRUFFE',subject:subj,
+          email:mail,to:'loacdev@outlook.fr',_captcha:'false',_template:'basic',
+          message:body+'\n\n📄 Tarif BIO N TRUFFE V15 : '+pdfUrl
+        })
+      });
+      const d=await res.json();
+      if(d.success===true||d.success==='true')sent++;else errors++;
+    }catch{errors++;}
+    await new Promise(r=>setTimeout(r,350));
+  }
+  btn.disabled=false;btn.textContent='🚀 Envoyer';
+  toast('✅ '+sent+' email(s) envoyé(s)'+(errors?' — '+errors+' erreur(s)':''));
+  if(sent>0)logActivite('Mailing envoyé — '+sent+' destinataires','blue');
+}
+
+// ══════════════════════════════════════════════════
+//  MODALS
+// ══════════════════════════════════════════════════
+function openModal(id){ document.getElementById('modal-'+id).classList.remove('hidden'); }
+function closeModal(id){ document.getElementById('modal-'+id).classList.add('hidden'); }
+document.querySelectorAll('.modal-bg').forEach(m=>{
+  m.addEventListener('click',e=>{if(e.target===m){const id=m.id.replace('modal-','');closeModal(id);}});
+});
+
+// ══════════════════════════════════════════════════
+//  TOAST
+// ══════════════════════════════════════════════════
+function toast(msg,type) {
+  const el=document.getElementById('toast');
+  el.textContent=msg;
+  el.style.background=type==='err'?'var(--red)':'var(--blue-p900)';
+  el.classList.add('show');
+  setTimeout(()=>el.classList.remove('show'),3500);
+}
+
+// ══════════════════════════════════════════════════
+//  UTILS
+// ══════════════════════════════════════════════════
+function g(id){ const el=document.getElementById(id);return el?el.value.trim():''; }
+function g2(id){ return document.getElementById(id); }
+function s2(id,v){ const el=document.getElementById(id);if(el)el.textContent=v; }
+function sv(id,v){ const el=document.getElementById(id);if(el)el.value=v; }
+function esc(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function fmtDate(ts) {
+  if(!ts)return'—';
+  let d;
+  try{d=ts.toDate?ts.toDate():new Date(ts);}catch{return'—';}
+  return d.toLocaleDateString('fr-FR');
+}
+</script>
+</body>
+</html>
