@@ -717,6 +717,14 @@ textarea { resize:vertical; min-height:80px; }
 }
 
 #app-shell:not(.hidden) { display:flex; flex-direction:column; min-height:100vh; width:100%; }
+
+  @keyframes scanAnim { 0%{top:0;} 95%{top:calc(100% - 2px);} 100%{top:calc(100% - 2px);} }
+  @keyframes slideUp { from{transform:translateY(100%);} to{transform:none;} }
+  #sec-scanner { padding:1.5rem; }
+  @media(max-width:640px) {
+    #sec-scanner > div:nth-child(3) { grid-template-columns:1fr !important; }
+  }
+
 </style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.0/jspdf.plugin.autotable.min.js"></script>
@@ -795,6 +803,7 @@ textarea { resize:vertical; min-height:80px; }
     <button class="t-tab active" onclick="showSection('dashboard',this)">Dashboard</button>
     <button class="t-tab" onclick="showSection('bdc',this)">Bon de Commande</button>
     <button class="t-tab" onclick="showSection('frais',this)">Frais</button>
+    <button class="t-tab" onclick="showSection('scanner',this)">📷 Scanner</button>
     <button class="t-tab" onclick="showSection('contacts-db',this)">Clients</button>
 
   </div>
@@ -1466,6 +1475,146 @@ textarea { resize:vertical; min-height:80px; }
     </div>
   </div></div>
 
+
+  <!-- SCANNER BDC -->
+  <div id="sec-scanner" class="hidden">
+    <div class="page-header">
+      <div>
+        <div class="page-title">📷 Scanner BDC</div>
+        <div class="page-sub">Scannez les codes-barres des produits MDM pour créer un bon de commande</div>
+      </div>
+      <div style="display:flex;gap:.5rem;align-items:center;flex-wrap:wrap;">
+        <button class="btn btn-ghost" style="font-size:.75rem;" onclick="scannerResetPanier()">🗑 Vider</button>
+        <button class="btn btn-primary" style="font-size:.75rem;" onclick="scannerTransferBDC()" id="scan-btn-transfer">🛒 Créer le BDC</button>
+      </div>
+    </div>
+
+    <!-- Sélecteur client -->
+    <div style="background:var(--surface);border-radius:10px;padding:1rem;margin-bottom:1rem;border:1px solid var(--border);">
+      <label style="font-size:.78rem;font-weight:600;color:var(--g600);display:block;margin-bottom:.4rem;">👤 Client de la commande</label>
+      <div style="display:flex;gap:.5rem;">
+        <select id="scan-client-select" style="flex:1;padding:.5rem .7rem;border:1.5px solid var(--border);border-radius:7px;font-size:.85rem;font-family:inherit;background:var(--surface2);color:var(--g800);">
+          <option value="">— Sélectionner un client —</option>
+        </select>
+        <button class="btn btn-ghost" style="font-size:.75rem;white-space:nowrap;" onclick="scannerRefreshClients()">🔄</button>
+      </div>
+    </div>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:1rem;">
+
+      <!-- Zone caméra -->
+      <div style="background:var(--surface);border-radius:10px;overflow:hidden;border:1px solid var(--border);">
+        <div style="padding:.7rem 1rem;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;">
+          <span style="font-size:.8rem;font-weight:600;color:var(--g700);">📷 Caméra</span>
+          <span id="scan-status-badge" style="font-size:.72rem;background:var(--g100);color:var(--g600);padding:2px 10px;border-radius:20px;">⏸ Arrêtée</span>
+        </div>
+
+        <!-- Vidéo / Zone iOS -->
+        <div id="scan-video-wrap" style="display:none;position:relative;background:#000;aspect-ratio:4/3;">
+          <video id="scan-video" playsinline muted autoplay style="width:100%;height:100%;object-fit:cover;display:block;"></video>
+          <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;pointer-events:none;">
+            <div style="width:60%;height:50%;border:2px solid #f0c060;border-radius:6px;box-shadow:0 0 0 9999px rgba(0,0,0,.4);position:relative;">
+              <div id="scan-line" style="position:absolute;top:0;left:0;right:0;height:2px;background:#f0c060;animation:scanAnim 1.8s linear infinite;"></div>
+            </div>
+          </div>
+          <canvas id="scan-canvas" style="display:none;"></canvas>
+        </div>
+
+        <!-- Zone iOS (photo) -->
+        <div id="scan-ios-wrap" style="display:none;">
+          <div onclick="scanIosPhoto()" style="cursor:pointer;background:#1a3a2a;aspect-ratio:4/3;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:.5rem;transition:opacity .2s;" onmousedown="this.style.opacity='.8'" onmouseup="this.style.opacity='1'">
+            <div style="font-size:3rem;">📷</div>
+            <div style="color:#f0c060;font-weight:600;font-size:.9rem;">Appuyer pour scanner</div>
+            <div style="color:rgba(255,255,255,.6);font-size:.75rem;font-style:italic;">Ouvre l'appareil photo</div>
+          </div>
+          <input type="file" id="scan-ios-input" accept="image/*" capture="environment" style="display:none" onchange="scanHandlePhoto(event)">
+        </div>
+
+        <!-- Écran idle -->
+        <div id="scan-idle-wrap" style="background:#f4f6fa;aspect-ratio:4/3;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:.5rem;">
+          <div style="font-size:2.5rem;opacity:.35;">🔍</div>
+          <div style="font-size:.82rem;color:var(--g500);">Appuyer sur Démarrer</div>
+        </div>
+
+        <!-- Contrôles -->
+        <div style="padding:.6rem;display:flex;gap:.4rem;flex-wrap:wrap;">
+          <button class="btn btn-primary" id="scan-btn-start" onclick="scanStart()" style="flex:1;font-size:.78rem;justify-content:center;">▶ Démarrer</button>
+          <button class="btn btn-ghost" id="scan-btn-stop" onclick="scanStop()" style="flex:1;font-size:.78rem;justify-content:center;display:none;">⏹ Stop</button>
+          <button class="btn btn-ghost" onclick="scanManual()" style="font-size:.78rem;white-space:nowrap;">⌨ Manuel</button>
+        </div>
+
+        <!-- Résultat scan -->
+        <div id="scan-result-card" style="display:none;padding:.7rem;border-top:1px solid var(--border);animation:fadeIn .2s ease;">
+          <div style="display:flex;gap:.6rem;align-items:flex-start;">
+            <div style="font-size:1.4rem;flex-shrink:0;">📦</div>
+            <div style="flex:1;min-width:0;">
+              <div id="scan-result-nom" style="font-weight:600;font-size:.85rem;color:var(--g800);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;"></div>
+              <div id="scan-result-ref" style="font-size:.72rem;color:var(--g500);"></div>
+              <div id="scan-result-prix" style="font-size:.85rem;font-weight:600;color:#1a7c3e;margin-top:2px;"></div>
+            </div>
+          </div>
+          <div style="display:flex;align-items:center;gap:.5rem;margin-top:.6rem;">
+            <button onclick="scanQtyChange(-1)" style="width:28px;height:28px;border-radius:50%;border:1.5px solid var(--g300);background:white;cursor:pointer;font-size:1rem;display:flex;align-items:center;justify-content:center;flex-shrink:0;">−</button>
+            <span id="scan-result-qty" style="font-size:1.1rem;font-weight:700;min-width:28px;text-align:center;color:var(--g800);">1</span>
+            <button onclick="scanQtyChange(1)" style="width:28px;height:28px;border-radius:50%;border:1.5px solid var(--g300);background:white;cursor:pointer;font-size:1rem;display:flex;align-items:center;justify-content:center;flex-shrink:0;">+</button>
+            <span id="scan-result-unite" style="font-size:.75rem;color:var(--g500);">colis</span>
+          </div>
+          <div style="display:flex;gap:.4rem;margin-top:.6rem;">
+            <button class="btn btn-primary" onclick="scanAjouter()" style="flex:1;justify-content:center;font-size:.8rem;">✓ Ajouter</button>
+            <button class="btn btn-ghost" onclick="scanDismiss()" style="font-size:.8rem;">✕</button>
+          </div>
+        </div>
+
+        <!-- Produit non trouvé -->
+        <div id="scan-notfound-card" style="display:none;padding:.7rem;border-top:1px solid var(--border);background:#fdf0ee;">
+          <p style="font-size:.82rem;color:#c0392b;margin:0;">❌ Code-barres non trouvé dans le catalogue</p>
+          <p id="scan-notfound-ean" style="font-size:.72rem;color:#999;margin:2px 0 0;font-family:monospace;"></p>
+        </div>
+      </div>
+
+      <!-- Panier scanner -->
+      <div style="background:var(--surface);border-radius:10px;border:1px solid var(--border);display:flex;flex-direction:column;">
+        <div style="padding:.7rem 1rem;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;">
+          <span style="font-size:.8rem;font-weight:600;color:var(--g700);">🛒 Panier</span>
+          <span id="scan-panier-count" style="font-size:.72rem;background:var(--blue-p100);color:var(--blue-p700);padding:2px 10px;border-radius:20px;">0 article</span>
+        </div>
+
+        <!-- Liste items -->
+        <div id="scan-panier-list" style="flex:1;overflow-y:auto;max-height:340px;padding:.4rem;">
+          <div id="scan-panier-empty" style="text-align:center;padding:2rem 1rem;color:var(--g400);">
+            <div style="font-size:2rem;margin-bottom:.3rem;">🛒</div>
+            <div style="font-size:.8rem;">Scannez des produits</div>
+          </div>
+        </div>
+
+        <!-- Total -->
+        <div style="padding:.7rem 1rem;border-top:1px solid var(--border);background:var(--surface2);">
+          <div style="display:flex;justify-content:space-between;align-items:center;">
+            <span style="font-size:.8rem;color:var(--g600);">Total HT</span>
+            <span id="scan-panier-total" style="font-size:1rem;font-weight:700;color:var(--g800);">0,00 €</span>
+          </div>
+          <div style="font-size:.72rem;color:var(--g400);margin-top:1px;" id="scan-panier-tva">TVA : 0,00 €</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal saisie manuelle -->
+    <div id="scan-modal-manual" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:800;align-items:flex-end;justify-content:center;">
+      <div style="background:white;border-radius:16px 16px 0 0;padding:1.5rem;width:100%;max-width:480px;animation:slideUp .3s ease;">
+        <h3 style="font-size:1rem;margin-bottom:1rem;color:var(--g800);">⌨ Saisir un EAN manuellement</h3>
+        <input type="text" id="scan-manual-input" inputmode="numeric" placeholder="Ex: 3347430006538"
+               style="width:100%;padding:.75rem;border:2px solid var(--blue-p400);border-radius:8px;font-size:1.1rem;font-family:monospace;letter-spacing:2px;text-align:center;margin-bottom:.8rem;box-sizing:border-box;"
+               onkeypress="if(event.key==='Enter') scanManualSearch()">
+        <div style="display:flex;gap:.5rem;">
+          <button class="btn btn-ghost" style="flex:1;justify-content:center;" onclick="document.getElementById('scan-modal-manual').style.display='none'">Annuler</button>
+          <button class="btn btn-primary" style="flex:1;justify-content:center;" onclick="scanManualSearch()">Rechercher</button>
+        </div>
+      </div>
+    </div>
+
+  </div>
+  <!-- FIN SCANNER BDC -->
+
   <!-- MAILING PROMO -->
   <div id="sec-mailing" class="hidden">
     <div class="page-header">
@@ -1907,7 +2056,7 @@ if (typeof cdbPageSize  === 'undefined') window.cdbPageSize  = 50;
 // ═══════════════════════════════════════════════
 //  NAVIGATION
 // ═══════════════════════════════════════════════
-const SECTIONS = ['dashboard','bdc','frais','contacts-db'];
+const SECTIONS = ['dashboard','bdc','frais','contacts-db','scanner'];
 function showSection(name, tabEl, sideEl) {
   SECTIONS.forEach(s => { const el=document.getElementById('sec-'+s); el.classList.add('hidden'); el.style.display=''; });
   const sec=document.getElementById('sec-'+name); if(!sec){console.warn('Section absente:',name);return;} sec.classList.remove('hidden'); sec.style.display=(name==='bdc')?'flex':'';
@@ -7363,6 +7512,422 @@ if ('serviceWorker' in navigator) {
       });
   });
 }
+
+
+// ══════════════════════════════════════════════════════════════
+//  MODULE SCANNER BDC — intégré au CRM MDM V3
+//  Utilise PRODUCTS (déjà en mémoire) + cdbContacts pour le BDC
+// ══════════════════════════════════════════════════════════════
+
+// ── Détection plateforme ─────────────────────────────────────
+const scanIsIOS      = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+const scanIsChromeIO = scanIsIOS && /CriOS/.test(navigator.userAgent);
+const scanForcePhoto = scanIsIOS && !scanIsChromeIO; // Safari iOS → mode photo seul
+
+// ── État ─────────────────────────────────────────────────────
+let scanVideoStream   = null;
+let scanBarcodeLoop   = null;
+let scannerActive     = false;
+let scanCurrentProduit = null;
+let scanCurrentQty    = 1;
+let scanPanier        = [];      // [{produit, qte}]
+let scanLastEAN       = '';
+let scanLastTime      = 0;
+let scanSessionCount  = 0;
+
+// ── Initialisation section scanner ───────────────────────────
+function scannerInit() {
+  scannerRefreshClients();
+  if (scanForcePhoto) {
+    document.getElementById('scan-idle-wrap').style.display = 'none';
+    document.getElementById('scan-ios-wrap').style.display  = 'block';
+    document.getElementById('scan-btn-start').textContent   = '📷 Ouvrir caméra';
+    document.getElementById('scan-status-badge').textContent = '📷 Mode photo';
+  }
+}
+
+// Charger les clients dans le select
+function scannerRefreshClients() {
+  var sel = document.getElementById('scan-client-select');
+  if (!sel) return;
+  var old = sel.value;
+  sel.innerHTML = '<option value="">— Sélectionner un client —</option>';
+  var contacts = (typeof cdbContacts !== 'undefined') ? cdbContacts : [];
+  contacts.forEach(function(c) {
+    var opt = document.createElement('option');
+    opt.value = c.id;
+    opt.textContent = (c.raison || c.nom || '') + (c.ville ? ' — ' + c.ville : '');
+    if (c.id === old) opt.selected = true;
+    sel.appendChild(opt);
+  });
+}
+
+// ── Démarrer le scan ─────────────────────────────────────────
+function scanStart() {
+  if (scanForcePhoto) { scanIosPhoto(); return; }
+  scanStop();
+  document.getElementById('scan-status-badge').textContent = '⏳ Accès caméra…';
+
+  navigator.mediaDevices.getUserMedia({
+    video: { facingMode: { ideal: 'environment' }, width: { ideal: 1280 }, height: { ideal: 720 } }
+  }).then(function(stream) {
+    scanVideoStream = stream;
+    var vid = document.getElementById('scan-video');
+    vid.srcObject = stream;
+    vid.setAttribute('playsinline', '');
+    vid.play().catch(function(){});
+
+    document.getElementById('scan-idle-wrap').style.display  = 'none';
+    document.getElementById('scan-ios-wrap').style.display   = 'none';
+    document.getElementById('scan-video-wrap').style.display = 'block';
+    document.getElementById('scan-btn-start').style.display  = 'none';
+    document.getElementById('scan-btn-stop').style.display   = 'inline-flex';
+    document.getElementById('scan-status-badge').textContent = '🔴 Actif';
+    scannerActive = true;
+
+    vid.addEventListener('loadedmetadata', function() { scanVideoLoop(vid); }, { once: true });
+    if (vid.readyState >= 1) scanVideoLoop(vid);
+
+  }).catch(function(e) {
+    console.warn('Caméra:', e.message);
+    toast('📷 Mode photo activé', 'info');
+    document.getElementById('scan-idle-wrap').style.display = 'none';
+    document.getElementById('scan-ios-wrap').style.display  = 'block';
+    document.getElementById('scan-btn-start').textContent   = '📷 Ouvrir caméra';
+    document.getElementById('scan-status-badge').textContent = '📷 Mode photo';
+  });
+}
+
+// Boucle de décodage vidéo
+function scanVideoLoop(vid) {
+  if (!scanVideoStream) return;
+  var canvas = document.getElementById('scan-canvas');
+  var ctx = canvas.getContext('2d', { willReadFrequently: true });
+
+  function loop() {
+    if (!scanVideoStream) return;
+    if (vid.readyState >= 2 && !vid.paused) {
+      canvas.width  = vid.videoWidth  || 640;
+      canvas.height = vid.videoHeight || 480;
+      ctx.drawImage(vid, 0, 0, canvas.width, canvas.height);
+
+      // jsQR si disponible
+      if (typeof jsQR !== 'undefined') {
+        try {
+          var imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+          var qr = jsQR(imgData.data, imgData.width, imgData.height, { inversionAttempts: 'dontInvert' });
+          if (qr && qr.data) { scanOnEAN(qr.data); return; }
+        } catch(e) {}
+      }
+
+      // ZXing/browser si disponible
+      if (typeof ZXingBrowser !== 'undefined') {
+        try {
+          var reader = new ZXingBrowser.BrowserMultiFormatReader();
+          reader.decodeFromCanvas(canvas).then(function(res) {
+            if (res) scanOnEAN(res.getText());
+          }).catch(function(){});
+        } catch(e) {}
+      }
+    }
+    scanBarcodeLoop = setTimeout(loop, 300);
+  }
+  loop();
+}
+
+function scanStop() {
+  if (scanBarcodeLoop) { clearTimeout(scanBarcodeLoop); scanBarcodeLoop = null; }
+  if (scanVideoStream) { scanVideoStream.getTracks().forEach(function(t){ t.stop(); }); scanVideoStream = null; }
+  var vid = document.getElementById('scan-video');
+  if (vid) vid.srcObject = null;
+  scannerActive = false;
+
+  document.getElementById('scan-video-wrap').style.display = 'none';
+  var idle = scanForcePhoto ? 'none' : 'flex';
+  var ios  = scanForcePhoto ? 'flex' : 'none';
+  document.getElementById('scan-idle-wrap').style.display = idle;
+  document.getElementById('scan-ios-wrap').style.display  = ios;
+  document.getElementById('scan-btn-start').style.display  = 'inline-flex';
+  document.getElementById('scan-btn-stop').style.display   = 'none';
+  document.getElementById('scan-btn-start').textContent   = scanForcePhoto ? '📷 Ouvrir caméra' : '▶ Démarrer';
+  document.getElementById('scan-status-badge').textContent = scanForcePhoto ? '📷 Mode photo' : '⏸ Arrêtée';
+}
+
+// ── Mode photo iOS ────────────────────────────────────────────
+function scanIosPhoto() {
+  var inp = document.getElementById('scan-ios-input');
+  inp.value = '';
+  inp.click();
+}
+
+function scanHandlePhoto(event) {
+  var file = event.target.files[0];
+  if (!file) return;
+  event.target.value = '';
+  document.getElementById('scan-status-badge').textContent = '⏳ Analyse…';
+
+  createImageBitmap(file).then(function(bmp) {
+    var canvas = document.getElementById('scan-canvas');
+    var scale = Math.min(1, 1200 / Math.max(bmp.width, bmp.height));
+    canvas.width  = Math.round(bmp.width  * scale);
+    canvas.height = Math.round(bmp.height * scale);
+    var ctx = canvas.getContext('2d', { willReadFrequently: true });
+    ctx.drawImage(bmp, 0, 0, canvas.width, canvas.height);
+
+    var decoded = null;
+
+    // jsQR
+    if (!decoded && typeof jsQR !== 'undefined') {
+      try {
+        var imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+        var qr = jsQR(imgData.data, imgData.width, imgData.height, { inversionAttempts: 'dontInvert' });
+        if (qr && qr.data) decoded = qr.data;
+      } catch(e) {}
+    }
+
+    // ZXing
+    if (!decoded && typeof ZXingBrowser !== 'undefined') {
+      try {
+        var reader = new ZXingBrowser.BrowserMultiFormatReader();
+        reader.decodeFromCanvas(canvas).then(function(res) {
+          if (res) { scanOnEAN(res.getText()); }
+          else { scanPhotoFailed(); }
+        }).catch(function() { if (!decoded) scanPhotoFailed(); });
+        return; // async
+      } catch(e) {}
+    }
+
+    if (decoded) {
+      scanOnEAN(decoded);
+    } else {
+      scanPhotoFailed();
+    }
+  }).catch(function(e) {
+    console.error(e);
+    document.getElementById('scan-status-badge').textContent = '⚠️ Erreur';
+    toast('Erreur lecture image', 'err');
+  });
+}
+
+function scanPhotoFailed() {
+  document.getElementById('scan-status-badge').textContent = '❌ Non lu';
+  toast('Code non lu — rapprochez-vous et centrez le code-barres', 'info');
+  setTimeout(function() {
+    document.getElementById('scan-status-badge').textContent = '📷 Mode photo';
+  }, 2000);
+}
+
+// ── Détection EAN → produit ───────────────────────────────────
+function scanOnEAN(ean) {
+  var now = Date.now();
+  if (ean === scanLastEAN && now - scanLastTime < 2500) return;
+  scanLastEAN = ean;
+  scanLastTime = now;
+  scanSessionCount++;
+
+  // Flash + vibration
+  if (navigator.vibrate) navigator.vibrate(70);
+  var badge = document.getElementById('scan-status-badge');
+  if (badge) { badge.textContent = '✅ Code lu !'; setTimeout(function(){ badge.textContent = scannerActive ? '🔴 Actif' : '📷 Mode photo'; }, 1200); }
+
+  scanDismiss();
+  var clean = String(ean).trim();
+
+  var found = (PRODUCTS || []).find(function(p) {
+    if (!p.ean) return false;
+    var pean = String(p.ean).trim();
+    return pean === clean || pean === clean.replace(/^0+/, '') || clean.endsWith(pean);
+  });
+
+  if (found) {
+    scanCurrentProduit = found;
+    scanCurrentQty     = 1;
+    document.getElementById('scan-result-nom').textContent  = found.libelle || found.nom || found.code;
+    document.getElementById('scan-result-ref').textContent  = 'Réf: ' + (found.code || '–') + ' · EAN: ' + clean;
+    document.getElementById('scan-result-prix').textContent = found.pu_ht > 0 ? found.pu_ht.toFixed(2) + ' € HT / ' + (found.pcb > 1 ? 'colis (×' + found.pcb + ')' : 'unité') : 'Prix non renseigné';
+    document.getElementById('scan-result-qty').textContent  = scanCurrentQty;
+    document.getElementById('scan-result-unite').textContent = found.pcb > 1 ? 'colis' : 'unité';
+    document.getElementById('scan-result-card').style.display    = 'block';
+    document.getElementById('scan-notfound-card').style.display  = 'none';
+  } else {
+    scanCurrentProduit = null;
+    document.getElementById('scan-notfound-ean').textContent  = 'EAN : ' + clean;
+    document.getElementById('scan-notfound-card').style.display = 'block';
+    document.getElementById('scan-result-card').style.display   = 'none';
+    setTimeout(function() {
+      document.getElementById('scan-notfound-card').style.display = 'none';
+    }, 4000);
+  }
+}
+
+// ── Gestion panier ────────────────────────────────────────────
+function scanQtyChange(delta) {
+  scanCurrentQty = Math.max(1, scanCurrentQty + delta);
+  document.getElementById('scan-result-qty').textContent = scanCurrentQty;
+}
+
+function scanAjouter() {
+  if (!scanCurrentProduit) return;
+  var code = scanCurrentProduit.code;
+  var ex   = scanPanier.find(function(i){ return i.produit.code === code; });
+  if (ex) { ex.qte += scanCurrentQty; }
+  else     { scanPanier.push({ produit: scanCurrentProduit, qte: scanCurrentQty }); }
+  scanDismiss();
+  scanPanierRender();
+  toast('✅ ' + (scanCurrentProduit.libelle || scanCurrentProduit.code).substring(0,35) + ' ajouté', 'ok');
+}
+
+function scanDismiss() {
+  document.getElementById('scan-result-card').style.display   = 'none';
+  document.getElementById('scan-notfound-card').style.display = 'none';
+  scanCurrentProduit = null;
+}
+
+function scanPanierRender() {
+  var list  = document.getElementById('scan-panier-list');
+  var empty = document.getElementById('scan-panier-empty');
+  var count = document.getElementById('scan-panier-count');
+
+  if (!scanPanier.length) {
+    if (empty) empty.style.display = 'block';
+    list.innerHTML = '';
+    list.appendChild(empty);
+    count.textContent = '0 article';
+    document.getElementById('scan-panier-total').textContent = '0,00 €';
+    document.getElementById('scan-panier-tva').textContent   = 'TVA : 0,00 €';
+    return;
+  }
+
+  if (empty) empty.style.display = 'none';
+  var totalHT  = 0, totalTVA = 0;
+  var totalQty = 0;
+
+  list.innerHTML = scanPanier.map(function(it, i) {
+    var ht = (it.produit.pu_ht || 0) * it.qte;
+    totalHT  += ht;
+    totalTVA += ht * ((it.produit.tva || 5.5) / 100);
+    totalQty += it.qte;
+    return '<div style="display:flex;align-items:center;gap:.5rem;padding:.4rem .3rem;border-bottom:1px solid var(--border);font-size:.78rem;">' +
+      '<div style="flex:1;min-width:0;">' +
+        '<div style="font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--g800);">' + (it.produit.libelle || it.produit.code) + '</div>' +
+        '<div style="color:var(--g500);font-size:.7rem;">' + (it.produit.code || '') + ' · ' + (it.produit.pu_ht > 0 ? ht.toFixed(2)+' € HT' : 'Prix ND') + '</div>' +
+      '</div>' +
+      '<div style="display:flex;align-items:center;gap:.3rem;flex-shrink:0;">' +
+        '<button onclick="scanItemQty('+i+',-1)" style="width:22px;height:22px;border-radius:50%;border:1px solid var(--g300);background:white;cursor:pointer;font-size:.85rem;display:flex;align-items:center;justify-content:center;">−</button>' +
+        '<span style="font-weight:700;min-width:20px;text-align:center;">' + it.qte + '</span>' +
+        '<button onclick="scanItemQty('+i+',1)" style="width:22px;height:22px;border-radius:50%;border:1px solid var(--g300);background:white;cursor:pointer;font-size:.85rem;display:flex;align-items:center;justify-content:center;">+</button>' +
+      '</div>' +
+      '<button onclick="scanItemDel('+i+')" style="background:none;border:none;cursor:pointer;color:var(--g300);font-size:1rem;padding:2px 4px;flex-shrink:0;">✕</button>' +
+    '</div>';
+  }).join('');
+
+  count.textContent = totalQty + ' article' + (totalQty > 1 ? 's' : '');
+  document.getElementById('scan-panier-total').textContent = totalHT.toFixed(2) + ' €';
+  document.getElementById('scan-panier-tva').textContent   = 'TVA : ' + totalTVA.toFixed(2) + ' €';
+}
+
+function scanItemQty(i, delta) {
+  scanPanier[i].qte = Math.max(1, scanPanier[i].qte + delta);
+  scanPanierRender();
+}
+
+function scanItemDel(i) {
+  scanPanier.splice(i, 1);
+  scanPanierRender();
+}
+
+function scannerResetPanier() {
+  if (scanPanier.length && !confirm('Vider le panier scanner ?')) return;
+  scanPanier = [];
+  scanPanierRender();
+}
+
+// ── Saisie manuelle ───────────────────────────────────────────
+function scanManual() {
+  var m = document.getElementById('scan-modal-manual');
+  m.style.display = 'flex';
+  setTimeout(function(){ document.getElementById('scan-manual-input').focus(); }, 250);
+}
+
+function scanManualSearch() {
+  var val = document.getElementById('scan-manual-input').value.trim();
+  if (!val) return;
+  document.getElementById('scan-modal-manual').style.display = 'none';
+  document.getElementById('scan-manual-input').value = '';
+  scanOnEAN(val);
+}
+
+// ── Transfert vers BDC ────────────────────────────────────────
+function scannerTransferBDC() {
+  if (!scanPanier.length) { toast('Panier vide', 'err'); return; }
+
+  // Récupérer le client sélectionné
+  var selEl   = document.getElementById('scan-client-select');
+  var clientId = selEl ? selEl.value : '';
+  var client   = clientId ? (typeof cdbContacts !== 'undefined' ? cdbContacts.find(function(c){ return c.id === clientId; }) : null) : null;
+
+  // Pré-remplir les champs BDC client
+  if (client) {
+    var setVal = function(id, val) { var el = document.getElementById(id); if (el) el.value = val || ''; };
+    setVal('bdc-raison',  client.raison || '');
+    setVal('bdc-contact', client.contact || '');
+    setVal('bdc-email',   client.email || '');
+    setVal('bdc-tel',     client.tel || '');
+    setVal('bdc-ville',   client.ville || '');
+    setVal('bdc-cp',      client.cp || '');
+    setVal('bdc-profil',  client.profil || 'Indépendant');
+    setVal('bdc-remise',  client.remise || 0);
+  }
+
+  // Injecter les quantités dans bdcQtys
+  if (typeof bdcQtys === 'undefined') { toast('Module BDC non disponible', 'err'); return; }
+
+  scanPanier.forEach(function(item) {
+    bdcQtys[item.produit.code] = (bdcQtys[item.produit.code] || 0) + item.qte;
+  });
+
+  // Aller sur la section BDC et rafraîchir
+  showSection('bdc', null, null);
+  if (typeof renderBDC === 'function') renderBDC();
+  else if (typeof bdcRender === 'function') bdcRender();
+
+  // Scroll vers le haut du BDC
+  var bdcEl = document.getElementById('sec-bdc');
+  if (bdcEl) bdcEl.scrollTop = 0;
+
+  var n = scanPanier.reduce(function(s,i){ return s + i.qte; }, 0);
+  toast('✅ ' + n + ' article(s) transféré(s) dans le BDC' + (client ? ' pour ' + (client.raison || '') : ''), 'ok');
+
+  // Vider le panier scanner
+  scanPanier = [];
+  scanPanierRender();
+}
+
+// ── Hook sur showSection pour init ───────────────────────────
+var _origShowSection = showSection;
+showSection = function(name, tabEl, sideEl) {
+  _origShowSection(name, tabEl, sideEl);
+  if (name === 'scanner') {
+    scannerInit();
+    // Ajouter les libs de décodage si pas encore chargées
+    if (typeof jsQR === 'undefined' && !document.getElementById('jsqr-script')) {
+      var s = document.createElement('script');
+      s.id = 'jsqr-script';
+      s.src = 'https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js';
+      document.head.appendChild(s);
+    }
+    if (typeof ZXingBrowser === 'undefined' && !document.getElementById('zxing-script')) {
+      var z = document.createElement('script');
+      z.id = 'zxing-script';
+      z.src = 'https://cdn.jsdelivr.net/npm/@zxing/browser@0.1.5/umd/index.min.js';
+      document.head.appendChild(z);
+    }
+  } else {
+    // Stopper la caméra quand on quitte le scanner
+    if (scanVideoStream) scanStop();
+  }
+};
+
 </script>
 
 <!-- ═══ MODALE SYNCHRONISATION DONNÉES ════════════════════════════════════ -->
