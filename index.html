@@ -8472,19 +8472,119 @@ function bdcScanHandlePhoto(event) {
   var file = event.target.files[0];
   if (!file) return;
   event.target.value = '';
-  document.getElementById('bdc-cam-badge').textContent = '⏳ Analyse…';
 
-  var url = URL.createObjectURL(file);
+  var badge = document.getElementById('bdc-cam-badge');
+  badge.textContent = '\u23f3 Chargement\u2026';
 
-  // ── Tentative 1 : Quagga2 sur l'image complète ──────────────
-  function tryQuagga(imageUrl, callback) {
-    if (typeof Quagga === 'undefined') { callback(null); return; }
+  // Lire le fichier en base64 pour eviter les restrictions blob iOS
+  var reader = new FileReader();
+  reader.onload = function(e) {
+    var img = new Image();
+    img.onload = function() { bdcDecodeImage(img); };
+    img.onerror = function() {
+      badge.textContent = '\u26a0\ufe0f Erreur image';
+      toast('Impossible de lire la photo', 'err');
+    };
+    img.src = e.target.result;
+  };
+  reader.readAsDataURL(file);
+}
+
+// Moteur de decodage multi-tentatives
+function bdcDecodeImage(img) {
+  var badge = document.getElementById('bdc-cam-badge');
+
+  // Canvas de travail redimensionne (max 1400px - optimise Quagga)
+  var canvas = document.createElement('canvas');
+  var ctx    = canvas.getContext('2d', { willReadFrequently: true });
+  var maxSide = 1400;
+  var scale   = Math.min(1, maxSide / Math.max(img.width, img.height));
+  canvas.width  = Math.round(img.width  * scale);
+  canvas.height = Math.round(img.height * scale);
+  ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+
+  // Pipeline de tentatives en cascade
+  var attempts = [];
+
+  // A : image complete Quagga
+  attempts.push(function(cb) { _tryQ(canvas, cb); });
+
+  // B : bande centrale 40% hauteur (code-barres souvent centre)
+  attempts.push(function(cb) {
+    var sh = Math.round(canvas.height * 0.4);
+    var sy = Math.round(canvas.height * 0.3);
+    var c2 = _cropCanvas(canvas, 0, sy, canvas.width, sh);
+    _tryQ(c2, cb);
+  });
+
+  // C : image en niveaux de gris contraste x1.5
+  attempts.push(function(cb) {
+    var gc = _grayContrast(canvas, 1.5);
+    _tryQ(gc, cb);
+  });
+
+  // D : bande centrale + niveaux de gris contraste x2
+  attempts.push(function(cb) {
+    var sh2 = Math.round(canvas.height * 0.5);
+    var sy2 = Math.round(canvas.height * 0.25);
+    var strip = _cropCanvas(canvas, 0, sy2, canvas.width, sh2);
+    var gc2   = _grayContrast(strip, 2.0);
+    _tryQ(gc2, cb);
+  });
+
+  // E : BarcodeDetector natif sur canvas
+  attempts.push(function(cb) {
+    if (!('BarcodeDetector' in window)) { cb(null); return; }
+    try {
+      new BarcodeDetector({ formats: ['ean_13','ean_8','code_128','code_39','upc_a','upc_e'] })
+        .detect(canvas)
+        .then(function(r) { cb(r.length ? r[0].rawValue : null); })
+        .catch(function() { cb(null); });
+    } catch(e) { cb(null); }
+  });
+
+  // F : BarcodeDetector sur image originale haute resolution
+  attempts.push(function(cb) {
+    if (!('BarcodeDetector' in window)) { cb(null); return; }
+    try {
+      new BarcodeDetector({ formats: ['ean_13','ean_8','code_128','code_39','upc_a','upc_e'] })
+        .detect(img)
+        .then(function(r) { cb(r.length ? r[0].rawValue : null); })
+        .catch(function() { cb(null); });
+    } catch(e) { cb(null); }
+  });
+
+  // Executer en serie, s arreter au premier succes
+  var i = 0;
+  function next() {
+    if (i >= attempts.length) { _bdcPhotoFail(); return; }
+    badge.textContent = '\u23f3 Essai ' + (i+1) + '/' + attempts.length + '\u2026';
+    attempts[i++](function(code) {
+      if (code && code.replace(/[^0-9]/g,'').length >= 8) {
+        bdcScanOnEAN(code);
+      } else if (code) {
+        bdcScanOnEAN(code); // Accepter aussi Code128 non-numerique
+      } else {
+        next();
+      }
+    });
+  }
+  next();
+}
+
+// Helper : Quagga sur un canvas
+function _tryQ(canvas, callback) {
+  if (typeof Quagga === 'undefined') { callback(null); return; }
+  try {
     Quagga.decodeSingle({
       decoder: {
-        readers: ['ean_reader','ean_8_reader','code_128_reader','code_39_reader','upc_reader','upc_e_reader']
+        readers: ['ean_reader','ean_8_reader','code_128_reader','upc_reader','upc_e_reader'],
+        multiple: false
       },
-      locate: true,
-      src: imageUrl
+      locate:     true,
+      halfSample: false,
+      patchSize:  'medium',
+      src: canvas.toDataURL('image/jpeg', 0.92)
     }, function(result) {
       if (result && result.codeResult && result.codeResult.code) {
         callback(result.codeResult.code);
@@ -8492,44 +8592,33 @@ function bdcScanHandlePhoto(event) {
         callback(null);
       }
     });
-  }
-
-  // ── Tentative 2 : BarcodeDetector natif (iOS 17+ / Chrome Android) ──
-  function tryNative(imageUrl, callback) {
-    if (!('BarcodeDetector' in window)) { callback(null); return; }
-    var img = new Image();
-    img.onload = function() {
-      try {
-        var detector = new BarcodeDetector({
-          formats: ['ean_13','ean_8','code_128','code_39','upc_a','upc_e','qr_code']
-        });
-        detector.detect(img).then(function(barcodes) {
-          callback(barcodes.length > 0 ? barcodes[0].rawValue : null);
-        }).catch(function() { callback(null); });
-      } catch(e) { callback(null); }
-    };
-    img.onerror = function() { callback(null); };
-    img.src = imageUrl;
-  }
-
-  // ── Pipeline : Quagga → BarcodeDetector → échec ──────────────
-  tryQuagga(url, function(code) {
-    if (code) {
-      URL.revokeObjectURL(url);
-      bdcScanOnEAN(code);
-      return;
-    }
-    tryNative(url, function(code2) {
-      URL.revokeObjectURL(url);
-      if (code2) {
-        bdcScanOnEAN(code2);
-      } else {
-        _bdcPhotoFail();
-      }
-    });
-  });
+  } catch(e) { callback(null); }
 }
 
+// Helper : recadrer un canvas
+function _cropCanvas(src, x, y, w, h) {
+  var c = document.createElement('canvas');
+  c.width = w; c.height = h;
+  c.getContext('2d').drawImage(src, x, y, w, h, 0, 0, w, h);
+  return c;
+}
+
+// Helper : niveaux de gris + contraste
+function _grayContrast(src, factor) {
+  var c = document.createElement('canvas');
+  c.width = src.width; c.height = src.height;
+  var ctx = c.getContext('2d', { willReadFrequently: true });
+  ctx.drawImage(src, 0, 0);
+  var id = ctx.getImageData(0, 0, c.width, c.height);
+  var d  = id.data;
+  for (var i = 0; i < d.length; i += 4) {
+    var g = 0.299*d[i] + 0.587*d[i+1] + 0.114*d[i+2];
+    g = Math.min(255, Math.max(0, (g - 128) * factor + 128));
+    d[i] = d[i+1] = d[i+2] = g;
+  }
+  ctx.putImageData(id, 0, 0);
+  return c;
+}
 function _bdcPhotoFail() {
   document.getElementById('bdc-cam-badge').textContent = '❌ Non lu';
   toast('Code non lu — rapprochez-vous et centrez le code-barres', 'info');
