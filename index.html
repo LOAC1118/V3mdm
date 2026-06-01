@@ -733,6 +733,8 @@ textarea { resize:vertical; min-height:80px; }
   }
 
 </style>
+<!-- Quagga2 : décodage EAN-13/EAN-8/Code128 depuis image et vidéo -->
+<script src="https://cdn.jsdelivr.net/npm/@ericblade/quagga2@1.4.2/dist/quagga.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.0/jspdf.plugin.autotable.min.js"></script>
 </head>
@@ -8026,19 +8028,7 @@ showSection = function(name, tabEl, sideEl) {
   _origShowSection(name, tabEl, sideEl);
   if (name === 'scanner') {
     scannerInit();
-    // Ajouter les libs de décodage si pas encore chargées
-    if (typeof jsQR === 'undefined' && !document.getElementById('jsqr-script')) {
-      var s = document.createElement('script');
-      s.id = 'jsqr-script';
-      s.src = 'https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js';
-      document.head.appendChild(s);
-    }
-    if (typeof ZXingBrowser === 'undefined' && !document.getElementById('zxing-script')) {
-      var z = document.createElement('script');
-      z.id = 'zxing-script';
-      z.src = 'https://cdn.jsdelivr.net/npm/@zxing/browser@0.1.5/umd/index.min.js';
-      document.head.appendChild(z);
-    }
+    // Quagga2 chargé en tête
   } else {
     // Stopper la caméra quand on quitte le scanner
     if (scanVideoStream) scanStop();
@@ -8096,19 +8086,7 @@ function bdcScanOpen() {
     document.getElementById('bdc-cam-start-btn').onclick = bdcScanIosPhoto;
   }
 
-  // Charger les libs de décodage si besoin
-  if (typeof jsQR === 'undefined' && !document.getElementById('jsqr-script')) {
-    var s = document.createElement('script');
-    s.id  = 'jsqr-script';
-    s.src = 'https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js';
-    document.head.appendChild(s);
-  }
-  if (typeof ZXingBrowser === 'undefined' && !document.getElementById('zxing-script')) {
-    var z = document.createElement('script');
-    z.id  = 'zxing-script';
-    z.src = 'https://cdn.jsdelivr.net/npm/@zxing/browser@0.1.5/umd/index.min.js';
-    document.head.appendChild(z);
-  }
+  // Quagga2 chargé en tête — rien à faire ici
 }
 
 function bdcScanClose() {
@@ -8160,6 +8138,17 @@ function _bdcVideoLoop(vid) {
   var canvas = document.getElementById('bdc-scan-canvas');
   var ctx = canvas.getContext('2d', { willReadFrequently: true });
 
+  // Préférer BarcodeDetector natif si dispo (performant)
+  var useNative = 'BarcodeDetector' in window;
+  var nativeDetector = null;
+  if (useNative) {
+    try {
+      nativeDetector = new BarcodeDetector({
+        formats: ['ean_13','ean_8','code_128','code_39','upc_a','upc_e','qr_code']
+      });
+    } catch(e) { useNative = false; }
+  }
+
   function loop() {
     if (!bdcScanStream) return;
     if (vid.readyState >= 2 && !vid.paused) {
@@ -8167,24 +8156,36 @@ function _bdcVideoLoop(vid) {
       canvas.height = vid.videoHeight || 480;
       ctx.drawImage(vid, 0, 0, canvas.width, canvas.height);
 
-      // jsQR
-      if (typeof jsQR !== 'undefined') {
-        try {
-          var d = ctx.getImageData(0, 0, canvas.width, canvas.height);
-          var r = jsQR(d.data, d.width, d.height, { inversionAttempts: 'dontInvert' });
-          if (r && r.data) { bdcScanOnEAN(r.data); return; }
-        } catch(e) {}
+      // Méthode 1 : BarcodeDetector natif (plus rapide)
+      if (useNative && nativeDetector) {
+        nativeDetector.detect(canvas).then(function(barcodes) {
+          if (barcodes.length > 0) {
+            bdcScanOnEAN(barcodes[0].rawValue);
+          }
+        }).catch(function(){});
+        bdcScanLoop = setTimeout(loop, 300);
+        return;
       }
-      // ZXing
-      if (typeof ZXingBrowser !== 'undefined') {
+
+      // Méthode 2 : Quagga2 frame par frame
+      if (typeof Quagga !== 'undefined') {
         try {
-          new ZXingBrowser.BrowserMultiFormatReader().decodeFromCanvas(canvas)
-            .then(function(res){ if (res) bdcScanOnEAN(res.getText()); })
-            .catch(function(){});
+          var imgData = canvas.toDataURL('image/jpeg', 0.8);
+          Quagga.decodeSingle({
+            decoder: {
+              readers: ['ean_reader','ean_8_reader','code_128_reader']
+            },
+            locate: true,
+            src: imgData
+          }, function(result) {
+            if (result && result.codeResult && result.codeResult.code) {
+              bdcScanOnEAN(result.codeResult.code);
+            }
+          });
         } catch(e) {}
       }
     }
-    bdcScanLoop = setTimeout(loop, 280);
+    bdcScanLoop = setTimeout(loop, 350);
   }
   loop();
 }
@@ -8221,53 +8222,59 @@ function bdcScanHandlePhoto(event) {
   event.target.value = '';
   document.getElementById('bdc-cam-badge').textContent = '⏳ Analyse…';
 
-  createImageBitmap(file).then(function(bmp) {
-    var canvas = document.getElementById('bdc-scan-canvas');
-    var scale = Math.min(1, 1200 / Math.max(bmp.width, bmp.height));
-    canvas.width  = Math.round(bmp.width  * scale);
-    canvas.height = Math.round(bmp.height * scale);
-    var ctx = canvas.getContext('2d', { willReadFrequently: true });
-    ctx.drawImage(bmp, 0, 0, canvas.width, canvas.height);
+  var url = URL.createObjectURL(file);
 
-    var decoded = null;
+  // ── Tentative 1 : Quagga2 sur l'image complète ──────────────
+  function tryQuagga(imageUrl, callback) {
+    if (typeof Quagga === 'undefined') { callback(null); return; }
+    Quagga.decodeSingle({
+      decoder: {
+        readers: ['ean_reader','ean_8_reader','code_128_reader','code_39_reader','upc_reader','upc_e_reader']
+      },
+      locate: true,
+      src: imageUrl
+    }, function(result) {
+      if (result && result.codeResult && result.codeResult.code) {
+        callback(result.codeResult.code);
+      } else {
+        callback(null);
+      }
+    });
+  }
 
-    // jsQR
-    if (typeof jsQR !== 'undefined') {
+  // ── Tentative 2 : BarcodeDetector natif (iOS 17+ / Chrome Android) ──
+  function tryNative(imageUrl, callback) {
+    if (!('BarcodeDetector' in window)) { callback(null); return; }
+    var img = new Image();
+    img.onload = function() {
       try {
-        var d  = ctx.getImageData(0, 0, canvas.width, canvas.height);
-        var r  = jsQR(d.data, d.width, d.height, { inversionAttempts: 'dontInvert' });
-        if (r && r.data) decoded = r.data;
-      } catch(e) {}
-    }
+        var detector = new BarcodeDetector({
+          formats: ['ean_13','ean_8','code_128','code_39','upc_a','upc_e','qr_code']
+        });
+        detector.detect(img).then(function(barcodes) {
+          callback(barcodes.length > 0 ? barcodes[0].rawValue : null);
+        }).catch(function() { callback(null); });
+      } catch(e) { callback(null); }
+    };
+    img.onerror = function() { callback(null); };
+    img.src = imageUrl;
+  }
 
-    // ZXing async
-    if (!decoded && typeof ZXingBrowser !== 'undefined') {
-      new ZXingBrowser.BrowserMultiFormatReader().decodeFromCanvas(canvas)
-        .then(function(res) {
-          if (res) bdcScanOnEAN(res.getText());
-          else _bdcPhotoFail();
-        }).catch(function(){ _bdcPhotoFail(); });
+  // ── Pipeline : Quagga → BarcodeDetector → échec ──────────────
+  tryQuagga(url, function(code) {
+    if (code) {
+      URL.revokeObjectURL(url);
+      bdcScanOnEAN(code);
       return;
     }
-
-    // Recadrage centre si toujours rien
-    if (!decoded && typeof jsQR !== 'undefined') {
-      try {
-        var cx = Math.round(canvas.width  * .15), cy = Math.round(canvas.height * .2);
-        var cw = Math.round(canvas.width  * .70), ch = Math.round(canvas.height * .6);
-        var crop = ctx.getImageData(cx, cy, cw, ch);
-        var r2 = jsQR(crop.data, cw, ch, { inversionAttempts: 'attemptBoth' });
-        if (r2 && r2.data) decoded = r2.data;
-      } catch(e) {}
-    }
-
-    if (decoded) bdcScanOnEAN(decoded);
-    else _bdcPhotoFail();
-
-  }).catch(function(e) {
-    console.error(e);
-    document.getElementById('bdc-cam-badge').textContent = '⚠️ Erreur';
-    toast('Erreur lecture image', 'err');
+    tryNative(url, function(code2) {
+      URL.revokeObjectURL(url);
+      if (code2) {
+        bdcScanOnEAN(code2);
+      } else {
+        _bdcPhotoFail();
+      }
+    });
   });
 }
 
