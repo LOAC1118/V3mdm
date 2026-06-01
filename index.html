@@ -718,6 +718,13 @@ textarea { resize:vertical; min-height:80px; }
 
 #app-shell:not(.hidden) { display:flex; flex-direction:column; min-height:100vh; width:100%; }
 
+
+  @keyframes bdcScanAnim { 0%{top:0;opacity:1;} 95%{top:calc(100% - 2px);opacity:1;} 100%{top:calc(100% - 2px);opacity:0;} }
+  #bdc-scan-panel { flex-direction: column; }
+  @media(max-width:680px) {
+    #bdc-scan-panel { width: 100% !important; }
+  }
+
   @keyframes scanAnim { 0%{top:0;} 95%{top:calc(100% - 2px);} 100%{top:calc(100% - 2px);} }
   @keyframes slideUp { from{transform:translateY(100%);} to{transform:none;} }
   #sec-scanner { padding:1.5rem; }
@@ -1096,6 +1103,7 @@ textarea { resize:vertical; min-height:80px; }
     <div style="background:var(--surface);border-bottom:1px solid var(--border);padding:.55rem 1rem;display:flex;align-items:center;gap:8px;flex-shrink:0;flex-wrap:wrap;">
       <div style="font-family:var(--fdisp);font-size:.9rem;color:var(--g900);flex:1;min-width:140px;">🌾 Bon de Commande MDM 2026</div>
       <button class="btn btn-ghost" style="font-size:.72rem;padding:.3rem .7rem;" onclick="openBdcImport()">📄 Importer commande</button>
+      <button class="btn btn-primary" id="bdc-scan-btn" style="font-size:.72rem;padding:.3rem .8rem;background:#1a7c3e;border-color:#1a7c3e;" onclick="bdcScanToggle()">📷 Scanner</button>
       <button class="btn btn-ghost" style="font-size:.72rem;padding:.3rem .7rem;color:#fcd34d;border-color:rgba(245,158,11,.3);" onclick="openStockImport()">📦 Mettre à jour stocks</button>
       <button class="btn btn-ghost" style="font-size:.72rem;padding:.3rem .7rem;" onclick="resetBDC()">🗑 Effacer</button>
       <button class="btn btn-primary" style="font-size:.72rem;padding:.3rem .7rem;" onclick="bdcSendOrder()">Envoyer la commande</button>
@@ -1475,6 +1483,115 @@ textarea { resize:vertical; min-height:80px; }
     </div>
   </div></div>
 
+
+
+    <!-- ══ PANNEAU SCANNER INTÉGRÉ AU BDC ══ -->
+    <div id="bdc-scan-panel" style="display:none;position:fixed;top:0;right:0;width:320px;height:100dvh;background:white;box-shadow:-4px 0 24px rgba(0,0,0,.18);z-index:600;display:none;flex-direction:column;border-left:2px solid #1a3a2a;">
+
+      <!-- Header panneau -->
+      <div style="background:#1a3a2a;padding:.75rem 1rem;display:flex;align-items:center;gap:.5rem;flex-shrink:0;">
+        <div style="flex:1;">
+          <div style="color:#f0c060;font-weight:700;font-size:.88rem;">📷 Scanner produits</div>
+          <div id="bdc-scan-client-label" style="color:rgba(255,255,255,.6);font-size:.72rem;font-style:italic;margin-top:1px;">Aucun client sélectionné</div>
+        </div>
+        <button onclick="bdcScanClose()" style="background:rgba(255,255,255,.15);border:none;color:white;border-radius:6px;padding:4px 10px;cursor:pointer;font-size:.8rem;">✕ Fermer</button>
+      </div>
+
+      <!-- Zone caméra / iOS -->
+      <div style="flex-shrink:0;background:#000;position:relative;" id="bdc-scan-cam-wrap">
+
+        <!-- Vidéo -->
+        <div id="bdc-cam-video-wrap" style="display:none;position:relative;aspect-ratio:4/3;">
+          <video id="bdc-scan-video" playsinline muted autoplay style="width:100%;height:100%;object-fit:cover;display:block;"></video>
+          <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;pointer-events:none;">
+            <div style="width:72%;height:52%;border:2.5px solid #f0c060;border-radius:8px;box-shadow:0 0 0 9999px rgba(0,0,0,.45);position:relative;">
+              <div id="bdc-scan-line" style="position:absolute;top:0;left:0;right:0;height:2px;background:#f0c060;animation:bdcScanAnim 1.8s linear infinite;"></div>
+              <!-- Coins -->
+              <span style="position:absolute;top:-2px;left:-2px;width:14px;height:14px;border:3px solid #f0c060;border-right:none;border-bottom:none;border-radius:3px 0 0 0;"></span>
+              <span style="position:absolute;top:-2px;right:-2px;width:14px;height:14px;border:3px solid #f0c060;border-left:none;border-bottom:none;border-radius:0 3px 0 0;"></span>
+              <span style="position:absolute;bottom:-2px;left:-2px;width:14px;height:14px;border:3px solid #f0c060;border-right:none;border-top:none;border-radius:0 0 0 3px;"></span>
+              <span style="position:absolute;bottom:-2px;right:-2px;width:14px;height:14px;border:3px solid #f0c060;border-left:none;border-top:none;border-radius:0 0 3px 0;"></span>
+            </div>
+          </div>
+          <canvas id="bdc-scan-canvas" style="display:none;"></canvas>
+        </div>
+
+        <!-- Zone iOS photo -->
+        <div id="bdc-cam-ios-wrap" style="display:none;aspect-ratio:4/3;cursor:pointer;background:#1a3a2a;display:none;flex-direction:column;align-items:center;justify-content:center;gap:.4rem;" onclick="bdcScanIosPhoto()">
+          <div style="font-size:2.5rem;">📷</div>
+          <div style="color:#f0c060;font-weight:600;font-size:.88rem;">Appuyer pour scanner</div>
+          <div style="color:rgba(255,255,255,.55);font-size:.72rem;font-style:italic;">Ouvre l'appareil photo iOS</div>
+        </div>
+        <input type="file" id="bdc-ios-input" accept="image/*" capture="environment" style="display:none;" onchange="bdcScanHandlePhoto(event)">
+
+        <!-- Idle -->
+        <div id="bdc-cam-idle-wrap" style="aspect-ratio:4/3;background:#1a3a2a;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:.4rem;">
+          <div style="font-size:2.5rem;opacity:.4;">📷</div>
+          <div style="color:rgba(255,255,255,.5);font-size:.8rem;">Appuyer sur Démarrer</div>
+        </div>
+      </div>
+
+      <!-- Contrôles caméra -->
+      <div style="padding:.5rem .7rem;border-bottom:1px solid #eee;display:flex;gap:.4rem;align-items:center;flex-shrink:0;background:#f9f9f8;">
+        <button id="bdc-cam-start-btn" class="btn btn-primary" onclick="bdcCamStart()" style="flex:1;justify-content:center;font-size:.78rem;background:#1a3a2a;border-color:#1a3a2a;">▶ Démarrer</button>
+        <button id="bdc-cam-stop-btn" class="btn btn-ghost" onclick="bdcCamStop()" style="flex:1;justify-content:center;font-size:.78rem;display:none;">⏹ Stop</button>
+        <button class="btn btn-ghost" onclick="bdcScanManuel()" style="font-size:.78rem;white-space:nowrap;">⌨</button>
+        <span id="bdc-cam-badge" style="font-size:.68rem;background:#f0f0ee;color:#666;padding:2px 8px;border-radius:12px;white-space:nowrap;">⏸</span>
+      </div>
+
+      <!-- Résultat scan -->
+      <div id="bdc-scan-result" style="display:none;padding:.6rem .8rem;border-bottom:1px solid #eee;background:#f0f9f4;animation:fadeIn .2s ease;flex-shrink:0;">
+        <div style="display:flex;gap:.6rem;align-items:flex-start;">
+          <div style="font-size:1.5rem;flex-shrink:0;">📦</div>
+          <div style="flex:1;min-width:0;">
+            <div id="bdc-sr-nom" style="font-weight:700;font-size:.85rem;color:#1a3a2a;line-height:1.3;"></div>
+            <div id="bdc-sr-ref" style="font-size:.7rem;color:#888;font-family:monospace;margin-top:1px;"></div>
+            <div id="bdc-sr-prix" style="font-size:.85rem;font-weight:600;color:#1a7c3e;margin-top:3px;"></div>
+          </div>
+        </div>
+        <!-- Qty selector -->
+        <div style="display:flex;align-items:center;gap:.6rem;margin-top:.6rem;padding-top:.5rem;border-top:1px solid #d0edda;">
+          <span style="font-size:.75rem;color:#555;flex-shrink:0;">Qté :</span>
+          <button onclick="bdcScanQty(-1)" style="width:30px;height:30px;border-radius:50%;border:1.5px solid #1a3a2a;background:white;cursor:pointer;font-size:1.1rem;display:flex;align-items:center;justify-content:center;color:#1a3a2a;flex-shrink:0;">−</button>
+          <span id="bdc-sr-qty" style="font-size:1.2rem;font-weight:800;min-width:28px;text-align:center;color:#1a3a2a;">1</span>
+          <span id="bdc-sr-unite" style="font-size:.72rem;color:#888;">colis</span>
+          <button onclick="bdcScanQty(1)" style="width:30px;height:30px;border-radius:50%;border:1.5px solid #1a3a2a;background:white;cursor:pointer;font-size:1.1rem;display:flex;align-items:center;justify-content:center;color:#1a3a2a;flex-shrink:0;">+</button>
+        </div>
+        <div style="display:flex;gap:.4rem;margin-top:.6rem;">
+          <button onclick="bdcScanAjouter()" class="btn btn-primary" style="flex:1;justify-content:center;font-size:.82rem;background:#1a3a2a;border-color:#1a3a2a;">✓ Ajouter au BDC</button>
+          <button onclick="bdcScanDismiss()" class="btn btn-ghost" style="font-size:.82rem;">✕</button>
+        </div>
+      </div>
+
+      <!-- Non trouvé -->
+      <div id="bdc-scan-notfound" style="display:none;padding:.6rem .8rem;border-bottom:1px solid #eee;background:#fdf0ee;flex-shrink:0;">
+        <div style="font-size:.82rem;color:#c0392b;font-weight:600;">❌ Produit non trouvé</div>
+        <div id="bdc-sr-ean-nf" style="font-size:.72rem;color:#999;font-family:monospace;margin-top:2px;"></div>
+        <div style="font-size:.72rem;color:#aaa;margin-top:2px;">Essayez la saisie manuelle ⌨</div>
+      </div>
+
+      <!-- Récapitulatif scans de la session -->
+      <div style="flex:1;overflow-y:auto;padding:.5rem .7rem;">
+        <div style="font-size:.72rem;font-weight:700;color:#999;text-transform:uppercase;letter-spacing:.05em;margin-bottom:.4rem;">Session en cours</div>
+        <div id="bdc-scan-log" style="display:flex;flex-direction:column;gap:.3rem;">
+          <div style="font-size:.78rem;color:#bbb;text-align:center;padding:1rem 0;">Aucun scan</div>
+        </div>
+      </div>
+
+      <!-- Modal saisie manuelle -->
+      <div id="bdc-scan-manual-modal" style="display:none;position:absolute;bottom:0;left:0;right:0;background:white;border-radius:12px 12px 0 0;padding:1.2rem;box-shadow:0 -4px 20px rgba(0,0,0,.15);">
+        <div style="font-size:.9rem;font-weight:600;color:#1a3a2a;margin-bottom:.8rem;">⌨ Saisir EAN manuellement</div>
+        <input type="text" id="bdc-manual-ean" inputmode="numeric" placeholder="Ex: 3347430006538"
+          style="width:100%;padding:.65rem;border:2px solid #1a3a2a;border-radius:8px;font-size:1rem;font-family:monospace;letter-spacing:1px;text-align:center;box-sizing:border-box;margin-bottom:.6rem;"
+          onkeypress="if(event.key==='Enter') bdcManualSearch()">
+        <div style="display:flex;gap:.4rem;">
+          <button class="btn btn-ghost" style="flex:1;justify-content:center;" onclick="document.getElementById('bdc-scan-manual-modal').style.display='none'">Annuler</button>
+          <button class="btn btn-primary" style="flex:1;justify-content:center;background:#1a3a2a;border-color:#1a3a2a;" onclick="bdcManualSearch()">Rechercher</button>
+        </div>
+      </div>
+
+    </div>
+    <!-- ══ FIN PANNEAU SCANNER BDC ══ -->
 
   <!-- SCANNER BDC -->
   <div id="sec-scanner" class="hidden">
@@ -7925,6 +8042,371 @@ showSection = function(name, tabEl, sideEl) {
   } else {
     // Stopper la caméra quand on quitte le scanner
     if (scanVideoStream) scanStop();
+  }
+};
+
+
+
+// ══════════════════════════════════════════════════════════════
+//  SCANNER INTÉGRÉ AU BDC
+//  Panneau latéral qui s'ouvre depuis le BDC et ajoute
+//  directement les produits dans bdcQtys + buildTable()
+// ══════════════════════════════════════════════════════════════
+
+var bdcScanStream   = null;
+var bdcScanLoop     = null;
+var bdcScanProduit  = null;
+var bdcScanQtyVal   = 1;
+var bdcScanLog      = [];   // [{code, libelle, qte}]
+var bdcScanLastEAN  = '';
+var bdcScanLastTime = 0;
+
+// Détection plateforme
+var _bdcIsIOS      = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+var _bdcIsChromeIO = _bdcIsIOS && /CriOS/.test(navigator.userAgent);
+var _bdcForcePhoto = _bdcIsIOS && !_bdcIsChromeIO;
+
+// ── Ouvrir / fermer le panneau ────────────────────────────────
+function bdcScanToggle() {
+  var panel = document.getElementById('bdc-scan-panel');
+  var isOpen = panel.style.display === 'flex';
+  if (isOpen) { bdcScanClose(); }
+  else        { bdcScanOpen();  }
+}
+
+function bdcScanOpen() {
+  var panel = document.getElementById('bdc-scan-panel');
+  panel.style.display = 'flex';
+
+  // Mettre à jour le label client
+  var magasin = (document.getElementById('bdc-magasin') || {}).value || '';
+  document.getElementById('bdc-scan-client-label').textContent = magasin || 'Aucun client sélectionné';
+
+  // Adapter le bouton topbar
+  document.getElementById('bdc-scan-btn').textContent = '📷 ✕ Fermer scan';
+  document.getElementById('bdc-scan-btn').style.background = '#c0392b';
+  document.getElementById('bdc-scan-btn').style.borderColor = '#c0392b';
+
+  // Adapter l'UI selon la plateforme
+  if (_bdcForcePhoto) {
+    document.getElementById('bdc-cam-idle-wrap').style.display = 'none';
+    document.getElementById('bdc-cam-ios-wrap').style.display  = 'flex';
+    document.getElementById('bdc-cam-start-btn').textContent   = '📷 Ouvrir caméra';
+    document.getElementById('bdc-cam-badge').textContent       = '📷 Mode photo';
+    document.getElementById('bdc-cam-start-btn').onclick = bdcScanIosPhoto;
+  }
+
+  // Charger les libs de décodage si besoin
+  if (typeof jsQR === 'undefined' && !document.getElementById('jsqr-script')) {
+    var s = document.createElement('script');
+    s.id  = 'jsqr-script';
+    s.src = 'https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js';
+    document.head.appendChild(s);
+  }
+  if (typeof ZXingBrowser === 'undefined' && !document.getElementById('zxing-script')) {
+    var z = document.createElement('script');
+    z.id  = 'zxing-script';
+    z.src = 'https://cdn.jsdelivr.net/npm/@zxing/browser@0.1.5/umd/index.min.js';
+    document.head.appendChild(z);
+  }
+}
+
+function bdcScanClose() {
+  bdcCamStop();
+  var panel = document.getElementById('bdc-scan-panel');
+  panel.style.display = 'none';
+  document.getElementById('bdc-scan-btn').textContent = '📷 Scanner';
+  document.getElementById('bdc-scan-btn').style.background = '#1a7c3e';
+  document.getElementById('bdc-scan-btn').style.borderColor = '#1a7c3e';
+}
+
+// ── Caméra vidéo ─────────────────────────────────────────────
+function bdcCamStart() {
+  if (_bdcForcePhoto) { bdcScanIosPhoto(); return; }
+  bdcCamStop();
+  document.getElementById('bdc-cam-badge').textContent = '⏳…';
+
+  navigator.mediaDevices.getUserMedia({
+    video: { facingMode: { ideal: 'environment' }, width: { ideal: 1280 } }
+  }).then(function(stream) {
+    bdcScanStream = stream;
+    var vid = document.getElementById('bdc-scan-video');
+    vid.srcObject = stream;
+    vid.setAttribute('playsinline', '');
+    vid.play().catch(function(){});
+
+    document.getElementById('bdc-cam-idle-wrap').style.display  = 'none';
+    document.getElementById('bdc-cam-ios-wrap').style.display   = 'none';
+    document.getElementById('bdc-cam-video-wrap').style.display = 'block';
+    document.getElementById('bdc-cam-start-btn').style.display  = 'none';
+    document.getElementById('bdc-cam-stop-btn').style.display   = 'flex';
+    document.getElementById('bdc-cam-badge').textContent        = '🔴 Actif';
+
+    vid.addEventListener('loadedmetadata', function() { _bdcVideoLoop(vid); }, { once: true });
+    if (vid.readyState >= 1) _bdcVideoLoop(vid);
+
+  }).catch(function(e) {
+    console.warn('BDC Cam:', e.message);
+    toast('📷 Mode photo activé — autorisez la caméra si demandé', 'info');
+    document.getElementById('bdc-cam-idle-wrap').style.display = 'none';
+    document.getElementById('bdc-cam-ios-wrap').style.display  = 'flex';
+    document.getElementById('bdc-cam-start-btn').textContent   = '📷 Ouvrir caméra';
+    document.getElementById('bdc-cam-start-btn').onclick = bdcScanIosPhoto;
+    document.getElementById('bdc-cam-badge').textContent = '📷 Photo';
+  });
+}
+
+function _bdcVideoLoop(vid) {
+  var canvas = document.getElementById('bdc-scan-canvas');
+  var ctx = canvas.getContext('2d', { willReadFrequently: true });
+
+  function loop() {
+    if (!bdcScanStream) return;
+    if (vid.readyState >= 2 && !vid.paused) {
+      canvas.width  = vid.videoWidth  || 640;
+      canvas.height = vid.videoHeight || 480;
+      ctx.drawImage(vid, 0, 0, canvas.width, canvas.height);
+
+      // jsQR
+      if (typeof jsQR !== 'undefined') {
+        try {
+          var d = ctx.getImageData(0, 0, canvas.width, canvas.height);
+          var r = jsQR(d.data, d.width, d.height, { inversionAttempts: 'dontInvert' });
+          if (r && r.data) { bdcScanOnEAN(r.data); return; }
+        } catch(e) {}
+      }
+      // ZXing
+      if (typeof ZXingBrowser !== 'undefined') {
+        try {
+          new ZXingBrowser.BrowserMultiFormatReader().decodeFromCanvas(canvas)
+            .then(function(res){ if (res) bdcScanOnEAN(res.getText()); })
+            .catch(function(){});
+        } catch(e) {}
+      }
+    }
+    bdcScanLoop = setTimeout(loop, 280);
+  }
+  loop();
+}
+
+function bdcCamStop() {
+  if (bdcScanLoop)   { clearTimeout(bdcScanLoop);  bdcScanLoop = null; }
+  if (bdcScanStream) { bdcScanStream.getTracks().forEach(function(t){ t.stop(); }); bdcScanStream = null; }
+  var vid = document.getElementById('bdc-scan-video');
+  if (vid) vid.srcObject = null;
+
+  document.getElementById('bdc-cam-video-wrap').style.display = 'none';
+  if (_bdcForcePhoto) {
+    document.getElementById('bdc-cam-ios-wrap').style.display  = 'flex';
+    document.getElementById('bdc-cam-idle-wrap').style.display = 'none';
+  } else {
+    document.getElementById('bdc-cam-ios-wrap').style.display  = 'none';
+    document.getElementById('bdc-cam-idle-wrap').style.display = 'flex';
+  }
+  document.getElementById('bdc-cam-start-btn').style.display = 'flex';
+  document.getElementById('bdc-cam-stop-btn').style.display  = 'none';
+  document.getElementById('bdc-cam-badge').textContent = _bdcForcePhoto ? '📷 Photo' : '⏸';
+}
+
+// ── Mode photo iOS ────────────────────────────────────────────
+function bdcScanIosPhoto() {
+  var inp = document.getElementById('bdc-ios-input');
+  inp.value = '';
+  inp.click();
+}
+
+function bdcScanHandlePhoto(event) {
+  var file = event.target.files[0];
+  if (!file) return;
+  event.target.value = '';
+  document.getElementById('bdc-cam-badge').textContent = '⏳ Analyse…';
+
+  createImageBitmap(file).then(function(bmp) {
+    var canvas = document.getElementById('bdc-scan-canvas');
+    var scale = Math.min(1, 1200 / Math.max(bmp.width, bmp.height));
+    canvas.width  = Math.round(bmp.width  * scale);
+    canvas.height = Math.round(bmp.height * scale);
+    var ctx = canvas.getContext('2d', { willReadFrequently: true });
+    ctx.drawImage(bmp, 0, 0, canvas.width, canvas.height);
+
+    var decoded = null;
+
+    // jsQR
+    if (typeof jsQR !== 'undefined') {
+      try {
+        var d  = ctx.getImageData(0, 0, canvas.width, canvas.height);
+        var r  = jsQR(d.data, d.width, d.height, { inversionAttempts: 'dontInvert' });
+        if (r && r.data) decoded = r.data;
+      } catch(e) {}
+    }
+
+    // ZXing async
+    if (!decoded && typeof ZXingBrowser !== 'undefined') {
+      new ZXingBrowser.BrowserMultiFormatReader().decodeFromCanvas(canvas)
+        .then(function(res) {
+          if (res) bdcScanOnEAN(res.getText());
+          else _bdcPhotoFail();
+        }).catch(function(){ _bdcPhotoFail(); });
+      return;
+    }
+
+    // Recadrage centre si toujours rien
+    if (!decoded && typeof jsQR !== 'undefined') {
+      try {
+        var cx = Math.round(canvas.width  * .15), cy = Math.round(canvas.height * .2);
+        var cw = Math.round(canvas.width  * .70), ch = Math.round(canvas.height * .6);
+        var crop = ctx.getImageData(cx, cy, cw, ch);
+        var r2 = jsQR(crop.data, cw, ch, { inversionAttempts: 'attemptBoth' });
+        if (r2 && r2.data) decoded = r2.data;
+      } catch(e) {}
+    }
+
+    if (decoded) bdcScanOnEAN(decoded);
+    else _bdcPhotoFail();
+
+  }).catch(function(e) {
+    console.error(e);
+    document.getElementById('bdc-cam-badge').textContent = '⚠️ Erreur';
+    toast('Erreur lecture image', 'err');
+  });
+}
+
+function _bdcPhotoFail() {
+  document.getElementById('bdc-cam-badge').textContent = '❌ Non lu';
+  toast('Code non lu — rapprochez-vous et centrez le code-barres', 'info');
+  setTimeout(function(){ document.getElementById('bdc-cam-badge').textContent = '📷 Photo'; }, 2000);
+}
+
+// ── Décodage EAN → produit ────────────────────────────────────
+function bdcScanOnEAN(ean) {
+  var now = Date.now();
+  if (ean === bdcScanLastEAN && now - bdcScanLastTime < 2500) return;
+  bdcScanLastEAN = ean;
+  bdcScanLastTime = now;
+  if (navigator.vibrate) navigator.vibrate(65);
+
+  document.getElementById('bdc-cam-badge').textContent = '✅ Code lu !';
+  setTimeout(function() {
+    document.getElementById('bdc-cam-badge').textContent = bdcScanStream ? '🔴 Actif' : (_bdcForcePhoto ? '📷 Photo' : '⏸');
+  }, 1000);
+
+  bdcScanDismiss();
+  var clean = String(ean).trim();
+
+  var found = (PRODUCTS || []).find(function(p) {
+    if (!p.ean) return false;
+    var pe = String(p.ean).trim();
+    return pe === clean || pe === clean.replace(/^0+/, '') || clean.endsWith(pe);
+  });
+
+  if (found) {
+    bdcScanProduit = found;
+    bdcScanQtyVal  = 1;
+
+    var pcb  = parseFloat(found.pcb) || 1;
+    var pNet = (typeof bdcPrixNet === 'function') ? bdcPrixNet(found) : found.pu_ht;
+
+    document.getElementById('bdc-sr-nom').textContent   = found.libelle || found.code;
+    document.getElementById('bdc-sr-ref').textContent   = 'Réf: ' + found.code + ' · EAN: ' + clean;
+    document.getElementById('bdc-sr-prix').textContent  = pNet > 0
+      ? pNet.toFixed(2) + ' € HT / ' + (pcb > 1 ? 'colis (×' + pcb + ' u.)' : 'unité')
+      : 'Prix non renseigné';
+    document.getElementById('bdc-sr-qty').textContent   = 1;
+    document.getElementById('bdc-sr-unite').textContent = pcb > 1 ? 'colis' : 'unité';
+
+    document.getElementById('bdc-scan-result').style.display   = 'block';
+    document.getElementById('bdc-scan-notfound').style.display = 'none';
+
+  } else {
+    bdcScanProduit = null;
+    document.getElementById('bdc-sr-ean-nf').textContent       = clean;
+    document.getElementById('bdc-scan-notfound').style.display = 'block';
+    document.getElementById('bdc-scan-result').style.display   = 'none';
+    setTimeout(function(){ document.getElementById('bdc-scan-notfound').style.display = 'none'; }, 4000);
+  }
+}
+
+function bdcScanQty(delta) {
+  bdcScanQtyVal = Math.max(1, bdcScanQtyVal + delta);
+  document.getElementById('bdc-sr-qty').textContent = bdcScanQtyVal;
+}
+
+function bdcScanAjouter() {
+  if (!bdcScanProduit) return;
+  var code = bdcScanProduit.code;
+  var curr = parseInt(bdcQtys[code]) || 0;
+  bdcQtys[code] = curr + bdcScanQtyVal;
+
+  // Rafraîchir la ligne dans le tableau BDC sans tout reconstruire
+  var input = document.querySelector('input[data-code="' + CSS.escape(code) + '"]');
+  if (input) {
+    input.value = bdcQtys[code];
+    if (typeof bdcOnQty === 'function') bdcOnQty(input);
+  } else {
+    if (typeof buildTable === 'function') buildTable();
+  }
+
+  // Mettre à jour les totaux
+  if (typeof bdcUpdateTotals === 'function') bdcUpdateTotals();
+
+  // Log session
+  var existing = bdcScanLog.find(function(l){ return l.code === code; });
+  if (existing) { existing.qte += bdcScanQtyVal; }
+  else { bdcScanLog.push({ code: code, libelle: bdcScanProduit.libelle || code, qte: bdcScanQtyVal }); }
+  _bdcScanRenderLog();
+
+  // Mise à jour label client
+  var magasin = (document.getElementById('bdc-magasin') || {}).value || '';
+  if (magasin) document.getElementById('bdc-scan-client-label').textContent = magasin;
+
+  toast('✅ ' + (bdcScanProduit.libelle || code).substring(0,30) + ' (+' + bdcScanQtyVal + ' colis)', 'ok');
+  bdcScanDismiss();
+}
+
+function bdcScanDismiss() {
+  document.getElementById('bdc-scan-result').style.display   = 'none';
+  document.getElementById('bdc-scan-notfound').style.display = 'none';
+  bdcScanProduit = null;
+}
+
+function _bdcScanRenderLog() {
+  var logEl = document.getElementById('bdc-scan-log');
+  if (!logEl) return;
+  if (!bdcScanLog.length) {
+    logEl.innerHTML = '<div style="font-size:.78rem;color:#bbb;text-align:center;padding:1rem 0;">Aucun scan</div>';
+    return;
+  }
+  logEl.innerHTML = bdcScanLog.slice().reverse().map(function(l) {
+    return '<div style="display:flex;justify-content:space-between;align-items:center;padding:.3rem .4rem;background:#f7f7f5;border-radius:6px;font-size:.78rem;">' +
+      '<span style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:200px;color:#333;">' + (l.libelle || l.code) + '</span>' +
+      '<span style="font-weight:700;color:#1a7c3e;flex-shrink:0;margin-left:.4rem;">×' + l.qte + '</span>' +
+    '</div>';
+  }).join('');
+}
+
+// ── Saisie manuelle ───────────────────────────────────────────
+function bdcScanManuel() {
+  var m = document.getElementById('bdc-scan-manual-modal');
+  m.style.display = 'block';
+  setTimeout(function(){ document.getElementById('bdc-manual-ean').focus(); }, 200);
+}
+
+function bdcManualSearch() {
+  var val = document.getElementById('bdc-manual-ean').value.trim();
+  if (!val) return;
+  document.getElementById('bdc-scan-manual-modal').style.display = 'none';
+  document.getElementById('bdc-manual-ean').value = '';
+  bdcScanOnEAN(val);
+}
+
+// Fermer le panneau quand on quitte la section BDC
+var _origShowSectionBdc = showSection;
+showSection = function(name, tabEl, sideEl) {
+  _origShowSectionBdc(name, tabEl, sideEl);
+  if (name !== 'bdc') {
+    if (bdcScanStream) bdcCamStop();
+    var panel = document.getElementById('bdc-scan-panel');
+    if (panel && panel.style.display === 'flex') bdcScanClose();
   }
 };
 
