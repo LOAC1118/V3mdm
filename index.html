@@ -717,270 +717,7 @@ textarea { resize:vertical; min-height:80px; }
 }
 
 #app-shell:not(.hidden) { display:flex; flex-direction:column; min-height:100vh; width:100%; }
-
-
-  @keyframes bdcScanAnim { 0%{top:0;opacity:1;} 95%{top:calc(100% - 2px);opacity:1;} 100%{top:calc(100% - 2px);opacity:0;} }
-  #bdc-scan-panel { flex-direction: column; }
-  @media(max-width:680px) {
-    #bdc-scan-panel { width: 100% !important; }
-  }
-
-  @keyframes scanAnim { 0%{top:0;} 95%{top:calc(100% - 2px);} 100%{top:calc(100% - 2px);} }
-  @keyframes slideUp { from{transform:translateY(100%);} to{transform:none;} }
-  #sec-scanner { padding:1.5rem; }
-  @media(max-width:640px) {
-    #sec-scanner > div:nth-child(3) { grid-template-columns:1fr !important; }
-  }
-
-
-/* ════════════════════════════════════════════════════
-   RESPONSIVE MOBILE — iPhone / smartphones
-   Breakpoint principal : 768px
-════════════════════════════════════════════════════ */
-
-@media (max-width: 768px) {
-
-  /* ── Topbar ── */
-  .topbar {
-    padding: 0 .75rem;
-    height: 52px;
-  }
-
-  #mob-menu-btn { display: flex !important; align-items: center; }
-
-  .brand-name { font-size: .82rem; }
-  .brand-sub  { display: none; }
-  .brand-ico  { font-size: 1.1rem; }
-
-  /* Masquer les onglets topbar (navigation via sidebar) */
-  .topbar-center { display: none !important; }
-
-  /* Réduire les actions topbar droite */
-  .topbar-actions { gap: .25rem; }
-  .topbar-actions .btn { font-size: .7rem; padding: .28rem .5rem; }
-
-  /* ── Layout principal ── */
-  .app {
-    height: calc(100dvh - 52px);
-    position: relative;
-  }
-
-  /* ── Sidebar : cachée par défaut, slide depuis la gauche ── */
-  .sidebar {
-    position: fixed !important;
-    top: 52px;
-    left: 0;
-    bottom: 0;
-    width: 240px !important;
-    z-index: 300;
-    transform: translateX(-100%);
-    transition: transform .25s cubic-bezier(.4,0,.2,1);
-    overflow-y: auto;
-    -webkit-overflow-scrolling: touch;
-  }
-
-  .sidebar.mob-open {
-    transform: translateX(0);
-    box-shadow: 4px 0 24px rgba(0,0,0,.35);
-  }
-
-  /* Chaque nav-item : plus grand pour le touch */
-  .nav-item {
-    padding: .7rem 1rem !important;
-    font-size: .85rem !important;
-    min-height: 44px;
-  }
-
-  /* ── Sections principales : pleine largeur ── */
-  #sec-dashboard,
-  #sec-frais,
-  #sec-contacts-db,
-  #sec-scanner,
-  #sec-mailing {
-    padding: .75rem !important;
-    overflow-y: auto;
-    -webkit-overflow-scrolling: touch;
-  }
-
-  .page-header {
-    flex-direction: column;
-    align-items: flex-start !important;
-    gap: .5rem;
-    margin-bottom: 1rem;
-  }
-
-  .page-header > div:last-child {
-    width: 100%;
-    display: flex;
-    flex-wrap: wrap;
-    gap: .35rem;
-  }
-
-  /* ── BDC : layout vertical sur mobile ── */
-  #sec-bdc {
-    overflow-y: auto !important;
-    -webkit-overflow-scrolling: touch;
-  }
-
-  /* Topbar BDC : wrap sur 2 lignes */
-  #sec-bdc > div:first-child {
-    flex-wrap: wrap;
-    gap: .3rem;
-    padding: .5rem .6rem !important;
-  }
-
-  #sec-bdc > div:first-child .btn {
-    font-size: .7rem !important;
-    padding: .3rem .55rem !important;
-  }
-
-  /* Masquer le titre BDC sur mobile pour gagner de la place */
-  #sec-bdc > div:first-child > div:first-child {
-    font-size: .78rem !important;
-    min-width: 0 !important;
-    flex: none !important;
-    width: 100%;
-  }
-
-  /* Layout BDC : sidebar client + tableau en colonne */
-  #sec-bdc > div:nth-child(3) {
-    flex-direction: column !important;
-    height: auto !important;
-    overflow: visible !important;
-  }
-
-  /* Sidebar client BDC : largeur auto */
-  #sec-bdc > div:nth-child(3) > div:first-child {
-    width: 100% !important;
-    border-right: none !important;
-    border-bottom: 1px solid var(--border) !important;
-    max-height: none !important;
-    overflow: visible !important;
-  }
-
-  /* Champs client BDC : grille 2 colonnes */
-  #sec-bdc > div:nth-child(3) > div:first-child input,
-  #sec-bdc > div:nth-child(3) > div:first-child select {
-    font-size: .82rem !important;
-    padding: .38rem .5rem !important;
-  }
-
-  /* Zone tableau BDC */
-  #sec-bdc > div:nth-child(3) > div:last-child {
-    flex: none !important;
-    height: auto !important;
-    overflow: visible !important;
-  }
-
-  /* Barre de recherche BDC */
-  #sec-bdc > div:nth-child(3) > div:last-child > div:first-child {
-    padding: .4rem .5rem !important;
-    flex-wrap: wrap;
-    gap: .3rem;
-  }
-
-  /* Tableau BDC : masquer colonnes peu utiles sur mobile */
-  #bdc-table { font-size: .72rem !important; }
-
-  /* Colonnes à masquer sur mobile : EAN, Certif, Stock, Rem.% */
-  #bdc-thead-row th:nth-child(2),  /* EAN */
-  #bdc-thead-row th:nth-child(4),  /* Certif */
-  #bdc-thead-row th:nth-child(8),  /* Stock */
-  #bdc-thead-row th:nth-child(10)  /* Rem.% */
-  { display: none !important; }
-
-  #bdc-tbody tr > td:nth-child(2),  /* EAN */
-  #bdc-tbody tr > td:nth-child(4),  /* Certif */
-  #bdc-tbody tr > td:nth-child(8),  /* Stock */
-  #bdc-tbody tr > td:nth-child(10)  /* Rem.% */
-  { display: none !important; }
-
-  /* Tableau : scroll horizontal si vraiment nécessaire */
-  #sec-bdc > div:nth-child(3) > div:last-child > div[style*="overflow:auto"],
-  #sec-bdc > div:nth-child(3) > div:last-child > div[style*="overflow: auto"] {
-    overflow-x: auto !important;
-    -webkit-overflow-scrolling: touch;
-  }
-
-  /* Boutons +/- quantité BDC : plus grands */
-  button[onclick*="bdcStepQty"] {
-    width: 26px !important;
-    height: 26px !important;
-    font-size: .95rem !important;
-  }
-
-  /* Inputs quantité BDC */
-  #bdc-tbody input[type="number"],
-  #bdc-tbody input[type="text"] {
-    width: 42px !important;
-    font-size: .8rem !important;
-    padding: .2rem .25rem !important;
-  }
-
-  /* ── Totaux BDC ── */
-  #sec-bdc > div:last-child {
-    padding: .5rem .6rem !important;
-    flex-wrap: wrap;
-    gap: .3rem;
-  }
-
-  /* ── Dashboard grilles ── */
-  .kpi-grid, [style*="grid-template-columns"] {
-    grid-template-columns: 1fr 1fr !important;
-  }
-
-  /* ── Clients : tableau horizontal scrollable ── */
-  #sec-contacts-db table {
-    font-size: .78rem;
-  }
-
-  #sec-contacts-db table th:nth-child(n+5),
-  #sec-contacts-db table td:nth-child(n+5) {
-    display: none;
-  }
-
-  /* ── Modales : pleine largeur ── */
-  .modal {
-    width: calc(100vw - 24px) !important;
-    max-width: none !important;
-    margin: 12px !important;
-    max-height: 90dvh;
-    overflow-y: auto;
-  }
-
-  .modal-wide {
-    width: calc(100vw - 16px) !important;
-    max-width: none !important;
-    margin: 8px !important;
-  }
-
-  /* ── Panneau scanner BDC ── */
-  #bdc-scan-panel {
-    width: 100% !important;
-    top: 52px !important;
-  }
-
-  /* ── Frais : formulaire colonnes → 1 colonne ── */
-  .form-row-2 { grid-template-columns: 1fr !important; }
-
-  /* ── Boutons globaux : taille touch-friendly ── */
-  .btn { min-height: 36px; }
-
-}
-
-/* Extra small : iPhone SE, mini */
-@media (max-width: 390px) {
-  .brand-name { font-size: .75rem; }
-  .kpi-grid { grid-template-columns: 1fr !important; }
-
-  #bdc-thead-row th:nth-child(1),  /* Code aussi masqué */
-  #bdc-tbody tr > td:nth-child(1)
-  { display: none !important; }
-}
-
 </style>
-<!-- Quagga2 : décodage EAN-13/EAN-8/Code128 depuis image et vidéo -->
-<script src="https://cdn.jsdelivr.net/npm/@ericblade/quagga2@1.4.2/dist/quagga.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.0/jspdf.plugin.autotable.min.js"></script>
 </head>
@@ -1050,10 +787,6 @@ textarea { resize:vertical; min-height:80px; }
 <div id="app-shell" class="hidden" style="flex-direction:column;min-height:100vh;width:100%;">
 
 <div class="topbar">
-  <!-- Bouton hamburger mobile uniquement -->
-  <button id="mob-menu-btn" onclick="mobToggleSidebar()" style="display:none;background:none;border:none;color:white;cursor:pointer;padding:6px 8px;margin-right:6px;border-radius:6px;flex-shrink:0;" aria-label="Menu">
-    <svg width="22" height="22" viewBox="0 0 22 22" fill="none"><rect y="4" width="22" height="2.5" rx="1.25" fill="white"/><rect y="10" width="22" height="2.5" rx="1.25" fill="white"/><rect y="16" width="22" height="2.5" rx="1.25" fill="white"/></svg>
-  </button>
   <div class="brand">
     <div class="brand-ico">🌾</div>
     <div><div class="brand-name">Moulin des Moines</div><div class="brand-sub">CRM 2026</div></div>
@@ -1062,7 +795,7 @@ textarea { resize:vertical; min-height:80px; }
     <button class="t-tab active" onclick="showSection('dashboard',this)">Dashboard</button>
     <button class="t-tab" onclick="showSection('bdc',this)">Bon de Commande</button>
     <button class="t-tab" onclick="showSection('frais',this)">Frais</button>
-
+    <button class="t-tab" onclick="showSection('commissions',this)">💶 Commissions</button>
     <button class="t-tab" onclick="showSection('contacts-db',this)">Clients</button>
 
   </div>
@@ -1082,9 +815,7 @@ textarea { resize:vertical; min-height:80px; }
 </div>
 
 <div class="app">
-<!-- Overlay mobile -->
-<div id="mob-overlay" onclick="mobCloseSidebar()" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:299;"></div>
-<div class="sidebar" id="main-sidebar">
+<div class="sidebar">
 
   <div class="nav-section">
     <div class="nav-label">Principal</div>
@@ -1103,6 +834,10 @@ textarea { resize:vertical; min-height:80px; }
     <div class="nav-item" onclick="showSection('frais',null,this)">
       <svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="1" y="3" width="14" height="10" rx="2"/><path d="M1 6h14"/><circle cx="5" cy="9.5" r="1"/></svg>
       Frais <span class="nav-badge" id="nb-frais">0</span>
+    </div>
+    <div class="nav-item" onclick="showSection('commissions',null,this)">
+      <svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="8" cy="8" r="6"/><path d="M8 5v6M6 7h3.5a1.5 1.5 0 0 1 0 3H6"/></svg>
+      Commissions
     </div>
   </div>
 
@@ -1357,7 +1092,6 @@ textarea { resize:vertical; min-height:80px; }
     <div style="background:var(--surface);border-bottom:1px solid var(--border);padding:.55rem 1rem;display:flex;align-items:center;gap:8px;flex-shrink:0;flex-wrap:wrap;">
       <div style="font-family:var(--fdisp);font-size:.9rem;color:var(--g900);flex:1;min-width:140px;">🌾 Bon de Commande MDM 2026</div>
       <button class="btn btn-ghost" style="font-size:.72rem;padding:.3rem .7rem;" onclick="openBdcImport()">📄 Importer commande</button>
-      <button class="btn btn-primary" id="bdc-scan-btn" style="font-size:.72rem;padding:.3rem .8rem;background:#1a7c3e;border-color:#1a7c3e;" onclick="bdcScanToggle()">📷 Scanner</button>
       <button class="btn btn-ghost" style="font-size:.72rem;padding:.3rem .7rem;color:#fcd34d;border-color:rgba(245,158,11,.3);" onclick="openStockImport()">📦 Mettre à jour stocks</button>
       <button class="btn btn-ghost" style="font-size:.72rem;padding:.3rem .7rem;" onclick="resetBDC()">🗑 Effacer</button>
       <button class="btn btn-primary" style="font-size:.72rem;padding:.3rem .7rem;" onclick="bdcSendOrder()">Envoyer la commande</button>
@@ -1737,256 +1471,77 @@ textarea { resize:vertical; min-height:80px; }
     </div>
   </div></div>
 
-
-
-    <!-- ══ PANNEAU SCANNER INTÉGRÉ AU BDC ══ -->
-    <div id="bdc-scan-panel" style="display:none;position:fixed;top:0;right:0;width:320px;height:100dvh;background:white;box-shadow:-4px 0 24px rgba(0,0,0,.18);z-index:600;display:none;flex-direction:column;border-left:2px solid #1a3a2a;">
-
-      <!-- Header panneau -->
-      <div style="background:#1a3a2a;padding:.75rem 1rem;display:flex;align-items:center;gap:.5rem;flex-shrink:0;">
-        <div style="flex:1;">
-          <div style="color:#f0c060;font-weight:700;font-size:.88rem;">📷 Scanner produits</div>
-          <div id="bdc-scan-client-label" style="color:rgba(255,255,255,.6);font-size:.72rem;font-style:italic;margin-top:1px;">Aucun client sélectionné</div>
-        </div>
-        <button onclick="bdcScanClose()" style="background:rgba(255,255,255,.15);border:none;color:white;border-radius:6px;padding:4px 10px;cursor:pointer;font-size:.8rem;">✕ Fermer</button>
-      </div>
-
-      <!-- Zone caméra / iOS -->
-      <div style="flex-shrink:0;background:#000;position:relative;" id="bdc-scan-cam-wrap">
-
-        <!-- Vidéo -->
-        <div id="bdc-cam-video-wrap" style="display:none;position:relative;aspect-ratio:4/3;">
-          <video id="bdc-scan-video" playsinline muted autoplay style="width:100%;height:100%;object-fit:cover;display:block;"></video>
-          <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;pointer-events:none;">
-            <div style="width:72%;height:52%;border:2.5px solid #f0c060;border-radius:8px;box-shadow:0 0 0 9999px rgba(0,0,0,.45);position:relative;">
-              <div id="bdc-scan-line" style="position:absolute;top:0;left:0;right:0;height:2px;background:#f0c060;animation:bdcScanAnim 1.8s linear infinite;"></div>
-              <!-- Coins -->
-              <span style="position:absolute;top:-2px;left:-2px;width:14px;height:14px;border:3px solid #f0c060;border-right:none;border-bottom:none;border-radius:3px 0 0 0;"></span>
-              <span style="position:absolute;top:-2px;right:-2px;width:14px;height:14px;border:3px solid #f0c060;border-left:none;border-bottom:none;border-radius:0 3px 0 0;"></span>
-              <span style="position:absolute;bottom:-2px;left:-2px;width:14px;height:14px;border:3px solid #f0c060;border-right:none;border-top:none;border-radius:0 0 0 3px;"></span>
-              <span style="position:absolute;bottom:-2px;right:-2px;width:14px;height:14px;border:3px solid #f0c060;border-left:none;border-top:none;border-radius:0 0 3px 0;"></span>
-            </div>
-          </div>
-          <canvas id="bdc-scan-canvas" style="display:none;"></canvas>
-        </div>
-
-        <!-- Zone iOS photo -->
-        <div id="bdc-cam-ios-wrap" style="display:none;aspect-ratio:4/3;cursor:pointer;background:#1a3a2a;display:none;flex-direction:column;align-items:center;justify-content:center;gap:.4rem;" onclick="bdcScanIosPhoto()">
-          <div style="font-size:2.5rem;">📷</div>
-          <div style="color:#f0c060;font-weight:600;font-size:.88rem;">Appuyer pour scanner</div>
-          <div style="color:rgba(255,255,255,.55);font-size:.72rem;font-style:italic;">Ouvre l'appareil photo iOS</div>
-        </div>
-        <input type="file" id="bdc-ios-input" accept="image/*" capture="environment" style="display:none;" onchange="bdcScanHandlePhoto(event)">
-
-        <!-- Idle -->
-        <div id="bdc-cam-idle-wrap" style="aspect-ratio:4/3;background:#1a3a2a;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:.4rem;">
-          <div style="font-size:2.5rem;opacity:.4;">📷</div>
-          <div style="color:rgba(255,255,255,.5);font-size:.8rem;">Appuyer sur Démarrer</div>
-        </div>
-      </div>
-
-      <!-- Contrôles caméra -->
-      <div style="padding:.5rem .7rem;border-bottom:1px solid #eee;display:flex;gap:.4rem;align-items:center;flex-shrink:0;background:#f9f9f8;">
-        <button id="bdc-cam-start-btn" class="btn btn-primary" onclick="bdcCamStart()" style="flex:1;justify-content:center;font-size:.78rem;background:#1a3a2a;border-color:#1a3a2a;">▶ Démarrer</button>
-        <button id="bdc-cam-stop-btn" class="btn btn-ghost" onclick="bdcCamStop()" style="flex:1;justify-content:center;font-size:.78rem;display:none;">⏹ Stop</button>
-        <button class="btn btn-ghost" onclick="bdcScanManuel()" style="font-size:.78rem;white-space:nowrap;">⌨</button>
-        <span id="bdc-cam-badge" style="font-size:.68rem;background:#f0f0ee;color:#666;padding:2px 8px;border-radius:12px;white-space:nowrap;">⏸</span>
-      </div>
-
-      <!-- Résultat scan -->
-      <div id="bdc-scan-result" style="display:none;padding:.6rem .8rem;border-bottom:1px solid #eee;background:#f0f9f4;animation:fadeIn .2s ease;flex-shrink:0;">
-        <div style="display:flex;gap:.6rem;align-items:flex-start;">
-          <div style="font-size:1.5rem;flex-shrink:0;">📦</div>
-          <div style="flex:1;min-width:0;">
-            <div id="bdc-sr-nom" style="font-weight:700;font-size:.85rem;color:#1a3a2a;line-height:1.3;"></div>
-            <div id="bdc-sr-ref" style="font-size:.7rem;color:#888;font-family:monospace;margin-top:1px;"></div>
-            <div id="bdc-sr-prix" style="font-size:.85rem;font-weight:600;color:#1a7c3e;margin-top:3px;"></div>
-          </div>
-        </div>
-        <!-- Qty selector -->
-        <div style="display:flex;align-items:center;gap:.6rem;margin-top:.6rem;padding-top:.5rem;border-top:1px solid #d0edda;">
-          <span style="font-size:.75rem;color:#555;flex-shrink:0;">Qté :</span>
-          <button onclick="bdcScanQty(-1)" style="width:30px;height:30px;border-radius:50%;border:1.5px solid #1a3a2a;background:white;cursor:pointer;font-size:1.1rem;display:flex;align-items:center;justify-content:center;color:#1a3a2a;flex-shrink:0;">−</button>
-          <span id="bdc-sr-qty" style="font-size:1.2rem;font-weight:800;min-width:28px;text-align:center;color:#1a3a2a;">1</span>
-          <span id="bdc-sr-unite" style="font-size:.72rem;color:#888;">colis</span>
-          <button onclick="bdcScanQty(1)" style="width:30px;height:30px;border-radius:50%;border:1.5px solid #1a3a2a;background:white;cursor:pointer;font-size:1.1rem;display:flex;align-items:center;justify-content:center;color:#1a3a2a;flex-shrink:0;">+</button>
-        </div>
-        <div style="display:flex;gap:.4rem;margin-top:.6rem;">
-          <button onclick="bdcScanAjouter()" class="btn btn-primary" style="flex:1;justify-content:center;font-size:.82rem;background:#1a3a2a;border-color:#1a3a2a;">✓ Ajouter au BDC</button>
-          <button onclick="bdcScanDismiss()" class="btn btn-ghost" style="font-size:.82rem;">✕</button>
-        </div>
-      </div>
-
-      <!-- Non trouvé -->
-      <div id="bdc-scan-notfound" style="display:none;padding:.6rem .8rem;border-bottom:1px solid #eee;background:#fdf0ee;flex-shrink:0;">
-        <div style="font-size:.82rem;color:#c0392b;font-weight:600;">❌ Produit non trouvé</div>
-        <div id="bdc-sr-ean-nf" style="font-size:.72rem;color:#999;font-family:monospace;margin-top:2px;"></div>
-        <div style="font-size:.72rem;color:#aaa;margin-top:2px;">Essayez la saisie manuelle ⌨</div>
-      </div>
-
-      <!-- Récapitulatif scans de la session -->
-      <div style="flex:1;overflow-y:auto;padding:.5rem .7rem;">
-        <div style="font-size:.72rem;font-weight:700;color:#999;text-transform:uppercase;letter-spacing:.05em;margin-bottom:.4rem;">Session en cours</div>
-        <div id="bdc-scan-log" style="display:flex;flex-direction:column;gap:.3rem;">
-          <div style="font-size:.78rem;color:#bbb;text-align:center;padding:1rem 0;">Aucun scan</div>
-        </div>
-      </div>
-
-      <!-- Modal saisie manuelle -->
-      <div id="bdc-scan-manual-modal" style="display:none;position:absolute;bottom:0;left:0;right:0;background:white;border-radius:12px 12px 0 0;padding:1.2rem;box-shadow:0 -4px 20px rgba(0,0,0,.15);">
-        <div style="font-size:.9rem;font-weight:600;color:#1a3a2a;margin-bottom:.8rem;">⌨ Saisir EAN manuellement</div>
-        <input type="text" id="bdc-manual-ean" inputmode="numeric" placeholder="Ex: 3347430006538"
-          style="width:100%;padding:.65rem;border:2px solid #1a3a2a;border-radius:8px;font-size:1rem;font-family:monospace;letter-spacing:1px;text-align:center;box-sizing:border-box;margin-bottom:.6rem;"
-          onkeypress="if(event.key==='Enter') bdcManualSearch()">
-        <div style="display:flex;gap:.4rem;">
-          <button class="btn btn-ghost" style="flex:1;justify-content:center;" onclick="document.getElementById('bdc-scan-manual-modal').style.display='none'">Annuler</button>
-          <button class="btn btn-primary" style="flex:1;justify-content:center;background:#1a3a2a;border-color:#1a3a2a;" onclick="bdcManualSearch()">Rechercher</button>
-        </div>
-      </div>
-
-    </div>
-    <!-- ══ FIN PANNEAU SCANNER BDC ══ -->
-
-  <!-- SCANNER BDC -->
-  <div id="sec-scanner" class="hidden">
-    <div class="page-header">
-      <div>
-        <div class="page-title">📷 Scanner BDC</div>
-        <div class="page-sub">Scannez les codes-barres des produits MDM pour créer un bon de commande</div>
-      </div>
-      <div style="display:flex;gap:.5rem;align-items:center;flex-wrap:wrap;">
-        <button class="btn btn-ghost" style="font-size:.75rem;" onclick="scannerResetPanier()">🗑 Vider</button>
-        <button class="btn btn-primary" style="font-size:.75rem;" onclick="scannerTransferBDC()" id="scan-btn-transfer">🛒 Créer le BDC</button>
-      </div>
-    </div>
-
-    <!-- Sélecteur client -->
-    <div style="background:var(--surface);border-radius:10px;padding:1rem;margin-bottom:1rem;border:1px solid var(--border);">
-      <label style="font-size:.78rem;font-weight:600;color:var(--g600);display:block;margin-bottom:.4rem;">👤 Client de la commande</label>
-      <div style="display:flex;gap:.5rem;">
-        <select id="scan-client-select" style="flex:1;padding:.5rem .7rem;border:1.5px solid var(--border);border-radius:7px;font-size:.85rem;font-family:inherit;background:var(--surface2);color:var(--g800);">
-          <option value="">— Sélectionner un client —</option>
-        </select>
-        <button class="btn btn-ghost" style="font-size:.75rem;white-space:nowrap;" onclick="scannerRefreshClients()">🔄</button>
-      </div>
-    </div>
-
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:1rem;">
-
-      <!-- Zone caméra -->
-      <div style="background:var(--surface);border-radius:10px;overflow:hidden;border:1px solid var(--border);">
-        <div style="padding:.7rem 1rem;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;">
-          <span style="font-size:.8rem;font-weight:600;color:var(--g700);">📷 Caméra</span>
-          <span id="scan-status-badge" style="font-size:.72rem;background:var(--g100);color:var(--g600);padding:2px 10px;border-radius:20px;">⏸ Arrêtée</span>
-        </div>
-
-        <!-- Vidéo / Zone iOS -->
-        <div id="scan-video-wrap" style="display:none;position:relative;background:#000;aspect-ratio:4/3;">
-          <video id="scan-video" playsinline muted autoplay style="width:100%;height:100%;object-fit:cover;display:block;"></video>
-          <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;pointer-events:none;">
-            <div style="width:60%;height:50%;border:2px solid #f0c060;border-radius:6px;box-shadow:0 0 0 9999px rgba(0,0,0,.4);position:relative;">
-              <div id="scan-line" style="position:absolute;top:0;left:0;right:0;height:2px;background:#f0c060;animation:scanAnim 1.8s linear infinite;"></div>
-            </div>
-          </div>
-          <canvas id="scan-canvas" style="display:none;"></canvas>
-        </div>
-
-        <!-- Zone iOS (photo) -->
-        <div id="scan-ios-wrap" style="display:none;">
-          <div onclick="scanIosPhoto()" style="cursor:pointer;background:#1a3a2a;aspect-ratio:4/3;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:.5rem;transition:opacity .2s;" onmousedown="this.style.opacity='.8'" onmouseup="this.style.opacity='1'">
-            <div style="font-size:3rem;">📷</div>
-            <div style="color:#f0c060;font-weight:600;font-size:.9rem;">Appuyer pour scanner</div>
-            <div style="color:rgba(255,255,255,.6);font-size:.75rem;font-style:italic;">Ouvre l'appareil photo</div>
-          </div>
-          <input type="file" id="scan-ios-input" accept="image/*" capture="environment" style="display:none" onchange="scanHandlePhoto(event)">
-        </div>
-
-        <!-- Écran idle -->
-        <div id="scan-idle-wrap" style="background:#f4f6fa;aspect-ratio:4/3;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:.5rem;">
-          <div style="font-size:2.5rem;opacity:.35;">🔍</div>
-          <div style="font-size:.82rem;color:var(--g500);">Appuyer sur Démarrer</div>
-        </div>
-
-        <!-- Contrôles -->
-        <div style="padding:.6rem;display:flex;gap:.4rem;flex-wrap:wrap;">
-          <button class="btn btn-primary" id="scan-btn-start" onclick="scanStart()" style="flex:1;font-size:.78rem;justify-content:center;">▶ Démarrer</button>
-          <button class="btn btn-ghost" id="scan-btn-stop" onclick="scanStop()" style="flex:1;font-size:.78rem;justify-content:center;display:none;">⏹ Stop</button>
-          <button class="btn btn-ghost" onclick="scanManual()" style="font-size:.78rem;white-space:nowrap;">⌨ Manuel</button>
-        </div>
-
-        <!-- Résultat scan -->
-        <div id="scan-result-card" style="display:none;padding:.7rem;border-top:1px solid var(--border);animation:fadeIn .2s ease;">
-          <div style="display:flex;gap:.6rem;align-items:flex-start;">
-            <div style="font-size:1.4rem;flex-shrink:0;">📦</div>
-            <div style="flex:1;min-width:0;">
-              <div id="scan-result-nom" style="font-weight:600;font-size:.85rem;color:var(--g800);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;"></div>
-              <div id="scan-result-ref" style="font-size:.72rem;color:var(--g500);"></div>
-              <div id="scan-result-prix" style="font-size:.85rem;font-weight:600;color:#1a7c3e;margin-top:2px;"></div>
-            </div>
-          </div>
-          <div style="display:flex;align-items:center;gap:.5rem;margin-top:.6rem;">
-            <button onclick="scanQtyChange(-1)" style="width:28px;height:28px;border-radius:50%;border:1.5px solid var(--g300);background:white;cursor:pointer;font-size:1rem;display:flex;align-items:center;justify-content:center;flex-shrink:0;">−</button>
-            <span id="scan-result-qty" style="font-size:1.1rem;font-weight:700;min-width:28px;text-align:center;color:var(--g800);">1</span>
-            <button onclick="scanQtyChange(1)" style="width:28px;height:28px;border-radius:50%;border:1.5px solid var(--g300);background:white;cursor:pointer;font-size:1rem;display:flex;align-items:center;justify-content:center;flex-shrink:0;">+</button>
-            <span id="scan-result-unite" style="font-size:.75rem;color:var(--g500);">colis</span>
-          </div>
-          <div style="display:flex;gap:.4rem;margin-top:.6rem;">
-            <button class="btn btn-primary" onclick="scanAjouter()" style="flex:1;justify-content:center;font-size:.8rem;">✓ Ajouter</button>
-            <button class="btn btn-ghost" onclick="scanDismiss()" style="font-size:.8rem;">✕</button>
-          </div>
-        </div>
-
-        <!-- Produit non trouvé -->
-        <div id="scan-notfound-card" style="display:none;padding:.7rem;border-top:1px solid var(--border);background:#fdf0ee;">
-          <p style="font-size:.82rem;color:#c0392b;margin:0;">❌ Code-barres non trouvé dans le catalogue</p>
-          <p id="scan-notfound-ean" style="font-size:.72rem;color:#999;margin:2px 0 0;font-family:monospace;"></p>
-        </div>
-      </div>
-
-      <!-- Panier scanner -->
-      <div style="background:var(--surface);border-radius:10px;border:1px solid var(--border);display:flex;flex-direction:column;">
-        <div style="padding:.7rem 1rem;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;">
-          <span style="font-size:.8rem;font-weight:600;color:var(--g700);">🛒 Panier</span>
-          <span id="scan-panier-count" style="font-size:.72rem;background:var(--blue-p100);color:var(--blue-p700);padding:2px 10px;border-radius:20px;">0 article</span>
-        </div>
-
-        <!-- Liste items -->
-        <div id="scan-panier-list" style="flex:1;overflow-y:auto;max-height:340px;padding:.4rem;">
-          <div id="scan-panier-empty" style="text-align:center;padding:2rem 1rem;color:var(--g400);">
-            <div style="font-size:2rem;margin-bottom:.3rem;">🛒</div>
-            <div style="font-size:.8rem;">Scannez des produits</div>
-          </div>
-        </div>
-
-        <!-- Total -->
-        <div style="padding:.7rem 1rem;border-top:1px solid var(--border);background:var(--surface2);">
-          <div style="display:flex;justify-content:space-between;align-items:center;">
-            <span style="font-size:.8rem;color:var(--g600);">Total HT</span>
-            <span id="scan-panier-total" style="font-size:1rem;font-weight:700;color:var(--g800);">0,00 €</span>
-          </div>
-          <div style="font-size:.72rem;color:var(--g400);margin-top:1px;" id="scan-panier-tva">TVA : 0,00 €</div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Modal saisie manuelle -->
-    <div id="scan-modal-manual" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:800;align-items:flex-end;justify-content:center;">
-      <div style="background:white;border-radius:16px 16px 0 0;padding:1.5rem;width:100%;max-width:480px;animation:slideUp .3s ease;">
-        <h3 style="font-size:1rem;margin-bottom:1rem;color:var(--g800);">⌨ Saisir un EAN manuellement</h3>
-        <input type="text" id="scan-manual-input" inputmode="numeric" placeholder="Ex: 3347430006538"
-               style="width:100%;padding:.75rem;border:2px solid var(--blue-p400);border-radius:8px;font-size:1.1rem;font-family:monospace;letter-spacing:2px;text-align:center;margin-bottom:.8rem;box-sizing:border-box;"
-               onkeypress="if(event.key==='Enter') scanManualSearch()">
-        <div style="display:flex;gap:.5rem;">
-          <button class="btn btn-ghost" style="flex:1;justify-content:center;" onclick="document.getElementById('scan-modal-manual').style.display='none'">Annuler</button>
-          <button class="btn btn-primary" style="flex:1;justify-content:center;" onclick="scanManualSearch()">Rechercher</button>
-        </div>
-      </div>
-    </div>
-
-  </div>
-  <!-- FIN SCANNER BDC -->
-
   <!-- MAILING PROMO -->
+  <!-- ═══ SECTION COMMISSIONS ═══════════════════════════════════════════════ -->
+  <div id="sec-commissions" class="hidden">
+    <div class="main-content" style="padding:1.25rem;">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1.25rem;flex-wrap:wrap;gap:.75rem;">
+        <div class="page-title" style="margin-bottom:0;">💶 Commissions</div>
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+          <!-- Taux globaux -->
+          <div style="display:flex;align-items:center;gap:6px;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:.35rem .75rem;">
+            <span style="font-size:.75rem;color:var(--g600);">Taux BDC :</span>
+            <input type="number" id="comm-taux-global-bdc" value="5" min="0" max="100" step="0.5"
+              style="width:48px;border:none;background:transparent;font-size:.82rem;font-weight:600;color:var(--blue-p700);text-align:center;"
+              oninput="commRefresh()"> %
+          </div>
+          <div style="display:flex;align-items:center;gap:6px;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:.35rem .75rem;">
+            <span style="font-size:.75rem;color:var(--g600);">Taux Factures :</span>
+            <input type="number" id="comm-taux-global-fact" value="5" min="0" max="100" step="0.5"
+              style="width:48px;border:none;background:transparent;font-size:.82rem;font-weight:600;color:var(--amber);text-align:center;"
+              oninput="commRefresh()"> %
+          </div>
+          <button class="btn btn-ghost" onclick="commSetAll()" style="font-size:.75rem;">↕ Appliquer à tous</button>
+          <button class="btn btn-primary" onclick="commSave()" style="font-size:.75rem;">💾 Enregistrer</button>
+        </div>
+      </div>
+
+      <!-- KPIs -->
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:.75rem;margin-bottom:1.25rem;">
+        <div class="card" style="padding:1rem;">
+          <div style="font-size:.7rem;color:var(--g500);text-transform:uppercase;letter-spacing:.08em;margin-bottom:.4rem;">💶 Commission totale</div>
+          <div id="comm-kpi-total" style="font-size:1.5rem;font-weight:700;color:var(--violet);">—</div>
+          <div style="font-size:.7rem;color:var(--g500);margin-top:2px;">BDC + Factures</div>
+        </div>
+        <div class="card" style="padding:1rem;">
+          <div style="font-size:.7rem;color:var(--g500);text-transform:uppercase;letter-spacing:.08em;margin-bottom:.4rem;">📋 Sur BDC</div>
+          <div id="comm-kpi-bdc" style="font-size:1.5rem;font-weight:700;color:var(--green);">—</div>
+          <div style="font-size:.7rem;color:var(--g500);margin-top:2px;">Commandes saisies CRM</div>
+        </div>
+        <div class="card" style="padding:1rem;">
+          <div style="font-size:.7rem;color:var(--g500);text-transform:uppercase;letter-spacing:.08em;margin-bottom:.4rem;">📄 Sur Factures</div>
+          <div id="comm-kpi-fact" style="font-size:1.5rem;font-weight:700;color:var(--amber);">—</div>
+          <div style="font-size:.7rem;color:var(--g500);margin-top:2px;">CA Dashboard chargé</div>
+        </div>
+      </div>
+
+      <!-- Tableau par client -->
+      <div class="card">
+        <div class="card-head">
+          <span class="card-title">📊 Détail par client</span>
+          <span style="font-size:.72rem;color:var(--g500);" id="comm-nb-clients">—</span>
+        </div>
+        <div style="overflow-x:auto;">
+          <table style="width:100%;border-collapse:collapse;font-size:.78rem;">
+            <thead>
+              <tr style="background:var(--blue-p50);">
+                <th style="padding:.6rem 1rem;text-align:left;font-weight:600;color:var(--blue-p800);white-space:nowrap;">Client</th>
+                <th style="padding:.6rem .75rem;text-align:right;color:var(--blue-p800);white-space:nowrap;">CA BDC</th>
+                <th style="padding:.6rem .75rem;text-align:center;color:var(--green);white-space:nowrap;">Taux BDC %</th>
+                <th style="padding:.6rem .75rem;text-align:right;color:var(--green);white-space:nowrap;">Comm. BDC</th>
+                <th style="padding:.6rem .75rem;text-align:right;color:var(--blue-p800);white-space:nowrap;">CA Facturé</th>
+                <th style="padding:.6rem .75rem;text-align:center;color:var(--amber);white-space:nowrap;">Taux Fact. %</th>
+                <th style="padding:.6rem .75rem;text-align:right;color:var(--amber);white-space:nowrap;">Comm. Fact.</th>
+                <th style="padding:.6rem .75rem;text-align:right;color:var(--violet);white-space:nowrap;">Total Comm.</th>
+              </tr>
+            </thead>
+            <tbody id="comm-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <div id="sec-mailing" class="hidden">
     <div class="page-header">
       <div>
@@ -2427,7 +1982,7 @@ if (typeof cdbPageSize  === 'undefined') window.cdbPageSize  = 50;
 // ═══════════════════════════════════════════════
 //  NAVIGATION
 // ═══════════════════════════════════════════════
-const SECTIONS = ['dashboard','bdc','frais','contacts-db','scanner'];
+const SECTIONS = ['dashboard','bdc','frais','contacts-db','commissions'];
 function showSection(name, tabEl, sideEl) {
   SECTIONS.forEach(s => { const el=document.getElementById('sec-'+s); el.classList.add('hidden'); el.style.display=''; });
   const sec=document.getElementById('sec-'+name); if(!sec){console.warn('Section absente:',name);return;} sec.classList.remove('hidden'); sec.style.display=(name==='bdc')?'flex':'';
@@ -2438,6 +1993,7 @@ function showSection(name, tabEl, sideEl) {
   if (name==='dashboard') refreshDashboard();
   if (name==='frais') { if (typeof refreshFraisStats === 'function') { try{refreshFraisStats();}catch(e){} } if (typeof nfdRender === 'function') nfdRender(); }
   if (name==='bdc') { if (!bdcInitDone) { buildTable(); bdcInitDone=true; } }
+  if (name==='commissions') { setTimeout(function(){ if (typeof commInit === 'function') commInit(); }, 80); }
 }
 
 function toggleAvatarMenu() { document.getElementById('avatar-menu').classList.toggle('open'); }
@@ -3527,6 +3083,187 @@ function bdcOnRemiseLigne(input) {
     }
   }
   bdcUpdateTotals();
+}
+
+
+// ══════════════════════════════════════════════════════════════════════════
+//  MODULE COMMISSIONS MDM CRM
+// ══════════════════════════════════════════════════════════════════════════
+var COMM_KEY = 'mdm_commissions_v1';
+
+function commLoad() {
+  try { return JSON.parse(localStorage.getItem(COMM_KEY) || '{}'); } catch(e) { return {}; }
+}
+
+function commSave() {
+  var data = commLoad();
+  var gBDC  = parseFloat((document.getElementById('comm-taux-global-bdc')  || {}).value) || 5;
+  var gFact = parseFloat((document.getElementById('comm-taux-global-fact') || {}).value) || 5;
+  data._global_bdc  = gBDC;
+  data._global_fact = gFact;
+  // Lire les taux par client depuis le tableau
+  document.querySelectorAll('[data-comm-id]').forEach(function(row) {
+    var id = row.getAttribute('data-comm-id');
+    var inputBDC  = document.getElementById('comm-bdc-'  + id);
+    var inputFact = document.getElementById('comm-fact-' + id);
+    if (!data[id]) data[id] = {};
+    if (inputBDC)  data[id].bdc  = parseFloat(inputBDC.value)  || 0;
+    if (inputFact) data[id].fact = parseFloat(inputFact.value) || 0;
+  });
+  localStorage.setItem(COMM_KEY, JSON.stringify(data));
+  // Sauvegarder dans Firestore
+  try {
+    if (typeof db !== 'undefined' && db) {
+      db.collection('config').doc('commissions_mdm').set(data)
+        .then(function(){ toast('✅ Taux de commission enregistrés (cloud)'); })
+        .catch(function(e){ toast('✅ Taux enregistrés (local)'); });
+    } else {
+      toast('✅ Taux de commission enregistrés');
+    }
+  } catch(e) { toast('✅ Taux de commission enregistrés'); }
+  commRefresh();
+}
+
+function commSetAll() {
+  var gBDC  = parseFloat((document.getElementById('comm-taux-global-bdc')  || {}).value) || 5;
+  var gFact = parseFloat((document.getElementById('comm-taux-global-fact') || {}).value) || 5;
+  document.querySelectorAll('[id^="comm-bdc-"]').forEach(function(el) { el.value = gBDC; });
+  document.querySelectorAll('[id^="comm-fact-"]').forEach(function(el) { el.value = gFact; });
+  commRefresh();
+}
+
+function commGetTaux(data, clientId, type) {
+  if (data[clientId] && data[clientId][type] !== undefined) return data[clientId][type];
+  return type === 'bdc' ? (data._global_bdc || 5) : (data._global_fact || 5);
+}
+
+function commFmt(val) {
+  return val.toLocaleString('fr-FR', { minimumFractionDigits:2, maximumFractionDigits:2 }) + ' €';
+}
+
+function commRefresh() {
+  var data = commLoad();
+  var gBDC  = parseFloat((document.getElementById('comm-taux-global-bdc')  || {}).value) || data._global_bdc  || 5;
+  var gFact = parseFloat((document.getElementById('comm-taux-global-fact') || {}).value) || data._global_fact || 5;
+
+  // Construire un map CA par client depuis le dashboard (commandes_stats)
+  var caFact = {};   // CA facturé (dashboard)
+  var caBDC  = {};   // CA BDC saisis dans le CRM
+
+  // CA depuis le dashboard (dashCaRows)
+  if (typeof dashCaRows !== 'undefined' && dashCaRows && dashCaRows.length) {
+    dashCaRows.forEach(function(row) {
+      var nom = (row['Nom client'] || row.nom || '').trim().toUpperCase();
+      var ca  = parseFloat(row['CA HT'] || row.ca || 0);
+      if (!nom || ca <= 0) return;
+      caFact[nom] = (caFact[nom] || 0) + ca;
+    });
+  }
+
+  // CA depuis la base clients (cumul2026 ou _stats)
+  if (typeof cdbContacts !== 'undefined' && cdbContacts.length) {
+    cdbContacts.forEach(function(c) {
+      var nom = (c.nom || '').trim().toUpperCase();
+      if (!nom) return;
+      var ca = 0;
+      if (c._stats && c._stats.caTotal) ca = c._stats.caTotal;
+      else if (c.cumul2026) ca = parseFloat(c.cumul2026) || 0;
+      if (ca > 0) caBDC[nom] = (caBDC[nom] || 0) + ca;
+    });
+  }
+
+  // Fusionner tous les clients connus
+  var allClients = {};
+  Object.keys(caFact).forEach(function(nom) { allClients[nom] = true; });
+  Object.keys(caBDC).forEach(function(nom) { allClients[nom] = true; });
+
+  // Trier par CA total décroissant
+  var clients = Object.keys(allClients).sort(function(a, b) {
+    return ((caFact[b]||0) + (caBDC[b]||0)) - ((caFact[a]||0) + (caBDC[a]||0));
+  }).filter(function(nom) {
+    return (caFact[nom] || 0) + (caBDC[nom] || 0) > 0;
+  });
+
+  var totalCommBDC = 0, totalCommFact = 0;
+  var rows = '';
+
+  clients.forEach(function(nom) {
+    var id = nom.replace(/[^a-zA-Z0-9]/g, '_').substring(0, 30);
+    var caBDCVal  = caBDC[nom]  || 0;
+    var caFactVal = caFact[nom] || 0;
+    var tauxBDC   = commGetTaux(data, id, 'bdc');
+    var tauxFact  = commGetTaux(data, id, 'fact');
+    var commBDC   = caBDCVal  * tauxBDC  / 100;
+    var commFact  = caFactVal * tauxFact / 100;
+    var commTotal = commBDC + commFact;
+    totalCommBDC  += commBDC;
+    totalCommFact += commFact;
+
+    rows += '<tr data-comm-id="' + id + '" style="border-bottom:1px solid var(--border);">' +
+      '<td style="padding:.5rem 1rem;font-weight:500;color:var(--g800);max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="' + nom + '">' + nom + '</td>' +
+      '<td style="padding:.5rem .75rem;text-align:right;color:var(--g700);">' + (caBDCVal > 0 ? commFmt(caBDCVal) : '—') + '</td>' +
+      '<td style="padding:.5rem .75rem;text-align:center;">' +
+        '<input id="comm-bdc-' + id + '" type="number" value="' + tauxBDC + '" min="0" max="100" step="0.5"' +
+        ' style="width:44px;border:1px solid var(--border-med);border-radius:5px;padding:2px 4px;text-align:center;font-size:.78rem;color:var(--green);"' +
+        ' oninput="commRefresh()">' +
+      '</td>' +
+      '<td style="padding:.5rem .75rem;text-align:right;font-weight:600;color:var(--green);">' + (commBDC > 0 ? commFmt(commBDC) : '—') + '</td>' +
+      '<td style="padding:.5rem .75rem;text-align:right;color:var(--g700);">' + (caFactVal > 0 ? commFmt(caFactVal) : '—') + '</td>' +
+      '<td style="padding:.5rem .75rem;text-align:center;">' +
+        '<input id="comm-fact-' + id + '" type="number" value="' + tauxFact + '" min="0" max="100" step="0.5"' +
+        ' style="width:44px;border:1px solid var(--border-med);border-radius:5px;padding:2px 4px;text-align:center;font-size:.78rem;color:var(--amber);"' +
+        ' oninput="commRefresh()">' +
+      '</td>' +
+      '<td style="padding:.5rem .75rem;text-align:right;font-weight:600;color:var(--amber);">' + (commFact > 0 ? commFmt(commFact) : '—') + '</td>' +
+      '<td style="padding:.5rem .75rem;text-align:right;font-weight:700;color:var(--violet);">' + (commTotal > 0 ? commFmt(commTotal) : '—') + '</td>' +
+    '</tr>';
+  });
+
+  // Ligne de totaux
+  var totalComm = totalCommBDC + totalCommFact;
+  rows += '<tr style="background:var(--blue-p50);border-top:2px solid var(--border-med);font-weight:700;">' +
+    '<td style="padding:.6rem 1rem;color:var(--blue-p800);">TOTAL</td>' +
+    '<td colspan="2"></td>' +
+    '<td style="padding:.6rem .75rem;text-align:right;color:var(--green);">' + commFmt(totalCommBDC) + '</td>' +
+    '<td colspan="2"></td>' +
+    '<td style="padding:.6rem .75rem;text-align:right;color:var(--amber);">' + commFmt(totalCommFact) + '</td>' +
+    '<td style="padding:.6rem .75rem;text-align:right;color:var(--violet);font-size:.9rem;">' + commFmt(totalComm) + '</td>' +
+  '</tr>';
+
+  var tbody = document.getElementById('comm-tbody');
+  if (tbody) tbody.innerHTML = rows;
+
+  // KPIs
+  var kpiTotal = document.getElementById('comm-kpi-total');
+  var kpiBDC   = document.getElementById('comm-kpi-bdc');
+  var kpiFact  = document.getElementById('comm-kpi-fact');
+  if (kpiTotal) kpiTotal.textContent = commFmt(totalComm);
+  if (kpiBDC)   kpiBDC.textContent   = commFmt(totalCommBDC);
+  if (kpiFact)  kpiFact.textContent  = commFmt(totalCommFact);
+
+  var nbEl = document.getElementById('comm-nb-clients');
+  if (nbEl) nbEl.textContent = clients.length + ' clients';
+}
+
+function commInit() {
+  // Charger les taux depuis Firestore si dispo
+  try {
+    if (typeof db !== 'undefined' && db) {
+      db.collection('config').doc('commissions_mdm').get().then(function(doc) {
+        if (doc.exists) {
+          var data = doc.data();
+          localStorage.setItem(COMM_KEY, JSON.stringify(data));
+          var el1 = document.getElementById('comm-taux-global-bdc');
+          var el2 = document.getElementById('comm-taux-global-fact');
+          if (el1 && data._global_bdc)  el1.value = data._global_bdc;
+          if (el2 && data._global_fact) el2.value = data._global_fact;
+        }
+        commRefresh();
+      }).catch(function() { commRefresh(); });
+    } else {
+      commRefresh();
+    }
+  } catch(e) { commRefresh(); }
 }
 
 
@@ -7883,955 +7620,6 @@ if ('serviceWorker' in navigator) {
       });
   });
 }
-
-
-// ══════════════════════════════════════════════════════════════
-//  MODULE SCANNER BDC — intégré au CRM MDM V3
-//  Utilise PRODUCTS (déjà en mémoire) + cdbContacts pour le BDC
-// ══════════════════════════════════════════════════════════════
-
-// ── Détection plateforme ─────────────────────────────────────
-const scanIsIOS      = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
-const scanIsChromeIO = scanIsIOS && /CriOS/.test(navigator.userAgent);
-const scanForcePhoto = scanIsIOS && !scanIsChromeIO; // Safari iOS → mode photo seul
-
-// ── État ─────────────────────────────────────────────────────
-let scanVideoStream   = null;
-let scanBarcodeLoop   = null;
-let scannerActive     = false;
-let scanCurrentProduit = null;
-let scanCurrentQty    = 1;
-let scanPanier        = [];      // [{produit, qte}]
-let scanLastEAN       = '';
-let scanLastTime      = 0;
-let scanSessionCount  = 0;
-
-// ── Initialisation section scanner ───────────────────────────
-function scannerInit() {
-  scannerRefreshClients();
-  if (scanForcePhoto) {
-    document.getElementById('scan-idle-wrap').style.display = 'none';
-    document.getElementById('scan-ios-wrap').style.display  = 'block';
-    document.getElementById('scan-btn-start').textContent   = '📷 Ouvrir caméra';
-    document.getElementById('scan-status-badge').textContent = '📷 Mode photo';
-  }
-}
-
-// Charger les clients dans le select
-function scannerRefreshClients() {
-  var sel = document.getElementById('scan-client-select');
-  if (!sel) return;
-  var old = sel.value;
-  sel.innerHTML = '<option value="">— Sélectionner un client —</option>';
-  var contacts = (typeof cdbContacts !== 'undefined') ? cdbContacts : [];
-  contacts.forEach(function(c) {
-    var opt = document.createElement('option');
-    opt.value = c.id;
-    opt.textContent = (c.raison || c.nom || '') + (c.ville ? ' — ' + c.ville : '');
-    if (c.id === old) opt.selected = true;
-    sel.appendChild(opt);
-  });
-}
-
-// ── Démarrer le scan ─────────────────────────────────────────
-function scanStart() {
-  if (scanForcePhoto) { scanIosPhoto(); return; }
-  scanStop();
-  document.getElementById('scan-status-badge').textContent = '⏳ Accès caméra…';
-
-  navigator.mediaDevices.getUserMedia({
-    video: { facingMode: { ideal: 'environment' }, width: { ideal: 1280 }, height: { ideal: 720 } }
-  }).then(function(stream) {
-    scanVideoStream = stream;
-    var vid = document.getElementById('scan-video');
-    vid.srcObject = stream;
-    vid.setAttribute('playsinline', '');
-    vid.play().catch(function(){});
-
-    document.getElementById('scan-idle-wrap').style.display  = 'none';
-    document.getElementById('scan-ios-wrap').style.display   = 'none';
-    document.getElementById('scan-video-wrap').style.display = 'block';
-    document.getElementById('scan-btn-start').style.display  = 'none';
-    document.getElementById('scan-btn-stop').style.display   = 'inline-flex';
-    document.getElementById('scan-status-badge').textContent = '🔴 Actif';
-    scannerActive = true;
-
-    vid.addEventListener('loadedmetadata', function() { scanVideoLoop(vid); }, { once: true });
-    if (vid.readyState >= 1) scanVideoLoop(vid);
-
-  }).catch(function(e) {
-    console.warn('Caméra:', e.message);
-    toast('📷 Mode photo activé', 'info');
-    document.getElementById('scan-idle-wrap').style.display = 'none';
-    document.getElementById('scan-ios-wrap').style.display  = 'block';
-    document.getElementById('scan-btn-start').textContent   = '📷 Ouvrir caméra';
-    document.getElementById('scan-status-badge').textContent = '📷 Mode photo';
-  });
-}
-
-// Boucle de décodage vidéo
-function scanVideoLoop(vid) {
-  if (!scanVideoStream) return;
-  var canvas = document.getElementById('scan-canvas');
-  var ctx = canvas.getContext('2d', { willReadFrequently: true });
-
-  function loop() {
-    if (!scanVideoStream) return;
-    if (vid.readyState >= 2 && !vid.paused) {
-      canvas.width  = vid.videoWidth  || 640;
-      canvas.height = vid.videoHeight || 480;
-      ctx.drawImage(vid, 0, 0, canvas.width, canvas.height);
-
-      // jsQR si disponible
-      if (typeof jsQR !== 'undefined') {
-        try {
-          var imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-          var qr = jsQR(imgData.data, imgData.width, imgData.height, { inversionAttempts: 'dontInvert' });
-          if (qr && qr.data) { scanOnEAN(qr.data); return; }
-        } catch(e) {}
-      }
-
-      // ZXing/browser si disponible
-      if (typeof ZXingBrowser !== 'undefined') {
-        try {
-          var reader = new ZXingBrowser.BrowserMultiFormatReader();
-          reader.decodeFromCanvas(canvas).then(function(res) {
-            if (res) scanOnEAN(res.getText());
-          }).catch(function(){});
-        } catch(e) {}
-      }
-    }
-    scanBarcodeLoop = setTimeout(loop, 300);
-  }
-  loop();
-}
-
-function scanStop() {
-  if (scanBarcodeLoop) { clearTimeout(scanBarcodeLoop); scanBarcodeLoop = null; }
-  if (scanVideoStream) { scanVideoStream.getTracks().forEach(function(t){ t.stop(); }); scanVideoStream = null; }
-  var vid = document.getElementById('scan-video');
-  if (vid) vid.srcObject = null;
-  scannerActive = false;
-
-  document.getElementById('scan-video-wrap').style.display = 'none';
-  var idle = scanForcePhoto ? 'none' : 'flex';
-  var ios  = scanForcePhoto ? 'flex' : 'none';
-  document.getElementById('scan-idle-wrap').style.display = idle;
-  document.getElementById('scan-ios-wrap').style.display  = ios;
-  document.getElementById('scan-btn-start').style.display  = 'inline-flex';
-  document.getElementById('scan-btn-stop').style.display   = 'none';
-  document.getElementById('scan-btn-start').textContent   = scanForcePhoto ? '📷 Ouvrir caméra' : '▶ Démarrer';
-  document.getElementById('scan-status-badge').textContent = scanForcePhoto ? '📷 Mode photo' : '⏸ Arrêtée';
-}
-
-// ── Mode photo iOS ────────────────────────────────────────────
-function scanIosPhoto() {
-  var inp = document.getElementById('scan-ios-input');
-  inp.value = '';
-  inp.click();
-}
-
-function scanHandlePhoto(event) {
-  var file = event.target.files[0];
-  if (!file) return;
-  event.target.value = '';
-  document.getElementById('scan-status-badge').textContent = '⏳ Analyse…';
-
-  createImageBitmap(file).then(function(bmp) {
-    var canvas = document.getElementById('scan-canvas');
-    var scale = Math.min(1, 1200 / Math.max(bmp.width, bmp.height));
-    canvas.width  = Math.round(bmp.width  * scale);
-    canvas.height = Math.round(bmp.height * scale);
-    var ctx = canvas.getContext('2d', { willReadFrequently: true });
-    ctx.drawImage(bmp, 0, 0, canvas.width, canvas.height);
-
-    var decoded = null;
-
-    // jsQR
-    if (!decoded && typeof jsQR !== 'undefined') {
-      try {
-        var imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-        var qr = jsQR(imgData.data, imgData.width, imgData.height, { inversionAttempts: 'dontInvert' });
-        if (qr && qr.data) decoded = qr.data;
-      } catch(e) {}
-    }
-
-    // ZXing
-    if (!decoded && typeof ZXingBrowser !== 'undefined') {
-      try {
-        var reader = new ZXingBrowser.BrowserMultiFormatReader();
-        reader.decodeFromCanvas(canvas).then(function(res) {
-          if (res) { scanOnEAN(res.getText()); }
-          else { scanPhotoFailed(); }
-        }).catch(function() { if (!decoded) scanPhotoFailed(); });
-        return; // async
-      } catch(e) {}
-    }
-
-    if (decoded) {
-      scanOnEAN(decoded);
-    } else {
-      scanPhotoFailed();
-    }
-  }).catch(function(e) {
-    console.error(e);
-    document.getElementById('scan-status-badge').textContent = '⚠️ Erreur';
-    toast('Erreur lecture image', 'err');
-  });
-}
-
-function scanPhotoFailed() {
-  document.getElementById('scan-status-badge').textContent = '❌ Non lu';
-  toast('Code non lu — rapprochez-vous et centrez le code-barres', 'info');
-  setTimeout(function() {
-    document.getElementById('scan-status-badge').textContent = '📷 Mode photo';
-  }, 2000);
-}
-
-// ── Détection EAN → produit ───────────────────────────────────
-function scanOnEAN(ean) {
-  var now = Date.now();
-  if (ean === scanLastEAN && now - scanLastTime < 2500) return;
-  scanLastEAN = ean;
-  scanLastTime = now;
-  scanSessionCount++;
-
-  // Flash + vibration
-  if (navigator.vibrate) navigator.vibrate(70);
-  var badge = document.getElementById('scan-status-badge');
-  if (badge) { badge.textContent = '✅ Code lu !'; setTimeout(function(){ badge.textContent = scannerActive ? '🔴 Actif' : '📷 Mode photo'; }, 1200); }
-
-  scanDismiss();
-  var clean = String(ean).trim();
-
-  var found = (PRODUCTS || []).find(function(p) {
-    if (!p.ean) return false;
-    var pean = String(p.ean).trim();
-    return pean === clean || pean === clean.replace(/^0+/, '') || clean.endsWith(pean);
-  });
-
-  if (found) {
-    scanCurrentProduit = found;
-    scanCurrentQty     = 1;
-    document.getElementById('scan-result-nom').textContent  = found.libelle || found.nom || found.code;
-    document.getElementById('scan-result-ref').textContent  = 'Réf: ' + (found.code || '–') + ' · EAN: ' + clean;
-    document.getElementById('scan-result-prix').textContent = found.pu_ht > 0 ? found.pu_ht.toFixed(2) + ' € HT / ' + (found.pcb > 1 ? 'colis (×' + found.pcb + ')' : 'unité') : 'Prix non renseigné';
-    document.getElementById('scan-result-qty').textContent  = scanCurrentQty;
-    document.getElementById('scan-result-unite').textContent = found.pcb > 1 ? 'colis' : 'unité';
-    document.getElementById('scan-result-card').style.display    = 'block';
-    document.getElementById('scan-notfound-card').style.display  = 'none';
-  } else {
-    scanCurrentProduit = null;
-    document.getElementById('scan-notfound-ean').textContent  = 'EAN : ' + clean;
-    document.getElementById('scan-notfound-card').style.display = 'block';
-    document.getElementById('scan-result-card').style.display   = 'none';
-    setTimeout(function() {
-      document.getElementById('scan-notfound-card').style.display = 'none';
-    }, 4000);
-  }
-}
-
-// ── Gestion panier ────────────────────────────────────────────
-function scanQtyChange(delta) {
-  scanCurrentQty = Math.max(1, scanCurrentQty + delta);
-  document.getElementById('scan-result-qty').textContent = scanCurrentQty;
-}
-
-function scanAjouter() {
-  if (!scanCurrentProduit) return;
-  var code = scanCurrentProduit.code;
-  var ex   = scanPanier.find(function(i){ return i.produit.code === code; });
-  if (ex) { ex.qte += scanCurrentQty; }
-  else     { scanPanier.push({ produit: scanCurrentProduit, qte: scanCurrentQty }); }
-  scanDismiss();
-  scanPanierRender();
-  toast('✅ ' + (scanCurrentProduit.libelle || scanCurrentProduit.code).substring(0,35) + ' ajouté', 'ok');
-}
-
-function scanDismiss() {
-  document.getElementById('scan-result-card').style.display   = 'none';
-  document.getElementById('scan-notfound-card').style.display = 'none';
-  scanCurrentProduit = null;
-}
-
-function scanPanierRender() {
-  var list  = document.getElementById('scan-panier-list');
-  var empty = document.getElementById('scan-panier-empty');
-  var count = document.getElementById('scan-panier-count');
-
-  if (!scanPanier.length) {
-    if (empty) empty.style.display = 'block';
-    list.innerHTML = '';
-    list.appendChild(empty);
-    count.textContent = '0 article';
-    document.getElementById('scan-panier-total').textContent = '0,00 €';
-    document.getElementById('scan-panier-tva').textContent   = 'TVA : 0,00 €';
-    return;
-  }
-
-  if (empty) empty.style.display = 'none';
-  var totalHT  = 0, totalTVA = 0;
-  var totalQty = 0;
-
-  list.innerHTML = scanPanier.map(function(it, i) {
-    var ht = (it.produit.pu_ht || 0) * it.qte;
-    totalHT  += ht;
-    totalTVA += ht * ((it.produit.tva || 5.5) / 100);
-    totalQty += it.qte;
-    return '<div style="display:flex;align-items:center;gap:.5rem;padding:.4rem .3rem;border-bottom:1px solid var(--border);font-size:.78rem;">' +
-      '<div style="flex:1;min-width:0;">' +
-        '<div style="font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--g800);">' + (it.produit.libelle || it.produit.code) + '</div>' +
-        '<div style="color:var(--g500);font-size:.7rem;">' + (it.produit.code || '') + ' · ' + (it.produit.pu_ht > 0 ? ht.toFixed(2)+' € HT' : 'Prix ND') + '</div>' +
-      '</div>' +
-      '<div style="display:flex;align-items:center;gap:.3rem;flex-shrink:0;">' +
-        '<button onclick="scanItemQty('+i+',-1)" style="width:22px;height:22px;border-radius:50%;border:1px solid var(--g300);background:white;cursor:pointer;font-size:.85rem;display:flex;align-items:center;justify-content:center;">−</button>' +
-        '<span style="font-weight:700;min-width:20px;text-align:center;">' + it.qte + '</span>' +
-        '<button onclick="scanItemQty('+i+',1)" style="width:22px;height:22px;border-radius:50%;border:1px solid var(--g300);background:white;cursor:pointer;font-size:.85rem;display:flex;align-items:center;justify-content:center;">+</button>' +
-      '</div>' +
-      '<button onclick="scanItemDel('+i+')" style="background:none;border:none;cursor:pointer;color:var(--g300);font-size:1rem;padding:2px 4px;flex-shrink:0;">✕</button>' +
-    '</div>';
-  }).join('');
-
-  count.textContent = totalQty + ' article' + (totalQty > 1 ? 's' : '');
-  document.getElementById('scan-panier-total').textContent = totalHT.toFixed(2) + ' €';
-  document.getElementById('scan-panier-tva').textContent   = 'TVA : ' + totalTVA.toFixed(2) + ' €';
-}
-
-function scanItemQty(i, delta) {
-  scanPanier[i].qte = Math.max(1, scanPanier[i].qte + delta);
-  scanPanierRender();
-}
-
-function scanItemDel(i) {
-  scanPanier.splice(i, 1);
-  scanPanierRender();
-}
-
-function scannerResetPanier() {
-  if (scanPanier.length && !confirm('Vider le panier scanner ?')) return;
-  scanPanier = [];
-  scanPanierRender();
-}
-
-// ── Saisie manuelle ───────────────────────────────────────────
-function scanManual() {
-  var m = document.getElementById('scan-modal-manual');
-  m.style.display = 'flex';
-  setTimeout(function(){ document.getElementById('scan-manual-input').focus(); }, 250);
-}
-
-function scanManualSearch() {
-  var val = document.getElementById('scan-manual-input').value.trim();
-  if (!val) return;
-  document.getElementById('scan-modal-manual').style.display = 'none';
-  document.getElementById('scan-manual-input').value = '';
-  scanOnEAN(val);
-}
-
-// ── Transfert vers BDC ────────────────────────────────────────
-function scannerTransferBDC() {
-  if (!scanPanier.length) { toast('Panier vide', 'err'); return; }
-
-  // Récupérer le client sélectionné
-  var selEl   = document.getElementById('scan-client-select');
-  var clientId = selEl ? selEl.value : '';
-  var client   = clientId ? (typeof cdbContacts !== 'undefined' ? cdbContacts.find(function(c){ return c.id === clientId; }) : null) : null;
-
-  // Pré-remplir les champs BDC client
-  if (client) {
-    var setVal = function(id, val) { var el = document.getElementById(id); if (el) el.value = val || ''; };
-    setVal('bdc-raison',  client.raison || '');
-    setVal('bdc-contact', client.contact || '');
-    setVal('bdc-email',   client.email || '');
-    setVal('bdc-tel',     client.tel || '');
-    setVal('bdc-ville',   client.ville || '');
-    setVal('bdc-cp',      client.cp || '');
-    setVal('bdc-profil',  client.profil || 'Indépendant');
-    setVal('bdc-remise',  client.remise || 0);
-  }
-
-  // Injecter les quantités dans bdcQtys
-  if (typeof bdcQtys === 'undefined') { toast('Module BDC non disponible', 'err'); return; }
-
-  scanPanier.forEach(function(item) {
-    bdcQtys[item.produit.code] = (bdcQtys[item.produit.code] || 0) + item.qte;
-  });
-
-  // Aller sur la section BDC et rafraîchir
-  showSection('bdc', null, null);
-  if (typeof renderBDC === 'function') renderBDC();
-  else if (typeof bdcRender === 'function') bdcRender();
-
-  // Scroll vers le haut du BDC
-  var bdcEl = document.getElementById('sec-bdc');
-  if (bdcEl) bdcEl.scrollTop = 0;
-
-  var n = scanPanier.reduce(function(s,i){ return s + i.qte; }, 0);
-  toast('✅ ' + n + ' article(s) transféré(s) dans le BDC' + (client ? ' pour ' + (client.raison || '') : ''), 'ok');
-
-  // Vider le panier scanner
-  scanPanier = [];
-  scanPanierRender();
-}
-
-// ── Hook sur showSection pour init ───────────────────────────
-var _origShowSection = showSection;
-showSection = function(name, tabEl, sideEl) {
-  _origShowSection(name, tabEl, sideEl);
-  if (name === 'scanner') {
-    scannerInit();
-    // Quagga2 chargé en tête
-  } else {
-    // Stopper la caméra quand on quitte le scanner
-    if (scanVideoStream) scanStop();
-  }
-};
-
-
-
-// ══════════════════════════════════════════════════════════════
-//  SCANNER INTÉGRÉ AU BDC
-//  Panneau latéral qui s'ouvre depuis le BDC et ajoute
-//  directement les produits dans bdcQtys + buildTable()
-// ══════════════════════════════════════════════════════════════
-
-var bdcScanStream   = null;
-var bdcScanLoop     = null;
-var bdcScanProduit  = null;
-var bdcScanQtyVal   = 1;
-var bdcScanLog      = [];   // [{code, libelle, qte}]
-var bdcScanLastEAN  = '';
-var bdcScanLastTime = 0;
-
-// Détection plateforme
-var _bdcIsIOS      = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
-var _bdcIsChromeIO = _bdcIsIOS && /CriOS/.test(navigator.userAgent);
-var _bdcForcePhoto = _bdcIsIOS && !_bdcIsChromeIO;
-
-// ── Ouvrir / fermer le panneau ────────────────────────────────
-function bdcScanToggle() {
-  var panel = document.getElementById('bdc-scan-panel');
-  var isOpen = panel.style.display === 'flex';
-  if (isOpen) { bdcScanClose(); }
-  else        { bdcScanOpen();  }
-}
-
-function bdcScanOpen() {
-  var panel = document.getElementById('bdc-scan-panel');
-  panel.style.display = 'flex';
-
-  // Mettre à jour le label client
-  var magasin = (document.getElementById('bdc-magasin') || {}).value || '';
-  document.getElementById('bdc-scan-client-label').textContent = magasin || 'Aucun client sélectionné';
-
-  // Adapter le bouton topbar
-  document.getElementById('bdc-scan-btn').textContent = '📷 ✕ Fermer scan';
-  document.getElementById('bdc-scan-btn').style.background = '#c0392b';
-  document.getElementById('bdc-scan-btn').style.borderColor = '#c0392b';
-
-  // Adapter l'UI selon la plateforme
-  if (_bdcForcePhoto) {
-    document.getElementById('bdc-cam-idle-wrap').style.display = 'none';
-    document.getElementById('bdc-cam-ios-wrap').style.display  = 'flex';
-    document.getElementById('bdc-cam-start-btn').textContent   = '📷 Ouvrir caméra';
-    document.getElementById('bdc-cam-badge').textContent       = '📷 Mode photo';
-    document.getElementById('bdc-cam-start-btn').onclick = bdcScanIosPhoto;
-  }
-
-  // Quagga2 chargé en tête — rien à faire ici
-}
-
-function bdcScanClose() {
-  bdcCamStop();
-  var panel = document.getElementById('bdc-scan-panel');
-  panel.style.display = 'none';
-  document.getElementById('bdc-scan-btn').textContent = '📷 Scanner';
-  document.getElementById('bdc-scan-btn').style.background = '#1a7c3e';
-  document.getElementById('bdc-scan-btn').style.borderColor = '#1a7c3e';
-}
-
-// ── Caméra vidéo ─────────────────────────────────────────────
-function bdcCamStart() {
-  if (_bdcForcePhoto) { bdcScanIosPhoto(); return; }
-  bdcCamStop();
-  document.getElementById('bdc-cam-badge').textContent = '⏳…';
-
-  navigator.mediaDevices.getUserMedia({
-    video: { facingMode: { ideal: 'environment' }, width: { ideal: 1280 } }
-  }).then(function(stream) {
-    bdcScanStream = stream;
-    var vid = document.getElementById('bdc-scan-video');
-    vid.srcObject = stream;
-    vid.setAttribute('playsinline', '');
-    vid.play().catch(function(){});
-
-    document.getElementById('bdc-cam-idle-wrap').style.display  = 'none';
-    document.getElementById('bdc-cam-ios-wrap').style.display   = 'none';
-    document.getElementById('bdc-cam-video-wrap').style.display = 'block';
-    document.getElementById('bdc-cam-start-btn').style.display  = 'none';
-    document.getElementById('bdc-cam-stop-btn').style.display   = 'flex';
-    document.getElementById('bdc-cam-badge').textContent        = '🔴 Actif';
-
-    vid.addEventListener('loadedmetadata', function() { _bdcVideoLoop(vid); }, { once: true });
-    if (vid.readyState >= 1) _bdcVideoLoop(vid);
-
-  }).catch(function(e) {
-    console.warn('BDC Cam:', e.message);
-    toast('📷 Mode photo activé — autorisez la caméra si demandé', 'info');
-    document.getElementById('bdc-cam-idle-wrap').style.display = 'none';
-    document.getElementById('bdc-cam-ios-wrap').style.display  = 'flex';
-    document.getElementById('bdc-cam-start-btn').textContent   = '📷 Ouvrir caméra';
-    document.getElementById('bdc-cam-start-btn').onclick = bdcScanIosPhoto;
-    document.getElementById('bdc-cam-badge').textContent = '📷 Photo';
-  });
-}
-
-function _bdcVideoLoop(vid) {
-  var canvas = document.getElementById('bdc-scan-canvas');
-  var ctx = canvas.getContext('2d', { willReadFrequently: true });
-
-  // Préférer BarcodeDetector natif si dispo (performant)
-  var useNative = 'BarcodeDetector' in window;
-  var nativeDetector = null;
-  if (useNative) {
-    try {
-      nativeDetector = new BarcodeDetector({
-        formats: ['ean_13','ean_8','code_128','code_39','upc_a','upc_e','qr_code']
-      });
-    } catch(e) { useNative = false; }
-  }
-
-  function loop() {
-    if (!bdcScanStream) return;
-    if (vid.readyState >= 2 && !vid.paused) {
-      canvas.width  = vid.videoWidth  || 640;
-      canvas.height = vid.videoHeight || 480;
-      ctx.drawImage(vid, 0, 0, canvas.width, canvas.height);
-
-      // Méthode 1 : BarcodeDetector natif (plus rapide)
-      if (useNative && nativeDetector) {
-        nativeDetector.detect(canvas).then(function(barcodes) {
-          if (barcodes.length > 0) {
-            bdcScanOnEAN(barcodes[0].rawValue);
-          }
-        }).catch(function(){});
-        bdcScanLoop = setTimeout(loop, 300);
-        return;
-      }
-
-      // Méthode 2 : Quagga2 frame par frame
-      if (typeof Quagga !== 'undefined') {
-        try {
-          var imgData = canvas.toDataURL('image/jpeg', 0.8);
-          Quagga.decodeSingle({
-            decoder: {
-              readers: ['ean_reader','ean_8_reader','code_128_reader']
-            },
-            locate: true,
-            src: imgData
-          }, function(result) {
-            if (result && result.codeResult && result.codeResult.code) {
-              bdcScanOnEAN(result.codeResult.code);
-            }
-          });
-        } catch(e) {}
-      }
-    }
-    bdcScanLoop = setTimeout(loop, 350);
-  }
-  loop();
-}
-
-function bdcCamStop() {
-  if (bdcScanLoop)   { clearTimeout(bdcScanLoop);  bdcScanLoop = null; }
-  if (bdcScanStream) { bdcScanStream.getTracks().forEach(function(t){ t.stop(); }); bdcScanStream = null; }
-  var vid = document.getElementById('bdc-scan-video');
-  if (vid) vid.srcObject = null;
-
-  document.getElementById('bdc-cam-video-wrap').style.display = 'none';
-  if (_bdcForcePhoto) {
-    document.getElementById('bdc-cam-ios-wrap').style.display  = 'flex';
-    document.getElementById('bdc-cam-idle-wrap').style.display = 'none';
-  } else {
-    document.getElementById('bdc-cam-ios-wrap').style.display  = 'none';
-    document.getElementById('bdc-cam-idle-wrap').style.display = 'flex';
-  }
-  document.getElementById('bdc-cam-start-btn').style.display = 'flex';
-  document.getElementById('bdc-cam-stop-btn').style.display  = 'none';
-  document.getElementById('bdc-cam-badge').textContent = _bdcForcePhoto ? '📷 Photo' : '⏸';
-}
-
-// ── Mode photo iOS ────────────────────────────────────────────
-function bdcScanIosPhoto() {
-  var inp = document.getElementById('bdc-ios-input');
-  inp.value = '';
-  inp.click();
-}
-
-function bdcScanHandlePhoto(event) {
-  var file = event.target.files[0];
-  if (!file) return;
-  event.target.value = '';
-
-  var badge = document.getElementById('bdc-cam-badge');
-  badge.textContent = '\u23f3 Chargement\u2026';
-
-  // Lire le fichier en base64 pour eviter les restrictions blob iOS
-  var reader = new FileReader();
-  reader.onload = function(e) {
-    var img = new Image();
-    img.onload = function() { bdcDecodeImage(img); };
-    img.onerror = function() {
-      badge.textContent = '\u26a0\ufe0f Erreur image';
-      toast('Impossible de lire la photo', 'err');
-    };
-    img.src = e.target.result;
-  };
-  reader.readAsDataURL(file);
-}
-
-// Moteur de decodage multi-tentatives
-function bdcDecodeImage(img) {
-  var badge = document.getElementById('bdc-cam-badge');
-
-  // Canvas de travail redimensionne (max 1400px - optimise Quagga)
-  var canvas = document.createElement('canvas');
-  var ctx    = canvas.getContext('2d', { willReadFrequently: true });
-  var maxSide = 1400;
-  var scale   = Math.min(1, maxSide / Math.max(img.width, img.height));
-  canvas.width  = Math.round(img.width  * scale);
-  canvas.height = Math.round(img.height * scale);
-  ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-
-  // Pipeline de tentatives en cascade
-  var attempts = [];
-
-  // A : image complete Quagga
-  attempts.push(function(cb) { _tryQ(canvas, cb); });
-
-  // B : bande centrale 40% hauteur (code-barres souvent centre)
-  attempts.push(function(cb) {
-    var sh = Math.round(canvas.height * 0.4);
-    var sy = Math.round(canvas.height * 0.3);
-    var c2 = _cropCanvas(canvas, 0, sy, canvas.width, sh);
-    _tryQ(c2, cb);
-  });
-
-  // C : image en niveaux de gris contraste x1.5
-  attempts.push(function(cb) {
-    var gc = _grayContrast(canvas, 1.5);
-    _tryQ(gc, cb);
-  });
-
-  // D : bande centrale + niveaux de gris contraste x2
-  attempts.push(function(cb) {
-    var sh2 = Math.round(canvas.height * 0.5);
-    var sy2 = Math.round(canvas.height * 0.25);
-    var strip = _cropCanvas(canvas, 0, sy2, canvas.width, sh2);
-    var gc2   = _grayContrast(strip, 2.0);
-    _tryQ(gc2, cb);
-  });
-
-  // E : BarcodeDetector natif sur canvas
-  attempts.push(function(cb) {
-    if (!('BarcodeDetector' in window)) { cb(null); return; }
-    try {
-      new BarcodeDetector({ formats: ['ean_13','ean_8','code_128','code_39','upc_a','upc_e'] })
-        .detect(canvas)
-        .then(function(r) { cb(r.length ? r[0].rawValue : null); })
-        .catch(function() { cb(null); });
-    } catch(e) { cb(null); }
-  });
-
-  // F : BarcodeDetector sur image originale haute resolution
-  attempts.push(function(cb) {
-    if (!('BarcodeDetector' in window)) { cb(null); return; }
-    try {
-      new BarcodeDetector({ formats: ['ean_13','ean_8','code_128','code_39','upc_a','upc_e'] })
-        .detect(img)
-        .then(function(r) { cb(r.length ? r[0].rawValue : null); })
-        .catch(function() { cb(null); });
-    } catch(e) { cb(null); }
-  });
-
-  // Executer en serie, s arreter au premier succes
-  var i = 0;
-  function next() {
-    if (i >= attempts.length) { _bdcPhotoFail(); return; }
-    badge.textContent = '\u23f3 Essai ' + (i+1) + '/' + attempts.length + '\u2026';
-    attempts[i++](function(code) {
-      if (code && code.replace(/[^0-9]/g,'').length >= 8) {
-        bdcScanOnEAN(code);
-      } else if (code) {
-        bdcScanOnEAN(code); // Accepter aussi Code128 non-numerique
-      } else {
-        next();
-      }
-    });
-  }
-  next();
-}
-
-// Helper : Quagga sur un canvas
-function _tryQ(canvas, callback) {
-  if (typeof Quagga === 'undefined') { callback(null); return; }
-  try {
-    Quagga.decodeSingle({
-      decoder: {
-        readers: ['ean_reader','ean_8_reader','code_128_reader','upc_reader','upc_e_reader'],
-        multiple: false
-      },
-      locate:     true,
-      halfSample: false,
-      patchSize:  'medium',
-      src: canvas.toDataURL('image/jpeg', 0.92)
-    }, function(result) {
-      if (result && result.codeResult && result.codeResult.code) {
-        callback(result.codeResult.code);
-      } else {
-        callback(null);
-      }
-    });
-  } catch(e) { callback(null); }
-}
-
-// Helper : recadrer un canvas
-function _cropCanvas(src, x, y, w, h) {
-  var c = document.createElement('canvas');
-  c.width = w; c.height = h;
-  c.getContext('2d').drawImage(src, x, y, w, h, 0, 0, w, h);
-  return c;
-}
-
-// Helper : niveaux de gris + contraste
-function _grayContrast(src, factor) {
-  var c = document.createElement('canvas');
-  c.width = src.width; c.height = src.height;
-  var ctx = c.getContext('2d', { willReadFrequently: true });
-  ctx.drawImage(src, 0, 0);
-  var id = ctx.getImageData(0, 0, c.width, c.height);
-  var d  = id.data;
-  for (var i = 0; i < d.length; i += 4) {
-    var g = 0.299*d[i] + 0.587*d[i+1] + 0.114*d[i+2];
-    g = Math.min(255, Math.max(0, (g - 128) * factor + 128));
-    d[i] = d[i+1] = d[i+2] = g;
-  }
-  ctx.putImageData(id, 0, 0);
-  return c;
-}
-function _bdcPhotoFail() {
-  document.getElementById('bdc-cam-badge').textContent = '❌ Non lu';
-  toast('Code non lu — rapprochez-vous et centrez le code-barres', 'info');
-  setTimeout(function(){ document.getElementById('bdc-cam-badge').textContent = '📷 Photo'; }, 2000);
-}
-
-// ── Décodage EAN → produit ────────────────────────────────────
-function bdcScanOnEAN(ean) {
-  var now = Date.now();
-  if (ean === bdcScanLastEAN && now - bdcScanLastTime < 2500) return;
-  bdcScanLastEAN = ean;
-  bdcScanLastTime = now;
-  if (navigator.vibrate) navigator.vibrate(65);
-
-  document.getElementById('bdc-cam-badge').textContent = '✅ Code lu !';
-  setTimeout(function() {
-    document.getElementById('bdc-cam-badge').textContent = bdcScanStream ? '🔴 Actif' : (_bdcForcePhoto ? '📷 Photo' : '⏸');
-  }, 1000);
-
-  bdcScanDismiss();
-  var clean = String(ean).trim();
-
-  var found = (PRODUCTS || []).find(function(p) {
-    if (!p.ean) return false;
-    var pe = String(p.ean).trim();
-    return pe === clean || pe === clean.replace(/^0+/, '') || clean.endsWith(pe);
-  });
-
-  if (found) {
-    bdcScanProduit = found;
-    bdcScanQtyVal  = 1;
-
-    var pcb  = parseFloat(found.pcb) || 1;
-    var pNet = (typeof bdcPrixNet === 'function') ? bdcPrixNet(found) : found.pu_ht;
-
-    document.getElementById('bdc-sr-nom').textContent   = found.libelle || found.code;
-    document.getElementById('bdc-sr-ref').textContent   = 'Réf: ' + found.code + ' · EAN: ' + clean;
-    document.getElementById('bdc-sr-prix').textContent  = pNet > 0
-      ? pNet.toFixed(2) + ' € HT / ' + (pcb > 1 ? 'colis (×' + pcb + ' u.)' : 'unité')
-      : 'Prix non renseigné';
-    document.getElementById('bdc-sr-qty').textContent   = 1;
-    document.getElementById('bdc-sr-unite').textContent = pcb > 1 ? 'colis' : 'unité';
-
-    document.getElementById('bdc-scan-result').style.display   = 'block';
-    document.getElementById('bdc-scan-notfound').style.display = 'none';
-
-  } else {
-    bdcScanProduit = null;
-    document.getElementById('bdc-sr-ean-nf').textContent       = clean;
-    document.getElementById('bdc-scan-notfound').style.display = 'block';
-    document.getElementById('bdc-scan-result').style.display   = 'none';
-    setTimeout(function(){ document.getElementById('bdc-scan-notfound').style.display = 'none'; }, 4000);
-  }
-}
-
-function bdcScanQty(delta) {
-  bdcScanQtyVal = Math.max(1, bdcScanQtyVal + delta);
-  document.getElementById('bdc-sr-qty').textContent = bdcScanQtyVal;
-}
-
-function bdcScanAjouter() {
-  if (!bdcScanProduit) return;
-  var code = bdcScanProduit.code;
-  var curr = parseInt(bdcQtys[code]) || 0;
-  bdcQtys[code] = curr + bdcScanQtyVal;
-
-  // Rafraîchir la ligne dans le tableau BDC sans tout reconstruire
-  var input = document.querySelector('input[data-code="' + CSS.escape(code) + '"]');
-  if (input) {
-    input.value = bdcQtys[code];
-    if (typeof bdcOnQty === 'function') bdcOnQty(input);
-  } else {
-    if (typeof buildTable === 'function') buildTable();
-  }
-
-  // Mettre à jour les totaux
-  if (typeof bdcUpdateTotals === 'function') bdcUpdateTotals();
-
-  // Log session
-  var existing = bdcScanLog.find(function(l){ return l.code === code; });
-  if (existing) { existing.qte += bdcScanQtyVal; }
-  else { bdcScanLog.push({ code: code, libelle: bdcScanProduit.libelle || code, qte: bdcScanQtyVal }); }
-  _bdcScanRenderLog();
-
-  // Mise à jour label client
-  var magasin = (document.getElementById('bdc-magasin') || {}).value || '';
-  if (magasin) document.getElementById('bdc-scan-client-label').textContent = magasin;
-
-  toast('✅ ' + (bdcScanProduit.libelle || code).substring(0,30) + ' (+' + bdcScanQtyVal + ' colis)', 'ok');
-  bdcScanDismiss();
-}
-
-function bdcScanDismiss() {
-  document.getElementById('bdc-scan-result').style.display   = 'none';
-  document.getElementById('bdc-scan-notfound').style.display = 'none';
-  bdcScanProduit = null;
-}
-
-function _bdcScanRenderLog() {
-  var logEl = document.getElementById('bdc-scan-log');
-  if (!logEl) return;
-  if (!bdcScanLog.length) {
-    logEl.innerHTML = '<div style="font-size:.78rem;color:#bbb;text-align:center;padding:1rem 0;">Aucun scan</div>';
-    return;
-  }
-  logEl.innerHTML = bdcScanLog.slice().reverse().map(function(l) {
-    return '<div style="display:flex;justify-content:space-between;align-items:center;padding:.3rem .4rem;background:#f7f7f5;border-radius:6px;font-size:.78rem;">' +
-      '<span style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:200px;color:#333;">' + (l.libelle || l.code) + '</span>' +
-      '<span style="font-weight:700;color:#1a7c3e;flex-shrink:0;margin-left:.4rem;">×' + l.qte + '</span>' +
-    '</div>';
-  }).join('');
-}
-
-// ── Saisie manuelle ───────────────────────────────────────────
-function bdcScanManuel() {
-  var m = document.getElementById('bdc-scan-manual-modal');
-  m.style.display = 'block';
-  setTimeout(function(){ document.getElementById('bdc-manual-ean').focus(); }, 200);
-}
-
-function bdcManualSearch() {
-  var val = document.getElementById('bdc-manual-ean').value.trim();
-  if (!val) return;
-  document.getElementById('bdc-scan-manual-modal').style.display = 'none';
-  document.getElementById('bdc-manual-ean').value = '';
-  bdcScanOnEAN(val);
-}
-
-// Fermer le panneau quand on quitte la section BDC
-var _origShowSectionBdc = showSection;
-showSection = function(name, tabEl, sideEl) {
-  _origShowSectionBdc(name, tabEl, sideEl);
-  if (name !== 'bdc') {
-    if (bdcScanStream) bdcCamStop();
-    var panel = document.getElementById('bdc-scan-panel');
-    if (panel && panel.style.display === 'flex') bdcScanClose();
-  }
-};
-
-
-
-// ══════════════════════════════════════════════════
-//  NAVIGATION MOBILE — Hamburger sidebar
-// ══════════════════════════════════════════════════
-
-function mobToggleSidebar() {
-  var sb = document.getElementById('main-sidebar');
-  var ov = document.getElementById('mob-overlay');
-  var isOpen = sb.classList.contains('mob-open');
-  if (isOpen) { mobCloseSidebar(); }
-  else {
-    sb.classList.add('mob-open');
-    ov.style.display = 'block';
-    document.body.style.overflow = 'hidden';
-  }
-}
-
-function mobCloseSidebar() {
-  var sb = document.getElementById('main-sidebar');
-  var ov = document.getElementById('mob-overlay');
-  sb.classList.remove('mob-open');
-  ov.style.display = 'none';
-  document.body.style.overflow = '';
-}
-
-// Fermer la sidebar automatiquement quand on clique un nav-item
-(function() {
-  document.addEventListener('click', function(e) {
-    var navItem = e.target.closest('.nav-item');
-    if (navItem && window.innerWidth <= 768) {
-      mobCloseSidebar();
-    }
-  });
-})();
-
-// Fermer la sidebar si on tourne le téléphone en paysage
-window.addEventListener('resize', function() {
-  if (window.innerWidth > 768) {
-    mobCloseSidebar();
-    document.body.style.overflow = '';
-  }
-});
-
-// Swipe gauche pour fermer la sidebar sur mobile
-(function() {
-  var startX = 0;
-  var startY = 0;
-  document.addEventListener('touchstart', function(e) {
-    startX = e.touches[0].clientX;
-    startY = e.touches[0].clientY;
-  }, { passive: true });
-
-  document.addEventListener('touchend', function(e) {
-    if (window.innerWidth > 768) return;
-    var dx = e.changedTouches[0].clientX - startX;
-    var dy = Math.abs(e.changedTouches[0].clientY - startY);
-    // Swipe gauche > 60px et pas trop vertical
-    if (dx < -60 && dy < 60) {
-      var sb = document.getElementById('main-sidebar');
-      if (sb && sb.classList.contains('mob-open')) {
-        mobCloseSidebar();
-      }
-    }
-    // Swipe droit depuis bord gauche → ouvrir
-    if (dx > 60 && dy < 60 && startX < 30) {
-      var sb2 = document.getElementById('main-sidebar');
-      if (sb2 && !sb2.classList.contains('mob-open')) {
-        mobToggleSidebar();
-      }
-    }
-  }, { passive: true });
-})();
-
 </script>
 
 <!-- ═══ MODALE SYNCHRONISATION DONNÉES ════════════════════════════════════ -->
