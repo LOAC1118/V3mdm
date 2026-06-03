@@ -688,7 +688,7 @@ textarea { resize:vertical; min-height:80px; }
 #ml-editor a { color:var(--blue-p700); text-decoration:underline; }
 
 /* ── FIX LAYOUT FRAIS & BASE CLIENTS ─────── */
-#sec-frais, #sec-contacts-db, #sec-mailing {
+#sec-frais, #sec-contacts-db, #sec-mailing, #sec-commissions {
   width: 100%;
   max-width: 100%;
   overflow-x: hidden;
@@ -1473,9 +1473,8 @@ textarea { resize:vertical; min-height:80px; }
 
   <!-- MAILING PROMO -->
   <!-- ═══ SECTION COMMISSIONS ═══════════════════════════════════════════════ -->
-  <div id="sec-commissions" class="hidden">
-    <div class="main">
-      <div class="page-header">
+  <div id="sec-commissions" class="hidden main">
+    <div class="page-header">
         <div>
           <div class="page-title">💶 Commissions</div>
           <div id="comm-mois-label" style="font-size:.75rem;color:var(--g500);margin-top:2px;">Mois en cours</div>
@@ -1530,7 +1529,6 @@ textarea { resize:vertical; min-height:80px; }
             <tbody id="comm-tbody"></tbody>
           </table>
         </div>
-    </div>
   </div>
 
   <div id="sec-mailing" class="hidden">
@@ -3161,8 +3159,8 @@ function commRefresh() {
 
   if (typeof dashCaRows !== 'undefined' && dashCaRows && dashCaRows.length) {
     dashCaRows.forEach(function(row) {
-      if (!row || (row.ca||0) <= 0 || row.statut === 'avoir') return;
-      if (!isCurMonth(row.dateFac || row.dateRef)) return;
+      if (!row || (row.ca||0) <= 0 || row.statut !== 'facturee') return;
+      if (!isCurMonth(row.dateFac)) return;
       var nom = (row.client||'').trim().toUpperCase();
       if (!nom || nom === '---') return;
       caFact[nom] = (caFact[nom]||0) + (row.ca||0);
@@ -3171,7 +3169,7 @@ function commRefresh() {
     if (!hasData) {
       warned = true;
       dashCaRows.forEach(function(row) {
-        if (!row || (row.ca||0) <= 0 || row.statut === 'avoir') return;
+        if (!row || (row.ca||0) <= 0 || row.statut !== 'facturee') return;
         var nom = (row.client||'').trim().toUpperCase();
         if (!nom || nom === '---') return;
         caFact[nom] = (caFact[nom]||0) + (row.ca||0);
