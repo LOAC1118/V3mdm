@@ -1473,8 +1473,8 @@ textarea { resize:vertical; min-height:80px; }
 
   <!-- MAILING PROMO -->
   <!-- ═══ SECTION COMMISSIONS ═══════════════════════════════════════════════ -->
-  <div id="sec-commissions" class="hidden">
-    <div class="main-content" style="padding:1.25rem;">
+  <div id="sec-commissions" class="hidden" style="overflow-y:auto;flex:1;width:100%;">
+    <div style="max-width:1400px;margin:0 auto;padding:1.25rem;">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1.25rem;flex-wrap:wrap;gap:.75rem;">
         <div class="page-title" style="margin-bottom:0;">💶 Commissions</div>
         <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
@@ -1497,7 +1497,7 @@ textarea { resize:vertical; min-height:80px; }
       </div>
 
       <!-- KPIs -->
-      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:.75rem;margin-bottom:1.25rem;">
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:.75rem;margin-bottom:1.25rem;max-width:700px;">
         <div class="card" style="padding:1rem;">
           <div style="font-size:.7rem;color:var(--g500);text-transform:uppercase;letter-spacing:.08em;margin-bottom:.4rem;">💶 Commission totale</div>
           <div id="comm-kpi-total" style="font-size:1.5rem;font-weight:700;color:var(--violet);">—</div>
@@ -1521,8 +1521,8 @@ textarea { resize:vertical; min-height:80px; }
           <span class="card-title">📊 Détail par client</span>
           <span style="font-size:.72rem;color:var(--g500);" id="comm-nb-clients">—</span>
         </div>
-        <div style="overflow-x:auto;">
-          <table style="width:100%;border-collapse:collapse;font-size:.78rem;">
+        <div style="overflow-x:auto;border-radius:0 0 10px 10px;">
+          <table style="width:100%;border-collapse:collapse;font-size:.78rem;min-width:700px;">
             <thead>
               <tr style="background:var(--blue-p50);">
                 <th style="padding:.6rem 1rem;text-align:left;font-weight:600;color:var(--blue-p800);white-space:nowrap;">Client</th>
@@ -3132,8 +3132,9 @@ function commSetAll() {
   commRefresh();
 }
 
-function commGetTaux(data, clientId, type) {
+function commGetTaux(data, clientId, type, globalFallback) {
   if (data[clientId] && data[clientId][type] !== undefined) return data[clientId][type];
+  if (globalFallback !== undefined) return globalFallback;
   return type === 'bdc' ? (data._global_bdc || 5) : (data._global_fact || 5);
 }
 
@@ -3143,8 +3144,22 @@ function commFmt(val) {
 
 function commRefresh() {
   var data = commLoad();
-  var gBDC  = parseFloat((document.getElementById('comm-taux-global-bdc')  || {}).value) || data._global_bdc  || 5;
-  var gFact = parseFloat((document.getElementById('comm-taux-global-fact') || {}).value) || data._global_fact || 5;
+  // Lire les taux globaux DEPUIS LES INPUTS (pas le localStorage)
+  var elGBDC  = document.getElementById('comm-taux-global-bdc');
+  var elGFact = document.getElementById('comm-taux-global-fact');
+  var gBDC  = elGBDC  ? (parseFloat(elGBDC.value)  || 0) : (data._global_bdc  || 5);
+  var gFact = elGFact ? (parseFloat(elGFact.value) || 0) : (data._global_fact || 5);
+  // Lire aussi les taux par ligne depuis les inputs existants (si le tableau est déjà rendu)
+  var lineRates = {};
+  document.querySelectorAll('[data-comm-id]').forEach(function(row) {
+    var id = row.getAttribute('data-comm-id');
+    var ib = document.getElementById('comm-bdc-'  + id);
+    var if_ = document.getElementById('comm-fact-' + id);
+    lineRates[id] = {
+      bdc:  ib  ? (parseFloat(ib.value)  || 0) : null,
+      fact: if_ ? (parseFloat(if_.value) || 0) : null
+    };
+  });
 
   // Construire un map CA par client depuis le dashboard (commandes_stats)
   var caFact = {};   // CA facturé (dashboard)
@@ -3191,8 +3206,9 @@ function commRefresh() {
     var id = nom.replace(/[^a-zA-Z0-9]/g, '_').substring(0, 30);
     var caBDCVal  = caBDC[nom]  || 0;
     var caFactVal = caFact[nom] || 0;
-    var tauxBDC   = commGetTaux(data, id, 'bdc');
-    var tauxFact  = commGetTaux(data, id, 'fact');
+    // Priorité : input déjà rendu > localStorage > taux global
+    var tauxBDC  = (lineRates[id] && lineRates[id].bdc  !== null) ? lineRates[id].bdc  : commGetTaux(data, id, 'bdc',  gBDC);
+    var tauxFact = (lineRates[id] && lineRates[id].fact !== null) ? lineRates[id].fact : commGetTaux(data, id, 'fact', gFact);
     var commBDC   = caBDCVal  * tauxBDC  / 100;
     var commFact  = caFactVal * tauxFact / 100;
     var commTotal = commBDC + commFact;
