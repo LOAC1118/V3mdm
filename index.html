@@ -1482,13 +1482,7 @@ textarea { resize:vertical; min-height:80px; }
         </div>
         <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
           <div style="display:flex;align-items:center;gap:6px;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:.35rem .75rem;">
-            <span style="font-size:.75rem;color:var(--g600);">Taux BDC :</span>
-            <input type="number" id="comm-taux-global-bdc" value="5" min="0" max="100" step="0.5"
-              style="width:48px;border:none;background:transparent;font-size:.82rem;font-weight:600;color:var(--blue-p700);text-align:center;"
-              oninput="commRefresh()"> %
-          </div>
-          <div style="display:flex;align-items:center;gap:6px;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:.35rem .75rem;">
-            <span style="font-size:.75rem;color:var(--g600);">Taux Factures :</span>
+            <span style="font-size:.75rem;color:var(--g600);">Taux commission :</span>
             <input type="number" id="comm-taux-global-fact" value="5" min="0" max="100" step="0.5"
               style="width:48px;border:none;background:transparent;font-size:.82rem;font-weight:600;color:var(--amber);text-align:center;"
               oninput="commRefresh()"> %
@@ -1527,14 +1521,10 @@ textarea { resize:vertical; min-height:80px; }
           <table style="width:100%;border-collapse:collapse;font-size:.78rem;min-width:700px;">
             <thead>
               <tr style="background:var(--blue-p50);">
-                <th style="padding:.6rem 1rem;text-align:left;font-weight:600;color:var(--blue-p800);white-space:nowrap;">Client</th>
-                <th style="padding:.6rem .75rem;text-align:right;color:var(--blue-p800);white-space:nowrap;">CA BDC</th>
-                <th style="padding:.6rem .75rem;text-align:center;color:var(--green);white-space:nowrap;">Taux BDC %</th>
-                <th style="padding:.6rem .75rem;text-align:right;color:var(--green);white-space:nowrap;">Comm. BDC</th>
-                <th style="padding:.6rem .75rem;text-align:right;color:var(--blue-p800);white-space:nowrap;">CA Facturé</th>
-                <th style="padding:.6rem .75rem;text-align:center;color:var(--amber);white-space:nowrap;">Taux Fact. %</th>
-                <th style="padding:.6rem .75rem;text-align:right;color:var(--amber);white-space:nowrap;">Comm. Fact.</th>
-                <th style="padding:.6rem .75rem;text-align:right;color:var(--violet);white-space:nowrap;">Total Comm.</th>
+                <th style="padding:.6rem 1rem;text-align:left;font-weight:600;color:var(--blue-p800);">Client</th>
+                <th style="padding:.6rem .75rem;text-align:right;color:var(--blue-p800);">CA Facturé</th>
+                <th style="padding:.6rem .75rem;text-align:center;color:var(--amber);">Taux %</th>
+                <th style="padding:.6rem .75rem;text-align:right;color:var(--amber);">Commission</th>
               </tr>
             </thead>
             <tbody id="comm-tbody"></tbody>
@@ -3144,168 +3134,109 @@ function commFmt(val) {
 }
 
 function commRefresh() {
-  var data = commLoad();
-  // Lire les taux globaux DEPUIS LES INPUTS (pas le localStorage)
-  var elGBDC  = document.getElementById('comm-taux-global-bdc');
+  var data    = commLoad();
   var elGFact = document.getElementById('comm-taux-global-fact');
-  var gBDC  = elGBDC  ? (parseFloat(elGBDC.value)  || 0) : (data._global_bdc  || 5);
-  var gFact = elGFact ? (parseFloat(elGFact.value) || 0) : (data._global_fact || 5);
-  // Lire aussi les taux par ligne depuis les inputs existants (si le tableau est déjà rendu)
+  var gFact   = elGFact ? (parseFloat(elGFact.value) || 0) : (data._global_fact || 5);
+
   var lineRates = {};
   document.querySelectorAll('[data-comm-id]').forEach(function(row) {
-    var id = row.getAttribute('data-comm-id');
-    var ib = document.getElementById('comm-bdc-'  + id);
-    var if_ = document.getElementById('comm-fact-' + id);
-    lineRates[id] = {
-      bdc:  ib  ? (parseFloat(ib.value)  || 0) : null,
-      fact: if_ ? (parseFloat(if_.value) || 0) : null
-    };
+    var id  = row.getAttribute('data-comm-id');
+    var iff = document.getElementById('comm-fact-' + id);
+    lineRates[id] = iff ? (parseFloat(iff.value) || 0) : null;
   });
 
-  // Construire un map CA par client depuis le dashboard (commandes_stats)
-  var caFact = {};   // CA facturé (dashboard)
-  var caBDC  = {};   // CA BDC saisis dans le CRM
+  var now  = new Date();
+  var curY = now.getFullYear(), curM = now.getMonth() + 1;
+  var MOIS = ['Janvier','Fevrier','Mars','Avril','Mai','Juin',
+              'Juillet','Aout','Septembre','Octobre','Novembre','Decembre'];
+  var moisLabel = MOIS[curM-1] + ' ' + curY;
+  var labelEl   = document.getElementById('comm-mois-label');
 
-  // Mois en cours
-  var now = new Date();
-  var moisCourant = now.getFullYear() + '-' + String(now.getMonth()+1).padStart(2,'0');
-  var moisNoms = ['Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août','Septembre','Octobre','Novembre','Décembre'];
-  var moisLabel = moisNoms[now.getMonth()] + ' ' + now.getFullYear();
-  var labelEl = document.getElementById('comm-mois-label');
-  if (labelEl) labelEl.textContent = 'Commissions sur ' + moisLabel;
+  function isCurMonth(d) {
+    return d && d instanceof Date && !isNaN(d) &&
+           d.getFullYear() === curY && (d.getMonth()+1) === curM;
+  }
 
-  // CA depuis le dashboard — filtré sur le mois en cours (date facture)
+  var caFact = {}, hasData = false, warned = false;
+
   if (typeof dashCaRows !== 'undefined' && dashCaRows && dashCaRows.length) {
     dashCaRows.forEach(function(row) {
-      var nom = (row['Nom client'] || row.nom || '').trim().toUpperCase();
-      var ca  = parseFloat(row['CA HT'] || row.ca || 0);
-      if (!nom || ca <= 0) return;
-      // Filtrer sur le mois courant via date de facture ou date commande
-      var dateRef = row['Facture'] || row['Commandé'] || row.date || '';
-      if (dateRef) {
-        // Convertir numéro Excel en date si nécessaire
-        var d;
-        if (!isNaN(dateRef)) {
-          d = new Date(Date.UTC(1899,11,30) + parseFloat(dateRef)*86400000);
-        } else {
-          d = new Date(dateRef);
-        }
-        if (!isNaN(d.getTime())) {
-          var rowMois = d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0');
-          if (rowMois !== moisCourant) return; // hors mois courant
-        }
-      }
-      caFact[nom] = (caFact[nom] || 0) + ca;
+      if (!row || (row.ca||0) <= 0 || row.statut === 'avoir') return;
+      if (!isCurMonth(row.dateFac || row.dateRef)) return;
+      var nom = (row.client||'').trim().toUpperCase();
+      if (!nom || nom === '---') return;
+      caFact[nom] = (caFact[nom]||0) + (row.ca||0);
+      hasData = true;
     });
+    if (!hasData) {
+      warned = true;
+      dashCaRows.forEach(function(row) {
+        if (!row || (row.ca||0) <= 0 || row.statut === 'avoir') return;
+        var nom = (row.client||'').trim().toUpperCase();
+        if (!nom || nom === '---') return;
+        caFact[nom] = (caFact[nom]||0) + (row.ca||0);
+      });
+    }
   }
 
-  // CA BDC depuis le dashboard filtré par mois (dashCaMois si disponible)
-  // Sinon utiliser les commandes du mois dans dashCaRows
-  if (typeof cdbContacts !== 'undefined' && cdbContacts.length) {
-    cdbContacts.forEach(function(c) {
-      var nom = (c.nom || '').trim().toUpperCase();
-      if (!nom) return;
-      var ca = 0;
-      // Chercher le CA du mois en cours dans les stats si disponible
-      if (c._stats && c._stats.caMois && c._stats.caMois[moisCourant]) {
-        ca = c._stats.caMois[moisCourant];
-      } else if (c._stats && c._stats.caTotal) {
-        // Pas de détail mensuel — utiliser le total (fallback)
-        ca = 0; // On ne met pas de fallback pour rester cohérent mois courant
-      }
-      if (ca > 0) caBDC[nom] = (caBDC[nom] || 0) + ca;
-    });
+  if (labelEl) {
+    if (!Object.keys(caFact).length) {
+      labelEl.textContent = 'Importez un fichier commandes via Synchroniser (' + moisLabel + ')';
+    } else if (warned) {
+      labelEl.textContent = 'Hors ' + moisLabel + ' -- toutes les commandes du fichier';
+    } else {
+      labelEl.textContent = 'CA facture de ' + moisLabel;
+    }
   }
 
-  // Si caFact vide (pas de données filtrées), tenter dashCaRows sans filtre date
-  // et afficher un avertissement
-  var nbFact = Object.keys(caFact).length;
-  var nbBDC  = Object.keys(caBDC).length;
-  if (nbFact === 0 && typeof dashCaRows !== 'undefined' && dashCaRows && dashCaRows.length > 0) {
-    // Les données chargées n'ont pas de date correspondant au mois courant
-    // → utiliser quand même toutes les données en affichant un warning
-    dashCaRows.forEach(function(row) {
-      var nom = (row['Nom client'] || row.nom || '').trim().toUpperCase();
-      var ca  = parseFloat(row['CA HT'] || row.ca || 0);
-      if (!nom || ca <= 0) return;
-      caFact[nom] = (caFact[nom] || 0) + ca;
-    });
-    if (labelEl) labelEl.textContent += ' ⚠ (données non filtrées par mois)';
-  }
+  var clients = Object.keys(caFact).filter(function(n){ return caFact[n]>0; })
+    .sort(function(a,b){ return caFact[b]-caFact[a]; });
 
-  // Fusionner tous les clients connus
-  var allClients = {};
-  Object.keys(caFact).forEach(function(nom) { allClients[nom] = true; });
-  Object.keys(caBDC).forEach(function(nom) { allClients[nom] = true; });
-
-  // Trier par CA total décroissant
-  var clients = Object.keys(allClients).sort(function(a, b) {
-    return ((caFact[b]||0) + (caBDC[b]||0)) - ((caFact[a]||0) + (caBDC[a]||0));
-  }).filter(function(nom) {
-    return (caFact[nom] || 0) + (caBDC[nom] || 0) > 0;
-  });
-
-  var totalCommBDC = 0, totalCommFact = 0;
-  var rows = '';
+  var totalComm = 0, totalCA = 0, rows = '';
 
   clients.forEach(function(nom) {
-    var id = nom.replace(/[^a-zA-Z0-9]/g, '_').substring(0, 30);
-    var caBDCVal  = caBDC[nom]  || 0;
-    var caFactVal = caFact[nom] || 0;
-    // Priorité : input déjà rendu > localStorage > taux global
-    var tauxBDC  = (lineRates[id] && lineRates[id].bdc  !== null) ? lineRates[id].bdc  : commGetTaux(data, id, 'bdc',  gBDC);
-    var tauxFact = (lineRates[id] && lineRates[id].fact !== null) ? lineRates[id].fact : commGetTaux(data, id, 'fact', gFact);
-    var commBDC   = caBDCVal  * tauxBDC  / 100;
-    var commFact  = caFactVal * tauxFact / 100;
-    var commTotal = commBDC + commFact;
-    totalCommBDC  += commBDC;
-    totalCommFact += commFact;
+    var id   = nom.replace(/[^a-zA-Z0-9]/g,'_').substring(0,30);
+    var caV  = caFact[nom];
+    var taux = (lineRates[id] !== null && lineRates[id] !== undefined)
+               ? lineRates[id] : commGetTaux(data, id, 'fact', gFact);
+    var comm = caV * taux / 100;
+    totalComm += comm;
+    totalCA   += caV;
 
-    rows += '<tr data-comm-id="' + id + '" style="border-bottom:1px solid var(--border);">' +
-      '<td style="padding:.5rem 1rem;font-weight:500;color:var(--g800);max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="' + nom + '">' + nom + '</td>' +
-      '<td style="padding:.5rem .75rem;text-align:right;color:var(--g700);">' + (caBDCVal > 0 ? commFmt(caBDCVal) : '—') + '</td>' +
+    rows += '<tr data-comm-id="'+id+'" style="border-bottom:1px solid var(--border);">' +
+      '<td style="padding:.5rem 1rem;font-weight:500;color:var(--g800);max-width:240px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="'+nom+'">'+nom+'</td>' +
+      '<td style="padding:.5rem .75rem;text-align:right;font-weight:600;color:var(--g700);">'+commFmt(caV)+'</td>' +
       '<td style="padding:.5rem .75rem;text-align:center;">' +
-        '<input id="comm-bdc-' + id + '" type="number" value="' + tauxBDC + '" min="0" max="100" step="0.5"' +
-        ' style="width:44px;border:1px solid var(--border-med);border-radius:5px;padding:2px 4px;text-align:center;font-size:.78rem;color:var(--green);"' +
-        ' oninput="commRefresh()">' +
-      '</td>' +
-      '<td style="padding:.5rem .75rem;text-align:right;font-weight:600;color:var(--green);">' + (commBDC > 0 ? commFmt(commBDC) : '—') + '</td>' +
-      '<td style="padding:.5rem .75rem;text-align:right;color:var(--g700);">' + (caFactVal > 0 ? commFmt(caFactVal) : '—') + '</td>' +
-      '<td style="padding:.5rem .75rem;text-align:center;">' +
-        '<input id="comm-fact-' + id + '" type="number" value="' + tauxFact + '" min="0" max="100" step="0.5"' +
-        ' style="width:44px;border:1px solid var(--border-med);border-radius:5px;padding:2px 4px;text-align:center;font-size:.78rem;color:var(--amber);"' +
-        ' oninput="commRefresh()">' +
-      '</td>' +
-      '<td style="padding:.5rem .75rem;text-align:right;font-weight:600;color:var(--amber);">' + (commFact > 0 ? commFmt(commFact) : '—') + '</td>' +
-      '<td style="padding:.5rem .75rem;text-align:right;font-weight:700;color:var(--violet);">' + (commTotal > 0 ? commFmt(commTotal) : '—') + '</td>' +
+        '<input id="comm-fact-'+id+'" type="number" value="'+taux+'" min="0" max="100" step="0.5"' +
+        ' style="width:48px;border:1px solid var(--border-med);border-radius:5px;padding:2px 5px;text-align:center;font-size:.8rem;font-weight:600;color:var(--amber);"' +
+        ' oninput="commRefresh()"></td>' +
+      '<td style="padding:.5rem .75rem;text-align:right;font-weight:700;color:var(--amber);">'+commFmt(comm)+'</td>' +
     '</tr>';
   });
 
-  // Ligne de totaux
-  var totalComm = totalCommBDC + totalCommFact;
-  rows += '<tr style="background:var(--blue-p50);border-top:2px solid var(--border-med);font-weight:700;">' +
-    '<td style="padding:.6rem 1rem;color:var(--blue-p800);">TOTAL</td>' +
-    '<td colspan="2"></td>' +
-    '<td style="padding:.6rem .75rem;text-align:right;color:var(--green);">' + commFmt(totalCommBDC) + '</td>' +
-    '<td colspan="2"></td>' +
-    '<td style="padding:.6rem .75rem;text-align:right;color:var(--amber);">' + commFmt(totalCommFact) + '</td>' +
-    '<td style="padding:.6rem .75rem;text-align:right;color:var(--violet);font-size:.9rem;">' + commFmt(totalComm) + '</td>' +
-  '</tr>';
+  if (rows) {
+    rows += '<tr style="background:var(--blue-p50);border-top:2px solid var(--border-med);">' +
+      '<td style="padding:.65rem 1rem;font-weight:700;color:var(--blue-p800);">TOTAL</td>' +
+      '<td style="padding:.65rem .75rem;text-align:right;font-weight:700;">'+commFmt(totalCA)+'</td>' +
+      '<td></td>' +
+      '<td style="padding:.65rem .75rem;text-align:right;font-weight:700;color:var(--amber);font-size:.9rem;">'+commFmt(totalComm)+'</td>' +
+    '</tr>';
+  }
 
   var tbody = document.getElementById('comm-tbody');
-  if (tbody) tbody.innerHTML = rows;
+  if (tbody) tbody.innerHTML = rows || '<tr><td colspan="4" style="padding:2rem;text-align:center;color:var(--g500);">Importez un fichier via Synchroniser</td></tr>';
 
-  // KPIs
-  var kpiTotal = document.getElementById('comm-kpi-total');
-  var kpiBDC   = document.getElementById('comm-kpi-bdc');
-  var kpiFact  = document.getElementById('comm-kpi-fact');
-  if (kpiTotal) kpiTotal.textContent = commFmt(totalComm);
-  if (kpiBDC)   kpiBDC.textContent   = commFmt(totalCommBDC);
-  if (kpiFact)  kpiFact.textContent  = commFmt(totalCommFact);
+  var kT = document.getElementById('comm-kpi-total');
+  var kB = document.getElementById('comm-kpi-bdc');
+  var kF = document.getElementById('comm-kpi-fact');
+  if (kT) kT.textContent = commFmt(totalComm);
+  if (kB) kB.textContent = commFmt(totalCA);
+  if (kF) kF.textContent = commFmt(totalComm);
 
   var nbEl = document.getElementById('comm-nb-clients');
-  if (nbEl) nbEl.textContent = clients.length + ' clients';
+  if (nbEl) nbEl.textContent = clients.length + ' client' + (clients.length>1?'s':'');
 }
+
 
 function commInit() {
   // Charger les taux depuis Firestore si dispo
