@@ -1473,12 +1473,14 @@ textarea { resize:vertical; min-height:80px; }
 
   <!-- MAILING PROMO -->
   <!-- ═══ SECTION COMMISSIONS ═══════════════════════════════════════════════ -->
-  <div id="sec-commissions" class="hidden" style="overflow-y:auto;flex:1;width:100%;">
-    <div style="max-width:1400px;margin:0 auto;padding:1.25rem;">
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1.25rem;flex-wrap:wrap;gap:.75rem;">
-        <div class="page-title" style="margin-bottom:0;">💶 Commissions</div>
+  <div id="sec-commissions" class="hidden">
+    <div class="main">
+      <div class="page-header">
+        <div>
+          <div class="page-title">💶 Commissions</div>
+          <div id="comm-mois-label" style="font-size:.75rem;color:var(--g500);margin-top:2px;">Mois en cours</div>
+        </div>
         <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
-          <!-- Taux globaux -->
           <div style="display:flex;align-items:center;gap:6px;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:.35rem .75rem;">
             <span style="font-size:.75rem;color:var(--g600);">Taux BDC :</span>
             <input type="number" id="comm-taux-global-bdc" value="5" min="0" max="100" step="0.5"
@@ -1497,7 +1499,7 @@ textarea { resize:vertical; min-height:80px; }
       </div>
 
       <!-- KPIs -->
-      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:.75rem;margin-bottom:1.25rem;max-width:700px;">
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:.75rem;margin-bottom:1.25rem;">
         <div class="card" style="padding:1rem;">
           <div style="font-size:.7rem;color:var(--g500);text-transform:uppercase;letter-spacing:.08em;margin-bottom:.4rem;">💶 Commission totale</div>
           <div id="comm-kpi-total" style="font-size:1.5rem;font-weight:700;color:var(--violet);">—</div>
@@ -1538,7 +1540,6 @@ textarea { resize:vertical; min-height:80px; }
             <tbody id="comm-tbody"></tbody>
           </table>
         </div>
-      </div>
     </div>
   </div>
 
@@ -3165,26 +3166,71 @@ function commRefresh() {
   var caFact = {};   // CA facturé (dashboard)
   var caBDC  = {};   // CA BDC saisis dans le CRM
 
-  // CA depuis le dashboard (dashCaRows)
+  // Mois en cours
+  var now = new Date();
+  var moisCourant = now.getFullYear() + '-' + String(now.getMonth()+1).padStart(2,'0');
+  var moisNoms = ['Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août','Septembre','Octobre','Novembre','Décembre'];
+  var moisLabel = moisNoms[now.getMonth()] + ' ' + now.getFullYear();
+  var labelEl = document.getElementById('comm-mois-label');
+  if (labelEl) labelEl.textContent = 'Commissions sur ' + moisLabel;
+
+  // CA depuis le dashboard — filtré sur le mois en cours (date facture)
   if (typeof dashCaRows !== 'undefined' && dashCaRows && dashCaRows.length) {
+    dashCaRows.forEach(function(row) {
+      var nom = (row['Nom client'] || row.nom || '').trim().toUpperCase();
+      var ca  = parseFloat(row['CA HT'] || row.ca || 0);
+      if (!nom || ca <= 0) return;
+      // Filtrer sur le mois courant via date de facture ou date commande
+      var dateRef = row['Facture'] || row['Commandé'] || row.date || '';
+      if (dateRef) {
+        // Convertir numéro Excel en date si nécessaire
+        var d;
+        if (!isNaN(dateRef)) {
+          d = new Date(Date.UTC(1899,11,30) + parseFloat(dateRef)*86400000);
+        } else {
+          d = new Date(dateRef);
+        }
+        if (!isNaN(d.getTime())) {
+          var rowMois = d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0');
+          if (rowMois !== moisCourant) return; // hors mois courant
+        }
+      }
+      caFact[nom] = (caFact[nom] || 0) + ca;
+    });
+  }
+
+  // CA BDC depuis le dashboard filtré par mois (dashCaMois si disponible)
+  // Sinon utiliser les commandes du mois dans dashCaRows
+  if (typeof cdbContacts !== 'undefined' && cdbContacts.length) {
+    cdbContacts.forEach(function(c) {
+      var nom = (c.nom || '').trim().toUpperCase();
+      if (!nom) return;
+      var ca = 0;
+      // Chercher le CA du mois en cours dans les stats si disponible
+      if (c._stats && c._stats.caMois && c._stats.caMois[moisCourant]) {
+        ca = c._stats.caMois[moisCourant];
+      } else if (c._stats && c._stats.caTotal) {
+        // Pas de détail mensuel — utiliser le total (fallback)
+        ca = 0; // On ne met pas de fallback pour rester cohérent mois courant
+      }
+      if (ca > 0) caBDC[nom] = (caBDC[nom] || 0) + ca;
+    });
+  }
+
+  // Si caFact vide (pas de données filtrées), tenter dashCaRows sans filtre date
+  // et afficher un avertissement
+  var nbFact = Object.keys(caFact).length;
+  var nbBDC  = Object.keys(caBDC).length;
+  if (nbFact === 0 && typeof dashCaRows !== 'undefined' && dashCaRows && dashCaRows.length > 0) {
+    // Les données chargées n'ont pas de date correspondant au mois courant
+    // → utiliser quand même toutes les données en affichant un warning
     dashCaRows.forEach(function(row) {
       var nom = (row['Nom client'] || row.nom || '').trim().toUpperCase();
       var ca  = parseFloat(row['CA HT'] || row.ca || 0);
       if (!nom || ca <= 0) return;
       caFact[nom] = (caFact[nom] || 0) + ca;
     });
-  }
-
-  // CA depuis la base clients (cumul2026 ou _stats)
-  if (typeof cdbContacts !== 'undefined' && cdbContacts.length) {
-    cdbContacts.forEach(function(c) {
-      var nom = (c.nom || '').trim().toUpperCase();
-      if (!nom) return;
-      var ca = 0;
-      if (c._stats && c._stats.caTotal) ca = c._stats.caTotal;
-      else if (c.cumul2026) ca = parseFloat(c.cumul2026) || 0;
-      if (ca > 0) caBDC[nom] = (caBDC[nom] || 0) + ca;
-    });
+    if (labelEl) labelEl.textContent += ' ⚠ (données non filtrées par mois)';
   }
 
   // Fusionner tous les clients connus
