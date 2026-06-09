@@ -1094,7 +1094,10 @@ textarea { resize:vertical; min-height:80px; }
       <button class="btn btn-ghost" style="font-size:.72rem;padding:.3rem .7rem;" onclick="openBdcImport()">📄 Importer commande</button>
       <button class="btn btn-ghost" style="font-size:.72rem;padding:.3rem .7rem;color:#fcd34d;border-color:rgba(245,158,11,.3);" onclick="openStockImport()">📦 Mettre à jour stocks</button>
       <button class="btn btn-ghost" style="font-size:.72rem;padding:.3rem .7rem;" onclick="resetBDC()">🗑 Effacer</button>
-      <button class="btn btn-primary" style="font-size:.72rem;padding:.3rem .7rem;" onclick="bdcSendOrder()">Envoyer la commande</button>
+      <div style="display:flex;gap:5px;">
+        <button class="btn btn-primary" style="font-size:.72rem;padding:.3rem .7rem;" onclick="bdcSendOrder()">📤 Envoyer à MDM</button>
+        <button class="btn btn-ghost" style="font-size:.72rem;padding:.3rem .7rem;border-color:var(--blue-p300);color:var(--blue-p700);" onclick="bdcOpenOutlook()">✉️ Outlook</button>
+      </div>
     </div>
     <!-- Bandeau articles saisis (sticky) -->
     <div id="bdc-recap-bar" style="display:none;background:var(--blue-p800);border-bottom:2px solid var(--blue-p600);padding:.4rem .8rem;overflow-x:auto;white-space:nowrap;flex-shrink:0;">
@@ -1134,10 +1137,15 @@ textarea { resize:vertical; min-height:80px; }
           <div style="display:flex;justify-content:space-between;font-size:.82rem;font-weight:600;color:var(--blue-p700);padding:.35rem 0;border-top:1px solid rgba(5,150,105,.2);margin-top:.25rem;">Total HT net<span id="bdc-total-net">0,00€</span></div>
         </div>
         <div id="bdc-alert" style="display:none;border-radius:6px;padding:.5rem .7rem;font-size:.72rem;margin-top:.6rem;line-height:1.4;"></div>
-        <button id="bdc-btn-send" class="btn btn-primary" style="width:100%;justify-content:center;margin-top:.7rem;" onclick="bdcSendOrder()">
-          <div id="bdc-spinner" style="display:none;width:11px;height:11px;border:2px solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;animation:spin .7s linear infinite;margin-right:5px;"></div>
-          <span id="bdc-send-label">Envoyer la commande</span>
-        </button>
+        <div style="display:flex;gap:6px;margin-top:.7rem;">
+          <button id="bdc-btn-send" class="btn btn-primary" style="flex:1;justify-content:center;" onclick="bdcSendOrder()">
+            <div id="bdc-spinner" style="display:none;width:11px;height:11px;border:2px solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;animation:spin .7s linear infinite;margin-right:5px;"></div>
+            <span id="bdc-send-label">📤 Envoyer à MDM</span>
+          </button>
+          <button class="btn btn-ghost" style="flex:1;justify-content:center;font-size:.72rem;border-color:var(--blue-p300);color:var(--blue-p700);background:var(--blue-p50);" onclick="bdcOpenOutlook()" title="Ouvrir dans Outlook vers commande@moulindesmoines.com">
+            ✉️ Ouvrir Outlook
+          </button>
+        </div>
       </div>
       <!-- Catalogue -->
       <div style="flex:1;display:flex;flex-direction:column;overflow:hidden;">
@@ -3522,30 +3530,142 @@ function bdcShowAlert(msg, type) {
   setTimeout(function(){el.style.display='none';}, 7000);
 }
 
-function bdcBuildText() {
-  var mag = g('bdc-magasin'), mail = g('bdc-email'), nc = g('bdc-numclient');
-  var ct = g('bdc-contact'), tel = g('bdc-tel'), dl = g('bdc-datelivraison'), com = g('bdc-comment');
+function bdcBuildHtml() {
+  var mag  = g('bdc-magasin'), mail = g('bdc-email'), nc = g('bdc-numclient');
+  var ct   = g('bdc-contact'), tel  = g('bdc-tel'),   dl = g('bdc-datelivraison'), com = g('bdc-comment');
   var today = new Date().toLocaleDateString('fr-FR');
-  var lines = ['BON DE COMMANDE — MOULIN DES MOINES 2026','==========================================','Magasin : '+mag];
+  var livDate = dl ? new Date(dl).toLocaleDateString('fr-FR') : '—';
+
+  // Construire les lignes articles
+  var tB=0, tN=0, nbC=0, nbR=0, rowsHtml='';
+  PRODUCTS.forEach(function(p) {
+    var q = bdcQtys[p.code] || 0; if (!q) return;
+    var pcb = parseFloat(p.pcb)||1, pN = bdcPrixNet(p), tot = pN*q*pcb;
+    tB += p.pu_ht*q*pcb; tN += tot; nbC += q; nbR++;
+    rowsHtml +=
+      '<tr style="border-bottom:1px solid #e5edf8;">' +
+        '<td style="padding:8px 10px;font-family:monospace;font-size:12px;color:#0c447c;white-space:nowrap;">'+p.code+'</td>' +
+        '<td style="padding:8px 10px;font-size:13px;color:#1e293b;">'+p.libelle+'</td>' +
+        '<td style="padding:8px 10px;text-align:center;font-weight:600;color:#0c447c;">'+q+' col.</td>' +
+        '<td style="padding:8px 10px;text-align:center;font-size:12px;color:#64748b;">'+(q*pcb)+' UVC</td>' +
+        '<td style="padding:8px 10px;text-align:right;color:#374151;">'+bdcFmt(pN)+'</td>' +
+        '<td style="padding:8px 10px;text-align:right;font-weight:600;color:#0c447c;">'+bdcFmt(tot)+'</td>' +
+      '</tr>';
+  });
+
+  var remiseLigne = tB - tN > 0
+    ? '<tr style="background:#fffbeb;"><td colspan="5" style="padding:6px 10px;font-size:12px;color:#92400e;text-align:right;">Remise '+bdcRemise+'%</td><td style="padding:6px 10px;text-align:right;font-weight:600;color:#92400e;">-'+bdcFmt(tB-tN)+'</td></tr>'
+    : '';
+
+  var infoItems = '';
+  if (nc)  infoItems += '<tr><td style="padding:4px 12px;font-size:12px;color:#64748b;white-space:nowrap;">N° Client</td><td style="padding:4px 12px;font-size:13px;color:#1e293b;font-weight:500;">'+nc+'</td></tr>';
+  if (ct)  infoItems += '<tr><td style="padding:4px 12px;font-size:12px;color:#64748b;">Contact</td><td style="padding:4px 12px;font-size:13px;color:#1e293b;">'+ct+'</td></tr>';
+  if (tel) infoItems += '<tr><td style="padding:4px 12px;font-size:12px;color:#64748b;">Téléphone</td><td style="padding:4px 12px;font-size:13px;color:#1e293b;">'+tel+'</td></tr>';
+  infoItems += '<tr><td style="padding:4px 12px;font-size:12px;color:#64748b;">Email</td><td style="padding:4px 12px;font-size:13px;color:#1e293b;">'+mail+'</td></tr>';
+  infoItems += '<tr><td style="padding:4px 12px;font-size:12px;color:#64748b;">Date commande</td><td style="padding:4px 12px;font-size:13px;color:#1e293b;font-weight:500;">'+today+'</td></tr>';
+  if (dl) infoItems += '<tr><td style="padding:4px 12px;font-size:12px;color:#64748b;">Livraison souhaitée</td><td style="padding:4px 12px;font-size:13px;color:#1e293b;font-weight:600;color:#0c447c;">'+livDate+'</td></tr>';
+  if (com) infoItems += '<tr><td style="padding:4px 12px;font-size:12px;color:#64748b;">Commentaire</td><td style="padding:4px 12px;font-size:13px;color:#1e293b;font-style:italic;">'+com+'</td></tr>';
+
+  return '<!DOCTYPE html><html><head><meta charset="UTF-8"></head><body style="margin:0;padding:0;background:#f0f6fb;font-family:Arial,sans-serif;">' +
+    '<table width="100%" cellpadding="0" cellspacing="0" style="background:#f0f6fb;padding:24px 0;">' +
+    '<tr><td align="center">' +
+    '<table width="620" cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:12px;overflow:hidden;box-shadow:0 2px 16px rgba(4,44,83,.12);">' +
+
+    // Header
+    '<tr><td style="background:linear-gradient(135deg,#0c447c,#042c53);padding:28px 32px;">' +
+      '<table width="100%"><tr>' +
+        '<td><div style="font-size:22px;font-weight:700;color:#ffffff;letter-spacing:-0.5px;">🌾 Moulin des Moines</div>' +
+        '<div style="font-size:13px;color:#93c5fd;margin-top:4px;">Bon de Commande 2026</div></td>' +
+        '<td align="right"><div style="background:rgba(255,255,255,.15);border-radius:8px;padding:8px 14px;display:inline-block;">' +
+        '<div style="font-size:11px;color:#bfdbfe;">CLIENT</div>' +
+        '<div style="font-size:16px;font-weight:700;color:#ffffff;">'+mag+'</div></div></td>' +
+      '</tr></table>' +
+    '</td></tr>' +
+
+    // Infos commande
+    '<tr><td style="padding:20px 32px 0;">' +
+      '<div style="font-size:11px;font-weight:700;color:#0c447c;text-transform:uppercase;letter-spacing:.1em;margin-bottom:10px;">Informations commande</div>' +
+      '<table width="100%" cellpadding="0" cellspacing="0" style="background:#f6f9fd;border-radius:8px;overflow:hidden;">'+infoItems+'</table>' +
+    '</td></tr>' +
+
+    // Tableau articles
+    '<tr><td style="padding:20px 32px 0;">' +
+      '<div style="font-size:11px;font-weight:700;color:#0c447c;text-transform:uppercase;letter-spacing:.1em;margin-bottom:10px;">Articles commandés</div>' +
+      '<table width="100%" cellpadding="0" cellspacing="0" style="border-radius:8px;overflow:hidden;border:1px solid #e5edf8;">' +
+        '<tr style="background:#0c447c;">' +
+          '<th style="padding:9px 10px;font-size:11px;font-weight:600;color:#bfdbfe;text-align:left;">Code</th>' +
+          '<th style="padding:9px 10px;font-size:11px;font-weight:600;color:#bfdbfe;text-align:left;">Désignation</th>' +
+          '<th style="padding:9px 10px;font-size:11px;font-weight:600;color:#bfdbfe;text-align:center;">Colis</th>' +
+          '<th style="padding:9px 10px;font-size:11px;font-weight:600;color:#bfdbfe;text-align:center;">UVC</th>' +
+          '<th style="padding:9px 10px;font-size:11px;font-weight:600;color:#bfdbfe;text-align:right;">PU HT</th>' +
+          '<th style="padding:9px 10px;font-size:11px;font-weight:600;color:#bfdbfe;text-align:right;">Total HT</th>' +
+        '</tr>' +
+        rowsHtml +
+        remiseLigne +
+        '<tr style="background:#eef6fd;">' +
+          '<td colspan="4" style="padding:10px;font-size:12px;color:#0c447c;">'+nbR+' référence(s) · '+nbC+' colis au total</td>' +
+          '<td style="padding:10px;text-align:right;font-size:12px;color:#0c447c;font-weight:600;">TOTAL HT NET</td>' +
+          '<td style="padding:10px;text-align:right;font-size:16px;font-weight:700;color:#0c447c;">'+bdcFmt(tN)+'</td>' +
+        '</tr>' +
+      '</table>' +
+    '</td></tr>' +
+
+    // Footer
+    '<tr><td style="padding:20px 32px 28px;text-align:center;">' +
+      '<div style="font-size:11px;color:#94a3b8;border-top:1px solid #e5edf8;padding-top:16px;">' +
+        'Ce bon de commande a été transmis via MDM CRM 2026 · Réalisé par <strong style="color:#0c447c;">LOAC DEV Solutions</strong>' +
+      '</div>' +
+    '</td></tr>' +
+
+    '</table></td></tr></table></body></html>';
+}
+
+function bdcBuildText() {
+  var mag  = g('bdc-magasin'), mail = g('bdc-email'), nc = g('bdc-numclient');
+  var ct   = g('bdc-contact'), tel  = g('bdc-tel'),   dl = g('bdc-datelivraison'), com = g('bdc-comment');
+  var today = new Date().toLocaleDateString('fr-FR');
+  var lines = ['BON DE COMMANDE - MOULIN DES MOINES 2026','Magasin : '+mag];
   if(nc) lines.push('N° Client : '+nc);
   if(ct) lines.push('Contact : '+ct);
   lines.push('Email : '+mail);
-  if(tel) lines.push('Tél : '+tel);
+  if(tel) lines.push('Tel : '+tel);
   if(dl) lines.push('Livraison : '+new Date(dl).toLocaleDateString('fr-FR'));
   if(bdcRemise>0) lines.push('Remise : '+bdcRemise+'%');
   if(com) lines.push('Commentaire : '+com);
-  lines.push('Date : '+today,'','---------- ARTICLES ----------','');
+  lines.push('Date : '+today,'','ARTICLES :','');
   var tB=0,tN=0,nbC=0,nbR=0;
   PRODUCTS.forEach(function(p){
     var q=bdcQtys[p.code]||0; if(!q) return;
     var pcb=parseFloat(p.pcb)||1, pN=bdcPrixNet(p), tot=pN*q*pcb;
     tB+=p.pu_ht*q*pcb; tN+=tot; nbC+=q; nbR++;
-    lines.push(p.code+' — '+p.libelle);
-    lines.push('  Qté : '+q+' colis × PCB '+pcb+' = '+(q*pcb)+' UVC | PU HT net : '+bdcFmt(pN)+' | Total HT : '+bdcFmt(tot));
+    lines.push(p.code+' — '+p.libelle+' | '+(q*pcb)+' UVC | PU HT net : '+bdcFmt(pN)+' | Total HT : '+bdcFmt(tot));
   });
-  lines.push('','---------- TOTAUX ----------','Références : '+nbR+' | Colis : '+nbC,'Total HT brut : '+bdcFmt(tB),'Remise : '+bdcFmt(tB-tN),'Total HT net : '+bdcFmt(tN));
+  lines.push('','TOTAL : '+nbR+' ref. | '+nbC+' colis | '+bdcFmt(tN)+' HT');
   return lines.join('\n');
 }
+
+// ── Ouvrir Outlook avec la commande pré-remplie ──────────────────────────
+function bdcOpenOutlook() {
+  var mag = g('bdc-magasin');
+  var hasOrder = Object.keys(bdcQtys).some(function(k){ return bdcQtys[k] > 0; });
+  if (!mag)       { bdcShowAlert('Veuillez renseigner le nom du magasin.', 'err'); return; }
+  if (!hasOrder)  { bdcShowAlert('Aucun article commandé.', 'err'); return; }
+
+  var today = new Date().toLocaleDateString('fr-FR');
+  var subject = 'Bon de commande MDM 2026 — ' + mag + ' — ' + today;
+
+  // Construire le corps en texte brut (même format que bdcBuildText)
+  var body = bdcBuildText();
+
+  // Encoder pour mailto:
+  var mailto = 'mailto:commande@moulindesmoines.com'
+    + '?subject=' + encodeURIComponent(subject)
+    + '&body='    + encodeURIComponent(body);
+
+  // Ouvrir Outlook (ou le client mail par défaut)
+  window.location.href = mailto;
+}
+
 
 function bdcSendOrder() {
   var mag = g('bdc-magasin'), mail = g('bdc-email');
@@ -3575,7 +3695,7 @@ function bdcSendOrder() {
   var payload={
     _subject:'Bon de commande MDM 2026 — '+mag+' — '+today,
     _captcha:'false', magasin:mag, email:mail,
-    commande:bdcBuildText(), _template:'table'
+    message:bdcBuildHtml()
   };
   if(mail.toLowerCase()!=='cspoto@moulindesmoines.com') payload._replyto=mail;
 
