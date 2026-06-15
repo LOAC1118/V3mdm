@@ -1050,6 +1050,47 @@ textarea { resize:vertical; min-height:80px; }
           </div>
         </div>
 
+        <!-- ── DERNIÈRES COMMANDES DU MOIS EN COURS ────────── -->
+        <div style="background:#fff;border:1px solid var(--border);border-radius:12px;overflow:hidden;margin-bottom:1.25rem;">
+          <div style="padding:.75rem 1rem;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;background:var(--blue-p50);">
+            <div>
+              <div style="font-size:.82rem;font-weight:700;color:var(--blue-p800);">🗓 Commandes du mois en cours</div>
+              <div id="dash-recent-label" style="font-size:.68rem;color:var(--g500);margin-top:1px;">—</div>
+            </div>
+            <div style="display:flex;gap:10px;align-items:center;">
+              <div style="text-align:center;">
+                <div id="dash-recent-nb" style="font-size:1.1rem;font-weight:700;color:var(--blue-p700);">—</div>
+                <div style="font-size:.62rem;color:var(--g500);">commandes</div>
+              </div>
+              <div style="text-align:center;">
+                <div id="dash-recent-ca-fac" style="font-size:1.1rem;font-weight:700;color:#059669;">—</div>
+                <div style="font-size:.62rem;color:var(--g500);">facturé</div>
+              </div>
+              <div style="text-align:center;">
+                <div id="dash-recent-ca-cours" style="font-size:1.1rem;font-weight:700;color:#f59e0b;">—</div>
+                <div style="font-size:.62rem;color:var(--g500);">en cours</div>
+              </div>
+            </div>
+          </div>
+          <div class="tbl-wrap" style="max-height:320px;overflow-y:auto;">
+            <table style="width:100%;border-collapse:collapse;font-size:.78rem;">
+              <thead style="position:sticky;top:0;z-index:1;">
+                <tr style="background:var(--blue-p800);">
+                  <th style="padding:.5rem .75rem;text-align:left;font-weight:600;color:#bfdbfe;white-space:nowrap;">Date</th>
+                  <th style="padding:.5rem .75rem;text-align:left;font-weight:600;color:#bfdbfe;">Client</th>
+                  <th style="padding:.5rem .75rem;text-align:center;font-weight:600;color:#bfdbfe;white-space:nowrap;">N° Cmd</th>
+                  <th style="padding:.5rem .75rem;text-align:center;font-weight:600;color:#bfdbfe;white-space:nowrap;">Statut</th>
+                  <th style="padding:.5rem .75rem;text-align:center;font-weight:600;color:#bfdbfe;white-space:nowrap;">N° Facture</th>
+                  <th style="padding:.5rem .75rem;text-align:right;font-weight:600;color:#bfdbfe;white-space:nowrap;">CA HT</th>
+                </tr>
+              </thead>
+              <tbody id="dash-recent-tbody">
+                <tr><td colspan="6" style="padding:2rem;text-align:center;color:var(--g500);">Importez un fichier commandes pour voir les données du mois en cours</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
         <!-- ── TABLEAU MENSUEL DÉTAILLÉ ───────────────────────── -->
         <div style="background:#fff;border:1px solid var(--border);border-radius:12px;overflow:hidden;">
           <div style="padding:.75rem 1rem;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;">
@@ -5583,12 +5624,96 @@ function dashCaRender() {
 
   // ═══ BLOC MOIS EN COURS ═══
   dashCaRenderCurrentMonth(filtered, byMonth, months);
+  dashRenderRecentOrders(filtered);
 
   // ═══ GRAPHIQUES ═══
   dashCaDrawCharts(filtered, months, moisNames);
   dashCaDrawTops(filtered);
 
 }
+
+// ── Dernières commandes du mois en cours ─────────────────────────────────
+function dashRenderRecentOrders(filtered) {
+  var tbody  = document.getElementById('dash-recent-tbody');
+  var label  = document.getElementById('dash-recent-label');
+  var nbEl   = document.getElementById('dash-recent-nb');
+  var caFac  = document.getElementById('dash-recent-ca-fac');
+  var caCours= document.getElementById('dash-recent-ca-cours');
+  if (!tbody) return;
+
+  var now  = new Date();
+  var curY = now.getFullYear(), curM = now.getMonth() + 1;
+  var moisNoms = ['Janvier','Février','Mars','Avril','Mai','Juin',
+                  'Juillet','Août','Septembre','Octobre','Novembre','Décembre'];
+
+  // Filtrer sur le mois courant (date de facture OU date de commande)
+  var recent = filtered.filter(function(r) {
+    var d = r.dateFac || r.dateRef;
+    if (!d || isNaN(d)) return false;
+    return d.getFullYear() === curY && (d.getMonth()+1) === curM;
+  });
+
+  // Trier par date décroissante (plus récent en premier)
+  recent.sort(function(a, b) {
+    var da = a.dateFac || a.dateRef || new Date(0);
+    var db = b.dateFac || b.dateRef || new Date(0);
+    return db - da;
+  });
+
+  // KPIs
+  var totalFac = 0, totalCours = 0;
+  recent.forEach(function(r) {
+    if (r.statut === 'facturee')     totalFac   += r.ca || 0;
+    else if (r.statut !== 'avoir')   totalCours += r.ca || 0;
+  });
+
+  var nbPos = recent.filter(function(r){ return r.ca > 0; }).length;
+  if (label)   label.textContent   = moisNoms[curM-1] + ' ' + curY + ' — ' + nbPos + ' commande' + (nbPos > 1 ? 's' : '');
+  if (nbEl)    nbEl.textContent    = nbPos;
+  if (caFac)   caFac.textContent   = totalFac.toLocaleString('fr-FR',{minimumFractionDigits:2,maximumFractionDigits:2}) + ' €';
+  if (caCours) caCours.textContent = totalCours.toLocaleString('fr-FR',{minimumFractionDigits:2,maximumFractionDigits:2}) + ' €';
+
+  if (!recent.length) {
+    tbody.innerHTML = '<tr><td colspan="6" style="padding:1.5rem;text-align:center;color:var(--g500);">Aucune commande pour ' + moisNoms[curM-1] + ' ' + curY + '</td></tr>';
+    return;
+  }
+
+  function fmtD(d) {
+    if (!d || isNaN(d)) return '—';
+    return d.toLocaleDateString('fr-FR', {day:'2-digit',month:'2-digit'});
+  }
+  function fmtCA(v) {
+    return (v||0).toLocaleString('fr-FR',{minimumFractionDigits:2,maximumFractionDigits:2}) + ' €';
+  }
+
+  tbody.innerHTML = recent.map(function(r) {
+    var statutBadge;
+    if (r.statut === 'facturee') {
+      statutBadge = '<span style="display:inline-block;padding:2px 7px;border-radius:10px;font-size:.65rem;font-weight:600;background:#dcfce7;color:#166534;">✅ Facturée</span>';
+    } else if (r.statut === 'avoir') {
+      statutBadge = '<span style="display:inline-block;padding:2px 7px;border-radius:10px;font-size:.65rem;font-weight:600;background:#fee2e2;color:#991b1b;">↩ Avoir</span>';
+    } else if (r.statut === 'livre') {
+      statutBadge = '<span style="display:inline-block;padding:2px 7px;border-radius:10px;font-size:.65rem;font-weight:600;background:#fef9c3;color:#854d0e;">📦 Livré</span>';
+    } else {
+      statutBadge = '<span style="display:inline-block;padding:2px 7px;border-radius:10px;font-size:.65rem;font-weight:600;background:#dbeafe;color:#1e40af;">⏳ En cours</span>';
+    }
+
+    var numFac = r.numFac ? r.numFac : '—';
+    var dateD  = r.dateFac || r.dateRef;
+    var caColor = r.statut === 'avoir' ? '#dc2626' : r.statut === 'facturee' ? '#059669' : '#b45309';
+
+    return '<tr style="border-bottom:1px solid var(--border);transition:background .1s;" ' +
+      'onmouseover="this.style.background=\'var(--blue-p50)\'" onmouseout="this.style.background=\'\'">' +
+      '<td style="padding:.45rem .75rem;white-space:nowrap;color:var(--g600);font-size:.75rem;">' + fmtD(dateD) + '</td>' +
+      '<td style="padding:.45rem .75rem;font-weight:500;color:var(--g900);max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="'+r.client+'">' + (r.client||'—') + '</td>' +
+      '<td style="padding:.45rem .75rem;text-align:center;font-size:.72rem;color:var(--g600);font-family:monospace;">' + (r.numCmd||'—') + '</td>' +
+      '<td style="padding:.45rem .75rem;text-align:center;">' + statutBadge + '</td>' +
+      '<td style="padding:.45rem .75rem;text-align:center;font-size:.72rem;font-family:monospace;color:var(--g700);">' + numFac + '</td>' +
+      '<td style="padding:.45rem .75rem;text-align:right;font-weight:700;color:'+caColor+';">' + fmtCA(r.ca) + '</td>' +
+    '</tr>';
+  }).join('');
+}
+
 
 function dashCaRenderCurrentMonth(filtered, byMonth, months) {
   var moisNames = ['Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août','Septembre','Octobre','Novembre','Décembre'];
