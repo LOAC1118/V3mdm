@@ -2082,12 +2082,11 @@ var nfdLines = [];      // toutes les dépenses, tous mois confondus
 // et retourne les lignes filtrées + les labels de période
 function nfdGetPeriod(mois, annee) {
   var m = parseInt(mois), y = parseInt(annee);
-  // Début : 17 du mois sélectionné
-  var dateDebut = new Date(y, m - 1, 17);
-  // Fin : 16 du mois suivant
+  // Periode : du 18 du mois au 17 du mois suivant a 23h59
+  var dateDebut = new Date(y, m - 1, 18);
   var nextM = m === 12 ? 1 : m + 1;
   var nextY = m === 12 ? y + 1 : y;
-  var dateFin = new Date(nextY, nextM - 1, 16);
+  var dateFin = new Date(nextY, nextM - 1, 17, 23, 59, 59);
 
   var filtered = nfdLines.filter(function(l) {
     if (!l.date) return false;
@@ -2329,7 +2328,7 @@ function nfdRender() {
 
   // Afficher la période active sous le titre
   var periodEl = document.getElementById('nfd-period-label');
-  if (periodEl) periodEl.textContent = 'Période : 17 ' + ['','Jan','Fév','Mars','Avr','Mai','Juin','Juil','Août','Sep','Oct','Nov','Déc'][parseInt(mois)] + ' → 16 du mois suivant';
+  if (periodEl) periodEl.textContent = 'Période : 18 ' + ['','Jan','Fév','Mars','Avr','Mai','Juin','Juil','Août','Sep','Oct','Nov','Déc'][parseInt(mois)] + ' → 17 du mois suivant';
 
   // KPIs
   var totHt=0, totTva=0, totTtc=0;
