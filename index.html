@@ -718,8 +718,7 @@ textarea { resize:vertical; min-height:80px; }
 
 #app-shell:not(.hidden) { display:flex; flex-direction:column; min-height:100vh; width:100%; }
 </style>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.0/jspdf.plugin.autotable.min.js"></script>
+<!-- jsPDF chargé en lazy au besoin -->
 </head>
 <body>
 
@@ -1798,9 +1797,7 @@ textarea { resize:vertical; min-height:80px; }
   <div class="modal-foot"><button class="btn btn-ghost" onclick="closeModal('frais')">Annuler</button><button class="btn btn-primary" onclick="saveFrais()">Enregistrer</button></div>
 </div></div>
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<!-- XLSX, pdf.js, Chart.js chargés en lazy au besoin -->
 <script>if(typeof pdfjsLib!=="undefined")pdfjsLib.GlobalWorkerOptions.workerSrc="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";</script>
 <!-- SDK Firebase (v9 compat) -->
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
@@ -1808,6 +1805,76 @@ textarea { resize:vertical; min-height:80px; }
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
 
 <script>
+
+// ══════════════════════════════════════════════════════════════════════════
+//  LAZY LOADER — charge les scripts externes uniquement quand nécessaire
+// ══════════════════════════════════════════════════════════════════════════
+var _lazyLoaded = {};
+
+function lazyLoad(urls, callback) {
+  if (typeof urls === 'string') urls = [urls];
+  var toLoad = urls.filter(function(u) { return !_lazyLoaded[u]; });
+  if (toLoad.length === 0) { if (callback) callback(); return; }
+
+  var loaded = 0;
+  toLoad.forEach(function(url) {
+    var s = document.createElement('script');
+    s.src = url;
+    s.onload = function() {
+      _lazyLoaded[url] = true;
+      loaded++;
+      if (loaded === toLoad.length && callback) callback();
+    };
+    s.onerror = function() {
+      console.error('[LazyLoad] Echec chargement:', url);
+      loaded++;
+      if (loaded === toLoad.length && callback) callback();
+    };
+    document.head.appendChild(s);
+  });
+}
+
+// URLs des libs
+var LIB_XLSX    = 'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js';
+var LIB_PDFJS   = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js';
+var LIB_CHARTJS = 'https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js';
+var LIB_JSPDF   = 'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js';
+var LIB_JSPDF_AT= 'https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.0/jspdf.plugin.autotable.min.js';
+
+// Wrappers qui chargent la lib si nécessaire avant d'appeler la fonction
+function withXLSX(fn) {
+  if (typeof XLSX !== 'undefined') { fn(); return; }
+  lazyLoad(LIB_XLSX, function() {
+    console.log('[LazyLoad] XLSX chargé');
+    fn();
+  });
+}
+
+function withPdfJs(fn) {
+  if (typeof pdfjsLib !== 'undefined') { fn(); return; }
+  lazyLoad(LIB_PDFJS, function() {
+    console.log('[LazyLoad] pdf.js chargé');
+    if (typeof pdfjsLib !== 'undefined') pdfjsLib.GlobalWorkerOptions.workerSrc = LIB_PDFJS;
+    fn();
+  });
+}
+
+function withChartJs(fn) {
+  if (typeof Chart !== 'undefined') { fn(); return; }
+  lazyLoad(LIB_CHARTJS, function() {
+    console.log('[LazyLoad] Chart.js chargé');
+    fn();
+  });
+}
+
+function withJsPdf(fn) {
+  if (typeof jspdf !== 'undefined') { fn(); return; }
+  lazyLoad([LIB_JSPDF, LIB_JSPDF_AT], function() {
+    console.log('[LazyLoad] jsPDF chargé');
+    fn();
+  });
+}
+
 // ═══════════════════════════════════════════════
 //  CONFIG FIREBASE
 // ═══════════════════════════════════════════════
@@ -2447,7 +2514,11 @@ function nfdExportCSV() {
 
 // Génération PDF — reproduit exactement le modèle NOTE DE FRAIS MDM
 function nfdGeneratePDF() {
-  if (typeof jspdf === 'undefined') { toast('jsPDF non chargé', 'err'); return; }
+  if (typeof jspdf === 'undefined') {
+    toast('Chargement PDF...', 'ok');
+    withJsPdf(function() { nfdGeneratePDF(); });
+    return;
+  }
 
   var mois = document.getElementById('nfd-mois').value;
   var annee = document.getElementById('nfd-annee').value;
@@ -3838,8 +3909,16 @@ function bdcImportFile(file) {
   if (ext === 'csv') {
     reader.onload = function(e) { bdcParseRows(bdcCSVtoRows(e.target.result)); };
     reader.readAsText(file, 'UTF-8');
-  } else {
-    reader.onload = function(e) {
+    return;
+  }
+  // Charger XLSX si nécessaire
+  if (typeof XLSX === 'undefined') {
+    bdcShowAlert('Chargement en cours...', 'ok');
+    withXLSX(function() { bdcImportFile(file); });
+    return;
+  }
+  var readerXls = new FileReader();
+  readerXls.onload = function(e) {
       try {
         var wb = XLSX.read(e.target.result, {type:'binary'});
         var ws = wb.Sheets[wb.SheetNames[0]];
@@ -3849,8 +3928,7 @@ function bdcImportFile(file) {
         bdcShowAlert('Erreur lecture Excel : ' + err.message, 'err');
       }
     };
-    reader.readAsBinaryString(file);
-  }
+    readerXls.readAsBinaryString(file);
 }
 
 // Convertit CSV en tableau d'objets {header: valeur}
@@ -4317,7 +4395,9 @@ async function pdfImportFile(file) {
   if (!file) return;
   console.log('[PDF] Import:', file.name);
   if (typeof pdfjsLib === 'undefined') {
-    bdcShowAlert('pdf.js non chargé, réessayez dans quelques secondes.', 'err'); return;
+    bdcShowAlert('Chargement pdf.js...', 'ok');
+    withPdfJs(function() { pdfImportFile(file); });
+    return;
   }
   document.getElementById('pdf-progress').style.display = 'block';
   document.getElementById('pdf-import-result').style.display = 'none';
@@ -4732,7 +4812,10 @@ function dashCaReset() {
 
 function dashCaLoad(file) {
   if (!file) return;
-  if (typeof XLSX === 'undefined') { toast('SheetJS non chargé','err'); return; }
+  if (typeof XLSX === 'undefined') {
+    withXLSX(function() { dashCaLoad(file); });
+    return;
+  }
   var reader = new FileReader();
   reader.onload = function(e) {
     try {
@@ -5809,7 +5892,10 @@ function dashCaRenderCurrentMonth(filtered, byMonth, months) {
 }
 
 function dashCaDrawCharts(filtered, months, moisNames) {
-  if (typeof Chart === 'undefined') return;
+  if (typeof Chart === 'undefined') {
+    withChartJs(function() { dashCaDrawCharts(filtered, months, moisNames); });
+    return;
+  }
   var labels = months.map(function(m) {
     var parts = m.mois.split('-');
     return moisNames[parseInt(parts[1])-1] + ' ' + parts[0].slice(2);
@@ -6393,16 +6479,10 @@ function cdbOpenImport() {
 }
 
 function cdbImportRead(file) {
-  console.log('[CDB] === DÉBUT IMPORT ===');
-  console.log('[CDB] Fichier reçu:', file);
-
-  if (!file) {
-    console.warn('[CDB] Aucun fichier sélectionné');
-    return;
-  }
+  if (!file) return;
   if (typeof XLSX === 'undefined') {
-    toast('SheetJS non chargé', 'err');
-    console.error('[CDB] XLSX undefined');
+    toast('Chargement en cours...', 'ok');
+    withXLSX(function() { cdbImportRead(file); });
     return;
   }
   console.log('[CDB] Nom:', file.name, '| Taille:', file.size, '| Type:', file.type);
