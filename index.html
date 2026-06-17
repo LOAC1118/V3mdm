@@ -817,6 +817,21 @@ textarea { resize:vertical; min-height:80px; }
 
   /* ── Avatar menu : éviter qu'il sorte de l'écran ── */
   .avatar-menu { right: -10px; }
+
+  /* ── BDC : panneau client + catalogue passent en colonne empilée ──
+     (ce layout est en flex inline, pas en grid, donc hors de la règle
+     générique ci-dessus ; on cible directement la structure du BDC) ── */
+  #sec-bdc > div[style*="display:flex;flex:1"] {
+    flex-direction: column !important;
+    overflow: visible !important;
+  }
+  #sec-bdc > div[style*="display:flex;flex:1"] > div[style*="width:255px"] {
+    width: 100% !important;
+    border-right: none !important;
+    border-bottom: 1px solid var(--border);
+    max-height: 50vh;
+  }
+  #sec-bdc table { font-size: .7rem; }
 }
 
 @media (max-width: 480px) {
@@ -1297,6 +1312,10 @@ textarea { resize:vertical; min-height:80px; }
             <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="#64748b" stroke-width="1.5"><circle cx="6.5" cy="6.5" r="4.5"/><path d="M10.5 10.5L14 14"/></svg>
             <input type="text" id="bdc-search" placeholder="Rechercher produit (désignation, code, EAN…)" oninput="bdcDoSearch()" style="background:transparent;border:none;outline:none;color:var(--g800);font-family:var(--fd);font-size:.75rem;width:100%;">
           </div>
+          <button onclick="bdcOpenScan()" style="display:flex;align-items:center;gap:5px;padding:.32rem .7rem;border-radius:6px;border:1.5px solid var(--blue-p400);background:var(--blue-p700);color:#fff;font-family:var(--fd);font-size:.75rem;font-weight:600;cursor:pointer;white-space:nowrap;">
+            <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M1 5V2a1 1 0 0 1 1-1h3M11 1h3a1 1 0 0 1 1 1v3M15 11v3a1 1 0 0 1-1 1h-3M5 15H2a1 1 0 0 1-1-1v-3M3 8h10"/></svg>
+            Scanner
+          </button>
           <div style="display:flex;gap:3px;">
             <button class="bdc-mode-btn active" data-mode="all" onclick="bdcSetMode(this)">Tout</button>
             <button class="bdc-mode-btn" data-mode="libelle" onclick="bdcSetMode(this)">Nom</button>
@@ -1842,6 +1861,34 @@ textarea { resize:vertical; min-height:80px; }
 
 <div id="toast"></div>
 
+<!-- ══════════════════════════════════════════
+     MODAL SCANNER CODE-BARRES (BDC)
+══════════════════════════════════════════ -->
+<div class="modal-bg hidden" id="bdc-scan-modal" style="z-index:600;">
+  <div class="modal" style="max-width:420px;background:#0b1220;border-color:rgba(255,255,255,.1);">
+    <div class="modal-head" style="background:#0b1220;border-bottom-color:rgba(255,255,255,.08);">
+      <span class="modal-title" style="color:#fff;">📷 Scanner un produit</span>
+      <button class="close-btn" onclick="bdcCloseScan()">✕</button>
+    </div>
+    <div class="modal-body" style="padding:0;position:relative;background:#000;">
+      <video id="bdc-scan-video" playsinline autoplay muted style="width:100%;display:block;max-height:62vh;background:#000;"></video>
+      <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;pointer-events:none;">
+        <div style="width:78%;max-width:280px;aspect-ratio:2/1;border:2.5px solid rgba(34,197,94,.85);border-radius:14px;box-shadow:0 0 0 9999px rgba(0,0,0,.35);"></div>
+      </div>
+      <div id="bdc-scan-status" style="position:absolute;left:0;right:0;bottom:0;padding:.6rem 1rem;background:rgba(0,0,0,.55);color:#fff;font-size:.78rem;text-align:center;">Initialisation de la caméra…</div>
+    </div>
+    <div id="bdc-scan-found" class="hidden" style="padding:1rem 1.2rem;background:#0b1220;border-top:1px solid rgba(255,255,255,.08);">
+      <div style="font-size:.68rem;color:#86efac;text-transform:uppercase;letter-spacing:.06em;font-weight:700;margin-bottom:4px;">✓ Produit trouvé</div>
+      <div id="bdc-scan-found-lib" style="color:#fff;font-size:.92rem;font-weight:600;margin-bottom:2px;"></div>
+      <div id="bdc-scan-found-meta" style="color:#94a3b8;font-size:.74rem;"></div>
+    </div>
+    <div class="modal-foot" style="background:#0b1220;border-top-color:rgba(255,255,255,.08);">
+      <button class="btn btn-ghost" onclick="bdcCloseScan()" style="background:transparent;color:#cbd5e1;border-color:rgba(255,255,255,.15);">Fermer</button>
+    </div>
+  </div>
+</div>
+
+
 <!-- MODAL PROSPECT -->
 <div class="modal-bg hidden" id="modal-prospect"><div class="modal">
   <div class="modal-head"><span class="modal-title" id="modal-prospect-title">Nouveau prospect</span><button class="close-btn" onclick="closeModal('prospect')">✕</button></div>
@@ -1970,6 +2017,163 @@ var LIB_PDFJS   = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.mi
 var LIB_CHARTJS = 'https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js';
 var LIB_JSPDF   = 'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js';
 var LIB_JSPDF_AT= 'https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.0/jspdf.plugin.autotable.min.js';
+var LIB_ZXING  = 'https://cdn.jsdelivr.net/npm/@zxing/library@0.20.0/umd/index.min.js';
+
+function withZXing(fn) {
+  if (typeof ZXing !== 'undefined') { fn(); return; }
+  lazyLoad(LIB_ZXING, function() {
+    console.log('[LazyLoad] ZXing chargé');
+    fn();
+  });
+}
+
+// ═══════════════════════════════════════════════
+//  SCANNER CODE-BARRES (BDC)
+// ═══════════════════════════════════════════════
+var bdcScanStream = null;
+var bdcScanZXingReader = null;
+var bdcScanBarcodeDetector = null;
+var bdcScanRafId = null;
+var bdcScanActive = false;
+var bdcScanLastCode = '';
+var bdcScanLastTime = 0;
+
+function bdcOpenScan() {
+  var modal = document.getElementById('bdc-scan-modal');
+  modal.classList.remove('hidden');
+  document.getElementById('bdc-scan-found').classList.add('hidden');
+  bdcSetScanStatus('Initialisation de la caméra…');
+  bdcScanActive = true;
+  bdcStartCamera();
+}
+
+function bdcCloseScan() {
+  bdcScanActive = false;
+  document.getElementById('bdc-scan-modal').classList.add('hidden');
+  bdcStopCamera();
+}
+
+function bdcSetScanStatus(msg) {
+  var el = document.getElementById('bdc-scan-status');
+  if (el) el.textContent = msg;
+}
+
+function bdcStartCamera() {
+  if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+    bdcSetScanStatus('Caméra non disponible sur ce navigateur. Utilise la recherche manuelle.');
+    return;
+  }
+  var constraints = { video: { facingMode: { ideal: 'environment' }, width: { ideal: 1280 }, height: { ideal: 720 } } };
+  navigator.mediaDevices.getUserMedia(constraints).then(function(stream) {
+    bdcScanStream = stream;
+    var video = document.getElementById('bdc-scan-video');
+    video.srcObject = stream;
+    video.play().catch(function(){});
+    bdcSetScanStatus('Vise le code-barres dans le cadre…');
+    bdcStartDecoding(video);
+  }).catch(function(err) {
+    console.warn('[Scan] getUserMedia erreur:', err);
+    bdcSetScanStatus('Accès caméra refusé. Vérifie les réglages Safari → Confidentialité → Caméra.');
+  });
+}
+
+function bdcStopCamera() {
+  if (bdcScanRafId) { cancelAnimationFrame(bdcScanRafId); bdcScanRafId = null; }
+  if (bdcScanZXingReader) { try { bdcScanZXingReader.reset(); } catch(e){} bdcScanZXingReader = null; }
+  if (bdcScanStream) {
+    bdcScanStream.getTracks().forEach(function(t){ t.stop(); });
+    bdcScanStream = null;
+  }
+  var video = document.getElementById('bdc-scan-video');
+  if (video) video.srcObject = null;
+}
+
+function bdcStartDecoding(video) {
+  // Cascade : BarcodeDetector natif (rapide, pas de lib) → ZXing (fallback compatible iOS Safari)
+  if ('BarcodeDetector' in window) {
+    bdcStartNativeDetector(video);
+  } else {
+    bdcStartZXingDetector(video);
+  }
+}
+
+function bdcStartNativeDetector(video) {
+  BarcodeDetector.getSupportedFormats().then(function(formats) {
+    var wanted = ['ean_13','ean_8','upc_a','upc_e','code_128'].filter(function(f){ return formats.indexOf(f) !== -1; });
+    if (!wanted.length) { bdcStartZXingDetector(video); return; }
+    bdcScanBarcodeDetector = new BarcodeDetector({ formats: wanted });
+    var tick = function() {
+      if (!bdcScanActive) return;
+      bdcScanBarcodeDetector.detect(video).then(function(codes) {
+        if (codes && codes.length) bdcOnCodeDetected(codes[0].rawValue);
+        if (bdcScanActive) bdcScanRafId = requestAnimationFrame(tick);
+      }).catch(function() {
+        if (bdcScanActive) bdcScanRafId = requestAnimationFrame(tick);
+      });
+    };
+    bdcScanRafId = requestAnimationFrame(tick);
+  }).catch(function() {
+    bdcStartZXingDetector(video);
+  });
+}
+
+function bdcStartZXingDetector(video) {
+  bdcSetScanStatus('Chargement du décodeur…');
+  withZXing(function() {
+    try {
+      var hints = new Map();
+      hints.set(ZXing.DecodeHintType.POSSIBLE_FORMATS, [
+        ZXing.BarcodeFormat.EAN_13, ZXing.BarcodeFormat.EAN_8,
+        ZXing.BarcodeFormat.UPC_A, ZXing.BarcodeFormat.UPC_E,
+        ZXing.BarcodeFormat.CODE_128
+      ]);
+      bdcScanZXingReader = new ZXing.BrowserMultiFormatReader(hints);
+      bdcSetScanStatus('Vise le code-barres dans le cadre…');
+      bdcScanZXingReader.decodeFromVideoElementContinuously(video, function(result, err) {
+        if (result) bdcOnCodeDetected(result.getText());
+      });
+    } catch (e) {
+      console.warn('[Scan] ZXing init erreur:', e);
+      bdcSetScanStatus('Décodeur indisponible. Utilise la recherche manuelle.');
+    }
+  });
+}
+
+function bdcOnCodeDetected(code) {
+  if (!code) return;
+  var now = Date.now();
+  // anti-rebond : ignore le même code répété en boucle pendant 2s
+  if (code === bdcScanLastCode && (now - bdcScanLastTime) < 2000) return;
+  bdcScanLastCode = code;
+  bdcScanLastTime = now;
+  bdcAddByEan(code);
+}
+
+function bdcAddByEan(ean) {
+  var clean = String(ean).trim();
+  var p = PRODUCTS.find(function(x){ return String(x.ean||'').trim() === clean; });
+  var foundEl = document.getElementById('bdc-scan-found');
+  if (!p) {
+    bdcSetScanStatus('Code ' + clean + ' non reconnu dans le catalogue MDM.');
+    foundEl.classList.add('hidden');
+    if (navigator.vibrate) navigator.vibrate(120);
+    return;
+  }
+  // Incrémente la quantité de ce produit (même logique que les boutons +/- du tableau)
+  var current = parseInt(bdcQtys[p.code]) || 0;
+  bdcQtys[p.code] = current + 1;
+  if (typeof buildTable === 'function') buildTable();
+  // Affiche le produit reconnu et son nouveau total dans le panneau de scan
+  document.getElementById('bdc-scan-found-lib').textContent = p.libelle;
+  document.getElementById('bdc-scan-found-meta').textContent = 'Code ' + p.code + ' · EAN ' + clean + ' · Quantité : ' + bdcQtys[p.code];
+  foundEl.classList.remove('hidden');
+  bdcSetScanStatus('Vise le prochain code-barres…');
+  if (navigator.vibrate) navigator.vibrate(60);
+  toast(p.libelle + ' ajouté (×' + bdcQtys[p.code] + ')', 'ok');
+  // Filtre la table sur ce produit pour que la ligne soit visible si on quitte le scanner
+  var searchInput = document.getElementById('bdc-search');
+  if (searchInput) { searchInput.value = clean; bdcDoSearch(); }
+}
 
 // Wrappers qui chargent la lib si nécessaire avant d'appeler la fonction
 function withXLSX(fn) {
