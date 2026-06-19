@@ -4945,6 +4945,11 @@ function normalizeCode(s) {
 }
 
 function parsePdfText(text) {
+  // Mode choisi par l'utilisateur : la quantité lue dans le PDF est-elle déjà
+  // en colis, ou en UVC (unités) — dans ce cas on divise par le PCB du produit.
+  var unitModeEl = document.querySelector('input[name="pdf-import-unit"]:checked');
+  var qtyIsUvc = !unitModeEl || unitModeEl.value === 'uvc'; // uvc = comportement par défaut historique
+
   // ── Index produits ───────────────────────────────────────────────────────
   var byCode = {}, byEan = {};
   PRODUCTS.forEach(function(p) {
@@ -4962,7 +4967,7 @@ function parsePdfText(text) {
   var previewEl = document.getElementById('pdf-text-preview');
   if (previewEl) previewEl.textContent = text.substring(0, 400);
 
-  // ── Stratégie : pdf.js reconstruit les lignes par position Y
+  // ── Stratégie A : pdf.js reconstruit les lignes par position Y
   // Chaque ligne a le format : "EAN CODE DESIGNATION QTE PA REMISE TVA"
   // Ex: "4053400200859 BIOVERCITBER BIONADE CITRON/BERGAMOTE 36.00 0.00 5.00 % 5.50 %"
   // On détecte les lignes qui commencent par un EAN (8-14 chiffres)
@@ -4976,6 +4981,15 @@ function parsePdfText(text) {
   var SKIP = {CODE:1,REF:1,FOU:1,DESIGNATION:1,QTE:1,HT:1,REMISE:1,TVA:1,
               PA:1,COMMANDE:1,CLIENT:1,MOULIN:1,MOINES:1,FAX:1,EMAIL:1,
               DELAI:1,NOMBRE:1,BASE:1,TOTAL:1,MONTANT:1,TX:1,BL:1};
+
+  // ── Stratégie B : bons de commande "type Mobilogic/client" — colonnes
+  // alignées en fin de ligne : "EAN CODE DESIGNATION PrixBrut€ Qté Remise% Montant€"
+  // Ex: "3347430003254 FARPETDCP2.5 FARINE DE PETIT EPEAUTRE T110 9,88 € 4 23,00 % 30,43 €"
+  // Particularités gérées : décimales en virgule (format FR), quantité entière
+  // sans décimale, désignation pouvant contenir des chiffres/% (ex: "CHOCOLAT NOIR 100%").
+  // On ancre la recherche en FIN de ligne pour ne jamais confondre un nombre
+  // présent dans la désignation avec la quantité réelle.
+  var TAIL_RE = /(\d+[.,]\d{1,2})\s*€?\s*(\d+)\s+(\d+[.,]\d{1,2})\s*%\s*(\d+[.,]\d{1,2})\s*€?\s*$/;
 
   lines.forEach(function(line) {
     line = line.trim();
@@ -4994,11 +5008,23 @@ function parsePdfText(text) {
       var nums00 = line.match(/\b(\d+)\.00\b/g) || [];
       if (nums00.length > 0) qtyUVC = parseFloat(nums00[0]);
 
+      // Fallback strict : si le format ".00" n'a rien donné (ex: décimales en
+      // virgule, quantité entière sans décimale), on tente le pattern de fin
+      // de ligne ancré (Stratégie B) sur cette même ligne avant d'abandonner.
+      if (qtyUVC === null) {
+        var mTail = TAIL_RE.exec(line);
+        if (mTail) qtyUVC = parseFloat(mTail[2]);
+      }
+
     // Cas 2 : ligne commence par un code produit MDM
     } else if (CODE_RE.test(parts[0]) && !SKIP[parts[0]]) {
       codeRef = parts[0];
-      var nums00 = line.match(/\b(\d+)\.00\b/g) || [];
-      if (nums00.length > 0) qtyUVC = parseFloat(nums00[0]);
+      var nums00b = line.match(/\b(\d+)\.00\b/g) || [];
+      if (nums00b.length > 0) qtyUVC = parseFloat(nums00b[0]);
+      if (qtyUVC === null) {
+        var mTail2 = TAIL_RE.exec(line);
+        if (mTail2) qtyUVC = parseFloat(mTail2[2]);
+      }
     }
 
     if (!codeRef || qtyUVC === null || qtyUVC <= 0) return;
@@ -5019,14 +5045,14 @@ function parsePdfText(text) {
     seen[prod.code] = true;
 
     var pcb = parseFloat(prod.pcb) || 1;
-    var colis = Math.ceil(qtyUVC / pcb);
+    var colis = qtyIsUvc ? Math.ceil(qtyUVC / pcb) : qtyUVC;
 
     pdfImportedQtys[prod.code] = colis;
     results.push({
       code: prod.code, rawCode: codeRef,
-      qty: colis, qtyOrig: qtyUVC, pcb: pcb, libelle: prod.libelle
+      qty: colis, qtyOrig: qtyUVC, pcb: pcb, libelle: prod.libelle, qtyIsUvc: qtyIsUvc
     });
-    console.log('[PDF]', prod.code, '<-', codeRef, qtyUVC, 'UVC /', pcb, '=', colis, 'colis');
+    console.log('[PDF]', prod.code, '<-', codeRef, qtyUVC, qtyIsUvc ? ('UVC / '+pcb+' = '+colis+' colis') : ('déjà en colis = '+colis));
   });
 
   console.log('[PDF] Total:', results.length, 'articles trouvés');
@@ -5039,13 +5065,15 @@ function parsePdfText(text) {
       '<div style="font-size:1.1rem;font-weight:600;color:#93c5fd;">' + ok + '</div>' +
       '<div style="font-size:.6rem;color:var(--s600);text-transform:uppercase;">Articles trouvés</div></div>' +
     '<div style="flex:2;background:rgba(30,41,59,.7);border-radius:6px;padding:.5rem;text-align:center;">' +
-      '<div style="font-size:.8rem;font-weight:500;color:var(--s300);">⚡ UVC → Colis (÷ PCB)</div>' +
-      '<div style="font-size:.6rem;color:var(--s600);">Conversion automatique appliquée</div></div>';
+      (qtyIsUvc
+        ? '<div style="font-size:.8rem;font-weight:500;color:var(--s300);">⚡ UVC → Colis (÷ PCB)</div><div style="font-size:.6rem;color:var(--s600);">Conversion automatique appliquée</div>'
+        : '<div style="font-size:.8rem;font-weight:500;color:var(--s300);">📦 Quantités lues telles quelles</div><div style="font-size:.6rem;color:var(--s600);">Déjà en colis, aucune conversion</div>') +
+    '</div>';
 
   document.getElementById('pdf-import-rows').innerHTML = ok === 0
     ? '<div style="padding:1rem;text-align:center;color:var(--s600);font-size:.8rem;">Aucun produit MDM reconnu dans ce PDF.<br><small>Vérifiez que les codes du PDF correspondent au catalogue.</small></div>'
     : results.map(function(r) {
-        var label = r.pcb > 1
+        var label = (qtyIsUvc && r.pcb > 1)
           ? '<span style="font-size:.65rem;color:#f59e0b;margin-left:4px;">' + r.qtyOrig + ' UVC ÷ ' + r.pcb + ' = ' + r.qty + ' colis</span>'
           : '';
         return '<div style="display:flex;align-items:center;gap:8px;padding:.35rem .6rem;border-bottom:1px solid rgba(255,255,255,.05);">' +
