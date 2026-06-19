@@ -1236,6 +1236,42 @@ textarea { resize:vertical; min-height:80px; }
           </div>
         </div>
 
+        <!-- ── CLIENTS SANS COMMANDE RÉCENTE ─────────────────── -->
+        <div style="background:#fff;border:1px solid var(--border);border-radius:12px;overflow:hidden;margin-top:1.25rem;">
+          <div style="padding:.75rem 1rem;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;background:#fff7ed;">
+            <div>
+              <div style="font-size:.82rem;font-weight:700;color:#9a3412;">⏰ Clients sans commande récente</div>
+              <div style="font-size:.68rem;color:var(--g500);margin-top:1px;">Basé sur la dernière commande connue de chaque client</div>
+            </div>
+            <div style="display:flex;gap:8px;align-items:center;">
+              <select id="dash-inactive-filter" onchange="dashRenderInactiveClients()" style="font-size:.72rem;padding:.3rem .5rem;border-radius:6px;border:1px solid var(--border-med);background:#fff;">
+                <option value="30">Depuis 1 mois</option>
+                <option value="60" selected>Depuis 2 mois</option>
+                <option value="90">Depuis 3 mois</option>
+              </select>
+              <button onclick="dashRelanceAllInactive()" style="font-size:.72rem;padding:.32rem .7rem;border-radius:6px;border:none;background:#ea580c;color:#fff;font-weight:600;cursor:pointer;white-space:nowrap;">📧 Relancer tous</button>
+            </div>
+          </div>
+          <div id="dash-inactive-empty" style="display:none;padding:1.5rem;text-align:center;color:var(--g400);font-size:.8rem;"></div>
+          <div class="tbl-wrap" style="max-height:380px;overflow-y:auto;">
+            <table style="width:100%;border-collapse:collapse;font-size:.78rem;">
+              <thead style="position:sticky;top:0;z-index:1;">
+                <tr style="background:#9a3412;">
+                  <th style="padding:.5rem .75rem;text-align:left;font-weight:600;color:#fed7aa;">Client</th>
+                  <th style="padding:.5rem .75rem;text-align:left;font-weight:600;color:#fed7aa;white-space:nowrap;">Ville</th>
+                  <th style="padding:.5rem .75rem;text-align:right;font-weight:600;color:#fed7aa;white-space:nowrap;">Dernière cmd</th>
+                  <th style="padding:.5rem .75rem;text-align:center;font-weight:600;color:#fed7aa;white-space:nowrap;">Sans cmd depuis</th>
+                  <th style="padding:.5rem .75rem;text-align:right;font-weight:600;color:#fed7aa;white-space:nowrap;">CA habituel</th>
+                  <th style="padding:.5rem .75rem;text-align:center;font-weight:600;color:#fed7aa;white-space:nowrap;">Relancer</th>
+                </tr>
+              </thead>
+              <tbody id="dash-inactive-tbody">
+                <tr><td colspan="6" style="padding:2rem;text-align:center;color:var(--g500);">Importez un fichier commandes pour voir les clients inactifs</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
         <!-- Hidden canvas for ticket chart (kept for JS compat) -->
         <canvas id="dash-chart-ticket" style="display:none;"></canvas>
         <!-- Hidden transport top (kept for JS compat) -->
@@ -2431,7 +2467,7 @@ function showSection(name, tabEl, sideEl) {
   if (tabEl) tabEl.classList.add('active');
   if (sideEl) sideEl.classList.add('active');
   document.querySelectorAll('.mtab[data-sec="'+name+'"]').forEach(t=>t.classList.add('active'));
-  if (name==='dashboard') refreshDashboard();
+  if (name==='dashboard') { refreshDashboard(); if (typeof dashRenderInactiveClients === 'function') dashRenderInactiveClients(); }
   if (name==='frais') { if (typeof refreshFraisStats === 'function') { try{refreshFraisStats();}catch(e){} } if (typeof nfdRender === 'function') nfdRender(); }
   if (name==='bdc') { if (!bdcInitDone) { buildTable(); bdcInitDone=true; } }
   if (name==='commissions') { setTimeout(function(){ if (typeof commInit === 'function') commInit(); }, 80); }
@@ -5788,12 +5824,112 @@ function cdbEnrichFromOrders(orders) {
   // Re-render la base contacts si elle est affichée
   if (typeof cdbRender === 'function') cdbRender();
 
+  // Rafraîchir le bloc "clients sans commande récente" du Dashboard
+  if (typeof dashRenderInactiveClients === 'function') dashRenderInactiveClients();
+
   // Toast résumé
   if (typeof toast === 'function') {
     toast('✅ ' + (matchedByCode + matchedByName) + ' commandes liées aux contacts' +
       ' (' + matchedByCode + ' par code, ' + matchedByName + ' par nom' +
       (unmatched ? ', ' + unmatched + ' orphelines' : '') + ')', 'ok');
   }
+}
+
+// ═══════════════════════════════════════════════
+//  CLIENTS SANS COMMANDE RÉCENTE (relance)
+// ═══════════════════════════════════════════════
+function dashGetInactiveClients(minDays) {
+  if (typeof cdbContacts === 'undefined' || !cdbContacts.length) return [];
+  var now = new Date();
+  var MS_DAY = 86400000;
+  return cdbContacts
+    .filter(function(c) {
+      // Uniquement les clients ayant déjà commandé au moins une fois
+      return c._stats && c._stats.nbCmds > 0 && c._stats.derniereCmd;
+    })
+    .map(function(c) {
+      var days = Math.floor((now - c._stats.derniereCmd) / MS_DAY);
+      var caMoyen = c._stats.nbCmds > 0 ? (c._stats.caTotal / c._stats.nbCmds) : 0;
+      return { c: c, days: days, caMoyen: caMoyen };
+    })
+    .filter(function(x) { return x.days >= minDays; })
+    .sort(function(a, b) { return b.days - a.days; }); // les plus inactifs en premier
+}
+
+function dashRenderInactiveClients() {
+  var tbody = document.getElementById('dash-inactive-tbody');
+  var emptyEl = document.getElementById('dash-inactive-empty');
+  if (!tbody) return; // dashboard pas encore affiché
+
+  if (typeof cdbContacts === 'undefined' || !cdbContacts.length || typeof dashCaRows === 'undefined' || !dashCaRows.length) {
+    tbody.innerHTML = '<tr><td colspan="6" style="padding:2rem;text-align:center;color:var(--g500);">Importez un fichier commandes pour voir les clients inactifs</td></tr>';
+    if (emptyEl) emptyEl.style.display = 'none';
+    return;
+  }
+
+  var selEl = document.getElementById('dash-inactive-filter');
+  var minDays = selEl ? parseInt(selEl.value) : 60;
+
+  var list = dashGetInactiveClients(minDays);
+
+  if (!list.length) {
+    tbody.innerHTML = '';
+    if (emptyEl) {
+      emptyEl.style.display = '';
+      emptyEl.innerHTML = '✅ Aucun client sans commande depuis plus de ' + (minDays === 30 ? '1 mois' : minDays === 60 ? '2 mois' : '3 mois') + '.';
+    }
+    return;
+  }
+  if (emptyEl) emptyEl.style.display = 'none';
+
+  var fmtCA = function(n) { return n > 0 ? n.toLocaleString('fr-FR', {maximumFractionDigits:0}) + ' €' : '—'; };
+
+  tbody.innerHTML = list.map(function(x) {
+    var c = x.c;
+    var months = Math.floor(x.days / 30);
+    var depuisLabel = months >= 1 ? (months + ' mois') : (x.days + ' j');
+    var depuisColor = x.days >= 90 ? '#dc2626' : x.days >= 60 ? '#ea580c' : '#d97706';
+    var dateLastStr = c._stats.derniereCmd ? c._stats.derniereCmd.toLocaleDateString('fr-FR') : '—';
+    var initiales = (c.nom||'?').replace(/[^A-Za-z\u00C0-\u024F\s]/g,'').split(/\s+/).filter(Boolean).map(function(w){return w[0].toUpperCase();}).slice(0,2).join('') || '?';
+
+    var actions = '';
+    if (c.email) actions += '<a href="mailto:' + cdbEsc(c.email) + '?subject=' + encodeURIComponent('Moulin des Moines — On vous a manqué !') + '" title="Email à ' + cdbEsc(c.email) + '" style="display:inline-flex;width:26px;height:26px;align-items:center;justify-content:center;border-radius:6px;background:var(--blue-p50);color:var(--blue-p700);margin-right:4px;text-decoration:none;">✉️</a>';
+    if (c.telephone) actions += '<a href="tel:' + cdbEsc(c.telephone.replace(/\s+/g,'')) + '" title="Appeler ' + cdbEsc(c.telephone) + '" style="display:inline-flex;width:26px;height:26px;align-items:center;justify-content:center;border-radius:6px;background:#f0fdf4;color:#166534;text-decoration:none;">📞</a>';
+    if (!actions) actions = '<span style="color:var(--g300);font-size:.68rem;">Pas de contact</span>';
+
+    return '<tr style="border-top:1px solid var(--border);cursor:pointer;" onclick="cdbOpenEdit(\'' + c.id + '\')">' +
+      '<td style="padding:.5rem .75rem;"><div style="display:flex;align-items:center;gap:8px;">' +
+        '<div style="width:26px;height:26px;border-radius:7px;background:#fed7aa;color:#9a3412;display:flex;align-items:center;justify-content:center;font-size:.62rem;font-weight:700;flex-shrink:0;">' + initiales + '</div>' +
+        '<span style="font-weight:600;color:var(--g900);">' + cdbEsc(c.nom||'—') + '</span>' +
+      '</div></td>' +
+      '<td style="padding:.5rem .75rem;color:var(--g600);">' + cdbEsc(c.ville||'—') + '</td>' +
+      '<td style="padding:.5rem .75rem;text-align:right;color:var(--g600);white-space:nowrap;">' + dateLastStr + '</td>' +
+      '<td style="padding:.5rem .75rem;text-align:center;"><span style="font-size:.68rem;font-weight:700;color:' + depuisColor + ';background:' + depuisColor + '18;padding:2px 8px;border-radius:10px;">' + depuisLabel + '</span></td>' +
+      '<td style="padding:.5rem .75rem;text-align:right;font-weight:600;color:var(--g700);">' + fmtCA(x.caMoyen) + ' / cmd</td>' +
+      '<td style="padding:.5rem .75rem;text-align:center;" onclick="event.stopPropagation()">' + actions + '</td>' +
+    '</tr>';
+  }).join('');
+}
+
+function dashRelanceAllInactive() {
+  var selEl = document.getElementById('dash-inactive-filter');
+  var minDays = selEl ? parseInt(selEl.value) : 60;
+  var list = dashGetInactiveClients(minDays);
+  var emails = list.map(function(x){ return x.c.email; }).filter(Boolean);
+  emails = [...new Set(emails.map(function(e){ return e.toLowerCase().trim(); }))];
+
+  if (!emails.length) { toast('Aucun email trouvé parmi ces clients inactifs', 'err'); return; }
+  if (!confirm('Envoyer une relance groupée à ' + emails.length + ' client' + (emails.length>1?'s':'') + ' sans commande récente ?')) return;
+
+  showSection('mailing', null);
+  setTimeout(function() {
+    var ta = document.getElementById('ml-recipients');
+    if (ta) {
+      ta.value = emails.join('\n');
+      if (typeof mlUpdateRecipients === 'function') mlUpdateRecipients();
+    }
+    toast('✅ ' + emails.length + ' email' + (emails.length>1?'s':'') + ' de clients inactifs ajoutés au mailing', 'ok');
+  }, 100);
 }
 
 function dashCaFmt(n) {
