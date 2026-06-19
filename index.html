@@ -832,6 +832,19 @@ textarea { resize:vertical; min-height:80px; }
     max-height: 50vh;
   }
   #sec-bdc table { font-size: .7rem; }
+
+  /* ── PANIER (récap commande) : le bouton d'ouverture doit rester visible
+     sans avoir à scroller horizontalement sur petit écran ── */
+  #bdc-recap-bar > div[onclick] {
+    flex-wrap: wrap;
+    gap: 4px;
+    white-space: normal;
+  }
+  #bdc-recap-items { display: none; } /* la liste de tags est redondante avec le panier déplié, on l'enlève sur mobile pour gagner de la place */
+  #bdc-recap-total { margin-left: 0 !important; }
+  #bdc-recap-chevron { margin-left: auto !important; }
+  #bdc-recap-detail table { font-size: .72rem; }
+  #bdc-recap-detail th, #bdc-recap-detail td { padding: .35rem .4rem !important; }
 }
 
 @media (max-width: 480px) {
@@ -1293,11 +1306,29 @@ textarea { resize:vertical; min-height:80px; }
         <button class="btn btn-ghost" style="font-size:.72rem;padding:.3rem .7rem;border-color:var(--blue-p300);color:var(--blue-p700);" onclick="bdcOpenOutlook()">✉️ Outlook</button>
       </div>
     </div>
-    <!-- Bandeau articles saisis (sticky) -->
-    <div id="bdc-recap-bar" style="display:none;background:var(--blue-p800);border-bottom:2px solid var(--blue-p600);padding:.4rem .8rem;overflow-x:auto;white-space:nowrap;flex-shrink:0;">
-      <span style="font-size:.65rem;font-weight:700;color:#93c5fd;text-transform:uppercase;letter-spacing:.08em;margin-right:.6rem;">📋 En cours :</span>
-      <span id="bdc-recap-items" style="font-size:.72rem;color:#e2e8f0;"></span>
-      <span id="bdc-recap-total" style="font-size:.75rem;font-weight:700;color:#4ade80;margin-left:1rem;"></span>
+    <!-- Bandeau articles saisis (sticky) — cliquable pour ouvrir le détail éditable -->
+    <div id="bdc-recap-bar" style="display:none;background:var(--blue-p800);border-bottom:2px solid var(--blue-p600);flex-shrink:0;">
+      <div onclick="bdcToggleRecapDetail()" style="cursor:pointer;padding:.4rem .8rem;overflow-x:auto;white-space:nowrap;display:flex;align-items:center;">
+        <span style="font-size:.65rem;font-weight:700;color:#93c5fd;text-transform:uppercase;letter-spacing:.08em;margin-right:.6rem;flex-shrink:0;">📋 Ma commande :</span>
+        <span id="bdc-recap-items" style="font-size:.72rem;color:#e2e8f0;"></span>
+        <span id="bdc-recap-total" style="font-size:.75rem;font-weight:700;color:#4ade80;margin-left:1rem;flex-shrink:0;"></span>
+        <span id="bdc-recap-chevron" style="margin-left:.6rem;color:#93c5fd;font-size:.7rem;flex-shrink:0;">▾ Voir / modifier</span>
+      </div>
+      <div id="bdc-recap-detail" class="hidden" style="background:var(--surface);border-top:1px solid rgba(255,255,255,.08);max-height:38vh;overflow-y:auto;">
+        <table style="width:100%;border-collapse:collapse;font-size:.76rem;">
+          <thead style="position:sticky;top:0;z-index:1;background:var(--blue-p900);">
+            <tr>
+              <th style="padding:.4rem .6rem;text-align:left;font-weight:600;color:#bfdbfe;">Produit</th>
+              <th style="padding:.4rem .6rem;text-align:right;font-weight:600;color:#bfdbfe;white-space:nowrap;">Prix net</th>
+              <th style="padding:.4rem .6rem;text-align:center;font-weight:600;color:#bfdbfe;white-space:nowrap;">Quantité</th>
+              <th style="padding:.4rem .6rem;text-align:center;font-weight:600;color:#bfdbfe;white-space:nowrap;">Remise %</th>
+              <th style="padding:.4rem .6rem;text-align:right;font-weight:600;color:#bfdbfe;white-space:nowrap;">Total HT</th>
+              <th style="padding:.4rem .6rem;text-align:center;font-weight:600;color:#bfdbfe;"></th>
+            </tr>
+          </thead>
+          <tbody id="bdc-recap-tbody"></tbody>
+        </table>
+      </div>
     </div>
     <div style="display:flex;flex:1;overflow:hidden;">
       <!-- Sidebar BDC -->
@@ -3877,12 +3908,90 @@ function bdcUpdateRecapBar() {
 
   if (lines.length === 0) {
     bar.style.display = 'none';
+    document.getElementById('bdc-recap-detail').classList.add('hidden');
     return;
   }
 
   bar.style.display = 'block';
   items.innerHTML = lines.join('');
-  totalEl.textContent = '→ ' + bdcFmt(totalNet) + ' HT';
+  totalEl.textContent = '→ ' + bdcFmt(totalNet) + ' HT (' + lines.length + ' réf.)';
+
+  // Si le détail est déjà ouvert, on le rafraîchit en direct
+  var detail = document.getElementById('bdc-recap-detail');
+  if (detail && !detail.classList.contains('hidden')) bdcRenderRecapDetail();
+}
+
+function bdcToggleRecapDetail() {
+  var detail = document.getElementById('bdc-recap-detail');
+  var chevron = document.getElementById('bdc-recap-chevron');
+  if (!detail) return;
+  var willOpen = detail.classList.contains('hidden');
+  detail.classList.toggle('hidden');
+  if (chevron) chevron.textContent = willOpen ? '▴ Fermer' : '▾ Voir / modifier';
+  if (willOpen) bdcRenderRecapDetail();
+}
+
+function bdcRenderRecapDetail() {
+  var tbody = document.getElementById('bdc-recap-tbody');
+  if (!tbody) return;
+
+  var rows = '';
+  PRODUCTS.forEach(function(p) {
+    var qty = bdcQtys[p.code] || 0;
+    if (qty <= 0) return;
+    var pcb = parseFloat(p.pcb) || 1;
+    var pNet = bdcPrixNet(p);
+    var total = pNet * qty * pcb;
+    var dCode = bdcEsc(p.code);
+    var rl = (typeof bdcRemiseLigne !== 'undefined' && bdcRemiseLigne[p.code] !== undefined) ? bdcRemiseLigne[p.code] : '';
+
+    rows += '<tr data-code="'+dCode+'" style="border-bottom:1px solid var(--border);">';
+    rows += '<td style="padding:.4rem .6rem;color:var(--g800);max-width:240px;">'+bdcEsc(p.libelle)+'<div style="font-size:.62rem;color:var(--g500);font-family:monospace;">'+dCode+'</div></td>';
+    rows += '<td style="padding:.4rem .6rem;text-align:right;white-space:nowrap;color:var(--g700);">'+bdcFmt(pNet)+'</td>';
+    rows += '<td class="bdc-td-qty" style="padding:.3rem .5rem;">' +
+      '<div style="display:flex;align-items:center;gap:3px;justify-content:center;">' +
+        '<button onclick="bdcStepQty(\''+dCode+'\','+pcb+',-1)" style="width:24px;height:24px;border-radius:5px;border:1px solid var(--border-med);background:var(--surface2);cursor:pointer;font-size:14px;line-height:1;display:flex;align-items:center;justify-content:center;color:var(--g700);flex-shrink:0;" tabindex="-1">−</button>' +
+        '<input type="number" min="0" step="1" value="'+qty+'" data-code-recap="'+dCode+'" oninput="bdcRecapOnQty(this)" onchange="bdcRecapOnQty(this)" style="width:42px;">' +
+        '<button onclick="bdcStepQty(\''+dCode+'\','+pcb+',1)" style="width:24px;height:24px;border-radius:5px;border:1px solid var(--border-med);background:var(--surface2);cursor:pointer;font-size:14px;line-height:1;display:flex;align-items:center;justify-content:center;color:var(--g700);flex-shrink:0;" tabindex="-1">+</button>' +
+      '</div>' +
+    '</td>';
+    rows += '<td style="padding:.3rem .5rem;text-align:center;"><input type="number" min="0" max="100" step="0.5" value="'+rl+'" placeholder="—" data-code-recap="'+dCode+'" oninput="bdcRecapOnRemise(this)" onchange="bdcRecapOnRemise(this)" style="width:55px;padding:.3rem .35rem;text-align:right;font-size:.78rem;" title="Remise % sur cette ligne"></td>';
+    rows += '<td id="bdcr-t-'+dCode+'" style="padding:.4rem .6rem;text-align:right;font-weight:600;color:var(--em400);white-space:nowrap;">'+bdcFmt(total)+'</td>';
+    rows += '<td style="padding:.4rem .6rem;text-align:center;"><button onclick="bdcRecapRemoveLine(\''+dCode+'\')" title="Retirer cette ligne" style="width:24px;height:24px;border-radius:5px;border:1px solid rgba(220,38,38,.3);background:rgba(220,38,38,.08);color:#dc2626;cursor:pointer;font-size:13px;line-height:1;">✕</button></td>';
+    rows += '</tr>';
+  });
+
+  if (!rows) rows = '<tr><td colspan="6" style="padding:1.2rem;text-align:center;color:var(--g500);">Aucune ligne dans la commande</td></tr>';
+  tbody.innerHTML = rows;
+}
+
+// Les inputs du panier détaillé pilotent les mêmes données (bdcQtys/bdcRemiseLigne)
+// que le tableau catalogue principal, puis synchronisent les deux vues + les totaux.
+function bdcRecapOnQty(input) {
+  var code = input.dataset.codeRecap;
+  var val = parseInt(input.value) || 0;
+  if (val > 0) bdcQtys[code] = val; else delete bdcQtys[code];
+  buildTable();          // resynchronise le tableau catalogue (qté, surlignage, total ligne)
+  bdcRenderRecapDetail(); // resynchronise le panier (peut faire disparaître la ligne si val=0)
+  bdcUpdateTotals();
+}
+
+function bdcRecapOnRemise(input) {
+  var code = input.dataset.codeRecap;
+  var val = input.value.trim();
+  if (val === '' || isNaN(parseFloat(val))) { delete bdcRemiseLigne[code]; }
+  else { var v = parseFloat(val); if (v<0) v=0; if (v>100) v=100; bdcRemiseLigne[code] = v; }
+  buildTable();
+  bdcRenderRecapDetail();
+  bdcUpdateTotals();
+}
+
+function bdcRecapRemoveLine(code) {
+  delete bdcQtys[code];
+  delete bdcRemiseLigne[code];
+  buildTable();
+  bdcRenderRecapDetail();
+  bdcUpdateTotals();
 }
 
 function buildTable() {
