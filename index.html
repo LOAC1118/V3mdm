@@ -7470,6 +7470,14 @@ function cdbBuildCATab(c) {
   html +=   '</div>';
   html += '</div>';
 
+  // ── Graphique CA par mois, comparé année par année ──────────────────────
+  // (toutes les années présentes dans les commandes de ce client, pas seulement N/N-1)
+  var yearsPresent = Object.keys(byYearMonth).map(Number).filter(Boolean).sort();
+  html += '<div style="font-size:.72rem;font-weight:700;color:var(--g700);margin-bottom:.5rem;">📊 Évolution du CA mois par mois</div>';
+  html += '<div style="background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:.8rem;margin-bottom:1.1rem;height:240px;">';
+  html += '<canvas id="cdb-ca-client-chart"></canvas>';
+  html += '</div>';
+
   // ── Tableau mois par mois avec évolution ────────────────────────────────
   html += '<div style="font-size:.72rem;font-weight:700;color:var(--g700);margin-bottom:.4rem;">Évolution mois par mois — '+NOW_YEAR+' vs '+PREV_YEAR+'</div>';
   html += '<div style="overflow-x:auto;"><table style="width:100%;border-collapse:collapse;font-size:.76rem;">';
@@ -7548,6 +7556,53 @@ function cdbBuildCATab(c) {
   }
 
   el.innerHTML = html;
+
+  // Dessiner le graphique d'évolution mensuelle (par-dessus le HTML qu'on vient d'injecter)
+  cdbDrawClientChart(byYearMonth, yearsPresent, moisNoms);
+}
+
+var cdbClientChart = null;
+function cdbDrawClientChart(byYearMonth, yearsPresent, moisNoms) {
+  var ctx = document.getElementById('cdb-ca-client-chart');
+  if (!ctx) return;
+
+  function draw() {
+    if (cdbClientChart) { cdbClientChart.destroy(); cdbClientChart = null; }
+    var canvasEl = document.getElementById('cdb-ca-client-chart');
+    if (!canvasEl) return;
+
+    var labels = moisNoms.slice(1); // Jan…Déc
+    // Une couleur par année (la plus récente en avant, ordre croissant pour la légende)
+    var palette = ['#f59e0b', '#60a5e8', '#2563b0', '#7c3aed', '#059669'];
+    var datasets = yearsPresent.map(function(y, idx) {
+      var data = [];
+      for (var mi = 1; mi <= 12; mi++) {
+        var mk = y + '-' + String(mi).padStart(2, '0');
+        var entry = byYearMonth[y] && byYearMonth[y][mk];
+        data.push(entry ? Math.round(entry.ca) : 0);
+      }
+      var color = palette[idx % palette.length];
+      return { label: String(y), data: data, backgroundColor: color, borderRadius: 3, maxBarThickness: 26 };
+    });
+
+    cdbClientChart = new Chart(canvasEl, {
+      type: 'bar',
+      data: { labels: labels, datasets: datasets },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: {
+          legend: { position: 'bottom', labels: { font: { size: 10 }, boxWidth: 12 } },
+          tooltip: { callbacks: { label: function(c){ return c.dataset.label + ' : ' + c.parsed.y.toLocaleString('fr-FR') + ' €'; } } }
+        },
+        scales: {
+          y: { ticks: { callback: function(v){ return (v/1000).toFixed(0)+'k €'; } } },
+          x: { ticks: { font: { size: 10 } } }
+        }
+      }
+    });
+  }
+
+  if (typeof Chart === 'undefined') { withChartJs(draw); } else { draw(); }
 }
 
 // ═══ MENU CONTEXTUEL ACTIONS ═══
