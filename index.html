@@ -1320,6 +1320,7 @@ textarea { resize:vertical; min-height:80px; }
             <tr>
               <th style="padding:.4rem .6rem;text-align:left;font-weight:600;color:#bfdbfe;">Produit</th>
               <th style="padding:.4rem .6rem;text-align:right;font-weight:600;color:#bfdbfe;white-space:nowrap;">Prix net</th>
+              <th style="padding:.4rem .6rem;text-align:center;font-weight:600;color:#bfdbfe;white-space:nowrap;">Stock</th>
               <th style="padding:.4rem .6rem;text-align:center;font-weight:600;color:#bfdbfe;white-space:nowrap;">Quantité</th>
               <th style="padding:.4rem .6rem;text-align:center;font-weight:600;color:#bfdbfe;white-space:nowrap;">Remise %</th>
               <th style="padding:.4rem .6rem;text-align:right;font-weight:600;color:#bfdbfe;white-space:nowrap;">Total HT</th>
@@ -3918,6 +3919,7 @@ function bdcUpdateRecapBar() {
 
   var lines = [];
   var totalNet = 0;
+  var nbRuptures = 0;
   PRODUCTS.forEach(function(p) {
     var q = bdcQtys[p.code] || 0;
     if (q <= 0) return;
@@ -3925,10 +3927,14 @@ function bdcUpdateRecapBar() {
     var pNet = bdcPrixNet(p);
     var montant = pNet * q * pcb;
     totalNet += montant;
+    // Signale si le stock dispo (en colis) est inférieur à la quantité commandée
+    var stk = (bdcStockMap[p.code] !== undefined) ? bdcStockMap[p.code] : ((p.stock !== undefined && p.stock !== null) ? p.stock : null);
+    var manque = stk !== null && Math.floor(stk / pcb) < q;
+    if (manque) nbRuptures++;
     // Nom court : max 20 chars
     var nom = (p.libelle || p.code).substring(0, 22);
-    lines.push('<span style="display:inline-block;background:rgba(255,255,255,.12);border-radius:4px;padding:1px 7px;margin-right:4px;font-size:.7rem;">' +
-      '<strong>' + q + '</strong> × ' + nom + '</span>');
+    lines.push('<span style="display:inline-block;background:rgba(255,255,255,.12);border-radius:4px;padding:1px 7px;margin-right:4px;font-size:.7rem;' + (manque ? 'border:1px solid #f87171;' : '') + '">' +
+      '<strong>' + q + '</strong> × ' + nom + (manque ? ' ⚠️' : '') + '</span>');
   });
 
   if (lines.length === 0) {
@@ -3940,6 +3946,10 @@ function bdcUpdateRecapBar() {
   bar.style.display = 'block';
   items.innerHTML = lines.join('');
   totalEl.textContent = '→ ' + bdcFmt(totalNet) + ' HT (' + lines.length + ' réf.)';
+  totalEl.style.color = nbRuptures > 0 ? '#fca5a5' : '#4ade80';
+  if (nbRuptures > 0) {
+    totalEl.textContent += '  ⚠️ ' + nbRuptures + ' réf. en stock insuffisant';
+  }
 
   // Si le détail est déjà ouvert, on le rafraîchit en direct
   var detail = document.getElementById('bdc-recap-detail');
@@ -3973,6 +3983,7 @@ function bdcRenderRecapDetail() {
     rows += '<tr data-code="'+dCode+'" style="border-bottom:1px solid var(--border);">';
     rows += '<td style="padding:.4rem .6rem;color:var(--g800);max-width:240px;">'+bdcEsc(p.libelle)+'<div style="font-size:.62rem;color:var(--g500);font-family:monospace;">'+dCode+'</div></td>';
     rows += '<td style="padding:.4rem .6rem;text-align:right;white-space:nowrap;color:var(--g700);">'+bdcFmt(pNet)+'</td>';
+    rows += '<td style="padding:.3rem .45rem;text-align:center;">'+bdcStockBadgeHtml(p, true)+'</td>';
     rows += '<td class="bdc-td-qty" style="padding:.3rem .5rem;">' +
       '<div style="display:flex;align-items:center;gap:3px;justify-content:center;">' +
         '<button onclick="bdcStepQty(\''+dCode+'\','+pcb+',-1)" style="width:24px;height:24px;border-radius:5px;border:1px solid var(--border-med);background:var(--surface2);cursor:pointer;font-size:14px;line-height:1;display:flex;align-items:center;justify-content:center;color:var(--g700);flex-shrink:0;" tabindex="-1">−</button>' +
@@ -3986,7 +3997,7 @@ function bdcRenderRecapDetail() {
     rows += '</tr>';
   });
 
-  if (!rows) rows = '<tr><td colspan="6" style="padding:1.2rem;text-align:center;color:var(--g500);">Aucune ligne dans la commande</td></tr>';
+  if (!rows) rows = '<tr><td colspan="7" style="padding:1.2rem;text-align:center;color:var(--g500);">Aucune ligne dans la commande</td></tr>';
   tbody.innerHTML = rows;
 }
 
@@ -4019,6 +4030,48 @@ function bdcRecapRemoveLine(code) {
   bdcUpdateTotals();
 }
 
+// Badge stock réutilisable (catalogue = fond sombre, panier "Ma commande" = fond clair).
+// Centralise les seuils colis critique/faible/correct/abondant pour que les deux
+// vues restent toujours cohérentes l'une avec l'autre.
+function bdcStockBadgeHtml(p, light) {
+  var stk = (bdcStockMap[p.code] !== undefined) ? bdcStockMap[p.code] : ((p.stock !== undefined && p.stock !== null) ? p.stock : null);
+  var pcbStk = parseFloat(p.pcb) || 1;
+
+  if (stk === null) {
+    return light
+      ? '<span style="display:inline-block;padding:1px 6px;border-radius:10px;font-size:.65rem;background:var(--surface2);color:var(--g500);">—</span>'
+      : '<span style="display:inline-block;padding:1px 6px;border-radius:10px;font-size:.65rem;background:rgba(255,255,255,.07);color:var(--s600);">—</span>';
+  }
+  if (stk <= 0) {
+    return light
+      ? '<span style="display:inline-block;padding:2px 6px;border-radius:10px;font-size:.65rem;font-weight:700;background:#fee2e2;color:#991b1b;border:1px solid #fca5a5;">⛔ Rupture</span>'
+      : '<span style="display:inline-block;padding:2px 6px;border-radius:10px;font-size:.65rem;font-weight:600;background:#450a0a;color:#fca5a5;border:1px solid #7f1d1d;">⛔ Rupture</span>';
+  }
+
+  var stkColis = Math.floor(stk / pcbStk);
+  var label = stkColis + ' col.';
+  var titleAttr = ' title="'+stk+' UVC = '+stkColis+' colis"';
+
+  if (stkColis <= 2) {
+    return light
+      ? '<span'+titleAttr+' style="display:inline-block;padding:2px 6px;border-radius:10px;font-size:.65rem;font-weight:700;background:#ffedd5;color:#9a3412;border:1px solid #fdba74;">🔴 '+label+'</span>'
+      : '<span'+titleAttr+' style="display:inline-block;padding:2px 6px;border-radius:10px;font-size:.65rem;font-weight:700;background:#431407;color:#fb923c;border:1px solid #9a3412;">🔴 '+label+'</span>';
+  }
+  if (stkColis <= 5) {
+    return light
+      ? '<span'+titleAttr+' style="display:inline-block;padding:2px 6px;border-radius:10px;font-size:.65rem;font-weight:700;background:#fef3c7;color:#92400e;border:1px solid #fcd34d;">🟡 '+label+'</span>'
+      : '<span'+titleAttr+' style="display:inline-block;padding:2px 6px;border-radius:10px;font-size:.65rem;font-weight:700;background:#422006;color:#fcd34d;border:1px solid #92400e;">🟡 '+label+'</span>';
+  }
+  if (stkColis <= 20) {
+    return light
+      ? '<span'+titleAttr+' style="display:inline-block;padding:2px 6px;border-radius:10px;font-size:.65rem;font-weight:600;background:#dcfce7;color:#166534;border:1px solid #86efac;">🟢 '+label+'</span>'
+      : '<span'+titleAttr+' style="display:inline-block;padding:2px 6px;border-radius:10px;font-size:.65rem;font-weight:600;background:#052e16;color:#86efac;border:1px solid #166534;">🟢 '+label+'</span>';
+  }
+  return light
+    ? '<span'+titleAttr+' style="display:inline-block;padding:2px 6px;border-radius:10px;font-size:.65rem;font-weight:600;background:#dbeafe;color:#1e40af;border:1px solid #93c5fd;">✅ '+label+'</span>'
+    : '<span'+titleAttr+' style="display:inline-block;padding:2px 6px;border-radius:10px;font-size:.65rem;font-weight:600;background:#042c53;color:#93c5fd;border:1px solid #1e40af;">✅ '+label+'</span>';
+}
+
 function buildTable() {
   var rows = '';
   for (var i = 0; i < PRODUCTS.length; i++) {
@@ -4045,31 +4098,7 @@ function buildTable() {
     if (pNet < p.pu_ht) prixCell = '<strong style="color:var(--em400)">'+bdcFmt(pNet)+'</strong> <span style="text-decoration:line-through;color:var(--s700);font-size:10px;">'+bdcFmt(p.pu_ht)+'</span>';
     rows += '<td style="padding:.4rem .55rem;white-space:nowrap;font-weight:500;color:var(--s100);">'+prixCell+'</td>';
     // Stock — code couleur
-    var stk = (bdcStockMap[p.code] !== undefined) ? bdcStockMap[p.code] : ((p.stock !== undefined && p.stock !== null) ? p.stock : null);
-    var pcbStk = parseFloat(p.pcb) || 1;
-    var stkH;
-    if (stk === null) {
-      // Stock inconnu
-      stkH = '<span style="display:inline-block;padding:1px 6px;border-radius:10px;font-size:.65rem;background:rgba(255,255,255,.07);color:var(--s600);">—</span>';
-    } else if (stk <= 0) {
-      // Rupture
-      stkH = '<span style="display:inline-block;padding:2px 6px;border-radius:10px;font-size:.65rem;font-weight:600;background:#450a0a;color:#fca5a5;border:1px solid #7f1d1d;">⛔ Rupture</span>';
-    } else {
-      var stkColis = Math.floor(stk / pcbStk);
-      if (stkColis <= 2) {
-        // Stock critique (1-2 colis)
-        stkH = '<span style="display:inline-block;padding:2px 6px;border-radius:10px;font-size:.65rem;font-weight:700;background:#431407;color:#fb923c;border:1px solid #9a3412;" title="'+stk+' UVC = '+stkColis+' colis">🔴 '+stkColis+' col.</span>';
-      } else if (stkColis <= 5) {
-        // Stock faible (3-5 colis)
-        stkH = '<span style="display:inline-block;padding:2px 6px;border-radius:10px;font-size:.65rem;font-weight:700;background:#422006;color:#fcd34d;border:1px solid #92400e;" title="'+stk+' UVC = '+stkColis+' colis">🟡 '+stkColis+' col.</span>';
-      } else if (stkColis <= 20) {
-        // Stock correct
-        stkH = '<span style="display:inline-block;padding:2px 6px;border-radius:10px;font-size:.65rem;font-weight:600;background:#052e16;color:#86efac;border:1px solid #166534;" title="'+stk+' UVC = '+stkColis+' colis">🟢 '+stkColis+' col.</span>';
-      } else {
-        // Stock abondant
-        stkH = '<span style="display:inline-block;padding:2px 6px;border-radius:10px;font-size:.65rem;font-weight:600;background:#042c53;color:#93c5fd;border:1px solid #1e40af;" title="'+stk+' UVC = '+stkColis+' colis">✅ '+stkColis+' col.</span>';
-      }
-    }
+    var stkH = bdcStockBadgeHtml(p, false);
     rows += '<td style="padding:.3rem .45rem;text-align:center;">'+stkH+'</td>';
     // Qty
     rows += '<td class="bdc-td-qty" style="padding:.25rem .45rem;">' +
