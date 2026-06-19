@@ -2055,24 +2055,25 @@ textarea { resize:vertical; min-height:80px; }
 // ══════════════════════════════════════════════════════════════════════════
 var _lazyLoaded = {};
 
-function lazyLoad(urls, callback) {
+function lazyLoad(urls, callback, onError) {
   if (typeof urls === 'string') urls = [urls];
   var toLoad = urls.filter(function(u) { return !_lazyLoaded[u]; });
   if (toLoad.length === 0) { if (callback) callback(); return; }
 
-  var loaded = 0;
+  var loaded = 0, failed = false;
   toLoad.forEach(function(url) {
     var s = document.createElement('script');
     s.src = url;
     s.onload = function() {
       _lazyLoaded[url] = true;
       loaded++;
-      if (loaded === toLoad.length && callback) callback();
+      if (loaded === toLoad.length) { if (failed) { if (onError) onError(); } else if (callback) callback(); }
     };
     s.onerror = function() {
       console.error('[LazyLoad] Echec chargement:', url);
+      failed = true;
       loaded++;
-      if (loaded === toLoad.length && callback) callback();
+      if (loaded === toLoad.length) { if (onError) onError(); else if (callback) callback(); }
     };
     document.head.appendChild(s);
   });
@@ -2081,6 +2082,11 @@ function lazyLoad(urls, callback) {
 // URLs des libs
 var LIB_XLSX    = 'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js';
 var LIB_PDFJS   = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js';
+var LIB_PDFJS_WORKER = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+// Fallback si cdnjs.cloudflare.com est bloqué (pare-feu/proxy d'entreprise) :
+// on retente sur un CDN différent avant d'abandonner.
+var LIB_PDFJS_FALLBACK   = 'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/legacy/build/pdf.min.js';
+var LIB_PDFJS_WORKER_FALLBACK = 'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/legacy/build/pdf.worker.min.js';
 var LIB_CHARTJS = 'https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js';
 var LIB_JSPDF   = 'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js';
 var LIB_JSPDF_AT= 'https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.0/jspdf.plugin.autotable.min.js';
@@ -2251,12 +2257,31 @@ function withXLSX(fn) {
   });
 }
 
-function withPdfJs(fn) {
+function withPdfJs(fn, onError) {
   if (typeof pdfjsLib !== 'undefined') { fn(); return; }
   lazyLoad(LIB_PDFJS, function() {
-    console.log('[LazyLoad] pdf.js chargé');
-    if (typeof pdfjsLib !== 'undefined') pdfjsLib.GlobalWorkerOptions.workerSrc = LIB_PDFJS;
-    fn();
+    console.log('[LazyLoad] pdf.js chargé (cdnjs)');
+    if (typeof pdfjsLib !== 'undefined') {
+      pdfjsLib.GlobalWorkerOptions.workerSrc = LIB_PDFJS_WORKER;
+      fn();
+    } else if (onError) {
+      onError();
+    }
+  }, function() {
+    // cdnjs a échoué : on retente une fois sur jsdelivr avant d'abandonner
+    console.warn('[LazyLoad] cdnjs inaccessible, tentative sur jsdelivr…');
+    lazyLoad(LIB_PDFJS_FALLBACK, function() {
+      console.log('[LazyLoad] pdf.js chargé (jsdelivr, fallback)');
+      if (typeof pdfjsLib !== 'undefined') {
+        pdfjsLib.GlobalWorkerOptions.workerSrc = LIB_PDFJS_WORKER_FALLBACK;
+        fn();
+      } else if (onError) {
+        onError();
+      }
+    }, function() {
+      console.error('[LazyLoad] jsdelivr également inaccessible.');
+      if (onError) onError();
+    });
   });
 }
 
@@ -4832,6 +4857,8 @@ function applyStockImport() {
       </div>
     </div>
 
+    <div id="pdf-import-error" style="display:none;margin-top:.8rem;background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.25);border-radius:8px;padding:.7rem .9rem;font-size:.78rem;color:#fca5a5;line-height:1.5;"></div>
+
     <div id="pdf-import-result" style="display:none;margin-top:.9rem;">
       <div id="pdf-import-summary" style="display:flex;gap:8px;margin-bottom:.7rem;"></div>
       <div id="pdf-raw-preview" style="background:rgba(15,23,42,.6);border:1px solid var(--border);border-radius:7px;padding:.6rem .8rem;font-size:.68rem;color:var(--s500);font-family:monospace;max-height:80px;overflow:auto;margin-bottom:.6rem;white-space:pre-wrap;" id="pdf-text-preview"></div>
@@ -4862,6 +4889,7 @@ function openPdfImport() {
   document.getElementById('pdf-import-result').style.display = 'none';
   document.getElementById('pdf-import-foot').style.display = 'none';
   document.getElementById('pdf-progress').style.display = 'none';
+  pdfHideError();
   pdfImportedQtys = {};
 }
 function closePdfImport() { document.getElementById('pdf-import-modal').classList.add('hidden'); }
@@ -4874,25 +4902,76 @@ function pdfImportDrop(e) {
   if (e.dataTransfer.files[0]) pdfImportFile(e.dataTransfer.files[0]);
 }
 
+function pdfShowError(msg) {
+  document.getElementById('pdf-progress').style.display = 'none';
+  var el = document.getElementById('pdf-import-error');
+  el.innerHTML = '⚠️ ' + msg;
+  el.style.display = 'block';
+}
+function pdfHideError() {
+  var el = document.getElementById('pdf-import-error');
+  if (el) el.style.display = 'none';
+}
+
+// Empêche un await de bloquer indéfiniment si la promesse sous-jacente
+// (page PDF corrompue, worker qui ne répond plus, etc.) ne se résout jamais.
+function pdfWithTimeout(promise, ms, label) {
+  return Promise.race([
+    promise,
+    new Promise(function(_, reject) {
+      setTimeout(function(){ reject(new Error('Délai dépassé (' + label + ')')); }, ms);
+    })
+  ]);
+}
+
 async function pdfImportFile(file) {
   if (!file) return;
   console.log('[PDF] Import:', file.name);
+  pdfHideError();
   if (typeof pdfjsLib === 'undefined') {
-    bdcShowAlert('Chargement pdf.js...', 'ok');
-    withPdfJs(function() { pdfImportFile(file); });
+    document.getElementById('pdf-progress').style.display = 'block';
+    document.getElementById('pdf-progress-label').textContent = 'Chargement du lecteur PDF…';
+    withPdfJs(
+      function() { pdfImportFile(file); },
+      function() {
+        // Les deux CDN (cdnjs et jsdelivr) ont échoué : on arrête de réessayer
+        // pour ne pas boucler indéfiniment, et on explique la cause probable
+        // plutôt que de laisser "Extraction du texte…" tourner sans jamais aboutir.
+        pdfShowError('Impossible de charger le lecteur PDF. Les serveurs nécessaires (cdnjs.cloudflare.com et cdn.jsdelivr.net) semblent inaccessibles depuis ce réseau. Causes probables : pare-feu ou antivirus d\'entreprise qui bloque ces sites, ou connexion instable. Essaie depuis un autre réseau (4G du téléphone par exemple), ou demande à ton informaticien d\'autoriser ces deux domaines.');
+      }
+    );
     return;
   }
   document.getElementById('pdf-progress').style.display = 'block';
+  document.getElementById('pdf-progress-label').textContent = 'Extraction du texte…';
   document.getElementById('pdf-import-result').style.display = 'none';
   document.getElementById('pdf-import-foot').style.display = 'none';
+
+  // Garde-fou global : si l'extraction n'a pas terminé après 20s (ex: CDN du
+  // worker pdf.js bloqué par un pare-feu/proxy, ou PDF avec une page qui ne
+  // répond jamais), on informe DANS LA MODALE plutôt que de bloquer
+  // indéfiniment et silencieusement sur "Extraction du texte…".
+  var pdfDone = false;
+  var pdfSafetyTimer = setTimeout(function() {
+    if (pdfDone) return;
+    pdfDone = true;
+    pdfShowError('L\'extraction prend trop de temps. Causes possibles : connexion lente/instable au moment du chargement du lecteur PDF, PDF protégé ou trop volumineux. Réessayez, ou si le souci persiste, vérifiez votre connexion puis rechargez la page (Ctrl+R) avant de réimporter.');
+  }, 20000);
+
   try {
     var arrayBuffer = await file.arrayBuffer();
-    var pdf = await pdfjsLib.getDocument({data: arrayBuffer}).promise;
+    var pdf = await pdfWithTimeout(pdfjsLib.getDocument({data: arrayBuffer}).promise, 12000, 'ouverture du PDF');
     var fullText = '';
     for (var p = 1; p <= pdf.numPages; p++) {
+      if (pdfDone) return; // le garde-fou global a déjà pris le relais
       document.getElementById('pdf-progress-bar').style.width = Math.round(p/pdf.numPages*100)+'%';
-      var page = await pdf.getPage(p);
-      var tc = await page.getTextContent();
+      try {
+        var page = await pdfWithTimeout(pdf.getPage(p), 8000, 'page ' + p);
+        var tc = await pdfWithTimeout(page.getTextContent(), 8000, 'texte page ' + p);
+      } catch (pageErr) {
+        console.warn('[PDF] Page', p, 'ignorée (', pageErr.message, ')');
+        continue; // on saute cette page plutôt que de tout bloquer
+      }
       var items = tc.items.filter(function(it){ return it.str && it.str.trim(); });
       items.sort(function(a,b){
         var dy = Math.round(b.transform[5]) - Math.round(a.transform[5]);
@@ -4928,13 +5007,22 @@ async function pdfImportFile(file) {
         if (words.length) fullText += words.join(' ') + '\n';
       });
     }
+    clearTimeout(pdfSafetyTimer);
+    if (pdfDone) return; // le message d'erreur a déjà été affiché, on n'écrase pas avec un succès tardif
+    pdfDone = true;
     console.log('[PDF] Texte:', fullText.substring(0, 200));
     document.getElementById('pdf-progress').style.display = 'none';
+    if (!fullText.trim()) {
+      pdfShowError('Aucun texte n\'a pu être extrait de ce PDF. Si c\'est un document scanné (image), l\'extraction automatique ne fonctionne pas — seuls les PDF "texte" sont supportés.');
+      return;
+    }
     parsePdfText(fullText);
   } catch(err) {
-    document.getElementById('pdf-progress').style.display = 'none';
+    clearTimeout(pdfSafetyTimer);
+    if (pdfDone) return;
+    pdfDone = true;
     console.error('[PDF] Erreur:', err);
-    bdcShowAlert('Erreur lecture PDF: ' + err.message, 'err');
+    pdfShowError('Erreur lecture PDF : ' + err.message);
   }
 }
 
