@@ -2343,6 +2343,62 @@ function initBrandSwitcherUI() {
   if (ico) ico.textContent = isNat ? '🌿' : '🌾';
   if (label) label.textContent = isNat ? 'Naturaline' : 'Moulin des Moines';
 }
+
+// ─── Migration automatique des données saisies avant l'ajout de NATURALINE ───
+// Avant ce changement, toutes les collections (clients, frais, commandes, ...)
+// n'avaient pas de suffixe de marque. On copie une seule fois ces anciennes
+// données vers "<collection>_mdm" (la marque historique), sans jamais écraser
+// quoi que ce soit si la cible contient déjà des documents.
+async function migrateLegacyCollectionsToMdm() {
+  if (localStorage.getItem('mdm_legacy_migration_done_v1') === '1') return;
+  var report = [];
+  try {
+    for (var i = 0; i < BRAND_SCOPED_COLLECTIONS.length; i++) {
+      var name = BRAND_SCOPED_COLLECTIONS[i];
+      try {
+        var targetSnap = await db.collection(name + '_mdm').limit(1).get();
+        if (!targetSnap.empty) continue; // déjà des données dans la cible, on ne touche à rien
+
+        var legacySnap = await db.collection(name).get();
+        if (legacySnap.empty) continue; // rien à migrer pour cette collection
+
+        var batch = db.batch();
+        var n = 0;
+        legacySnap.forEach(function(doc) {
+          batch.set(db.collection(name + '_mdm').doc(doc.id), doc.data());
+          n++;
+        });
+        await batch.commit();
+        report.push(name + ' (' + n + ')');
+      } catch (eCol) {
+        console.warn('[Migration] erreur sur', name, eCol);
+      }
+    }
+  } catch (e) {
+    console.warn('[Migration] erreur générale', e);
+  }
+  localStorage.setItem('mdm_legacy_migration_done_v1', '1');
+  if (report.length) {
+    console.log('[Migration] Données rapatriées vers MDM : ' + report.join(', '));
+    toast('Données existantes retrouvées : ' + report.join(', '));
+  }
+
+  // Cas particulier : l'ancien doc de commissions s'appelait "commissions_mdm"
+  // dans la collection "config" ; il faut aussi le dupliquer sous le nom "commissions"
+  // dans "config_mdm" (nouveau schéma : la marque est portée par la collection, pas le doc).
+  try {
+    var newCommDoc = await db.collection('config_mdm').doc('commissions').get();
+    if (!newCommDoc.exists) {
+      var oldCommDoc = await db.collection('config_mdm').doc('commissions_mdm').get();
+      if (oldCommDoc.exists) {
+        await db.collection('config_mdm').doc('commissions').set(oldCommDoc.data());
+        console.log('[Migration] Config commissions rapatriée');
+      }
+    }
+  } catch (eComm) {
+    console.warn('[Migration] erreur commissions', eComm);
+  }
+}
 let cache = { prospects:[], clients:[], commandes:[], frais:[], activite:[] };
 let listeners = [];
 
@@ -2459,6 +2515,8 @@ async function showApp() {
 
   // Préremplir commercial dans frais
   document.getElementById('f-commercial').value = nom;
+
+  await migrateLegacyCollectionsToMdm();
 
   startListeners();
 
