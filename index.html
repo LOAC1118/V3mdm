@@ -2235,7 +2235,7 @@ function bdcAddByEan(ean) {
   var p = PRODUCTS.find(function(x){ return String(x.ean||'').trim() === clean; });
   var foundEl = document.getElementById('bdc-scan-found');
   if (!p) {
-    bdcSetScanStatus('Code ' + clean + ' non reconnu dans le catalogue MDM.');
+    bdcSetScanStatus('Code ' + clean + ' non reconnu dans le catalogue ' + (CURRENT_BRAND === 'naturaline' ? 'NATURALINE' : 'MDM') + '.');
     foundEl.classList.add('hidden');
     if (navigator.vibrate) navigator.vibrate(120);
     return;
