@@ -4443,13 +4443,15 @@ function bdcOpenOutlook() {
   // Construire le corps en texte brut (même format que bdcBuildText)
   var body = bdcBuildText();
 
-  // Encoder pour mailto:
-  var mailto = 'mailto:commande@moulindesmoines.com'
-    + '?subject=' + encodeURIComponent(subject)
+  // Lien de composition directe dans Outlook Web (OWA) — au lieu de mailto:
+  // pour éviter que ça parte vers une autre appli/compte mail par défaut.
+  var owaUrl = 'https://mails.moulindesmoines.com/owa/?path=/mail/action/compose'
+    + '&to='      + encodeURIComponent('commande@moulindesmoines.com')
+    + '&subject=' + encodeURIComponent(subject)
     + '&body='    + encodeURIComponent(body);
 
-  // Ouvrir Outlook (ou le client mail par défaut)
-  window.location.href = mailto;
+  // Ouvrir dans un nouvel onglet (l'utilisateur doit déjà être connecté à OWA)
+  window.open(owaUrl, '_blank');
 }
 
 
