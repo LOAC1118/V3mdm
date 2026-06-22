@@ -3707,7 +3707,12 @@ var bdcRemise = 0;
 var bdcSearchMode = 'all';
 var bdcInitDone = false;
 var bdcImportedQtys = {};
+var BDC_STOCK_KEY = 'mdm_stock_map_v1'; // clé commune (même fichier de stock pour MDM et NATURALINE)
 var bdcStockMap = {}; // code -> stock disponible
+try {
+  var savedStockMap = localStorage.getItem(BDC_STOCK_KEY);
+  if (savedStockMap) bdcStockMap = JSON.parse(savedStockMap);
+} catch(e) { console.warn('[Stock] lecture cache impossible', e); }
 
 function bdcActivate() {
   const sec = document.getElementById('sec-bdc');
@@ -4870,8 +4875,10 @@ function stockParseCSV(text) {
   if (stockIdx < 0) { toast("Colonne 'Disponible' non trouvée",'err'); return; }
 
   // Construire index des codes produits pour matching rapide
+  // (les deux catalogues à la fois : le fichier de stock est commun à MDM et NATURALINE)
   var knownCodes = {};
-  PRODUCTS.forEach(function(p){ knownCodes[p.code.toUpperCase()] = true; });
+  PRODUCTS_MDM.forEach(function(p){ knownCodes[p.code.toUpperCase()] = true; });
+  PRODUCTS_NATURALINE.forEach(function(p){ knownCodes[p.code.toUpperCase()] = true; });
 
   pendingStockMap = {};
   var matched = 0, unknown = 0, rupture = 0, exemples = [];
@@ -4928,6 +4935,10 @@ function stockParseCSV(text) {
 function applyStockImport() {
   // Fusionner dans bdcStockMap
   Object.assign(bdcStockMap, pendingStockMap);
+
+  // Persister (clé commune aux deux marques, même fichier de stock)
+  try { localStorage.setItem(BDC_STOCK_KEY, JSON.stringify(bdcStockMap)); }
+  catch(e) { console.warn('[Stock] sauvegarde cache impossible', e); }
 
   // Mettre à jour le tableau en direct sans rebuild complet
   var updated = 0;
