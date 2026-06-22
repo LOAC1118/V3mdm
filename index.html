@@ -847,8 +847,17 @@ textarea { resize:vertical; min-height:80px; }
   #bdc-recap-detail th, #bdc-recap-detail td { padding: .35rem .4rem !important; }
 }
 
+@media (max-width: 768px) {
+  /* Switcher de marque compact sur mobile : icône seule, texte masqué */
+  #brand-switcher { margin-left: 6px !important; padding: 2px !important; }
+  #brand-btn-mdm, #brand-btn-naturaline { padding: 6px 8px !important; font-size: 0 !important; }
+  #brand-btn-mdm::before { content: '🌾'; font-size: 1rem; }
+  #brand-btn-naturaline::before { content: '🌿'; font-size: 1rem; }
+}
 @media (max-width: 480px) {
   .page-title { font-size: 1.1rem; }
+  /* Sur très petit écran, on masque aussi le nom de marque pour garder de la place */
+  .brand-name { display: none; }
 }
 </style>
 <!-- jsPDF chargé en lazy au besoin -->
@@ -922,12 +931,12 @@ textarea { resize:vertical; min-height:80px; }
   <div class="brand">
     <div class="brand-ico" id="brand-ico">🌾</div>
     <div><div class="brand-name" id="brand-name-label">Moulin des Moines</div><div class="brand-sub">CRM 2026</div></div>
+    <div id="brand-switcher" style="display:flex;align-items:center;background:rgba(255,255,255,.08);border-radius:10px;padding:3px;margin-left:12px;">
+      <button id="brand-btn-mdm" onclick="setCurrentBrand('mdm')" style="border:none;background:rgba(255,255,255,.18);color:#fff;font-size:.72rem;font-weight:600;padding:6px 10px;border-radius:7px;cursor:pointer;transition:background .15s;white-space:nowrap;">🌾 MDM</button>
+      <button id="brand-btn-naturaline" onclick="setCurrentBrand('naturaline')" style="border:none;background:transparent;color:#fff;opacity:.6;font-size:.72rem;font-weight:600;padding:6px 10px;border-radius:7px;cursor:pointer;transition:background .15s;white-space:nowrap;">🌿 NATURALINE</button>
+    </div>
   </div>
   <div class="topbar-center">
-    <div id="brand-switcher" style="display:flex;align-items:center;background:rgba(255,255,255,.08);border-radius:10px;padding:3px;margin-right:14px;">
-      <button id="brand-btn-mdm" onclick="setCurrentBrand('mdm')" style="border:none;background:rgba(255,255,255,.18);color:#fff;font-size:.78rem;font-weight:600;padding:6px 12px;border-radius:7px;cursor:pointer;transition:background .15s;">🌾 MDM</button>
-      <button id="brand-btn-naturaline" onclick="setCurrentBrand('naturaline')" style="border:none;background:transparent;color:#fff;opacity:.6;font-size:.78rem;font-weight:600;padding:6px 12px;border-radius:7px;cursor:pointer;transition:background .15s;">🌿 NATURALINE</button>
-    </div>
     <button class="t-tab active" onclick="showSection('dashboard',this)">Dashboard</button>
     <button class="t-tab" onclick="showSection('bdc',this)">Bon de Commande</button>
     <button class="t-tab" onclick="showSection('frais',this)">Frais</button>
