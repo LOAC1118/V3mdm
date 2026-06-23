@@ -4622,15 +4622,51 @@ function bdcOpenOutlook() {
   // Construire le corps en texte brut (même format que bdcBuildText)
   var body = bdcBuildText();
 
-  // Lien de composition directe dans Outlook Web (OWA) — au lieu de mailto:
-  // pour éviter que ça parte vers une autre appli/compte mail par défaut.
+  // L'URL OWA ne contient QUE to+subject (toujours courts) — le corps, qui peut
+  // être très long pour les grosses commandes, est copié dans le presse-papiers
+  // séparément pour éviter de dépasser la limite de longueur d'URL des serveurs.
   var owaUrl = 'https://mails.moulindesmoines.com/owa/?path=/mail/action/compose'
     + '&to='      + encodeURIComponent('commande@moulindesmoines.com')
-    + '&subject=' + encodeURIComponent(subject)
-    + '&body='    + encodeURIComponent(body);
+    + '&subject=' + encodeURIComponent(subject);
 
-  // Ouvrir dans un nouvel onglet (l'utilisateur doit déjà être connecté à OWA)
-  window.open(owaUrl, '_blank');
+  function openOwa() {
+    window.open(owaUrl, '_blank');
+  }
+
+  function copyFallback() {
+    try {
+      var ta = document.createElement('textarea');
+      ta.value = body;
+      ta.style.position = 'fixed';
+      ta.style.opacity = '0';
+      document.body.appendChild(ta);
+      ta.focus(); ta.select();
+      document.execCommand('copy');
+      document.body.removeChild(ta);
+      return true;
+    } catch(e) { return false; }
+  }
+
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(body).then(function() {
+      bdcShowAlert('📋 Commande copiée — collez-la (Ctrl+V) dans le mail qui s\'ouvre.', 'ok');
+      openOwa();
+    }).catch(function() {
+      if (copyFallback()) {
+        bdcShowAlert('📋 Commande copiée — collez-la (Ctrl+V) dans le mail qui s\'ouvre.', 'ok');
+      } else {
+        bdcShowAlert('⚠️ Copie automatique impossible — pensez à copier le BDC manuellement.', 'err');
+      }
+      openOwa();
+    });
+  } else {
+    if (copyFallback()) {
+      bdcShowAlert('📋 Commande copiée — collez-la (Ctrl+V) dans le mail qui s\'ouvre.', 'ok');
+    } else {
+      bdcShowAlert('⚠️ Copie automatique impossible — pensez à copier le BDC manuellement.', 'err');
+    }
+    openOwa();
+  }
 }
 
 
@@ -4662,7 +4698,10 @@ function bdcSendOrder() {
   var payload={
     _subject:'Bon de commande MDM 2026 — '+mag+' — '+today,
     _captcha:'false', magasin:mag, email:mail,
-    message:bdcBuildHtml()
+    // Web3Forms liste chaque champ comme texte brut dans son propre template
+    // (il ne permet pas d'injecter du HTML personnalisé comme corps du mail) :
+    // on envoie donc la version texte, structurée et lisible, plutôt que le HTML.
+    commande:bdcBuildText()
   };
   if(mail.toLowerCase()!=='cspoto@moulindesmoines.com') payload._replyto=mail;
 
