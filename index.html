@@ -1496,7 +1496,11 @@ textarea { resize:vertical; min-height:80px; }
           </select>
         </div>
         <div><label class="lb">HT (€)</label><input type="number" step="0.01" min="0" id="nfd-new-ht" oninput="nfdComputeTTC()" placeholder="0,00"/></div>
-        <div><label class="lb">TVA (€)</label><input type="number" step="0.01" min="0" id="nfd-new-tva" oninput="nfdComputeTTC()" placeholder="0,00"/></div>
+        <div><label class="lb">TVA (€)</label><input type="number" step="0.01" min="0" id="nfd-new-tva" oninput="nfdComputeTTC()" placeholder="0,00"/>
+          <select id="nfd-new-tva-taux" style="margin-top:4px;font-size:.7rem;padding:2px 4px;width:100%;color:var(--g500);">
+            <option value="20">20%</option><option value="10">10%</option><option value="5.5">5,5%</option>
+          </select>
+        </div>
         <div><label class="lb">TTC (€)</label><input type="number" step="0.01" id="nfd-new-ttc" placeholder="auto" readonly style="background:var(--g100);"/></div>
         <div><label class="lb">Description</label><input type="text" id="nfd-new-desc" placeholder="Ex: Total Bourges → Lyon"/></div>
         <div><button class="btn btn-primary" onclick="nfdAddLine()" style="white-space:nowrap;">➕ Ajouter</button></div>
@@ -2076,6 +2080,7 @@ textarea { resize:vertical; min-height:80px; }
     <div class="form-row"><label>Client visité</label><select id="f-client-visite"><option value="">— Aucun —</option></select></div>
     <div class="form-row"><label>Motif *</label><input type="text" id="f-motif" placeholder="Visite Biocoop Lyon, démo produits…"></div>
     <div class="form-row-2"><div><label>Montant total (€) *</label><input type="number" id="f-montant" min="0" step="0.01" placeholder="0.00"></div><div><label>Justificatif</label><select id="f-justif"><option>Ticket / facture</option><option>Relevé bancaire</option><option>Note de frais papier</option><option>Aucun justificatif</option></select></div></div>
+    <div class="form-row-2"><div><label>TVA</label><select id="f-tva"><option value="20">20%</option><option value="10">10%</option><option value="5.5">5,5%</option></select></div><div></div></div>
     <div class="form-row"><label>Notes</label><textarea id="f-notes" placeholder="Précisions…" style="min-height:60px;"></textarea></div>
   </div>
   <div class="modal-foot"><button class="btn btn-ghost" onclick="closeModal('frais')">Annuler</button><button class="btn btn-primary" onclick="saveFrais()">Enregistrer</button></div>
@@ -2931,6 +2936,7 @@ function nfdAddLine() {
   var cat = document.getElementById('nfd-new-cat').value;
   var ht = parseFloat(document.getElementById('nfd-new-ht').value) || 0;
   var tva = parseFloat(document.getElementById('nfd-new-tva').value) || 0;
+  var tauxTva = document.getElementById('nfd-new-tva-taux').value;
   var ttc = parseFloat(document.getElementById('nfd-new-ttc').value) || (ht + tva);
   var desc = document.getElementById('nfd-new-desc').value.trim();
 
@@ -2943,6 +2949,7 @@ function nfdAddLine() {
     categorie: cat,
     ht: Math.round(ht * 100) / 100,
     tva: Math.round(tva * 100) / 100,
+    tauxTva: tauxTva,
     ttc: Math.round(ttc * 100) / 100,
     description: desc,
     createdAt: Date.now()
@@ -3023,7 +3030,7 @@ function nfdRender() {
         '<td>' + nfdFmtDate(l.date) + '</td>' +
         '<td><span style="display:inline-block;padding:2px 8px;background:var(--blue-p100);color:var(--blue-p800);border-radius:10px;font-size:.7rem;font-weight:500;">' + nfdEsc(l.categorie) + '</span></td>' +
         '<td style="text-align:right;font-variant-numeric:tabular-nums;">' + nfdFmt(l.ht) + '</td>' +
-        '<td style="text-align:right;font-variant-numeric:tabular-nums;">' + nfdFmt(l.tva) + '</td>' +
+        '<td style="text-align:right;font-variant-numeric:tabular-nums;">' + nfdFmt(l.tva) + (l.tauxTva ? ' <span style="font-size:.68rem;color:var(--g500);">(' + String(l.tauxTva).replace('.',',') + '%)</span>' : '') + '</td>' +
         '<td style="text-align:right;font-variant-numeric:tabular-nums;font-weight:600;">' + nfdFmt(l.ttc) + '</td>' +
         '<td style="font-size:.78rem;color:var(--g700);">' + nfdEsc(l.description) + '</td>' +
         '<td><button class="btn btn-ghost" onclick="nfdDeleteLine(\'' + l.id + '\')" style="font-size:.7rem;padding:.25rem .55rem;color:#dc2626;">🗑</button></td>' +
@@ -3104,11 +3111,11 @@ function nfdExportCSV() {
   var filtered = period.filtered;
   if (!filtered.length) { toast('Aucune ligne', 'err'); return; }
 
-  var header = 'Date,Catégorie,HT,TVA,TTC,Description';
+  var header = 'Date,Catégorie,HT,TVA,Taux TVA,TTC,Description';
   var lines = filtered.map(function(l) {
     var desc = String(l.description||'').replace(/"/g,'""');
     if (desc.indexOf(',') >= 0 || desc.indexOf('"') >= 0) desc = '"' + desc + '"';
-    return [l.date, l.categorie, (l.ht||0).toFixed(2), (l.tva||0).toFixed(2), (l.ttc||0).toFixed(2), desc].join(',');
+    return [l.date, l.categorie, (l.ht||0).toFixed(2), (l.tva||0).toFixed(2), (l.tauxTva ? String(l.tauxTva).replace('.',',') + '%' : ''), (l.ttc||0).toFixed(2), desc].join(',');
   });
   var csv = '\ufeff' + header + '\n' + lines.join('\n');
   var blob = new Blob([csv], { type:'text/csv;charset=utf-8' });
@@ -3560,6 +3567,9 @@ function toggleFraisFields() {
   document.getElementById('f-block-deplacement').classList.toggle('hidden',t!=='Déplacement');
   document.getElementById('f-block-repas').classList.toggle('hidden',t!=='Repas');
   document.getElementById('f-block-hebergement').classList.toggle('hidden',t!=='Hébergement');
+  // Présélection du taux de TVA usuel selon le type (modifiable manuellement)
+  const tvaSel = document.getElementById('f-tva');
+  if (tvaSel) tvaSel.value = (t === 'Repas') ? '10' : '20';
 }
 function calcFraisDepl() {
   const km=parseFloat(g('f-km'))||0, bar=parseFloat(g('f-bareme'))||0;
@@ -3576,7 +3586,7 @@ async function saveFrais() {
   if (!fdate) { toast('Date obligatoire','err'); return; }
   const row = {
     commercial, dateFrais:fdate, typeFrais:g('f-type'), motif, montant, statut:g('f-statut'),
-    clientVisite:g('f-client-visite'), justif:g('f-justif'), notes:g('f-notes'),
+    clientVisite:g('f-client-visite'), justif:g('f-justif'), notes:g('f-notes'), tva:parseFloat(g('f-tva'))||20,
     depart:g('f-depart'), arrivee:g('f-arrivee'),
     km:parseFloat(g('f-km'))||0, bareme:parseFloat(g('f-bareme'))||0.632,
     carburant:parseFloat(g('f-carburant'))||0, peages:parseFloat(g('f-peages'))||0,
@@ -3640,6 +3650,7 @@ function editFrais(id) {
   if(f.repasType) s('f-repas-type',f.repasType);
   if(f.km) calcFraisDepl();
   toggleFraisFields();
+  s('f-tva', f.tva !== undefined && f.tva !== null ? String(f.tva) : '20');
 }
 
 function refreshFraisStats() {
