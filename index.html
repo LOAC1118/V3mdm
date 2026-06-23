@@ -2323,13 +2323,15 @@ function withJsPdf(fn) {
 // ═══════════════════════════════════════════════
 let db = null, auth = null, currentUser = null;
 
-// ─── Multi-marque : collections branchées dynamiquement (MDM / NATURALINE) ───
-// Les collections listées ici sont dupliquées par marque (suffixe _mdm / _naturaline).
-// 'profils' reste commun (profil utilisateur du commercial, indépendant de la marque vendue).
+// ─── Multi-marque + multi-commercial : collections branchées dynamiquement ───
+// Les collections listées ici sont dupliquées par marque ET par commercial
+// (suffixe _<marque>_<uid>). 'profils' reste commun et global (compte Firebase
+// Auth, indépendant de la marque et déjà identifié par son propre uid).
 var BRAND_SCOPED_COLLECTIONS = ['clients','contacts','prospects','commandes','commandes_meta','commandes_stats','frais','notes_frais','activite','objectifs_ca','config'];
 function bcol(name) {
   if (BRAND_SCOPED_COLLECTIONS.indexOf(name) !== -1) {
-    return db.collection(name + '_' + CURRENT_BRAND);
+    var uidSuffix = (currentUser && currentUser.uid) ? ('_' + currentUser.uid) : '';
+    return db.collection(name + '_' + CURRENT_BRAND + uidSuffix);
   }
   return db.collection(name);
 }
@@ -2406,6 +2408,47 @@ async function migrateLegacyCollectionsToMdm() {
     }
   } catch (eComm) {
     console.warn('[Migration] erreur commissions', eComm);
+  }
+}
+
+// ─── Migration multi-commercial : rattache les données existantes (par marque,
+// sans notion de commercial) au compte de la 1ère personne qui se connecte après
+// l'ajout du multi-commercial. Les comptes créés ensuite démarrent à zéro. ───
+async function migrateLegacyDataToCurrentUser() {
+  if (localStorage.getItem('mdm_user_migration_done_v1') === '1') return;
+  if (!currentUser || !currentUser.uid) return;
+  var brands = ['mdm', 'naturaline'];
+  var report = [];
+  for (var b = 0; b < brands.length; b++) {
+    var brand = brands[b];
+    for (var i = 0; i < BRAND_SCOPED_COLLECTIONS.length; i++) {
+      var name = BRAND_SCOPED_COLLECTIONS[i];
+      var legacyName = name + '_' + brand;          // ex: clients_mdm (sans uid)
+      var targetName = legacyName + '_' + currentUser.uid; // ex: clients_mdm_<uid>
+      try {
+        var targetSnap = await db.collection(targetName).limit(1).get();
+        if (!targetSnap.empty) continue; // déjà des données sous ce compte, on ne touche pas
+
+        var legacySnap = await db.collection(legacyName).get();
+        if (legacySnap.empty) continue;
+
+        var batch = db.batch();
+        var n = 0;
+        legacySnap.forEach(function(doc) {
+          batch.set(db.collection(targetName).doc(doc.id), doc.data());
+          n++;
+        });
+        await batch.commit();
+        report.push(legacyName + ' (' + n + ')');
+      } catch (eCol) {
+        console.warn('[Migration uid] erreur sur', legacyName, eCol);
+      }
+    }
+  }
+  localStorage.setItem('mdm_user_migration_done_v1', '1');
+  if (report.length) {
+    console.log('[Migration uid] Données rattachées à votre compte : ' + report.join(', '));
+    toast('Vos données ont été rattachées à votre compte : ' + report.join(', '));
   }
 }
 let cache = { prospects:[], clients:[], commandes:[], frais:[], activite:[] };
@@ -2526,6 +2569,8 @@ async function showApp() {
   document.getElementById('f-commercial').value = nom;
 
   await migrateLegacyCollectionsToMdm();
+  await migrateLegacyDataToCurrentUser();
+  loadStockMapFromCache();
 
   startListeners();
 
@@ -2537,7 +2582,7 @@ async function showApp() {
     try { if (typeof dashLoadObjectifs === 'function') dashLoadObjectifs(); } catch(e) { console.warn('dashLoadObjectifs err:', e); }
   // Restaurer commande BDC en cours depuis localStorage au démarrage
   try {
-    var bdcRaw = localStorage.getItem(BDC_STORAGE_KEY);
+    var bdcRaw = localStorage.getItem(BDC_STORAGE_KEY());
     if (bdcRaw) {
       var bdcSaved = JSON.parse(bdcRaw);
       if (bdcSaved && bdcSaved.qtys && Object.keys(bdcSaved.qtys).filter(function(k){ return bdcSaved.qtys[k] > 0; }).length > 0) {
@@ -2581,7 +2626,7 @@ function startListeners() {
   // Pas de orderBy('createdAt') car les contacts importés depuis Excel n'ont pas ce champ
   const uContacts = bcol('contacts').onSnapshot(function(snap) {
     cdbContacts = snap.docs.map(function(d){ var data = d.data(); data.id = d.id; return data; });
-    try { localStorage.setItem(CDB_CACHE_KEY, JSON.stringify(cdbContacts)); } catch(e){}
+    try { localStorage.setItem(CDB_CACHE_KEY(), JSON.stringify(cdbContacts)); } catch(e){}
     console.log('[CDB] onSnapshot : ' + cdbContacts.length + ' contacts (temps réel)');
     if (typeof cdbRender === 'function') cdbRender();
     if (typeof dashCaRows !== 'undefined' && dashCaRows.length && typeof cdbEnrichFromOrders === 'function') {
@@ -2705,8 +2750,8 @@ function nfdGetPeriod(mois, annee) {
 
   return { filtered: filtered, periodLabel: periodLabel, dateDebut: dateDebut, dateFin: dateFin };
 }
-var NFD_CACHE_KEY = 'mdm_nfd_lines_v1_' + CURRENT_BRAND;
-var NFD_IDENTITY_KEY = 'mdm_nfd_identity_v1_' + CURRENT_BRAND;
+function NFD_CACHE_KEY() { return 'mdm_nfd_lines_v1_' + CURRENT_BRAND + (currentUser && currentUser.uid ? '_' + currentUser.uid : ''); }
+function NFD_IDENTITY_KEY() { return 'mdm_nfd_identity_v1_' + CURRENT_BRAND + (currentUser && currentUser.uid ? '_' + currentUser.uid : ''); }
 
 function nfdSwitchTab(tab) {
   var zCom = document.getElementById('frais-zone-com');
@@ -2746,7 +2791,7 @@ function nfdComputeTTC() {
 // Identité
 function nfdLoadIdentity() {
   try {
-    var s = localStorage.getItem(NFD_IDENTITY_KEY);
+    var s = localStorage.getItem(NFD_IDENTITY_KEY());
     if (s) {
       var id = JSON.parse(s);
       if (id.nom) document.getElementById('nfd-nom').value = id.nom;
@@ -2759,7 +2804,7 @@ function nfdLoadIdentity() {
 }
 function nfdSaveIdentity() {
   try {
-    localStorage.setItem(NFD_IDENTITY_KEY, JSON.stringify({
+    localStorage.setItem(NFD_IDENTITY_KEY(), JSON.stringify({
       nom: document.getElementById('nfd-nom').value,
       prenom: document.getElementById('nfd-prenom').value
     }));
@@ -2769,7 +2814,7 @@ function nfdSaveIdentity() {
 // Stockage local + Firestore
 function nfdSaveCache() {
   try {
-    localStorage.setItem(NFD_CACHE_KEY, JSON.stringify(nfdLines));
+    localStorage.setItem(NFD_CACHE_KEY(), JSON.stringify(nfdLines));
     console.log('[NFD] Cache sauvegardé : ' + nfdLines.length + ' lignes');
   } catch(e) {
     console.warn('[NFD] Erreur cache:', e);
@@ -2777,7 +2822,7 @@ function nfdSaveCache() {
 }
 function nfdLoadCache() {
   try {
-    var s = localStorage.getItem(NFD_CACHE_KEY);
+    var s = localStorage.getItem(NFD_CACHE_KEY());
     if (s) {
       var loaded = JSON.parse(s);
       if (Array.isArray(loaded)) {
@@ -3716,12 +3761,14 @@ var bdcRemise = 0;
 var bdcSearchMode = 'all';
 var bdcInitDone = false;
 var bdcImportedQtys = {};
-var BDC_STOCK_KEY = 'mdm_stock_map_v1'; // clé commune (même fichier de stock pour MDM et NATURALINE)
+function BDC_STOCK_KEY() { return 'mdm_stock_map_v1' + (currentUser && currentUser.uid ? '_' + currentUser.uid : ''); } // par commercial (chacun son fichier de stock), commun aux deux marques
 var bdcStockMap = {}; // code -> stock disponible
-try {
-  var savedStockMap = localStorage.getItem(BDC_STOCK_KEY);
-  if (savedStockMap) bdcStockMap = JSON.parse(savedStockMap);
-} catch(e) { console.warn('[Stock] lecture cache impossible', e); }
+function loadStockMapFromCache() {
+  try {
+    var savedStockMap = localStorage.getItem(BDC_STOCK_KEY());
+    if (savedStockMap) bdcStockMap = JSON.parse(savedStockMap);
+  } catch(e) { console.warn('[Stock] lecture cache impossible', e); }
+}
 
 function bdcActivate() {
   const sec = document.getElementById('sec-bdc');
@@ -3780,10 +3827,10 @@ function bdcOnRemiseLigne(input) {
 // ══════════════════════════════════════════════════════════════════════════
 //  MODULE COMMISSIONS MDM CRM
 // ══════════════════════════════════════════════════════════════════════════
-var COMM_KEY = 'mdm_commissions_v1_' + CURRENT_BRAND;
+function COMM_KEY() { return 'mdm_commissions_v1_' + CURRENT_BRAND + (currentUser && currentUser.uid ? '_' + currentUser.uid : ''); }
 
 function commLoad() {
-  try { return JSON.parse(localStorage.getItem(COMM_KEY) || '{}'); } catch(e) { return {}; }
+  try { return JSON.parse(localStorage.getItem(COMM_KEY()) || '{}'); } catch(e) { return {}; }
 }
 
 function commSave() {
@@ -3801,7 +3848,7 @@ function commSave() {
     if (inputBDC)  data[id].bdc  = parseFloat(inputBDC.value)  || 0;
     if (inputFact) data[id].fact = parseFloat(inputFact.value) || 0;
   });
-  localStorage.setItem(COMM_KEY, JSON.stringify(data));
+  localStorage.setItem(COMM_KEY(), JSON.stringify(data));
   // Sauvegarder dans Firestore
   try {
     if (typeof db !== 'undefined' && db) {
@@ -3945,7 +3992,7 @@ function commInit() {
       bcol('config').doc('commissions').get().then(function(doc) {
         if (doc.exists) {
           var data = doc.data();
-          localStorage.setItem(COMM_KEY, JSON.stringify(data));
+          localStorage.setItem(COMM_KEY(), JSON.stringify(data));
           var el1 = document.getElementById('comm-taux-global-bdc');
           var el2 = document.getElementById('comm-taux-global-fact');
           if (el1 && data._global_bdc)  el1.value = data._global_bdc;
@@ -3961,7 +4008,7 @@ function commInit() {
 
 
 // ── Bandeau récapitulatif BDC + persistance localStorage ─────────────────
-var BDC_STORAGE_KEY = 'mdm_bdc_encours_v1_' + CURRENT_BRAND;
+function BDC_STORAGE_KEY() { return 'mdm_bdc_encours_v1_' + CURRENT_BRAND + (currentUser && currentUser.uid ? '_' + currentUser.uid : ''); }
 
 function bdcSaveLocal() {
   try {
@@ -3978,13 +4025,13 @@ function bdcSaveLocal() {
       comment:      (document.getElementById('bdc-comment')       || {}).value || '',
       savedAt: new Date().toISOString()
     };
-    localStorage.setItem(BDC_STORAGE_KEY, JSON.stringify(data));
+    localStorage.setItem(BDC_STORAGE_KEY(), JSON.stringify(data));
   } catch(e) { console.warn('bdcSaveLocal:', e); }
 }
 
 function bdcLoadLocal() {
   try {
-    var raw = localStorage.getItem(BDC_STORAGE_KEY);
+    var raw = localStorage.getItem(BDC_STORAGE_KEY());
     if (!raw) return false;
     var data = JSON.parse(raw);
     if (!data || !data.qtys) return false;
@@ -4023,7 +4070,7 @@ function bdcLoadLocal() {
 }
 
 function bdcClearLocal() {
-  try { localStorage.removeItem(BDC_STORAGE_KEY); } catch(e) {}
+  try { localStorage.removeItem(BDC_STORAGE_KEY()); } catch(e) {}
 }
 
 function bdcUpdateRecapBar() {
@@ -4946,7 +4993,7 @@ function applyStockImport() {
   Object.assign(bdcStockMap, pendingStockMap);
 
   // Persister (clé commune aux deux marques, même fichier de stock)
-  try { localStorage.setItem(BDC_STOCK_KEY, JSON.stringify(bdcStockMap)); }
+  try { localStorage.setItem(BDC_STOCK_KEY(), JSON.stringify(bdcStockMap)); }
   catch(e) { console.warn('[Stock] sauvegarde cache impossible', e); }
 
   // Mettre à jour le tableau en direct sans rebuild complet
@@ -5833,8 +5880,8 @@ var MDM_VERSION = 'v7.2-fix-' + Date.now(); console.log('%c[MDM CRM] Version cha
 // Stockage compact dans collection 'commandes_stats'
 // + Cache localStorage pour affichage instantané
 // ═══════════════════════════════════════════════
-var DASHCA_CACHE_KEY = 'mdm_commandes_stats_cache_v1_' + CURRENT_BRAND;
-var DASHCA_META_KEY  = 'mdm_commandes_stats_meta_v1_' + CURRENT_BRAND;
+function DASHCA_CACHE_KEY() { return 'mdm_commandes_stats_cache_v1_' + CURRENT_BRAND + (currentUser && currentUser.uid ? '_' + currentUser.uid : ''); }
+function DASHCA_META_KEY() { return 'mdm_commandes_stats_meta_v1_' + CURRENT_BRAND + (currentUser && currentUser.uid ? '_' + currentUser.uid : ''); }
 
 function dashCaSaveCache() {
   try {
@@ -5851,8 +5898,8 @@ function dashCaSaveCache() {
         mois: r.mois, annee: r.annee
       };
     });
-    localStorage.setItem(DASHCA_CACHE_KEY, JSON.stringify(compact));
-    localStorage.setItem(DASHCA_META_KEY, JSON.stringify({
+    localStorage.setItem(DASHCA_CACHE_KEY(), JSON.stringify(compact));
+    localStorage.setItem(DASHCA_META_KEY(), JSON.stringify({
       lastImport: Date.now(),
       nbRows: dashCaRows.length,
       dateCol: dashCaDateCol
@@ -5863,7 +5910,7 @@ function dashCaSaveCache() {
 
 function dashCaLoadCache() {
   try {
-    var raw = localStorage.getItem(DASHCA_CACHE_KEY);
+    var raw = localStorage.getItem(DASHCA_CACHE_KEY());
     if (!raw) return false;
     var compact = JSON.parse(raw);
     if (!compact || !compact.length) return false;
@@ -5925,7 +5972,7 @@ function dashCaUpdateLastImportLabel() {
   var el = document.getElementById('dash-ca-lastimport');
   if (!el) return;
   try {
-    var meta = JSON.parse(localStorage.getItem(DASHCA_META_KEY) || '{}');
+    var meta = JSON.parse(localStorage.getItem(DASHCA_META_KEY()) || '{}');
     if (!meta.lastImport) { el.textContent = ''; return; }
     var d = new Date(meta.lastImport);
     var diff = (Date.now() - d) / 1000;
@@ -6037,7 +6084,7 @@ function dashCaLoadFromFirestore() {
     });
     // Si on a des données plus récentes que le cache local (ou aucun cache), on remplace
     var meta = {};
-    try { meta = JSON.parse(localStorage.getItem(DASHCA_META_KEY) || '{}'); } catch(e){}
+    try { meta = JSON.parse(localStorage.getItem(DASHCA_META_KEY()) || '{}'); } catch(e){}
     // Firestore fait autorité si plus de données OU si pas de cache local
     if (rows.length > 0 && (rows.length >= dashCaRows.length || !dashCaRows.length)) {
       console.log('[DashCA] ' + rows.length + ' commandes chargées depuis Firestore');
@@ -6054,7 +6101,7 @@ function dashCaLoadFromFirestore() {
       bcol('commandes_meta').doc('latest').get().then(function(doc) {
         if (doc.exists) {
           var m = doc.data();
-          localStorage.setItem(DASHCA_META_KEY, JSON.stringify(m));
+          localStorage.setItem(DASHCA_META_KEY(), JSON.stringify(m));
           dashCaUpdateLastImportLabel();
         }
       }).catch(function(){});
@@ -6940,7 +6987,7 @@ function dashCaDrawTops(filtered) {
 // ═══════════════════════════════════════════════
 // BASE CONTACTS — Firestore + cache localStorage
 // ═══════════════════════════════════════════════
-var CDB_CACHE_KEY = 'mdm_contacts_cache_v1_' + CURRENT_BRAND;
+function CDB_CACHE_KEY() { return 'mdm_contacts_cache_v1_' + CURRENT_BRAND + (currentUser && currentUser.uid ? '_' + currentUser.uid : ''); }
 var cdbContacts = [];          // array complet de contacts
 var cdbImportRaw = null;
 var cdbImportColsIndex = [];       // raw data de l\'import en attente
@@ -7009,7 +7056,7 @@ function cdbLoadCache() {
   if (cdbCacheLoaded) return;
   cdbCacheLoaded = true;
   try {
-    var cached = localStorage.getItem(CDB_CACHE_KEY);
+    var cached = localStorage.getItem(CDB_CACHE_KEY());
     if (cached) {
       cdbContacts = JSON.parse(cached);
       console.log('[CDB] Cache local : ' + cdbContacts.length + ' contacts');
@@ -7080,7 +7127,7 @@ function cdbSyncFromFirestore() {
       });
       // Firestore fait autorité : écrase toujours le cache local (garantit la synchro multi-appareils)
       cdbContacts = loaded;
-      try { localStorage.setItem(CDB_CACHE_KEY, JSON.stringify(cdbContacts)); } catch(e){}
+      try { localStorage.setItem(CDB_CACHE_KEY(), JSON.stringify(cdbContacts)); } catch(e){}
       console.log('[CDB] ' + cdbContacts.length + ' contacts chargés depuis Firestore (source de vérité)');
       if (typeof cdbRender === 'function') cdbRender();
       if (typeof dashCaRows !== 'undefined' && dashCaRows.length && typeof cdbEnrichFromOrders === 'function') {
@@ -7733,7 +7780,7 @@ function cdbImportApply() {
   // Sans Firebase : sauvegarde locale uniquement
   if (typeof firebase === 'undefined' || !firebase.firestore) {
     cdbContacts = newContacts;
-    try { localStorage.setItem(CDB_CACHE_KEY, JSON.stringify(cdbContacts)); } catch(e){}
+    try { localStorage.setItem(CDB_CACHE_KEY(), JSON.stringify(cdbContacts)); } catch(e){}
     if (typeof cdbRender === 'function') cdbRender();
     var modal = document.getElementById('cdb-modal-import');
     if (modal) modal.classList.add('hidden');
@@ -7767,7 +7814,7 @@ function cdbImportApply() {
     function addBatch(i) {
       if (i >= newContacts.length) {
         cdbContacts = newContacts;
-        try { localStorage.setItem(CDB_CACHE_KEY, JSON.stringify(cdbContacts)); } catch(e){}
+        try { localStorage.setItem(CDB_CACHE_KEY(), JSON.stringify(cdbContacts)); } catch(e){}
         if (typeof cdbRender === 'function') cdbRender();
         var modal = document.getElementById('cdb-modal-import');
         if (modal) modal.classList.add('hidden');
@@ -8376,14 +8423,14 @@ function cdbSave() {
   if (typeof firebase !== 'undefined' && firebase.firestore) {
     bcol('contacts').doc(c.id).set(c).then(function(){
       if (!id) cdbContacts.push(c);
-      try { localStorage.setItem(CDB_CACHE_KEY, JSON.stringify(cdbContacts)); } catch(e){}
+      try { localStorage.setItem(CDB_CACHE_KEY(), JSON.stringify(cdbContacts)); } catch(e){}
       cdbRender();
       document.getElementById('cdb-modal-edit').classList.add('hidden');
       toast('✅ Contact enregistré', 'ok');
     }).catch(function(e){ toast('Erreur : '+e.message, 'err'); });
   } else {
     if (!id) cdbContacts.push(c);
-    try { localStorage.setItem(CDB_CACHE_KEY, JSON.stringify(cdbContacts)); } catch(e){}
+    try { localStorage.setItem(CDB_CACHE_KEY(), JSON.stringify(cdbContacts)); } catch(e){}
     cdbRender();
     document.getElementById('cdb-modal-edit').classList.add('hidden');
   }
@@ -8396,7 +8443,7 @@ function cdbDelete() {
   if (typeof firebase !== 'undefined' && firebase.firestore) {
     bcol('contacts').doc(id).delete().then(function(){
       cdbContacts = cdbContacts.filter(function(x){ return x.id !== id; });
-      try { localStorage.setItem(CDB_CACHE_KEY, JSON.stringify(cdbContacts)); } catch(e){}
+      try { localStorage.setItem(CDB_CACHE_KEY(), JSON.stringify(cdbContacts)); } catch(e){}
       cdbRender();
       document.getElementById('cdb-modal-edit').classList.add('hidden');
       toast('Contact supprimé', 'ok');
