@@ -4480,7 +4480,7 @@ function bdcBuildHtml() {
   var mag  = g('bdc-magasin'), mail = g('bdc-email'), nc = g('bdc-numclient');
   var ct   = g('bdc-contact'), tel  = g('bdc-tel'),   dl = g('bdc-datelivraison'), com = g('bdc-comment');
   var today = new Date().toLocaleDateString('fr-FR');
-  var livDate = dl ? new Date(dl).toLocaleDateString('fr-FR') : '—';
+  var livDate = dl ? new Date(dl).toLocaleDateString('fr-FR') : '\u2014';
 
   // Construire les lignes articles
   var tB=0, tN=0, nbC=0, nbR=0, rowsHtml='';
@@ -4489,78 +4489,86 @@ function bdcBuildHtml() {
     var pcb = parseFloat(p.pcb)||1, pN = bdcPrixNet(p), tot = pN*q*pcb;
     tB += p.pu_ht*q*pcb; tN += tot; nbC += q; nbR++;
     rowsHtml +=
-      '<tr style="border-bottom:1px solid #e5edf8;">' +
-        '<td style="padding:8px 10px;font-family:monospace;font-size:12px;color:#0c447c;white-space:nowrap;">'+p.code+'</td>' +
-        '<td style="padding:8px 10px;font-size:13px;color:#1e293b;">'+p.libelle+'</td>' +
-        '<td style="padding:8px 10px;text-align:center;font-weight:600;color:#0c447c;">'+q+' col.</td>' +
-        '<td style="padding:8px 10px;text-align:center;font-size:12px;color:#64748b;">'+(q*pcb)+' UVC</td>' +
-        '<td style="padding:8px 10px;text-align:right;color:#374151;">'+bdcFmt(pN)+'</td>' +
-        '<td style="padding:8px 10px;text-align:right;font-weight:600;color:#0c447c;">'+bdcFmt(tot)+'</td>' +
+      '<tr>' +
+        '<td style="padding:8px 10px;border-bottom:1px solid #e5edf8;font-family:Consolas,monospace;font-size:12px;color:#0c447c;white-space:nowrap;">'+p.code+'</td>' +
+        '<td style="padding:8px 10px;border-bottom:1px solid #e5edf8;font-size:13px;color:#1e293b;">'+p.libelle+'</td>' +
+        '<td style="padding:8px 10px;border-bottom:1px solid #e5edf8;text-align:center;font-weight:bold;color:#0c447c;">'+q+' col.</td>' +
+        '<td style="padding:8px 10px;border-bottom:1px solid #e5edf8;text-align:center;font-size:12px;color:#64748b;">'+(q*pcb)+' UVC</td>' +
+        '<td style="padding:8px 10px;border-bottom:1px solid #e5edf8;text-align:right;color:#374151;">'+bdcFmt(pN)+'</td>' +
+        '<td style="padding:8px 10px;border-bottom:1px solid #e5edf8;text-align:right;font-weight:bold;color:#0c447c;">'+bdcFmt(tot)+'</td>' +
       '</tr>';
   });
 
   var remiseLigne = tB - tN > 0
-    ? '<tr style="background:#fffbeb;"><td colspan="5" style="padding:6px 10px;font-size:12px;color:#92400e;text-align:right;">Remise '+bdcRemise+'%</td><td style="padding:6px 10px;text-align:right;font-weight:600;color:#92400e;">-'+bdcFmt(tB-tN)+'</td></tr>'
+    ? '<tr><td colspan="5" bgcolor="#fffbeb" style="padding:6px 10px;background-color:#fffbeb;font-size:12px;color:#92400e;text-align:right;">Remise '+bdcRemise+'%</td><td bgcolor="#fffbeb" style="padding:6px 10px;background-color:#fffbeb;text-align:right;font-weight:bold;color:#92400e;">-'+bdcFmt(tB-tN)+'</td></tr>'
     : '';
 
   var infoItems = '';
-  if (nc)  infoItems += '<tr><td style="padding:4px 12px;font-size:12px;color:#64748b;white-space:nowrap;">N° Client</td><td style="padding:4px 12px;font-size:13px;color:#1e293b;font-weight:500;">'+nc+'</td></tr>';
+  if (nc)  infoItems += '<tr><td style="padding:4px 12px;font-size:12px;color:#64748b;white-space:nowrap;">N\u00b0 Client</td><td style="padding:4px 12px;font-size:13px;color:#1e293b;font-weight:bold;">'+nc+'</td></tr>';
   if (ct)  infoItems += '<tr><td style="padding:4px 12px;font-size:12px;color:#64748b;">Contact</td><td style="padding:4px 12px;font-size:13px;color:#1e293b;">'+ct+'</td></tr>';
-  if (tel) infoItems += '<tr><td style="padding:4px 12px;font-size:12px;color:#64748b;">Téléphone</td><td style="padding:4px 12px;font-size:13px;color:#1e293b;">'+tel+'</td></tr>';
+  if (tel) infoItems += '<tr><td style="padding:4px 12px;font-size:12px;color:#64748b;">T\u00e9l\u00e9phone</td><td style="padding:4px 12px;font-size:13px;color:#1e293b;">'+tel+'</td></tr>';
   infoItems += '<tr><td style="padding:4px 12px;font-size:12px;color:#64748b;">Email</td><td style="padding:4px 12px;font-size:13px;color:#1e293b;">'+mail+'</td></tr>';
-  infoItems += '<tr><td style="padding:4px 12px;font-size:12px;color:#64748b;">Date commande</td><td style="padding:4px 12px;font-size:13px;color:#1e293b;font-weight:500;">'+today+'</td></tr>';
-  if (dl) infoItems += '<tr><td style="padding:4px 12px;font-size:12px;color:#64748b;">Livraison souhaitée</td><td style="padding:4px 12px;font-size:13px;color:#1e293b;font-weight:600;color:#0c447c;">'+livDate+'</td></tr>';
+  infoItems += '<tr><td style="padding:4px 12px;font-size:12px;color:#64748b;">Date commande</td><td style="padding:4px 12px;font-size:13px;color:#1e293b;font-weight:bold;">'+today+'</td></tr>';
+  if (dl) infoItems += '<tr><td style="padding:4px 12px;font-size:12px;color:#64748b;">Livraison souhait\u00e9e</td><td style="padding:4px 12px;font-size:13px;color:#0c447c;font-weight:bold;">'+livDate+'</td></tr>';
   if (com) infoItems += '<tr><td style="padding:4px 12px;font-size:12px;color:#64748b;">Commentaire</td><td style="padding:4px 12px;font-size:13px;color:#1e293b;font-style:italic;">'+com+'</td></tr>';
 
-  return '<!DOCTYPE html><html><head><meta charset="UTF-8"></head><body style="margin:0;padding:0;background:#f0f6fb;font-family:Arial,sans-serif;">' +
-    '<table width="100%" cellpadding="0" cellspacing="0" style="background:#f0f6fb;padding:24px 0;">' +
-    '<tr><td align="center">' +
-    '<table width="620" cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:12px;overflow:hidden;box-shadow:0 2px 16px rgba(4,44,83,.12);">' +
+  // ── Version "Outlook-safe" : pas de linear-gradient, box-shadow ni border-radius
+  // (non supportés par Outlook desktop/web, voir https://www.contactmonkey.com/blog/outlook-rendering-issues)
+  // Couleur pleine en fallback, bordures carrées, bgcolor en attribut HTML en plus du style inline.
+  return '<!DOCTYPE html><html><head><meta charset="UTF-8"></head><body style="margin:0;padding:0;background-color:#f0f6fb;font-family:Arial,Helvetica,sans-serif;">' +
+    '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:#f0f6fb;">' +
+    '<tr><td align="center" style="padding:24px 12px;">' +
+    '<table role="presentation" width="620" cellpadding="0" cellspacing="0" border="0" style="background-color:#ffffff;border:1px solid #e5edf8;">' +
 
-    // Header
-    '<tr><td style="background:linear-gradient(135deg,#0c447c,#042c53);padding:28px 32px;">' +
-      '<table width="100%"><tr>' +
-        '<td><div style="font-size:22px;font-weight:700;color:#ffffff;letter-spacing:-0.5px;">🌾 Moulin des Moines</div>' +
-        '<div style="font-size:13px;color:#93c5fd;margin-top:4px;">Bon de Commande 2026</div></td>' +
-        '<td align="right"><div style="background:rgba(255,255,255,.15);border-radius:8px;padding:8px 14px;display:inline-block;">' +
+    // Header (couleur pleine, pas de degrade)
+    '<tr><td bgcolor="#0c447c" style="background-color:#0c447c;padding:24px 28px;">' +
+      '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"><tr>' +
+        '<td valign="middle"><div style="font-size:20px;font-weight:bold;color:#ffffff;">Moulin des Moines</div>' +
+        '<div style="font-size:13px;color:#bfdbfe;margin-top:4px;">Bon de Commande 2026</div></td>' +
+        '<td valign="middle" align="right">' +
+        '<table role="presentation" cellpadding="0" cellspacing="0" border="0"><tr><td bgcolor="#0a3a6b" style="background-color:#0a3a6b;padding:8px 14px;">' +
         '<div style="font-size:11px;color:#bfdbfe;">CLIENT</div>' +
-        '<div style="font-size:16px;font-weight:700;color:#ffffff;">'+mag+'</div></div></td>' +
+        '<div style="font-size:15px;font-weight:bold;color:#ffffff;">'+mag+'</div>' +
+        '</td></tr></table>' +
+        '</td>' +
       '</tr></table>' +
     '</td></tr>' +
 
     // Infos commande
-    '<tr><td style="padding:20px 32px 0;">' +
-      '<div style="font-size:11px;font-weight:700;color:#0c447c;text-transform:uppercase;letter-spacing:.1em;margin-bottom:10px;">Informations commande</div>' +
-      '<table width="100%" cellpadding="0" cellspacing="0" style="background:#f6f9fd;border-radius:8px;overflow:hidden;">'+infoItems+'</table>' +
+    '<tr><td style="padding:20px 28px 0;">' +
+      '<div style="font-size:11px;font-weight:bold;color:#0c447c;text-transform:uppercase;letter-spacing:1px;margin-bottom:10px;">Informations commande</div>' +
+      '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#f6f9fd" style="background-color:#f6f9fd;">'+infoItems+'</table>' +
     '</td></tr>' +
 
     // Tableau articles
-    '<tr><td style="padding:20px 32px 0;">' +
-      '<div style="font-size:11px;font-weight:700;color:#0c447c;text-transform:uppercase;letter-spacing:.1em;margin-bottom:10px;">Articles commandés</div>' +
-      '<table width="100%" cellpadding="0" cellspacing="0" style="border-radius:8px;overflow:hidden;border:1px solid #e5edf8;">' +
-        '<tr style="background:#0c447c;">' +
-          '<th style="padding:9px 10px;font-size:11px;font-weight:600;color:#bfdbfe;text-align:left;">Code</th>' +
-          '<th style="padding:9px 10px;font-size:11px;font-weight:600;color:#bfdbfe;text-align:left;">Désignation</th>' +
-          '<th style="padding:9px 10px;font-size:11px;font-weight:600;color:#bfdbfe;text-align:center;">Colis</th>' +
-          '<th style="padding:9px 10px;font-size:11px;font-weight:600;color:#bfdbfe;text-align:center;">UVC</th>' +
-          '<th style="padding:9px 10px;font-size:11px;font-weight:600;color:#bfdbfe;text-align:right;">PU HT</th>' +
-          '<th style="padding:9px 10px;font-size:11px;font-weight:600;color:#bfdbfe;text-align:right;">Total HT</th>' +
+    '<tr><td style="padding:20px 28px 0;">' +
+      '<div style="font-size:11px;font-weight:bold;color:#0c447c;text-transform:uppercase;letter-spacing:1px;margin-bottom:10px;">Articles command\u00e9s</div>' +
+      '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border:1px solid #e5edf8;">' +
+        '<tr bgcolor="#0c447c" style="background-color:#0c447c;">' +
+          '<th style="padding:9px 10px;font-size:11px;font-weight:bold;color:#bfdbfe;text-align:left;">Code</th>' +
+          '<th style="padding:9px 10px;font-size:11px;font-weight:bold;color:#bfdbfe;text-align:left;">D\u00e9signation</th>' +
+          '<th style="padding:9px 10px;font-size:11px;font-weight:bold;color:#bfdbfe;text-align:center;">Colis</th>' +
+          '<th style="padding:9px 10px;font-size:11px;font-weight:bold;color:#bfdbfe;text-align:center;">UVC</th>' +
+          '<th style="padding:9px 10px;font-size:11px;font-weight:bold;color:#bfdbfe;text-align:right;">PU HT</th>' +
+          '<th style="padding:9px 10px;font-size:11px;font-weight:bold;color:#bfdbfe;text-align:right;">Total HT</th>' +
         '</tr>' +
         rowsHtml +
         remiseLigne +
-        '<tr style="background:#eef6fd;">' +
-          '<td colspan="4" style="padding:10px;font-size:12px;color:#0c447c;">'+nbR+' référence(s) · '+nbC+' colis au total</td>' +
-          '<td style="padding:10px;text-align:right;font-size:12px;color:#0c447c;font-weight:600;">TOTAL HT NET</td>' +
-          '<td style="padding:10px;text-align:right;font-size:16px;font-weight:700;color:#0c447c;">'+bdcFmt(tN)+'</td>' +
+        '<tr bgcolor="#eef6fd" style="background-color:#eef6fd;">' +
+          '<td colspan="4" style="padding:10px;font-size:12px;color:#0c447c;">'+nbR+' r\u00e9f\u00e9rence(s) \u00b7 '+nbC+' colis au total</td>' +
+          '<td style="padding:10px;text-align:right;font-size:12px;color:#0c447c;font-weight:bold;">TOTAL HT NET</td>' +
+          '<td style="padding:10px;text-align:right;font-size:16px;font-weight:bold;color:#0c447c;">'+bdcFmt(tN)+'</td>' +
         '</tr>' +
       '</table>' +
     '</td></tr>' +
 
     // Footer
-    '<tr><td style="padding:20px 32px 28px;text-align:center;">' +
-      '<div style="font-size:11px;color:#94a3b8;border-top:1px solid #e5edf8;padding-top:16px;">' +
-        'Ce bon de commande a été transmis via MDM CRM 2026 · Réalisé par <strong style="color:#0c447c;">LOAC DEV Solutions</strong>' +
+    '<tr><td style="padding:20px 28px 28px;text-align:center;">' +
+      '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border-top:1px solid #e5edf8;"><tr><td style="padding-top:16px;text-align:center;">' +
+      '<div style="font-size:11px;color:#94a3b8;">' +
+        'Ce bon de commande a \u00e9t\u00e9 transmis via MDM CRM 2026 \u00b7 R\u00e9alis\u00e9 par <strong style="color:#0c447c;">LOAC DEV Solutions</strong>' +
       '</div>' +
+      '</td></tr></table>' +
     '</td></tr>' +
 
     '</table></td></tr></table></body></html>';
