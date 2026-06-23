@@ -1742,6 +1742,32 @@ textarea { resize:vertical; min-height:80px; }
         </div>
       </div>
 
+      <!-- Toggle mode de calcul -->
+      <div class="card" style="padding:.85rem 1rem;margin-bottom:1.25rem;display:flex;align-items:center;gap:14px;flex-wrap:wrap;">
+        <span style="font-size:.78rem;font-weight:600;color:var(--g700);">Mode de calcul :</span>
+        <div style="display:flex;background:var(--bg);border-radius:9px;padding:3px;border:1px solid var(--border);">
+          <button id="comm-mode-btn-client" onclick="commSetMode('client')" class="btn" style="font-size:.74rem;padding:.4rem .85rem;border:none;background:var(--surface);box-shadow:0 1px 2px rgba(0,0,0,.08);">👤 Par client</button>
+          <button id="comm-mode-btn-global" onclick="commSetMode('global')" class="btn btn-ghost" style="font-size:.74rem;padding:.4rem .85rem;border:none;">🎯 Global mensuel (paliers)</button>
+        </div>
+        <div id="comm-global-config" style="display:none;align-items:center;gap:10px;flex-wrap:wrap;margin-left:auto;">
+          <div style="display:flex;align-items:center;gap:5px;">
+            <span style="font-size:.74rem;color:var(--g600);">Taux avant objectif :</span>
+            <input type="number" id="comm-global-taux1" value="1" min="0" max="100" step="0.1"
+              style="width:48px;border:1px solid var(--border-med);border-radius:5px;padding:3px 5px;text-align:center;font-size:.8rem;font-weight:600;color:var(--blue-p700);" oninput="commRefresh()"> %
+          </div>
+          <div style="display:flex;align-items:center;gap:5px;">
+            <span style="font-size:.74rem;color:var(--g600);">Taux après dépassement :</span>
+            <input type="number" id="comm-global-taux2" value="2" min="0" max="100" step="0.1"
+              style="width:48px;border:1px solid var(--border-med);border-radius:5px;padding:3px 5px;text-align:center;font-size:.8rem;font-weight:600;color:var(--em600);" oninput="commRefresh()"> %
+          </div>
+        </div>
+      </div>
+
+      <!-- Détail du calcul global (visible seulement en mode global) -->
+      <div id="comm-global-detail" class="card" style="display:none;padding:1rem;margin-bottom:1.25rem;background:var(--blue-p50);border-color:var(--blue-p300);">
+        <div id="comm-global-detail-text" style="font-size:.85rem;color:var(--blue-p800);line-height:1.6;"></div>
+      </div>
+
       <!-- KPIs -->
       <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:.75rem;margin-bottom:1.25rem;">
         <div class="card" style="padding:1rem;">
@@ -1762,9 +1788,9 @@ textarea { resize:vertical; min-height:80px; }
       </div>
 
       <!-- Tableau par client -->
-      <div class="card">
+      <div class="card" id="comm-table-card">
         <div class="card-head">
-          <span class="card-title">📊 Détail par client</span>
+          <span class="card-title" id="comm-table-title">📊 Détail par client</span>
           <span style="font-size:.72rem;color:var(--g500);" id="comm-nb-clients">—</span>
         </div>
         <div style="overflow-x:auto;border-radius:0 0 10px 10px;">
@@ -1773,7 +1799,7 @@ textarea { resize:vertical; min-height:80px; }
               <tr style="background:var(--blue-p50);">
                 <th style="padding:.6rem 1rem;text-align:left;font-weight:600;color:var(--blue-p800);">Client</th>
                 <th style="padding:.6rem .75rem;text-align:right;color:var(--blue-p800);">CA Facturé</th>
-                <th style="padding:.6rem .75rem;text-align:center;color:var(--amber);">Taux %</th>
+                <th style="padding:.6rem .75rem;text-align:center;color:var(--amber);" id="comm-th-taux">Taux %</th>
                 <th style="padding:.6rem .75rem;text-align:right;color:var(--amber);">Commission</th>
               </tr>
             </thead>
@@ -3828,6 +3854,39 @@ function bdcOnRemiseLigne(input) {
 //  MODULE COMMISSIONS MDM CRM
 // ══════════════════════════════════════════════════════════════════════════
 function COMM_KEY() { return 'mdm_commissions_v1_' + CURRENT_BRAND + (currentUser && currentUser.uid ? '_' + currentUser.uid : ''); }
+function COMM_MODE_KEY() { return 'mdm_comm_mode_v1_' + CURRENT_BRAND + (currentUser && currentUser.uid ? '_' + currentUser.uid : ''); }
+
+function commGetMode() {
+  return localStorage.getItem(COMM_MODE_KEY()) || 'client';
+}
+function commSetMode(mode) {
+  if (mode !== 'client' && mode !== 'global') return;
+  localStorage.setItem(COMM_MODE_KEY(), mode);
+  commApplyModeUI();
+  commRefresh();
+}
+function commApplyModeUI() {
+  var mode = commGetMode();
+  var btnClient = document.getElementById('comm-mode-btn-client');
+  var btnGlobal = document.getElementById('comm-mode-btn-global');
+  var globalConfig = document.getElementById('comm-global-config');
+  var globalDetail = document.getElementById('comm-global-detail');
+  var thTaux = document.getElementById('comm-th-taux');
+  var tableTitle = document.getElementById('comm-table-title');
+  var isGlobal = (mode === 'global');
+
+  if (btnClient) { btnClient.className = isGlobal ? 'btn btn-ghost' : 'btn'; btnClient.style.background = isGlobal ? 'transparent' : 'var(--surface)'; btnClient.style.boxShadow = isGlobal ? 'none' : '0 1px 2px rgba(0,0,0,.08)'; }
+  if (btnGlobal) { btnGlobal.className = isGlobal ? 'btn' : 'btn btn-ghost'; btnGlobal.style.background = isGlobal ? 'var(--surface)' : 'transparent'; btnGlobal.style.boxShadow = isGlobal ? '0 1px 2px rgba(0,0,0,.08)' : 'none'; }
+  if (globalConfig) globalConfig.style.display = isGlobal ? 'flex' : 'none';
+  if (globalDetail) globalDetail.style.display = isGlobal ? 'block' : 'none';
+  if (thTaux) thTaux.textContent = isGlobal ? 'Taux effectif %' : 'Taux %';
+  if (tableTitle) tableTitle.textContent = isGlobal ? '📊 Répartition par client (calcul global)' : '📊 Détail par client';
+
+  // En mode global, les taux individuels ne sont plus éditables (calculés automatiquement)
+  document.querySelectorAll('#comm-tbody input[id^="comm-fact-"]').forEach(function(inp) {
+    inp.disabled = isGlobal;
+  });
+}
 
 function commLoad() {
   try { return JSON.parse(localStorage.getItem(COMM_KEY()) || '{}'); } catch(e) { return {}; }
@@ -3939,14 +3998,52 @@ function commRefresh() {
   var clients = Object.keys(caFact).filter(function(n){ return caFact[n]>0; })
     .sort(function(a,b){ return caFact[b]-caFact[a]; });
 
+  var mode = commGetMode();
   var totalComm = 0, totalCA = 0, rows = '';
+
+  // ── Mode global mensuel à paliers : taux1 sur tout le CA + taux2 sur le dépassement ──
+  var globalTauxEffectif = null, globalObjectif = 0, globalCAtotal = 0, globalCommTotal = 0;
+  if (mode === 'global') {
+    clients.forEach(function(nom) { globalCAtotal += caFact[nom]; });
+    var moisKey = curY + '-' + String(curM).padStart(2,'0');
+    globalObjectif = (typeof dashObjectifs !== 'undefined' && dashObjectifs[moisKey]) || 0;
+    var elT1 = document.getElementById('comm-global-taux1');
+    var elT2 = document.getElementById('comm-global-taux2');
+    var taux1 = elT1 ? (parseFloat(elT1.value) || 0) : 1;
+    var taux2 = elT2 ? (parseFloat(elT2.value) || 0) : 2;
+    var depassement = Math.max(0, globalCAtotal - globalObjectif);
+    globalCommTotal = (globalCAtotal * taux1 / 100) + (depassement * taux2 / 100);
+    // Taux effectif uniforme, réparti proportionnellement sur chaque client pour le détail
+    globalTauxEffectif = globalCAtotal > 0 ? (globalCommTotal / globalCAtotal * 100) : 0;
+
+    var detailEl = document.getElementById('comm-global-detail-text');
+    if (detailEl) {
+      if (globalCAtotal <= 0) {
+        detailEl.innerHTML = 'Aucun CA facturé sur ' + moisLabel + ' pour le moment.';
+      } else if (globalObjectif <= 0) {
+        detailEl.innerHTML = '⚠️ Aucun objectif défini pour ' + moisLabel + ' (à saisir dans Dashboard → Objectifs). Le calcul applique le taux de base (' + taux1 + '%) sur tout le CA, sans bonus de dépassement.';
+      } else if (depassement > 0) {
+        detailEl.innerHTML = 'Objectif ' + moisLabel + ' : <b>' + commFmt(globalObjectif) + '</b> — Réalisé : <b>' + commFmt(globalCAtotal) + '</b> ✅ Objectif dépassé de <b>' + commFmt(depassement) + '</b><br>' +
+          'Commission = ' + taux1 + '% × ' + commFmt(globalCAtotal) + ' (' + commFmt(globalCAtotal*taux1/100) + ') + ' + taux2 + '% × ' + commFmt(depassement) + ' (' + commFmt(depassement*taux2/100) + ') = <b>' + commFmt(globalCommTotal) + '</b>';
+      } else {
+        detailEl.innerHTML = 'Objectif ' + moisLabel + ' : <b>' + commFmt(globalObjectif) + '</b> — Réalisé : <b>' + commFmt(globalCAtotal) + '</b><br>' +
+          'Objectif pas encore atteint (reste ' + commFmt(globalObjectif - globalCAtotal) + ') — Commission = ' + taux1 + '% × ' + commFmt(globalCAtotal) + ' = <b>' + commFmt(globalCommTotal) + '</b>';
+      }
+    }
+  }
 
   clients.forEach(function(nom) {
     var id   = nom.replace(/[^a-zA-Z0-9]/g,'_').substring(0,30);
     var caV  = caFact[nom];
-    var taux = (lineRates[id] !== null && lineRates[id] !== undefined)
-               ? lineRates[id] : commGetTaux(data, id, 'fact', gFact);
-    var comm = caV * taux / 100;
+    var taux, comm;
+    if (mode === 'global') {
+      taux = globalTauxEffectif;
+      comm = caV * taux / 100;
+    } else {
+      taux = (lineRates[id] !== null && lineRates[id] !== undefined)
+             ? lineRates[id] : commGetTaux(data, id, 'fact', gFact);
+      comm = caV * taux / 100;
+    }
     totalComm += comm;
     totalCA   += caV;
 
@@ -3954,7 +4051,8 @@ function commRefresh() {
       '<td style="padding:.5rem 1rem;font-weight:500;color:var(--g800);max-width:240px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="'+nom+'">'+nom+'</td>' +
       '<td style="padding:.5rem .75rem;text-align:right;font-weight:600;color:var(--g700);">'+commFmt(caV)+'</td>' +
       '<td style="padding:.5rem .75rem;text-align:center;">' +
-        '<input id="comm-fact-'+id+'" type="number" value="'+taux+'" min="0" max="100" step="0.5"' +
+        '<input id="comm-fact-'+id+'" type="number" value="'+taux.toFixed(2)+'" min="0" max="100" step="0.5"' +
+        (mode === 'global' ? ' disabled' : '') +
         ' style="width:48px;border:1px solid var(--border-med);border-radius:5px;padding:2px 5px;text-align:center;font-size:.8rem;font-weight:600;color:var(--amber);"' +
         ' oninput="commRefresh()"></td>' +
       '<td style="padding:.5rem .75rem;text-align:right;font-weight:700;color:var(--amber);">'+commFmt(comm)+'</td>' +
@@ -3986,6 +4084,7 @@ function commRefresh() {
 
 
 function commInit() {
+  commApplyModeUI();
   // Charger les taux depuis Firestore si dispo
   try {
     if (typeof db !== 'undefined' && db) {
