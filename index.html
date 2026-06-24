@@ -942,6 +942,7 @@ textarea { resize:vertical; min-height:80px; }
     <button class="t-tab" onclick="showSection('frais',this)">Frais</button>
     <button class="t-tab" onclick="showSection('commissions',this)">💶 Commissions</button>
     <button class="t-tab" onclick="showSection('contacts-db',this)">Clients</button>
+    <button class="t-tab hidden" id="t-tab-comptes" onclick="showSection('comptes',this)">👥 Comptes</button>
 
   </div>
   <div class="topbar-right">
@@ -983,6 +984,10 @@ textarea { resize:vertical; min-height:80px; }
     <div class="nav-item" onclick="showSection('commissions',null,this)">
       <svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="8" cy="8" r="6"/><path d="M8 5v6M6 7h3.5a1.5 1.5 0 0 1 0 3H6"/></svg>
       Commissions
+    </div>
+    <div class="nav-item hidden" id="nav-item-comptes" onclick="showSection('comptes',null,this)">
+      <svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="5.5" cy="5.5" r="2.5"/><circle cx="11" cy="6" r="2"/><path d="M1 14c0-2.5 1.8-4.5 4.5-4.5S10 11.5 10 14"/><path d="M9.5 9.7c2 .2 3.5 1.8 3.5 4.3"/></svg>
+      Comptes
     </div>
   </div>
 
@@ -1813,6 +1818,41 @@ textarea { resize:vertical; min-height:80px; }
       </div>
   </div>
 
+  <!-- GESTION DES COMPTES (admin uniquement) -->
+  <div id="sec-comptes" class="hidden" style="padding:1.75rem 2rem;overflow-y:auto;flex:1;background:var(--bg);box-sizing:border-box;">
+    <div class="page-header">
+      <div>
+        <div class="page-title">👥 Gestion des comptes</div>
+        <div class="page-sub">Comptes ayant accès au CRM MDM / NATURALINE</div>
+      </div>
+      <button class="btn" onclick="comptesRender()">🔄 Actualiser</button>
+    </div>
+
+    <div class="card">
+      <div style="overflow-x:auto;border-radius:10px;">
+        <table style="width:100%;border-collapse:collapse;font-size:.82rem;min-width:760px;">
+          <thead>
+            <tr style="background:var(--blue-p50);">
+              <th style="padding:.65rem 1rem;text-align:left;font-weight:600;color:var(--blue-p800);">Nom</th>
+              <th style="padding:.65rem .75rem;text-align:left;color:var(--blue-p800);">Email</th>
+              <th style="padding:.65rem .75rem;text-align:center;color:var(--blue-p800);">Rôle</th>
+              <th style="padding:.65rem .75rem;text-align:center;color:var(--blue-p800);">Créé le</th>
+              <th style="padding:.65rem .75rem;text-align:center;color:var(--blue-p800);">Statut</th>
+              <th style="padding:.65rem .75rem;text-align:center;color:var(--blue-p800);">Actions</th>
+            </tr>
+          </thead>
+          <tbody id="comptes-tbody">
+            <tr><td colspan="6"><div class="empty"><div class="empty-icon">👥</div><div class="empty-title">Chargement…</div></div></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div style="margin-top:1rem;font-size:.74rem;color:var(--g500);line-height:1.6;">
+      💡 Désactiver un compte coupe immédiatement son accès au CRM (sans supprimer le compte de connexion). Le bouton "Supprimer" retire le profil de cette liste, mais le compte de connexion Firebase doit être supprimé manuellement depuis la <a href="https://console.firebase.google.com/project/bdcmdm26/authentication/users" target="_blank" style="color:var(--blue-p700);">console Firebase</a> si besoin.
+    </div>
+  </div>
+
   <div id="sec-mailing" class="hidden">
     <div class="page-header">
       <div>
@@ -1967,6 +2007,10 @@ textarea { resize:vertical; min-height:80px; }
   <button class="mtab" data-sec="commissions" onclick="showSection('commissions',null,null)">
     <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="8" cy="8" r="6"/><path d="M8 5v6M6 7h3.5a1.5 1.5 0 0 1 0 3H6"/></svg>
     <span>Commiss.</span>
+  </button>
+  <button class="mtab hidden" id="mtab-comptes" data-sec="comptes" onclick="showSection('comptes',null,null)">
+    <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="5.5" cy="5.5" r="2.5"/><circle cx="11" cy="6" r="2"/><path d="M1 14c0-2.5 1.8-4.5 4.5-4.5S10 11.5 10 14"/><path d="M9.5 9.7c2 .2 3.5 1.8 3.5 4.3"/></svg>
+    <span>Comptes</span>
   </button>
 </div>
 
@@ -2386,6 +2430,122 @@ function initBrandSwitcherUI() {
   if (label) label.textContent = isNat ? 'Naturaline' : 'Moulin des Moines';
 }
 
+// ─── Gestion des comptes (admin uniquement) ───────────────────────────────
+var ADMIN_EMAIL = 'loacdev@outlook.fr';
+function isAdminUser() {
+  return !!(currentUser && currentUser.email && currentUser.email.toLowerCase() === ADMIN_EMAIL);
+}
+function initAdminAccountsUI() {
+  if (!isAdminUser()) return;
+  var ids = ['t-tab-comptes', 'nav-item-comptes', 'mtab-comptes'];
+  ids.forEach(function(id) {
+    var el = document.getElementById(id);
+    if (el) el.classList.remove('hidden');
+  });
+}
+
+function comptesFmtDate(ts) {
+  try {
+    if (!ts) return '—';
+    var d = ts.toDate ? ts.toDate() : new Date(ts);
+    return d.toLocaleDateString('fr-FR');
+  } catch(e) { return '—'; }
+}
+
+async function comptesRender() {
+  if (!isAdminUser()) return;
+  var tbody = document.getElementById('comptes-tbody');
+  if (!tbody) return;
+  try {
+    var snap = await db.collection('profils').get();
+    var rows = [];
+    snap.forEach(function(doc) { rows.push(Object.assign({ id: doc.id }, doc.data())); });
+    rows.sort(function(a, b) { return (a.nom || '').localeCompare(b.nom || ''); });
+
+    if (!rows.length) {
+      tbody.innerHTML = '<tr><td colspan="6"><div class="empty"><div class="empty-icon">👥</div><div class="empty-title">Aucun compte trouvé</div></div></td></tr>';
+      return;
+    }
+
+    tbody.innerHTML = rows.map(function(r) {
+      var isMe = (r.id === currentUser.uid);
+      var actif = (r.actif !== false); // par défaut actif si le champ n'existe pas encore
+      var roleLabel = (r.role === 'admin') ? '👑 Admin' : '👤 Commercial';
+      var statutBadge = actif
+        ? '<span style="display:inline-block;padding:2px 10px;border-radius:20px;background:var(--em100,#dcfce7);color:var(--em700,#15803d);font-size:.72rem;font-weight:600;">● Actif</span>'
+        : '<span style="display:inline-block;padding:2px 10px;border-radius:20px;background:#fee2e2;color:#b91c1c;font-size:.72rem;font-weight:600;">● Désactivé</span>';
+
+      var actions = '';
+      if (isMe) {
+        actions = '<span style="font-size:.72rem;color:var(--g500);">— Votre compte —</span>';
+      } else {
+        actions =
+          '<button class="btn btn-ghost" style="font-size:.7rem;padding:.25rem .6rem;" onclick="comptesEditRole(\'' + r.id + '\',\'' + (r.role || 'commercial') + '\')">✏️ Rôle</button> ' +
+          '<button class="btn btn-ghost" style="font-size:.7rem;padding:.25rem .6rem;" onclick="comptesToggleActif(\'' + r.id + '\',' + actif + ')">' + (actif ? '🚫 Désactiver' : '✅ Réactiver') + '</button> ' +
+          '<button class="btn btn-ghost" style="font-size:.7rem;padding:.25rem .6rem;color:#b91c1c;" onclick="comptesDelete(\'' + r.id + '\',\'' + (r.nom || r.email || '').replace(/'/g, "\\'") + '\')">🗑️</button>';
+      }
+
+      return '<tr style="border-bottom:1px solid var(--border);">' +
+        '<td style="padding:.6rem 1rem;font-weight:500;color:var(--g800);">' + (r.nom || '—') + (isMe ? ' <span style="font-size:.68rem;color:var(--blue-p700);">(vous)</span>' : '') + '</td>' +
+        '<td style="padding:.6rem .75rem;color:var(--g700);">' + (r.email || '—') + '</td>' +
+        '<td style="padding:.6rem .75rem;text-align:center;">' + roleLabel + '</td>' +
+        '<td style="padding:.6rem .75rem;text-align:center;color:var(--g600);font-size:.78rem;">' + comptesFmtDate(r.createdAt) + '</td>' +
+        '<td style="padding:.6rem .75rem;text-align:center;">' + statutBadge + '</td>' +
+        '<td style="padding:.6rem .75rem;text-align:center;white-space:nowrap;">' + actions + '</td>' +
+      '</tr>';
+    }).join('');
+  } catch (e) {
+    console.warn('[Comptes] erreur chargement', e);
+    tbody.innerHTML = '<tr><td colspan="6"><div class="empty"><div class="empty-title">Erreur de chargement</div><div class="empty-sub">' + (e.message || e) + '</div></div></td></tr>';
+  }
+}
+
+async function comptesToggleActif(uid, currentlyActive) {
+  if (!isAdminUser()) return;
+  var newState = !currentlyActive;
+  var msg = newState
+    ? 'Réactiver ce compte ? Il pourra de nouveau se connecter au CRM.'
+    : 'Désactiver ce compte ? Il ne pourra plus se connecter au CRM (le compte n\'est pas supprimé).';
+  if (!confirm(msg)) return;
+  try {
+    await db.collection('profils').doc(uid).update({ actif: newState });
+    toast(newState ? '✅ Compte réactivé' : '🚫 Compte désactivé');
+    comptesRender();
+  } catch (e) {
+    toast('Erreur : ' + (e.message || e), 'err');
+  }
+}
+
+async function comptesEditRole(uid, currentRole) {
+  if (!isAdminUser()) return;
+  var newRole = prompt('Rôle pour ce compte ("admin" ou "commercial") :', currentRole || 'commercial');
+  if (newRole === null) return;
+  newRole = newRole.trim().toLowerCase();
+  if (newRole !== 'admin' && newRole !== 'commercial') {
+    toast('Rôle invalide — utilisez "admin" ou "commercial"', 'err');
+    return;
+  }
+  try {
+    await db.collection('profils').doc(uid).update({ role: newRole });
+    toast('✅ Rôle mis à jour');
+    comptesRender();
+  } catch (e) {
+    toast('Erreur : ' + (e.message || e), 'err');
+  }
+}
+
+async function comptesDelete(uid, label) {
+  if (!isAdminUser()) return;
+  if (!confirm('Retirer "' + label + '" de la liste des comptes ?\n\nCeci supprime uniquement le profil dans le CRM. Le compte de connexion (email/mot de passe) doit être supprimé séparément depuis la console Firebase si vous voulez bloquer définitivement la création d\'un nouveau profil avec ce même compte.')) return;
+  try {
+    await db.collection('profils').doc(uid).delete();
+    toast('🗑️ Profil supprimé');
+    comptesRender();
+  } catch (e) {
+    toast('Erreur : ' + (e.message || e), 'err');
+  }
+}
+
 // ─── Migration automatique des données saisies avant l'ajout de NATURALINE ───
 // Avant ce changement, toutes les collections (clients, frais, commandes, ...)
 // n'avaient pas de suffixe de marque. On copie une seule fois ces anciennes
@@ -2594,6 +2754,16 @@ async function showApp() {
     const role = profil.exists ? (profil.data().role || 'commercial') : 'commercial';
     s2('sb-role', role.charAt(0).toUpperCase()+role.slice(1));
     s2('menu-role-lbl', role==='admin' ? '👑 Administrateur' : '👤 Commercial');
+
+    // Compte désactivé par l'administrateur : on bloque l'accès immédiatement.
+    if (profil.exists && profil.data().actif === false) {
+      shell.classList.add('hidden');
+      shell.style.display = 'none';
+      await auth.signOut();
+      document.getElementById('login-screen').style.display = 'flex';
+      setLoginErr('Votre accès a été désactivé. Contactez votre administrateur.');
+      return;
+    }
   } catch { s2('sb-role','Commercial'); }
 
   // Préremplir commercial dans frais
@@ -2602,6 +2772,7 @@ async function showApp() {
   await migrateLegacyCollectionsToMdm();
   await migrateLegacyDataToCurrentUser();
   loadStockMapFromCache();
+  initAdminAccountsUI();
 
   startListeners();
 
@@ -2696,8 +2867,12 @@ if (typeof cdbPageSize  === 'undefined') window.cdbPageSize  = 50;
 // ═══════════════════════════════════════════════
 //  NAVIGATION
 // ═══════════════════════════════════════════════
-const SECTIONS = ['dashboard','bdc','frais','contacts-db','commissions'];
+const SECTIONS = ['dashboard','bdc','frais','contacts-db','commissions','comptes'];
 function showSection(name, tabEl, sideEl) {
+  if (name === 'comptes' && !isAdminUser()) {
+    toast('Accès réservé.', 'err');
+    name = 'dashboard';
+  }
   SECTIONS.forEach(s => { const el=document.getElementById('sec-'+s); el.classList.add('hidden'); el.style.display=''; });
   const sec=document.getElementById('sec-'+name); if(!sec){console.warn('Section absente:',name);return;} sec.classList.remove('hidden'); sec.style.display=(name==='bdc')?'flex':'';
   document.querySelectorAll('.t-tab').forEach(t=>t.classList.remove('active'));
@@ -2710,6 +2885,7 @@ function showSection(name, tabEl, sideEl) {
   if (name==='frais') { if (typeof refreshFraisStats === 'function') { try{refreshFraisStats();}catch(e){} } if (typeof nfdRender === 'function') nfdRender(); }
   if (name==='bdc') { if (!bdcInitDone) { buildTable(); bdcInitDone=true; } }
   if (name==='commissions') { setTimeout(function(){ if (typeof commInit === 'function') commInit(); }, 80); }
+  if (name==='comptes') { if (typeof comptesRender === 'function') comptesRender(); }
   // remonte en haut de la zone de contenu à chaque changement de section (utile sur mobile)
   const mainEl = document.querySelector('.main'); if (mainEl) mainEl.scrollTop = 0;
 }
