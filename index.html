@@ -1317,6 +1317,7 @@ textarea { resize:vertical; min-height:80px; }
     <div style="background:var(--surface);border-bottom:1px solid var(--border);padding:.55rem 1rem;display:flex;align-items:center;gap:8px;flex-shrink:0;flex-wrap:wrap;">
       <div style="font-family:var(--fdisp);font-size:.9rem;color:var(--g900);flex:1;min-width:140px;">🌾 Bon de Commande MDM 2026</div>
       <button class="btn btn-ghost" style="font-size:.72rem;padding:.3rem .7rem;" onclick="openBdcImport()">📄 Importer commande</button>
+      <button class="btn btn-ghost" style="font-size:.72rem;padding:.3rem .7rem;color:#a78bfa;border-color:rgba(167,139,250,.3);" onclick="boxOpen()">📦 Création BOX</button>
       <button class="btn btn-ghost" style="font-size:.72rem;padding:.3rem .7rem;color:#fcd34d;border-color:rgba(245,158,11,.3);" onclick="openStockImport()">📦 Mettre à jour stocks</button>
       <button class="btn btn-ghost" style="font-size:.72rem;padding:.3rem .7rem;" onclick="resetBDC()">🗑 Effacer</button>
       <div style="display:flex;gap:5px;">
@@ -2892,6 +2893,13 @@ function showSection(name, tabEl, sideEl) {
 
 function toggleAvatarMenu() { document.getElementById('avatar-menu').classList.toggle('open'); }
 document.addEventListener('click', e => { if(!e.target.closest('#avatar-btn')) document.getElementById('avatar-menu')?.classList.remove('open'); });
+document.addEventListener('click', function(e) {
+  if (e.target.closest('[id^="box-search-"]') || e.target.closest('[id^="box-suggest-"]')) return;
+  for (var i = 0; i < BOX_NB_ETAGES; i++) {
+    var el = document.getElementById('box-suggest-' + i);
+    if (el) el.classList.add('hidden');
+  }
+});
 
 // ═══════════════════════════════════════════════
 //  MODAL
@@ -5133,6 +5141,160 @@ function bdcApplyImport() {
   bdcImportedQtys={};
 }
 
+// ─── Module Création BOX (5 étages, 1 produit par étage) ──────────────────
+var BOX_NB_ETAGES = 5;
+var boxEtagesData = []; // [{code, libelle, puHt, pcb, unitesParBox}, ...] index = étage
+
+function boxOpen() {
+  boxEtagesData = new Array(BOX_NB_ETAGES).fill(null);
+  document.getElementById('box-brand-label').textContent = (CURRENT_BRAND === 'naturaline') ? 'NATURALINE' : 'MDM';
+  document.getElementById('box-nb').value = 1;
+  boxRenderEtages();
+  boxRecalc();
+  document.getElementById('box-modal').classList.remove('hidden');
+}
+function boxClose() {
+  document.getElementById('box-modal').classList.add('hidden');
+}
+
+function boxRenderEtages() {
+  var html = '';
+  for (var i = 0; i < BOX_NB_ETAGES; i++) {
+    html +=
+      '<div style="display:flex;align-items:flex-end;gap:8px;padding:.6rem 0;border-bottom:1px solid var(--border);">' +
+        '<div style="width:26px;height:26px;border-radius:50%;background:var(--blue-p700);color:#fff;display:flex;align-items:center;justify-content:center;font-size:.75rem;font-weight:700;flex-shrink:0;margin-bottom:2px;">' + (i+1) + '</div>' +
+        '<div style="flex:1;position:relative;">' +
+          '<label style="display:block;font-size:.65rem;font-weight:600;color:var(--g600);text-transform:uppercase;letter-spacing:.04em;margin-bottom:.2rem;">Produit (code, EAN ou nom)</label>' +
+          '<input type="text" id="box-search-' + i + '" placeholder="Rechercher…" oninput="boxSearchProduct(' + i + ')" autocomplete="off" ' +
+            'style="width:100%;border:1px solid var(--border-med);border-radius:6px;padding:.4rem .6rem;font-size:.78rem;outline:none;">' +
+          '<div id="box-suggest-' + i + '" class="hidden" style="position:absolute;top:100%;left:0;right:0;z-index:20;background:var(--surface);border:1px solid var(--border);border-radius:8px;box-shadow:0 6px 18px rgba(0,0,0,.12);max-height:200px;overflow-y:auto;margin-top:3px;"></div>' +
+          '<div id="box-selected-' + i + '" style="margin-top:.3rem;font-size:.72rem;color:var(--blue-p700);font-weight:600;"></div>' +
+        '</div>' +
+        '<div style="width:130px;flex-shrink:0;">' +
+          '<label style="display:block;font-size:.65rem;font-weight:600;color:var(--g600);text-transform:uppercase;letter-spacing:.04em;margin-bottom:.2rem;">Unités / box</label>' +
+          '<input type="number" id="box-units-' + i + '" min="1" step="1" value="1" oninput="boxOnUnitsChange(' + i + ')" ' +
+            'style="width:100%;border:1px solid var(--border-med);border-radius:6px;padding:.4rem .6rem;font-size:.78rem;text-align:center;outline:none;">' +
+        '</div>' +
+      '</div>';
+  }
+  document.getElementById('box-etages').innerHTML = html;
+}
+
+function boxSearchProduct(idx) {
+  var q = (document.getElementById('box-search-' + idx).value || '').toLowerCase().trim();
+  var suggestEl = document.getElementById('box-suggest-' + idx);
+  if (!q) { suggestEl.classList.add('hidden'); suggestEl.innerHTML = ''; return; }
+
+  var matches = PRODUCTS.filter(function(p) {
+    return p.code.toLowerCase().includes(q) ||
+           (p.ean && p.ean.toLowerCase().includes(q)) ||
+           p.libelle.toLowerCase().includes(q);
+  }).slice(0, 8);
+
+  if (!matches.length) {
+    suggestEl.innerHTML = '<div style="padding:.5rem .7rem;font-size:.74rem;color:var(--g500);">Aucun résultat</div>';
+    suggestEl.classList.remove('hidden');
+    return;
+  }
+
+  suggestEl.innerHTML = matches.map(function(p) {
+    return '<div onclick="boxSelectProduct(' + idx + ',\'' + p.code.replace(/'/g, "\\'") + '\')" ' +
+      'style="padding:.5rem .7rem;font-size:.76rem;cursor:pointer;border-bottom:1px solid var(--border);" ' +
+      'onmouseover="this.style.background=\'var(--surface2)\'" onmouseout="this.style.background=\'\'">' +
+      '<span style="font-family:monospace;color:var(--blue-p700);font-weight:600;">' + p.code + '</span> — ' + p.libelle +
+      ' <span style="color:var(--g500);">(PCB ' + (p.pcb||1) + ')</span>' +
+    '</div>';
+  }).join('');
+  suggestEl.classList.remove('hidden');
+}
+
+function boxSelectProduct(idx, code) {
+  var p = PRODUCTS.find(function(pr) { return pr.code === code; });
+  if (!p) return;
+  boxEtagesData[idx] = {
+    code: p.code,
+    libelle: p.libelle,
+    puHt: bdcPrixNet ? bdcPrixNet(p) : p.pu_ht,
+    pcb: parseFloat(p.pcb) || 1,
+    unitesParBox: parseFloat(document.getElementById('box-units-' + idx).value) || 1
+  };
+  document.getElementById('box-search-' + idx).value = '';
+  document.getElementById('box-suggest-' + idx).classList.add('hidden');
+  document.getElementById('box-selected-' + idx).innerHTML = '✓ ' + p.code + ' — ' + p.libelle;
+  boxRecalc();
+}
+
+function boxOnUnitsChange(idx) {
+  if (boxEtagesData[idx]) {
+    boxEtagesData[idx].unitesParBox = parseFloat(document.getElementById('box-units-' + idx).value) || 1;
+  }
+  boxRecalc();
+}
+
+function boxRecalc() {
+  var nbBox = parseFloat(document.getElementById('box-nb').value) || 1;
+  var summaryEl = document.getElementById('box-summary');
+  var tbody = document.getElementById('box-summary-tbody');
+  var rows = '';
+  var totalGeneral = 0;
+  var anyFilled = false;
+
+  for (var i = 0; i < BOX_NB_ETAGES; i++) {
+    var e = boxEtagesData[i];
+    if (!e) continue;
+    anyFilled = true;
+    var uvcNecessaires = e.unitesParBox * nbBox;
+    var colis = Math.ceil(uvcNecessaires / e.pcb);
+    var totalLigne = colis * e.pcb * e.puHt;
+    totalGeneral += totalLigne;
+
+    rows += '<tr style="border-bottom:1px solid var(--border);">' +
+      '<td style="padding:.35rem .4rem;font-weight:700;color:var(--blue-p700);">' + (i+1) + '</td>' +
+      '<td style="padding:.35rem .4rem;">' + e.code + ' — ' + e.libelle + '</td>' +
+      '<td style="padding:.35rem .4rem;text-align:right;">' + uvcNecessaires + '</td>' +
+      '<td style="padding:.35rem .4rem;text-align:right;font-weight:700;color:var(--em600,#059669);">' + colis + ' col.</td>' +
+      '<td style="padding:.35rem .4rem;text-align:right;">' + totalLigne.toFixed(2).replace('.',',') + '€</td>' +
+    '</tr>';
+  }
+
+  if (anyFilled) {
+    tbody.innerHTML = rows;
+    document.getElementById('box-summary-nb').textContent = nbBox;
+    document.getElementById('box-summary-total').textContent = totalGeneral.toFixed(2).replace('.',',') + '€';
+    summaryEl.style.display = 'block';
+  } else {
+    summaryEl.style.display = 'none';
+  }
+}
+
+function boxExportCSV() {
+  var nbBox = parseFloat(document.getElementById('box-nb').value) || 1;
+  var lines = ['Etage,Code,Designation,Unites par box,Nombre de box,UVC necessaires,PCB,Colis a commander,PU HT,Total HT'];
+  var hasData = false;
+  for (var i = 0; i < BOX_NB_ETAGES; i++) {
+    var e = boxEtagesData[i];
+    if (!e) continue;
+    hasData = true;
+    var uvcNecessaires = e.unitesParBox * nbBox;
+    var colis = Math.ceil(uvcNecessaires / e.pcb);
+    var totalLigne = colis * e.pcb * e.puHt;
+    var desig = e.libelle.replace(/"/g, '""');
+    if (desig.indexOf(',') >= 0) desig = '"' + desig + '"';
+    lines.push([i+1, e.code, desig, e.unitesParBox, nbBox, uvcNecessaires, e.pcb, colis, e.puHt.toFixed(2), totalLigne.toFixed(2)].join(','));
+  }
+  if (!hasData) { toast('Sélectionnez au moins un produit avant d\'exporter', 'err'); return; }
+
+  var blob = new Blob([lines.join('\n')], { type: 'text/csv;charset=utf-8;' });
+  var url = URL.createObjectURL(blob);
+  var a = document.createElement('a');
+  a.href = url;
+  a.download = 'BOX_' + (CURRENT_BRAND === 'naturaline' ? 'NATURALINE' : 'MDM') + '_' + nbBox + 'box_' + new Date().toISOString().slice(0,10) + '.csv';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
 </script>
 
 <!-- IMPORT BDC -->
@@ -5170,6 +5332,44 @@ function bdcApplyImport() {
   <div class="modal-foot" id="bdc-import-foot" style="display:none;">
     <button class="btn btn-ghost" onclick="closeBdcImport()">Annuler</button>
     <button class="btn btn-primary" onclick="bdcApplyImport()">&#10003; Appliquer les quantit&eacute;s</button>
+  </div>
+</div></div>
+
+<!-- MODULE CRÉATION BOX -->
+<div class="modal-bg hidden" id="box-modal"><div class="modal" style="max-width:760px;">
+  <div class="modal-head"><span class="modal-title">📦 Création BOX — <span id="box-brand-label">MDM</span></span><button class="close-btn" onclick="boxClose()">✕</button></div>
+  <div class="modal-body">
+    <div style="font-size:.78rem;color:var(--s600);margin-bottom:1rem;line-height:1.5;">
+      Une box contient 5 étages. Choisissez un produit par étage (code, EAN ou nom), indiquez combien d'unités de ce produit vont dans <strong>une</strong> box, et le nombre total de box à produire — le nombre de colis à commander est calculé automatiquement.
+    </div>
+
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:1rem;padding:.7rem .9rem;background:var(--blue-p50);border-radius:8px;border:1px solid rgba(59,130,212,.15);">
+      <label style="font-size:.8rem;font-weight:600;color:var(--g700);white-space:nowrap;">Nombre de box à produire :</label>
+      <input type="number" id="box-nb" min="1" step="1" value="1" oninput="boxRecalc()" style="width:80px;border:1px solid var(--border-med);border-radius:6px;padding:.3rem .5rem;text-align:center;font-size:.85rem;font-weight:700;color:var(--blue-p800);">
+    </div>
+
+    <div id="box-etages"></div>
+
+    <div id="box-summary" style="margin-top:1rem;padding:.8rem .9rem;background:var(--surface2);border-radius:8px;border:1px solid var(--border);display:none;">
+      <div style="font-size:.72rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--g500);margin-bottom:.5rem;">Récapitulatif</div>
+      <table style="width:100%;border-collapse:collapse;font-size:.78rem;">
+        <thead><tr style="border-bottom:1px solid var(--border);">
+          <th style="text-align:left;padding:.3rem .4rem;color:var(--g600);">Étage</th>
+          <th style="text-align:left;padding:.3rem .4rem;color:var(--g600);">Produit</th>
+          <th style="text-align:right;padding:.3rem .4rem;color:var(--g600);">UVC nécessaires</th>
+          <th style="text-align:right;padding:.3rem .4rem;color:var(--g600);">Colis à commander</th>
+          <th style="text-align:right;padding:.3rem .4rem;color:var(--g600);">Total HT</th>
+        </tr></thead>
+        <tbody id="box-summary-tbody"></tbody>
+      </table>
+      <div style="display:flex;justify-content:flex-end;margin-top:.6rem;padding-top:.5rem;border-top:1px solid var(--border);font-size:.85rem;font-weight:700;color:var(--blue-p700);">
+        Total HT box × <span id="box-summary-nb"></span> : <span id="box-summary-total" style="margin-left:.4rem;"></span>
+      </div>
+    </div>
+  </div>
+  <div class="modal-foot">
+    <button class="btn btn-ghost" onclick="boxClose()">Fermer</button>
+    <button class="btn btn-primary" onclick="boxExportCSV()">⬇️ Exporter en CSV</button>
   </div>
 </div></div>
 
