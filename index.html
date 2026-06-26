@@ -1322,7 +1322,7 @@ textarea { resize:vertical; min-height:80px; }
       <button class="btn btn-ghost" style="font-size:.72rem;padding:.3rem .7rem;" onclick="resetBDC()">🗑 Effacer</button>
       <div style="display:flex;gap:5px;">
         <button class="btn btn-primary" style="font-size:.72rem;padding:.3rem .7rem;" onclick="bdcSendOrder()">📤 Envoyer à MDM</button>
-        <button class="btn btn-ghost" style="font-size:.72rem;padding:.3rem .7rem;border-color:var(--blue-p300);color:var(--blue-p700);" onclick="bdcOpenOutlook()">✉️ Outlook</button>
+        <button class="btn btn-ghost" style="font-size:.72rem;padding:.3rem .7rem;border-color:var(--blue-p300);color:var(--blue-p700);" onclick="bdcOpenOutlook()">✉️ Email</button>
       </div>
     </div>
     <!-- Bandeau articles saisis (sticky) — cliquable pour ouvrir le détail éditable -->
@@ -1387,8 +1387,8 @@ textarea { resize:vertical; min-height:80px; }
             <div id="bdc-spinner" style="display:none;width:11px;height:11px;border:2px solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;animation:spin .7s linear infinite;margin-right:5px;"></div>
             <span id="bdc-send-label">📤 Envoyer à MDM</span>
           </button>
-          <button class="btn btn-ghost" style="flex:1;justify-content:center;font-size:.72rem;border-color:var(--blue-p300);color:var(--blue-p700);background:var(--blue-p50);" onclick="bdcOpenOutlook()" title="Ouvrir dans Outlook vers commande@moulindesmoines.com">
-            ✉️ Ouvrir Outlook
+          <button class="btn btn-ghost" style="flex:1;justify-content:center;font-size:.72rem;border-color:var(--blue-p300);color:var(--blue-p700);background:var(--blue-p50);" onclick="bdcOpenOutlook()" title="Ouvrir votre client mail vers commande@moulindesmoines.com">
+            ✉️ Envoyer par email
           </button>
         </div>
       </div>
@@ -4806,15 +4806,15 @@ function bdcOpenOutlook() {
   // Construire le corps en texte brut (même format que bdcBuildText)
   var body = bdcBuildText();
 
-  // L'URL OWA ne contient QUE to+subject (toujours courts) — le corps, qui peut
+  // Le mailto: ne contient QUE to+subject (toujours courts) — le corps, qui peut
   // être très long pour les grosses commandes, est copié dans le presse-papiers
-  // séparément pour éviter de dépasser la limite de longueur d'URL des serveurs.
-  var owaUrl = 'https://mails.moulindesmoines.com/owa/?path=/mail/action/compose'
-    + '&to='      + encodeURIComponent('commande@moulindesmoines.com')
-    + '&subject=' + encodeURIComponent(subject);
+  // séparément pour éviter de dépasser la limite de longueur des liens mailto:
+  // (environ 2000 caractères sur Windows, parfois bien moins selon le client mail).
+  var mailtoUrl = 'mailto:' + encodeURIComponent('commande@moulindesmoines.com')
+    + '?subject=' + encodeURIComponent(subject);
 
-  function openOwa() {
-    window.open(owaUrl, '_blank');
+  function openMailClient() {
+    window.location.href = mailtoUrl;
   }
 
   function copyFallback() {
@@ -4834,14 +4834,14 @@ function bdcOpenOutlook() {
   if (navigator.clipboard && navigator.clipboard.writeText) {
     navigator.clipboard.writeText(body).then(function() {
       bdcShowAlert('📋 Commande copiée — collez-la (Ctrl+V) dans le mail qui s\'ouvre.', 'ok');
-      openOwa();
+      openMailClient();
     }).catch(function() {
       if (copyFallback()) {
         bdcShowAlert('📋 Commande copiée — collez-la (Ctrl+V) dans le mail qui s\'ouvre.', 'ok');
       } else {
         bdcShowAlert('⚠️ Copie automatique impossible — pensez à copier le BDC manuellement.', 'err');
       }
-      openOwa();
+      openMailClient();
     });
   } else {
     if (copyFallback()) {
@@ -4849,7 +4849,7 @@ function bdcOpenOutlook() {
     } else {
       bdcShowAlert('⚠️ Copie automatique impossible — pensez à copier le BDC manuellement.', 'err');
     }
-    openOwa();
+    openMailClient();
   }
 }
 
