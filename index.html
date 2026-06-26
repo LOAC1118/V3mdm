@@ -1491,7 +1491,7 @@ textarea { resize:vertical; min-height:80px; }
     <!-- Saisie nouvelle ligne -->
     <div class="card" style="padding:1rem;margin-bottom:1rem;background:linear-gradient(135deg,var(--blue-p50),#fff);border:1.5px solid var(--blue-p300);">
       <div style="font-size:.72rem;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--blue-p700);margin-bottom:.6rem;">➕ Ajouter une ligne</div>
-      <div style="display:grid;grid-template-columns:minmax(100px,120px) 1.2fr minmax(80px,100px) minmax(75px,90px) minmax(80px,100px) 1.5fr auto;gap:8px;align-items:end;overflow:hidden;">
+      <div style="display:grid;grid-template-columns:minmax(100px,120px) 1.2fr minmax(80px,100px) minmax(75px,90px) minmax(80px,100px) 1.5fr auto;gap:8px;align-items:end;overflow:hidden;min-width:0;">
         <div><label class="lb">Date</label><input type="date" id="nfd-new-date"/></div>
         <div><label class="lb">Catégorie</label>
           <select id="nfd-new-cat">
@@ -1509,7 +1509,12 @@ textarea { resize:vertical; min-height:80px; }
         </div>
         <div><label class="lb">TTC (€)</label><input type="number" step="0.01" id="nfd-new-ttc" placeholder="auto" readonly style="background:var(--g100);"/></div>
         <div><label class="lb">Description</label><input type="text" id="nfd-new-desc" placeholder="Ex: Total Bourges → Lyon"/></div>
-        <div><button class="btn btn-primary" onclick="nfdAddLine()" style="white-space:nowrap;">➕ Ajouter</button></div>
+        <div style="display:flex;gap:6px;">
+          <button class="btn btn-ghost" onclick="nfdOpenScanner()" title="Scanner le ticket avec la caméra" style="white-space:nowrap;position:relative;">
+            📷<span id="nfd-photo-badge" class="hidden" style="position:absolute;top:-5px;right:-5px;width:14px;height:14px;border-radius:50%;background:var(--em600,#059669);"></span>
+          </button>
+          <button class="btn btn-primary" onclick="nfdAddLine()" style="white-space:nowrap;">➕ Ajouter</button>
+        </div>
       </div>
     </div>
 
@@ -1525,6 +1530,7 @@ textarea { resize:vertical; min-height:80px; }
               <th style="text-align:right;">TVA</th>
               <th style="text-align:right;">TTC</th>
               <th>Description</th>
+              <th style="text-align:center;">Photo</th>
               <th>Action</th>
             </tr>
           </thead>
@@ -2040,6 +2046,27 @@ textarea { resize:vertical; min-height:80px; }
     </div>
     <div class="modal-foot" style="background:#0b1220;border-top-color:rgba(255,255,255,.08);">
       <button class="btn btn-ghost" onclick="bdcCloseScan()" style="background:transparent;color:#cbd5e1;border-color:rgba(255,255,255,.15);">Fermer</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODALE SCANNER TICKET DE FRAIS -->
+<div class="modal-bg hidden" id="nfd-scan-modal" style="z-index:600;">
+  <div class="modal" style="max-width:420px;background:#0b1220;border-color:rgba(255,255,255,.1);">
+    <div class="modal-head" style="background:#0b1220;border-bottom-color:rgba(255,255,255,.08);">
+      <span class="modal-title" style="color:#fff;">📷 Scanner un ticket</span>
+      <button class="close-btn" onclick="nfdCloseScanner()">✕</button>
+    </div>
+    <div class="modal-body" style="padding:0;position:relative;background:#000;">
+      <video id="nfd-scan-video" playsinline autoplay muted style="width:100%;display:block;max-height:62vh;background:#000;"></video>
+      <canvas id="nfd-scan-canvas" class="hidden" style="width:100%;display:block;max-height:62vh;"></canvas>
+      <div id="nfd-scan-status" style="position:absolute;left:0;right:0;bottom:0;padding:.6rem 1rem;background:rgba(0,0,0,.55);color:#fff;font-size:.78rem;text-align:center;">Initialisation de la caméra…</div>
+    </div>
+    <div class="modal-foot" style="background:#0b1220;border-top-color:rgba(255,255,255,.08);display:flex;gap:8px;">
+      <button class="btn btn-ghost" id="nfd-scan-btn-cancel" onclick="nfdCloseScanner()" style="background:transparent;color:#cbd5e1;border-color:rgba(255,255,255,.15);">Annuler</button>
+      <button class="btn btn-primary" id="nfd-scan-btn-capture" onclick="nfdCapturePhoto()" style="flex:1;">📸 Prendre la photo</button>
+      <button class="btn btn-ghost hidden" id="nfd-scan-btn-retake" onclick="nfdRetakePhoto()" style="background:transparent;color:#cbd5e1;border-color:rgba(255,255,255,.15);">↺ Reprendre</button>
+      <button class="btn btn-primary hidden" id="nfd-scan-btn-confirm" onclick="nfdConfirmPhoto()" style="flex:1;background:var(--em600,#059669);border-color:var(--em600,#059669);">✓ Utiliser cette photo</button>
     </div>
   </div>
 </div>
@@ -3029,7 +3056,15 @@ function nfdSaveIdentity() {
 // Stockage local + Firestore
 function nfdSaveCache() {
   try {
-    localStorage.setItem(NFD_CACHE_KEY(), JSON.stringify(nfdLines));
+    // Les photos (base64, potentiellement lourdes) ne sont PAS dupliquées dans le
+    // cache localStorage — seul Firestore les conserve, pour éviter de dépasser
+    // le quota localStorage (généralement 5-10 Mo par domaine).
+    var lightLines = nfdLines.map(function(l) {
+      var copy = Object.assign({}, l);
+      if (copy.photo) copy.photo = true; // simple marqueur "a une photo", pas la donnée elle-même
+      return copy;
+    });
+    localStorage.setItem(NFD_CACHE_KEY(), JSON.stringify(lightLines));
     console.log('[NFD] Cache sauvegardé : ' + nfdLines.length + ' lignes');
   } catch(e) {
     console.warn('[NFD] Erreur cache:', e);
@@ -3136,6 +3171,7 @@ function nfdAddLine() {
     tauxTva: tauxTva,
     ttc: Math.round(ttc * 100) / 100,
     description: desc,
+    photo: nfdPendingPhoto || null,
     createdAt: Date.now()
   };
 
@@ -3149,6 +3185,8 @@ function nfdAddLine() {
   document.getElementById('nfd-new-ttc').value = '';
   document.getElementById('nfd-new-desc').value = '';
   document.getElementById('nfd-new-ht').focus();
+  nfdPendingPhoto = null;
+  document.getElementById('nfd-photo-badge').classList.add('hidden');
 
   nfdRender();
   toast('✅ Ligne ajoutée et sauvegardée', 'ok');
@@ -3159,6 +3197,137 @@ function nfdAddLine() {
     statEl.style.display = 'inline-block';
     setTimeout(function(){ statEl.style.display = 'none'; }, 2500);
   }
+}
+
+// ─── Scanner photo de ticket (justificatif) ────────────────────────────────
+var nfdPendingPhoto = null; // base64 de la photo en attente, liée à la prochaine ligne ajoutée
+var nfdScanStream = null;
+
+function nfdOpenScanner() {
+  var modal = document.getElementById('nfd-scan-modal');
+  modal.classList.remove('hidden');
+  document.getElementById('nfd-scan-video').classList.remove('hidden');
+  document.getElementById('nfd-scan-canvas').classList.add('hidden');
+  document.getElementById('nfd-scan-btn-capture').classList.remove('hidden');
+  document.getElementById('nfd-scan-btn-cancel').classList.remove('hidden');
+  document.getElementById('nfd-scan-btn-retake').classList.add('hidden');
+  document.getElementById('nfd-scan-btn-confirm').classList.add('hidden');
+  nfdSetScanStatus('Initialisation de la caméra…');
+  nfdStartCamera();
+}
+
+function nfdCloseScanner() {
+  document.getElementById('nfd-scan-modal').classList.add('hidden');
+  nfdStopCamera();
+}
+
+function nfdSetScanStatus(msg) {
+  var el = document.getElementById('nfd-scan-status');
+  if (el) el.textContent = msg;
+}
+
+function nfdStartCamera() {
+  if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+    nfdSetScanStatus('Caméra non disponible sur ce navigateur.');
+    return;
+  }
+  var constraints = { video: { facingMode: { ideal: 'environment' }, width: { ideal: 1280 }, height: { ideal: 1280 } } };
+  navigator.mediaDevices.getUserMedia(constraints).then(function(stream) {
+    nfdScanStream = stream;
+    var video = document.getElementById('nfd-scan-video');
+    video.srcObject = stream;
+    nfdSetScanStatus('Cadrez le ticket puis appuyez sur "Prendre la photo".');
+  }).catch(function(err) {
+    console.warn('[Scan ticket] getUserMedia erreur:', err);
+    nfdSetScanStatus('Impossible d\'accéder à la caméra (autorisation refusée ?).');
+  });
+}
+
+function nfdStopCamera() {
+  if (nfdScanStream) {
+    nfdScanStream.getTracks().forEach(function(t){ t.stop(); });
+    nfdScanStream = null;
+  }
+}
+
+function nfdCapturePhoto() {
+  var video = document.getElementById('nfd-scan-video');
+  var canvas = document.getElementById('nfd-scan-canvas');
+  if (!video.videoWidth) { toast('Caméra pas encore prête, réessayez', 'err'); return; }
+
+  // Redimensionner pour rester sous une taille raisonnable (Firestore : 1 Mo / document)
+  var MAX_DIM = 1280;
+  var scale = Math.min(1, MAX_DIM / Math.max(video.videoWidth, video.videoHeight));
+  canvas.width = video.videoWidth * scale;
+  canvas.height = video.videoHeight * scale;
+  var ctx = canvas.getContext('2d');
+  ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+  // Compression JPEG qualité 0.7 — bon compromis lisibilité / poids pour un ticket de caisse
+  var dataUrl = canvas.toDataURL('image/jpeg', 0.7);
+
+  video.classList.add('hidden');
+  canvas.classList.remove('hidden');
+  document.getElementById('nfd-scan-btn-capture').classList.add('hidden');
+  document.getElementById('nfd-scan-btn-cancel').classList.add('hidden');
+  document.getElementById('nfd-scan-btn-retake').classList.remove('hidden');
+  document.getElementById('nfd-scan-btn-confirm').classList.remove('hidden');
+
+  var sizeKB = Math.round(dataUrl.length * 0.75 / 1024); // estimation taille réelle (base64 ≈ +33%)
+  nfdSetScanStatus('Photo capturée (~' + sizeKB + ' Ko). Confirmez ou reprenez.');
+  canvas.dataset.pendingDataUrl = dataUrl;
+}
+
+function nfdRetakePhoto() {
+  document.getElementById('nfd-scan-video').classList.remove('hidden');
+  document.getElementById('nfd-scan-canvas').classList.add('hidden');
+  document.getElementById('nfd-scan-btn-capture').classList.remove('hidden');
+  document.getElementById('nfd-scan-btn-cancel').classList.remove('hidden');
+  document.getElementById('nfd-scan-btn-retake').classList.add('hidden');
+  document.getElementById('nfd-scan-btn-confirm').classList.add('hidden');
+  nfdSetScanStatus('Cadrez le ticket puis appuyez sur "Prendre la photo".');
+}
+
+function nfdConfirmPhoto() {
+  var canvas = document.getElementById('nfd-scan-canvas');
+  var dataUrl = canvas.dataset.pendingDataUrl;
+  if (!dataUrl) { toast('Aucune photo capturée', 'err'); return; }
+
+  // Garde-fou : si malgré la compression la photo dépasse ~700 Ko en base64,
+  // on prévient (le reste de la ligne + marge Firestore doit aussi tenir sous 1 Mo).
+  if (dataUrl.length > 700 * 1024) {
+    toast('⚠️ Photo trop volumineuse, reprenez avec moins de zoom/lumière', 'err');
+    return;
+  }
+
+  nfdPendingPhoto = dataUrl;
+  document.getElementById('nfd-photo-badge').classList.remove('hidden');
+  nfdCloseScanner();
+  toast('📷 Photo attachée — elle sera enregistrée avec la ligne', 'ok');
+}
+
+function nfdViewPhoto(lineId) {
+  var line = nfdLines.find(function(l){ return l.id === lineId; });
+  if (!line || !line.photo) { toast('Aucune photo pour cette ligne', 'err'); return; }
+  if (line.photo === true) { toast('Photo en cours de synchronisation, réessayez dans un instant…', 'err'); return; }
+
+  var overlay = document.createElement('div');
+  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.82);z-index:9999;display:flex;align-items:center;justify-content:center;padding:2rem;cursor:zoom-out;';
+  overlay.onclick = function() { document.body.removeChild(overlay); };
+
+  var img = document.createElement('img');
+  img.src = line.photo;
+  img.style.cssText = 'max-width:100%;max-height:100%;border-radius:8px;box-shadow:0 10px 40px rgba(0,0,0,.4);cursor:default;';
+  img.onclick = function(e) { e.stopPropagation(); };
+
+  var closeBtn = document.createElement('button');
+  closeBtn.textContent = '✕';
+  closeBtn.style.cssText = 'position:fixed;top:18px;right:22px;background:rgba(255,255,255,.12);color:#fff;border:none;width:38px;height:38px;border-radius:50%;font-size:1.1rem;cursor:pointer;';
+  closeBtn.onclick = function() { document.body.removeChild(overlay); };
+
+  overlay.appendChild(img);
+  overlay.appendChild(closeBtn);
+  document.body.appendChild(overlay);
 }
 
 // Supprimer ligne
@@ -3207,7 +3376,7 @@ function nfdRender() {
   // Tableau lignes
   var tbody = document.getElementById('nfd-tbody');
   if (!filtered.length) {
-    tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:2rem;color:var(--g500);">Aucune dépense pour ce mois.<br/>Ajoutez votre première ligne ci-dessus.</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:2rem;color:var(--g500);">Aucune dépense pour ce mois.<br/>Ajoutez votre première ligne ci-dessus.</td></tr>';
   } else {
     tbody.innerHTML = filtered.map(function(l) {
       return '<tr>' +
@@ -3217,6 +3386,7 @@ function nfdRender() {
         '<td style="text-align:right;font-variant-numeric:tabular-nums;">' + nfdFmt(l.tva) + (l.tauxTva ? ' <span style="font-size:.68rem;color:var(--g500);">(' + String(l.tauxTva).replace('.',',') + '%)</span>' : '') + '</td>' +
         '<td style="text-align:right;font-variant-numeric:tabular-nums;font-weight:600;">' + nfdFmt(l.ttc) + '</td>' +
         '<td style="font-size:.78rem;color:var(--g700);">' + nfdEsc(l.description) + '</td>' +
+        '<td style="text-align:center;">' + (l.photo ? '<button class="btn btn-ghost" onclick="nfdViewPhoto(\'' + l.id + '\')" style="font-size:.85rem;padding:.2rem .4rem;" title="Voir le justificatif">📷</button>' : '<span style="color:var(--g400);font-size:.78rem;">—</span>') + '</td>' +
         '<td><button class="btn btn-ghost" onclick="nfdDeleteLine(\'' + l.id + '\')" style="font-size:.7rem;padding:.25rem .55rem;color:#dc2626;">🗑</button></td>' +
       '</tr>';
     }).join('');
