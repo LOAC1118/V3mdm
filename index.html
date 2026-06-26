@@ -1488,9 +1488,10 @@ textarea { resize:vertical; min-height:80px; }
       <div class="stat-card" style="border-top:3px solid #059669!important;"><div class="stat-label">Total TTC</div><div class="stat-val" id="nfd-kpi-ttc" style="color:#059669;">0,00 €</div></div>
     </div>
 
-    <!-- Saisie nouvelle ligne -->
+    <!-- Saisie nouvelle ligne / édition -->
     <div class="card" style="padding:1rem;margin-bottom:1rem;background:linear-gradient(135deg,var(--blue-p50),#fff);border:1.5px solid var(--blue-p300);">
-      <div style="font-size:.72rem;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--blue-p700);margin-bottom:.6rem;">➕ Ajouter une ligne</div>
+      <div id="nfd-form-title" style="font-size:.72rem;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--blue-p700);margin-bottom:.6rem;">➕ Ajouter une ligne</div>
+      <input type="hidden" id="nfd-edit-id" value="">
       <div style="display:grid;grid-template-columns:minmax(100px,120px) 1.2fr minmax(80px,100px) minmax(75px,90px) minmax(80px,100px) 1.5fr auto;gap:8px;align-items:end;overflow:hidden;min-width:0;">
         <div><label class="lb">Date</label><input type="date" id="nfd-new-date"/></div>
         <div><label class="lb">Catégorie</label>
@@ -1513,7 +1514,8 @@ textarea { resize:vertical; min-height:80px; }
           <button class="btn btn-ghost" onclick="nfdOpenScanner()" title="Scanner le ticket avec la caméra" style="white-space:nowrap;position:relative;">
             📷<span id="nfd-photo-badge" class="hidden" style="position:absolute;top:-5px;right:-5px;width:14px;height:14px;border-radius:50%;background:var(--em600,#059669);"></span>
           </button>
-          <button class="btn btn-primary" onclick="nfdAddLine()" style="white-space:nowrap;">➕ Ajouter</button>
+          <button class="btn btn-ghost hidden" id="nfd-cancel-edit-btn" onclick="nfdCancelEdit()" style="white-space:nowrap;">✕ Annuler</button>
+          <button class="btn btn-primary" id="nfd-submit-btn" onclick="nfdAddLine()" style="white-space:nowrap;">➕ Ajouter</button>
         </div>
       </div>
     </div>
@@ -3154,6 +3156,7 @@ function nfdSyncFromFirestore() {
 
 // Ajouter une ligne
 function nfdAddLine() {
+  var editId = document.getElementById('nfd-edit-id').value;
   var date = document.getElementById('nfd-new-date').value;
   var cat = document.getElementById('nfd-new-cat').value;
   var ht = parseFloat(document.getElementById('nfd-new-ht').value) || 0;
@@ -3164,6 +3167,34 @@ function nfdAddLine() {
 
   if (!date) { toast('Date requise', 'err'); return; }
   if (ht <= 0 && tva <= 0 && ttc <= 0) { toast('Montant requis', 'err'); return; }
+
+  if (editId) {
+    // ─── Mode édition : on met à jour la ligne existante ───
+    var idx = nfdLines.findIndex(function(l){ return l.id === editId; });
+    if (idx === -1) { toast('Ligne introuvable (déjà supprimée ?)', 'err'); nfdCancelEdit(); return; }
+
+    var existing = nfdLines[idx];
+    var updated = Object.assign({}, existing, {
+      date: date,
+      categorie: cat,
+      ht: Math.round(ht * 100) / 100,
+      tva: Math.round(tva * 100) / 100,
+      tauxTva: tauxTva,
+      ttc: Math.round(ttc * 100) / 100,
+      description: desc,
+      // On ne remplace la photo que si une nouvelle a été scannée ; sinon on garde l'ancienne.
+      photo: nfdPendingPhoto !== null ? nfdPendingPhoto : existing.photo
+    });
+
+    nfdLines[idx] = updated;
+    nfdSaveCache();
+    nfdSaveLine(updated);
+
+    nfdCancelEdit(); // remet le formulaire en mode "ajout" + reset
+    nfdRender();
+    toast('✅ Ligne modifiée et sauvegardée', 'ok');
+    return;
+  }
 
   var line = {
     id: 'nfd_' + Date.now() + '_' + Math.floor(Math.random() * 1000),
@@ -3200,6 +3231,50 @@ function nfdAddLine() {
     statEl.style.display = 'inline-block';
     setTimeout(function(){ statEl.style.display = 'none'; }, 2500);
   }
+}
+
+// ─── Édition d'une ligne existante ─────────────────────────────────────────
+function nfdEditLine(id) {
+  var line = nfdLines.find(function(l){ return l.id === id; });
+  if (!line) { toast('Ligne introuvable', 'err'); return; }
+
+  document.getElementById('nfd-edit-id').value = id;
+  document.getElementById('nfd-new-date').value = line.date || '';
+  document.getElementById('nfd-new-cat').value = line.categorie || 'Carburant';
+  document.getElementById('nfd-new-ht').value = line.ht || '';
+  document.getElementById('nfd-new-tva').value = line.tva || '';
+  var tauxSel = document.getElementById('nfd-new-tva-taux');
+  var tauxStr = line.tauxTva ? String(line.tauxTva) : '20';
+  if ([...tauxSel.options].some(function(o){ return o.value === tauxStr; })) tauxSel.value = tauxStr;
+  document.getElementById('nfd-new-ttc').value = line.ttc || '';
+  document.getElementById('nfd-new-desc').value = line.description || '';
+
+  // On ne pré-charge pas nfdPendingPhoto avec l'ancienne photo : si l'utilisateur
+  // ne rescanne rien, la photo existante de la ligne est conservée automatiquement
+  // (cf. logique dans nfdAddLine). Le badge reflète juste s'il y a déjà une photo.
+  nfdPendingPhoto = null;
+  var badge = document.getElementById('nfd-photo-badge');
+  if (line.photo) { badge.classList.remove('hidden'); badge.style.background = 'var(--em600,#059669)'; }
+  else { badge.classList.add('hidden'); }
+
+  document.getElementById('nfd-form-title').textContent = '✏️ Modifier la ligne du ' + nfdFmtDate(line.date);
+  document.getElementById('nfd-submit-btn').textContent = '✓ Enregistrer';
+  document.getElementById('nfd-cancel-edit-btn').classList.remove('hidden');
+
+  document.getElementById('nfd-form-title').scrollIntoView({ behavior: 'smooth', block: 'center' });
+}
+
+function nfdCancelEdit() {
+  document.getElementById('nfd-edit-id').value = '';
+  document.getElementById('nfd-new-ht').value = '';
+  document.getElementById('nfd-new-tva').value = '';
+  document.getElementById('nfd-new-ttc').value = '';
+  document.getElementById('nfd-new-desc').value = '';
+  nfdPendingPhoto = null;
+  document.getElementById('nfd-photo-badge').classList.add('hidden');
+  document.getElementById('nfd-form-title').textContent = '➕ Ajouter une ligne';
+  document.getElementById('nfd-submit-btn').textContent = '➕ Ajouter';
+  document.getElementById('nfd-cancel-edit-btn').classList.add('hidden');
 }
 
 // ─── Scanner photo de ticket (justificatif) ────────────────────────────────
@@ -3402,6 +3477,7 @@ function nfdViewPhoto(lineId) {
 // Supprimer ligne
 function nfdDeleteLine(id) {
   if (!confirm('Supprimer cette ligne ?')) return;
+  if (document.getElementById('nfd-edit-id').value === id) nfdCancelEdit();
   nfdLines = nfdLines.filter(function(l){ return l.id !== id; });
   nfdSaveCache();
   nfdDeleteLineFs(id);
@@ -3456,7 +3532,7 @@ function nfdRender() {
         '<td style="text-align:right;font-variant-numeric:tabular-nums;font-weight:600;">' + nfdFmt(l.ttc) + '</td>' +
         '<td style="font-size:.78rem;color:var(--g700);">' + nfdEsc(l.description) + '</td>' +
         '<td style="text-align:center;">' + (l.photo ? '<button class="btn btn-ghost" onclick="nfdViewPhoto(\'' + l.id + '\')" style="font-size:.85rem;padding:.2rem .4rem;" title="Voir le justificatif">📷</button>' : '<span style="color:var(--g400);font-size:.78rem;">—</span>') + '</td>' +
-        '<td><button class="btn btn-ghost" onclick="nfdDeleteLine(\'' + l.id + '\')" style="font-size:.7rem;padding:.25rem .55rem;color:#dc2626;">🗑</button></td>' +
+        '<td style="white-space:nowrap;"><button class="btn btn-ghost" onclick="nfdEditLine(\'' + l.id + '\')" style="font-size:.7rem;padding:.25rem .5rem;color:var(--blue-p700);" title="Modifier cette ligne">✏️</button> <button class="btn btn-ghost" onclick="nfdDeleteLine(\'' + l.id + '\')" style="font-size:.7rem;padding:.25rem .55rem;color:#dc2626;" title="Supprimer">🗑</button></td>' +
       '</tr>';
     }).join('');
   }
