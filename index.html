@@ -2164,6 +2164,7 @@ textarea { resize:vertical; min-height:80px; }
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-functions-compat.js"></script>
 
 <script>
 
@@ -2424,7 +2425,7 @@ function withJsPdf(fn) {
 // ═══════════════════════════════════════════════
 //  CONFIG FIREBASE
 // ═══════════════════════════════════════════════
-let db = null, auth = null, currentUser = null;
+let db = null, auth = null, currentUser = null, fbFunctions = null;
 
 // ─── Multi-marque + multi-commercial : collections branchées dynamiquement ───
 // Les collections listées ici sont dupliquées par marque ET par commercial
@@ -2681,6 +2682,8 @@ function initFirebase(cfg) {
   }
   auth = firebase.auth();
   db   = firebase.firestore();
+  // Région europe-west1 : doit correspondre à la région de déploiement de la Cloud Function
+  try { fbFunctions = firebase.app().functions('europe-west1'); } catch(e) { console.warn('[Functions] indisponible', e); }
   // Pas de enablePersistence : doit être appelé avant toute opération Firestore
 }
 
@@ -3212,6 +3215,8 @@ function nfdOpenScanner() {
   document.getElementById('nfd-scan-btn-cancel').classList.remove('hidden');
   document.getElementById('nfd-scan-btn-retake').classList.add('hidden');
   document.getElementById('nfd-scan-btn-confirm').classList.add('hidden');
+  var badge = document.getElementById('nfd-photo-badge');
+  if (badge) badge.style.background = 'var(--em600,#059669)';
   nfdSetScanStatus('Initialisation de la caméra…');
   nfdStartCamera();
 }
@@ -3303,7 +3308,72 @@ function nfdConfirmPhoto() {
   nfdPendingPhoto = dataUrl;
   document.getElementById('nfd-photo-badge').classList.remove('hidden');
   nfdCloseScanner();
-  toast('📷 Photo attachée — elle sera enregistrée avec la ligne', 'ok');
+  toast('📷 Photo attachée — analyse en cours…', 'ok');
+  nfdAnalyzeTicket(dataUrl);
+}
+
+// ─── Analyse automatique du ticket via Claude (Cloud Function) ────────────
+function nfdAnalyzeTicket(dataUrl) {
+  if (!fbFunctions) {
+    toast('⚠️ Analyse automatique indisponible (service non configuré)', 'err');
+    return;
+  }
+  // dataUrl est de la forme "data:image/jpeg;base64,XXXXX" — on retire le préfixe
+  var commaIdx = dataUrl.indexOf(',');
+  var imageBase64 = dataUrl.substring(commaIdx + 1);
+  var mediaType = dataUrl.substring(5, dataUrl.indexOf(';')); // ex: "image/jpeg"
+
+  var statusEl = document.getElementById('nfd-photo-badge');
+  if (statusEl) { statusEl.style.background = '#f59e0b'; } // orange = analyse en cours
+
+  var callAnalyse = fbFunctions.httpsCallable('analyseTicketFrais');
+  callAnalyse({ imageBase64: imageBase64, mediaType: mediaType }).then(function(result) {
+    var data = result.data;
+    if (statusEl) { statusEl.style.background = 'var(--em600,#059669)'; }
+
+    if (!data || data.lisible === false) {
+      toast('🔍 Ticket analysé, mais peu lisible — vérifiez/complétez les champs manuellement', 'err');
+      return;
+    }
+
+    var filled = [];
+    if (data.montant_ht !== null && data.montant_ht !== undefined) {
+      document.getElementById('nfd-new-ht').value = data.montant_ht;
+      filled.push('HT');
+    }
+    if (data.montant_tva !== null && data.montant_tva !== undefined) {
+      document.getElementById('nfd-new-tva').value = data.montant_tva;
+      filled.push('TVA');
+    }
+    if (data.taux_tva !== null && data.taux_tva !== undefined) {
+      var tauxSel = document.getElementById('nfd-new-tva-taux');
+      var tauxStr = String(data.taux_tva);
+      if ([...tauxSel.options].some(function(o){ return o.value === tauxStr; })) {
+        tauxSel.value = tauxStr;
+      }
+    }
+    // Calcul automatique du TTC depuis HT+TVA, puis on écrase avec la vraie
+    // valeur lue sur le ticket si elle est disponible (plus fiable qu'un arrondi).
+    nfdComputeTTC();
+    if (data.montant_ttc !== null && data.montant_ttc !== undefined) {
+      document.getElementById('nfd-new-ttc').value = data.montant_ttc;
+      filled.push('TTC');
+    }
+    if (data.designation) {
+      document.getElementById('nfd-new-desc').value = data.designation;
+      filled.push('désignation');
+    }
+
+    if (filled.length) {
+      toast('✅ Champs pré-remplis automatiquement : ' + filled.join(', ') + ' — vérifiez avant d\'ajouter', 'ok');
+    } else {
+      toast('🔍 Ticket analysé, mais aucun champ détecté — complétez manuellement', 'err');
+    }
+  }).catch(function(err) {
+    console.warn('[NFD] Erreur analyse ticket:', err);
+    if (statusEl) { statusEl.style.background = '#dc2626'; } // rouge = erreur
+    toast('⚠️ Analyse automatique impossible (' + (err.message || 'erreur') + ') — saisissez manuellement', 'err');
+  });
 }
 
 function nfdViewPhoto(lineId) {
