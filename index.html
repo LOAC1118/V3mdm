@@ -3308,8 +3308,7 @@ function nfdConfirmPhoto() {
   nfdPendingPhoto = dataUrl;
   document.getElementById('nfd-photo-badge').classList.remove('hidden');
   nfdCloseScanner();
-  toast('📷 Photo attachée — analyse en cours…', 'ok');
-  nfdAnalyzeTicket(dataUrl);
+  toast('📷 Photo attachée — elle sera enregistrée avec la ligne', 'ok');
 }
 
 // ─── Analyse automatique du ticket via Claude (Cloud Function) ────────────
