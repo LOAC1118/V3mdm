@@ -2815,17 +2815,13 @@ async function showApp() {
     console.log('[Cloud] Démarrage sync multi-modules...');
     // cdbInit() remplacé par le listener onSnapshot dans startListeners()
     try { if (typeof dashLoadObjectifs === 'function') dashLoadObjectifs(); } catch(e) { console.warn('dashLoadObjectifs err:', e); }
-  // Restaurer commande BDC en cours depuis localStorage au démarrage
+  // Restaurer commande BDC en cours (cloud en priorité, pour reprendre depuis
+  // n'importe quel appareil — ex: scanné sur iPhone, terminé sur ordinateur).
   try {
-    var bdcRaw = localStorage.getItem(BDC_STORAGE_KEY());
-    if (bdcRaw) {
-      var bdcSaved = JSON.parse(bdcRaw);
-      if (bdcSaved && bdcSaved.qtys && Object.keys(bdcSaved.qtys).filter(function(k){ return bdcSaved.qtys[k] > 0; }).length > 0) {
-        bdcQtys = bdcSaved.qtys;
-        bdcRemiseLigne = bdcSaved.remiseLigne || {};
-        bdcRemise = bdcSaved.remise || 0;
-        console.log('[BDC] Commande en cours restaurée depuis localStorage');
-      }
+    if (typeof bdcLoadFromCloud === 'function') {
+      bdcLoadFromCloud().then(function(restored) {
+        if (restored) console.log('[BDC] Commande en cours restaurée (cloud/local)');
+      });
     }
   } catch(e) { console.warn('[BDC] Restore err:', e); }
     try { if (typeof nfdSyncFromFirestore === 'function') nfdSyncFromFirestore(); } catch(e) { console.warn('nfdSync err:', e); }
@@ -4619,6 +4615,7 @@ function commInit() {
 // ── Bandeau récapitulatif BDC + persistance localStorage ─────────────────
 function BDC_STORAGE_KEY() { return 'mdm_bdc_encours_v1_' + CURRENT_BRAND + (currentUser && currentUser.uid ? '_' + currentUser.uid : ''); }
 
+var bdcCloudSyncTimer = null;
 function bdcSaveLocal() {
   try {
     var data = {
@@ -4635,7 +4632,59 @@ function bdcSaveLocal() {
       savedAt: new Date().toISOString()
     };
     localStorage.setItem(BDC_STORAGE_KEY(), JSON.stringify(data));
+
+    // Synchronisation cloud (Firestore) débouncée : permet de reprendre la même
+    // commande en cours depuis un autre appareil (ex: scanné sur iPhone,
+    // terminé sur ordinateur). On attend une courte pause de saisie avant
+    // d'écrire, pour ne pas surcharger Firestore à chaque frappe/scan.
+    clearTimeout(bdcCloudSyncTimer);
+    bdcCloudSyncTimer = setTimeout(function() {
+      try {
+        if (typeof bcol === 'function' && db) {
+          bcol('config').doc('bdc_encours').set(data).catch(function(e) {
+            console.warn('[BDC] Sync cloud échouée (hors-ligne ?)', e);
+          });
+        }
+      } catch(e) { console.warn('[BDC] Sync cloud erreur:', e); }
+    }, 1500);
   } catch(e) { console.warn('bdcSaveLocal:', e); }
+}
+
+// Applique un objet "commande en cours" (qtys, remises, champs client) à l'UI.
+// Factorisé pour être utilisé aussi bien par le chargement local que cloud.
+function bdcApplyData(data, sourceLabel) {
+  var nbArticles = Object.keys(data.qtys || {}).filter(function(k){ return data.qtys[k] > 0; }).length;
+  if (nbArticles === 0) return false;
+
+  bdcQtys = data.qtys || {};
+  bdcRemiseLigne = data.remiseLigne || {};
+  bdcRemise = data.remise || 0;
+
+  var set = function(id, val) { var el = document.getElementById(id); if (el && val) el.value = val; };
+  set('bdc-magasin',      data.magasin);
+  set('bdc-numclient',    data.numClient);
+  set('bdc-contact',      data.contact);
+  set('bdc-email',        data.email);
+  set('bdc-tel',          data.tel);
+  set('bdc-datelivraison',data.datelivraison);
+  set('bdc-comment',      data.comment);
+
+  if (bdcRemise > 0) {
+    var btns = document.querySelectorAll('.bdc-rem-btn');
+    btns.forEach(function(b) { b.classList.remove('active'); });
+    var custom = document.getElementById('bdc-remise-custom');
+    if (custom) custom.value = bdcRemise;
+  }
+
+  // On ne reconstruit le tableau visuellement que si le module BDC a déjà été
+  // ouvert au moins une fois (sinon bdcActivate() s'en chargera à l'ouverture).
+  if (bdcInitDone) {
+    buildTable();
+    bdcUpdateRecapBar();
+  }
+  var saved = data.savedAt ? new Date(data.savedAt).toLocaleTimeString('fr-FR') : '';
+  toast('📋 Commande en cours restaurée (' + nbArticles + ' articles' + (saved ? ' · ' + saved : '') + (sourceLabel ? ' · ' + sourceLabel : '') + ')', 'ok');
+  return true;
 }
 
 function bdcLoadLocal() {
@@ -4644,42 +4693,58 @@ function bdcLoadLocal() {
     if (!raw) return false;
     var data = JSON.parse(raw);
     if (!data || !data.qtys) return false;
-    var nbArticles = Object.keys(data.qtys).filter(function(k){ return data.qtys[k] > 0; }).length;
-    if (nbArticles === 0) return false;
-
-    // Restaurer les quantités et remises
-    bdcQtys = data.qtys || {};
-    bdcRemiseLigne = data.remiseLigne || {};
-    bdcRemise = data.remise || 0;
-
-    // Restaurer les champs client
-    var set = function(id, val) { var el = document.getElementById(id); if (el && val) el.value = val; };
-    set('bdc-magasin',      data.magasin);
-    set('bdc-numclient',    data.numClient);
-    set('bdc-contact',      data.contact);
-    set('bdc-email',        data.email);
-    set('bdc-tel',          data.tel);
-    set('bdc-datelivraison',data.datelivraison);
-    set('bdc-comment',      data.comment);
-
-    // Restaurer le bouton remise
-    if (bdcRemise > 0) {
-      var btns = document.querySelectorAll('.bdc-rem-btn');
-      btns.forEach(function(b) { b.classList.remove('active'); });
-      var custom = document.getElementById('bdc-remise-custom');
-      if (custom) custom.value = bdcRemise;
-    }
-
-    buildTable();
-    bdcUpdateRecapBar();
-    var saved = data.savedAt ? new Date(data.savedAt).toLocaleTimeString('fr-FR') : '';
-    toast('📋 Commande en cours restaurée (' + nbArticles + ' articles' + (saved ? ' · ' + saved : '') + ')', 'ok');
-    return true;
+    return bdcApplyData(data);
   } catch(e) { console.warn('bdcLoadLocal:', e); return false; }
+}
+
+// Tente de charger la commande en cours depuis Firestore (la plus à jour, qui
+// peut provenir d'un autre appareil — ex: scan sur iPhone, finition sur PC).
+// Compare avec la version locale et applique celle la plus récente.
+// Retourne une Promise<boolean> (true si une commande a été restaurée).
+async function bdcLoadFromCloud() {
+  var localRaw = localStorage.getItem(BDC_STORAGE_KEY());
+  var localData = null;
+  try { localData = localRaw ? JSON.parse(localRaw) : null; } catch(e) {}
+
+  try {
+    if (typeof bcol !== 'function' || !db) return bdcLoadLocal();
+
+    var doc = await bcol('config').doc('bdc_encours').get();
+    if (!doc.exists) return bdcLoadLocal();
+
+    var cloudData = doc.data();
+    if (!cloudData || !cloudData.qtys) return bdcLoadLocal();
+
+    // Comparaison de fraîcheur : on garde la version la plus récente entre
+    // le cache local (potentiellement modifié hors-ligne) et le cloud.
+    var cloudTime = cloudData.savedAt ? new Date(cloudData.savedAt).getTime() : 0;
+    var localTime = (localData && localData.savedAt) ? new Date(localData.savedAt).getTime() : 0;
+
+    if (localTime > cloudTime) {
+      // Le local est plus récent (ex: saisie hors-ligne) → on l'applique et on
+      // republie vers le cloud pour resynchroniser les autres appareils.
+      var applied = bdcApplyData(localData, 'local plus récent');
+      if (applied) bdcSaveLocal(); // republie vers le cloud
+      return applied;
+    } else {
+      return bdcApplyData(cloudData, 'synchronisé');
+    }
+  } catch(e) {
+    console.warn('[BDC] Chargement cloud échoué, fallback local:', e);
+    return bdcLoadLocal();
+  }
 }
 
 function bdcClearLocal() {
   try { localStorage.removeItem(BDC_STORAGE_KEY()); } catch(e) {}
+  try {
+    clearTimeout(bdcCloudSyncTimer);
+    if (typeof bcol === 'function' && db) {
+      bcol('config').doc('bdc_encours').delete().catch(function(e) {
+        console.warn('[BDC] Suppression cloud échouée (hors-ligne ?)', e);
+      });
+    }
+  } catch(e) { console.warn('[BDC] bdcClearLocal cloud err:', e); }
 }
 
 function bdcUpdateRecapBar() {
