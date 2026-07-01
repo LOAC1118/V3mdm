@@ -4474,11 +4474,10 @@ function commRefresh() {
   if (typeof dashCaRows !== 'undefined' && dashCaRows && dashCaRows.length) {
     dashCaRows.forEach(function(row) {
       if (!row || (row.ca||0) <= 0 || row.statut !== 'facturee') return;
-      // Pour les commissions, on cherche la meilleure date disponible :
-      // dateFac en priorité, puis dateLiv, puis dateCmd — car de nombreuses
-      // commandes marquées "facturée" n'ont pas de date de facturation explicite.
-      var dateRef = row.dateFac || row.dateLiv || row.dateCmd;
-      if (!isCurMonth(dateRef)) return;
+      // Utiliser row.dateRef : c'est exactement la même date que le Dashboard
+      // (dateFac en priorité, puis dateLiv, puis dateCmd selon le réglage d'import).
+      // Garantit que le CA des commissions = CA du Dashboard pour le même mois.
+      if (!isCurMonth(row.dateRef)) return;
       var nom = (row.client||'').trim().toUpperCase();
       if (!nom || nom === '---') return;
       caFact[nom] = (caFact[nom]||0) + (row.ca||0);
