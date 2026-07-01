@@ -4521,7 +4521,7 @@ function commRefresh() {
 
   var moisKey = curY + '-' + String(curM).padStart(2,'0'); // ex: "2026-07"
 
-  var caFact = {}, hasData = false, warned = false;
+  var caFact = {}, hasData = false;
 
   if (typeof dashCaRows !== 'undefined' && dashCaRows && dashCaRows.length) {
     dashCaRows.forEach(function(row) {
@@ -4546,24 +4546,13 @@ function commRefresh() {
       caFact[nom] = (caFact[nom]||0) + (row.ca||0);
       hasData = true;
     });
-    if (!hasData) {
-      warned = true;
-      dashCaRows.forEach(function(row) {
-        if (!row || (row.ca||0) <= 0 || row.statut !== 'facturee') return;
-        var nom = (row.client||'').trim().toUpperCase();
-        if (!nom || nom === '---') return;
-        caFact[nom] = (caFact[nom]||0) + (row.ca||0);
-      });
-    }
   }
 
   if (labelEl) {
     if (!Object.keys(caFact).length) {
-      labelEl.textContent = 'Importez un fichier commandes via Synchroniser (' + moisLabel + ')';
-    } else if (warned) {
-      labelEl.textContent = 'Hors ' + moisLabel + ' -- toutes les commandes du fichier';
+      labelEl.textContent = 'Aucune commande facturée en ' + moisLabel + ' (CA = 0€)';
     } else {
-      labelEl.textContent = 'CA facture de ' + moisLabel;
+      labelEl.textContent = 'CA facturé ' + moisLabel;
     }
   }
 
