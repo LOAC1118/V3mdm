@@ -1042,6 +1042,11 @@ textarea { resize:vertical; min-height:80px; }
       <div class="stat-card"><div class="stat-label">Contacts</div><div class="stat-val" id="stat-clients">—</div><div class="stat-delta">base clients</div></div>
       <div class="stat-card"><div class="stat-label">BDC saisis</div><div class="stat-val" id="stat-commandes">—</div><div class="stat-delta">bons de commande</div></div>
       <div class="stat-card"><div class="stat-label">Frais du mois</div><div class="stat-val" id="ro-count" style="font-size:1.1rem;">—</div><div class="stat-delta">note de frais</div></div>
+      <div class="stat-card" id="dash-comm-card" style="cursor:pointer;" onclick="showSection('commissions',null,null)" title="Voir le détail dans Commissions">
+        <div class="stat-label">💶 Commission en cours</div>
+        <div class="stat-val" id="dash-comm-val" style="color:#7c3aed;font-size:1.1rem;">—</div>
+        <div class="stat-delta" id="dash-comm-sub">sur CA facturé du mois</div>
+      </div>
     </div>
 
     <!-- ═══ ANALYSE CA MENSUELLE (upload Excel) ═══ -->
@@ -1787,21 +1792,16 @@ textarea { resize:vertical; min-height:80px; }
       </div>
 
       <!-- KPIs -->
-      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:.75rem;margin-bottom:1.25rem;">
+      <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:.75rem;margin-bottom:1.25rem;">
         <div class="card" style="padding:1rem;">
-          <div style="font-size:.7rem;color:var(--g500);text-transform:uppercase;letter-spacing:.08em;margin-bottom:.4rem;">💶 Commission totale</div>
+          <div style="font-size:.7rem;color:var(--g500);text-transform:uppercase;letter-spacing:.08em;margin-bottom:.4rem;">💶 Commission totale du mois</div>
           <div id="comm-kpi-total" style="font-size:1.5rem;font-weight:700;color:var(--violet);">—</div>
-          <div style="font-size:.7rem;color:var(--g500);margin-top:2px;">BDC + Factures</div>
+          <div style="font-size:.7rem;color:var(--g500);margin-top:2px;">Sur CA facturé</div>
         </div>
         <div class="card" style="padding:1rem;">
-          <div style="font-size:.7rem;color:var(--g500);text-transform:uppercase;letter-spacing:.08em;margin-bottom:.4rem;">📋 Sur BDC</div>
-          <div id="comm-kpi-bdc" style="font-size:1.5rem;font-weight:700;color:var(--green);">—</div>
-          <div style="font-size:.7rem;color:var(--g500);margin-top:2px;">Commandes saisies CRM</div>
-        </div>
-        <div class="card" style="padding:1rem;">
-          <div style="font-size:.7rem;color:var(--g500);text-transform:uppercase;letter-spacing:.08em;margin-bottom:.4rem;">📄 Sur Factures</div>
+          <div style="font-size:.7rem;color:var(--g500);text-transform:uppercase;letter-spacing:.08em;margin-bottom:.4rem;">📄 CA Facturé du mois</div>
           <div id="comm-kpi-fact" style="font-size:1.5rem;font-weight:700;color:var(--amber);">—</div>
-          <div style="font-size:.7rem;color:var(--g500);margin-top:2px;">CA Dashboard chargé</div>
+          <div style="font-size:.7rem;color:var(--g500);margin-top:2px;">Source : Dashboard</div>
         </div>
       </div>
 
@@ -4633,14 +4633,22 @@ function commRefresh() {
   if (tbody) tbody.innerHTML = rows || '<tr><td colspan="4" style="padding:2rem;text-align:center;color:var(--g500);">Importez un fichier via Synchroniser</td></tr>';
 
   var kT = document.getElementById('comm-kpi-total');
-  var kB = document.getElementById('comm-kpi-bdc');
   var kF = document.getElementById('comm-kpi-fact');
   if (kT) kT.textContent = commFmt(totalComm);
-  if (kB) kB.textContent = commFmt(totalCA);
-  if (kF) kF.textContent = commFmt(totalComm);
+  if (kF) kF.textContent = commFmt(totalCA);
 
   var nbEl = document.getElementById('comm-nb-clients');
   if (nbEl) nbEl.textContent = clients.length + ' client' + (clients.length>1?'s':'');
+
+  // Mise à jour de l'encart commission dans le Dashboard
+  dashUpdateCommCard(totalComm, totalCA, moisLabel);
+}
+
+function dashUpdateCommCard(comm, ca, moisLabel) {
+  var valEl = document.getElementById('dash-comm-val');
+  var subEl = document.getElementById('dash-comm-sub');
+  if (valEl) valEl.textContent = comm > 0 ? comm.toLocaleString('fr-FR', {minimumFractionDigits:2, maximumFractionDigits:2}) + ' €' : '—';
+  if (subEl) subEl.textContent = moisLabel ? (ca > 0 ? moisLabel + ' · ' + ca.toLocaleString('fr-FR', {minimumFractionDigits:0, maximumFractionDigits:0}) + '€ facturés' : moisLabel) : 'sur CA facturé du mois';
 }
 
 
@@ -7759,6 +7767,11 @@ function dashCaRender() {
   dashCaDrawCharts(filtered, months, moisNames);
   dashCaDrawTops(filtered);
 
+  // Mise à jour de l'encart commission dans le Dashboard après chaque rendu
+  // (les données dashCaRows viennent d'être rafraîchies, on recalcule les commissions)
+  setTimeout(function() {
+    if (typeof commRefresh === 'function') commRefresh();
+  }, 100);
 }
 
 // ── Dernières commandes du mois en cours ─────────────────────────────────
