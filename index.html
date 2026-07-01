@@ -4469,15 +4469,16 @@ function commRefresh() {
            d.getFullYear() === curY && (d.getMonth()+1) === curM;
   }
 
+  var moisKey = curY + '-' + String(curM).padStart(2,'0'); // ex: "2026-07"
+
   var caFact = {}, hasData = false, warned = false;
 
   if (typeof dashCaRows !== 'undefined' && dashCaRows && dashCaRows.length) {
     dashCaRows.forEach(function(row) {
       if (!row || (row.ca||0) <= 0 || row.statut !== 'facturee') return;
-      // Utiliser row.dateRef : c'est exactement la même date que le Dashboard
-      // (dateFac en priorité, puis dateLiv, puis dateCmd selon le réglage d'import).
-      // Garantit que le CA des commissions = CA du Dashboard pour le même mois.
-      if (!isCurMonth(row.dateRef)) return;
+      // Filtrer exactement comme le Dashboard : par row.mois (ex: "2026-07")
+      // C'est le champ calculé à l'import, identique à ce qu'affiche le Dashboard.
+      if (row.mois !== moisKey) return;
       var nom = (row.client||'').trim().toUpperCase();
       if (!nom || nom === '---') return;
       caFact[nom] = (caFact[nom]||0) + (row.ca||0);
@@ -4514,7 +4515,6 @@ function commRefresh() {
   var globalTauxEffectif = null, globalObjectif = 0, globalCAtotal = 0, globalCommTotal = 0;
   if (mode === 'global') {
     clients.forEach(function(nom) { globalCAtotal += caFact[nom]; });
-    var moisKey = curY + '-' + String(curM).padStart(2,'0');
     globalObjectif = (typeof dashObjectifs !== 'undefined' && dashObjectifs[moisKey]) || 0;
     var elT1 = document.getElementById('comm-global-taux1');
     var elT2 = document.getElementById('comm-global-taux2');
