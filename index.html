@@ -943,6 +943,7 @@ textarea { resize:vertical; min-height:80px; }
     <button class="t-tab" onclick="showSection('commissions',this)">💶 Commissions</button>
     <button class="t-tab" onclick="showSection('contacts-db',this)">Clients</button>
     <button class="t-tab hidden" id="t-tab-comptes" onclick="showSection('comptes',this)">👥 Comptes</button>
+    <button class="t-tab" onclick="showSection('mailing',this)">✉️ Mailing</button>
 
   </div>
   <div class="topbar-right">
@@ -988,6 +989,10 @@ textarea { resize:vertical; min-height:80px; }
     <div class="nav-item hidden" id="nav-item-comptes" onclick="showSection('comptes',null,this)">
       <svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="5.5" cy="5.5" r="2.5"/><circle cx="11" cy="6" r="2"/><path d="M1 14c0-2.5 1.8-4.5 4.5-4.5S10 11.5 10 14"/><path d="M9.5 9.7c2 .2 3.5 1.8 3.5 4.3"/></svg>
       Comptes
+    </div>
+    <div class="nav-item" onclick="showSection('mailing',null,this)">
+      <svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="1" y="3" width="14" height="10" rx="1.5"/><path d="M1 4.5l7 5 7-5"/></svg>
+      Mailing
     </div>
   </div>
 
@@ -1915,6 +1920,7 @@ textarea { resize:vertical; min-height:80px; }
             <div style="display:flex;gap:8px;align-items:center;margin-top:.5rem;flex-wrap:wrap;">
               <button class="btn btn-ghost" onclick="mlImportCsv()" style="font-size:.74rem;padding:.35rem .7rem;">📥 Importer CSV</button>
               <input type="file" id="ml-csv-file" accept=".csv,.txt" style="display:none" onchange="mlHandleCsv(this.files[0])"/>
+              <button class="btn btn-ghost" onclick="mlPickFromContacts()" style="font-size:.74rem;padding:.35rem .7rem;">👥 Base clients</button>
               <button class="btn btn-ghost" onclick="mlDedup()" style="font-size:.74rem;padding:.35rem .7rem;">🧹 Dédupliquer</button>
               <button class="btn btn-ghost" onclick="mlClearRecipients()" style="font-size:.74rem;padding:.35rem .7rem;">🗑 Effacer</button>
               <span id="ml-recipients-invalid" style="font-size:.7rem;color:#dc2626;margin-left:auto;"></span>
@@ -1997,7 +2003,7 @@ textarea { resize:vertical; min-height:80px; }
             <strong id="ml-send-summary">Aucune adresse saisie</strong>
             <div id="ml-send-info" style="font-size:.68rem;color:var(--g500);margin-top:2px;">L'envoi se fera via Web3Forms vers cspoto@moulindesmoines.com</div>
           </div>
-          <button class="btn btn-primary" onclick="mlSendAll()" id="ml-send-btn" style="font-size:.88rem;padding:.6rem 1.2rem;" disabled>🚀 Envoyer le mailing</button>
+          <button class="btn btn-primary" onclick="mlSendAll()" id="ml-send-btn" style="font-size:.88rem;padding:.6rem 1.2rem;" disabled>✉️ Ouvrir dans eM Client</button>
         </div>
 
       </div>
@@ -2051,6 +2057,10 @@ textarea { resize:vertical; min-height:80px; }
   <button class="mtab hidden" id="mtab-comptes" data-sec="comptes" onclick="showSection('comptes',null,null)">
     <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="5.5" cy="5.5" r="2.5"/><circle cx="11" cy="6" r="2"/><path d="M1 14c0-2.5 1.8-4.5 4.5-4.5S10 11.5 10 14"/><path d="M9.5 9.7c2 .2 3.5 1.8 3.5 4.3"/></svg>
     <span>Comptes</span>
+  </button>
+  <button class="mtab" data-sec="mailing" onclick="showSection('mailing',null,null)">
+    <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="1" y="3" width="14" height="10" rx="1.5"/><path d="M1 4.5l7 5 7-5"/></svg>
+    <span>Mailing</span>
   </button>
 </div>
 
@@ -2927,7 +2937,7 @@ if (typeof cdbPageSize  === 'undefined') window.cdbPageSize  = 50;
 // ═══════════════════════════════════════════════
 //  NAVIGATION
 // ═══════════════════════════════════════════════
-const SECTIONS = ['dashboard','bdc','frais','contacts-db','commissions','comptes'];
+const SECTIONS = ['dashboard','bdc','frais','contacts-db','commissions','comptes','mailing'];
 function showSection(name, tabEl, sideEl) {
   if (name === 'comptes' && !isAdminUser()) {
     toast('Accès réservé.', 'err');
@@ -9875,67 +9885,105 @@ function mlSendAll() {
   if (!mlRecipients.length) { toast('Aucun destinataire', 'err'); return; }
   var subject = document.getElementById('ml-subject').value.trim();
   var htmlBody = document.getElementById('ml-editor').innerHTML;
-  if (!subject || !htmlBody) { toast('Objet et contenu requis', 'err'); return; }
+  var textBody = document.getElementById('ml-editor').innerText || '';
+  if (!subject) { toast('Objet requis', 'err'); return; }
+  if (!textBody.trim()) { toast('Contenu requis', 'err'); return; }
 
-  if (!confirm('Envoyer le mailing à ' + mlRecipients.length + ' destinataire' + (mlRecipients.length>1?'s':'') + ' ?')) return;
-
-  // Récupère l'email émetteur du CRM (si dispo) ou demande
-  var sender = 'contact@moulindesmoines.com';
-
-  var btn = document.getElementById('ml-send-btn');
-  btn.disabled = true;
-  btn.textContent = 'Envoi en cours…';
-
-  var sent = 0, failed = 0;
-  var total = mlRecipients.length;
-
-  function next(i) {
-    if (i >= total) {
-      btn.disabled = false;
-      btn.textContent = '🚀 Envoyer le mailing';
-      toast('✅ Mailing envoyé : ' + sent + '/' + total + (failed ? ' (' + failed + ' échecs)' : ''), failed ? 'err' : 'ok');
-      return;
-    }
-    var to = mlRecipients[i];
-    btn.textContent = 'Envoi ' + (i+1) + '/' + total + '…';
-
-    // Construction du body avec PJ éventuelle
-    var finalBody = htmlBody;
-    if (mlPJ) {
-      finalBody += '<hr/><p style="font-size:.85em;color:#666;"><b>📎 Pièce jointe :</b> ' + mlPJ.name +
-        '<br/><em>Note : la pièce jointe sera transmise à l\'envoi.</em></p>';
-    }
-
-    var formData = new FormData();
-    formData.append('_subject', subject);
-    formData.append('_template', 'box');
-    formData.append('_captcha', 'false');
-    formData.append('message', finalBody);
-    formData.append('email', to);
-    if (mlPJ) {
-      // FormSubmit accepte un fichier en multipart via le champ "attachment"
-      var byteArr = Uint8Array.from(atob(mlPJ.base64), function(c){ return c.charCodeAt(0); });
-      var blob = new Blob([byteArr], { type: 'application/pdf' });
-      formData.append('attachment', blob, mlPJ.name);
-    }
-
-    fetch('https://api.web3forms.com/submit', {
-      method: 'POST',
-      body: formData
-    })
-    .then(function(r){ return r.json(); })
-    .then(function(res){
-      if (res.success) sent++;
-      else failed++;
-      setTimeout(function(){ next(i+1); }, 600); // petite pause entre envois
-    })
-    .catch(function(){
-      failed++;
-      setTimeout(function(){ next(i+1); }, 600);
-    });
+  // Construction du corps texte + mention PJ éventuelle
+  var bodyToSend = textBody;
+  if (mlPJ) {
+    bodyToSend += '\n\n——\n📎 Pièce jointe jointe séparément : ' + mlPJ.name;
   }
 
-  next(0);
+  // Stratégie mailto selon le nombre de destinataires :
+  // - 1 destinataire : champ "to"
+  // - Plusieurs : premier en "to", les autres en "bcc" (confidentialité préservée)
+  var toAddr = mlRecipients[0];
+  var bccAddrs = mlRecipients.slice(1).join(',');
+  var mailtoUrl = 'mailto:' + encodeURIComponent(toAddr);
+  mailtoUrl += '?subject=' + encodeURIComponent(subject);
+  if (bccAddrs) mailtoUrl += '&bcc=' + encodeURIComponent(bccAddrs);
+
+  // Copie du contenu dans le presse-papiers, puis ouverture eM Client
+  function openClient() { window.location.href = mailtoUrl; }
+
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(bodyToSend).then(function() {
+      toast('📋 Contenu copié — collez-le (Ctrl+V) dans le mail qui s\'ouvre. ' +
+            mlRecipients.length + ' destinataire' + (mlRecipients.length > 1 ? 's (bcc)' : ''), 'ok');
+      openClient();
+    }).catch(function() {
+      openClient();
+      toast('⚠️ Copie automatique impossible — collez le contenu manuellement', 'err');
+    });
+  } else {
+    openClient();
+  }
+}
+
+// Sélection des destinataires depuis la base clients
+function mlPickFromContacts() {
+  if (typeof cdbContacts === 'undefined' || !cdbContacts.length) {
+    toast('Base clients vide ou pas encore chargée', 'err');
+    return;
+  }
+  // Récupère les contacts avec un email valide
+  var withEmail = cdbContacts.filter(function(c) { return c.email && c.email.includes('@'); });
+  if (!withEmail.length) { toast('Aucun contact avec email dans la base', 'err'); return; }
+
+  // Modale de sélection légère
+  var existing = document.getElementById('ml-pick-modal');
+  if (existing) document.body.removeChild(existing);
+
+  var overlay = document.createElement('div');
+  overlay.id = 'ml-pick-modal';
+  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:900;display:flex;align-items:center;justify-content:center;padding:1rem;';
+
+  var box = document.createElement('div');
+  box.style.cssText = 'background:var(--surface);border-radius:12px;width:100%;max-width:520px;max-height:80vh;display:flex;flex-direction:column;box-shadow:0 20px 60px rgba(0,0,0,.3);';
+
+  var selected = new Set();
+  var listHtml = withEmail.map(function(c, i) {
+    return '<label style="display:flex;align-items:center;gap:10px;padding:.5rem .75rem;cursor:pointer;border-bottom:1px solid var(--border);">' +
+      '<input type="checkbox" data-email="' + c.email + '" style="accent-color:var(--blue-p700);">' +
+      '<div><div style="font-size:.83rem;font-weight:500;">' + (c.raison || c.nom || '—') + '</div>' +
+      '<div style="font-size:.72rem;color:var(--g500);">' + c.email + '</div></div>' +
+    '</label>';
+  }).join('');
+
+  box.innerHTML =
+    '<div style="padding:1rem 1.25rem;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;">' +
+      '<span style="font-weight:700;font-size:.9rem;">👥 Sélectionner des destinataires</span>' +
+      '<button onclick="document.body.removeChild(document.getElementById(\'ml-pick-modal\'))" style="background:none;border:none;font-size:1.2rem;cursor:pointer;color:var(--g500);">✕</button>' +
+    '</div>' +
+    '<div style="padding:.5rem .75rem;border-bottom:1px solid var(--border);display:flex;gap:8px;">' +
+      '<button onclick="this.closest(\'div\').querySelectorAll(\'input\').forEach(function(cb){cb.checked=true;})" style="font-size:.72rem;" class="btn btn-ghost">Tout sélectionner</button>' +
+      '<button onclick="this.closest(\'div\').querySelectorAll(\'input\').forEach(function(cb){cb.checked=false;})" style="font-size:.72rem;" class="btn btn-ghost">Tout déselectionner</button>' +
+    '</div>' +
+    '<div style="overflow-y:auto;flex:1;">' + listHtml + '</div>' +
+    '<div style="padding:.75rem 1rem;border-top:1px solid var(--border);display:flex;justify-content:flex-end;gap:8px;">' +
+      '<button class="btn btn-ghost" onclick="document.body.removeChild(document.getElementById(\'ml-pick-modal\'))">Annuler</button>' +
+      '<button class="btn btn-primary" onclick="mlApplyPickedContacts()">✓ Ajouter ces destinataires</button>' +
+    '</div>';
+
+  overlay.appendChild(box);
+  document.body.appendChild(overlay);
+}
+
+function mlApplyPickedContacts() {
+  var modal = document.getElementById('ml-pick-modal');
+  if (!modal) return;
+  var checked = modal.querySelectorAll('input[type=checkbox]:checked');
+  var emails = [];
+  checked.forEach(function(cb) { if (cb.dataset.email) emails.push(cb.dataset.email); });
+  if (!emails.length) { toast('Aucun contact sélectionné', 'err'); return; }
+
+  var area = document.getElementById('ml-recipients');
+  var existing = area.value.trim();
+  area.value = (existing ? existing + '\n' : '') + emails.join('\n');
+  mlUpdateRecipients();
+  document.body.removeChild(modal);
+  toast('✅ ' + emails.length + ' email' + (emails.length > 1 ? 's ajoutés' : ' ajouté'), 'ok');
 }
 
 // Listeners au chargement
