@@ -1771,12 +1771,12 @@ textarea { resize:vertical; min-height:80px; }
           <div style="display:flex;align-items:center;gap:5px;">
             <span style="font-size:.74rem;color:var(--g600);">Taux avant objectif :</span>
             <input type="number" id="comm-global-taux1" value="1" min="0" max="100" step="0.1"
-              style="width:48px;border:1px solid var(--border-med);border-radius:5px;padding:3px 5px;text-align:center;font-size:.8rem;font-weight:600;color:var(--blue-p700);" oninput="commRefresh()"> %
+              style="width:48px;border:1px solid var(--border-med);border-radius:5px;padding:3px 5px;text-align:center;font-size:.8rem;font-weight:600;color:var(--blue-p700);" oninput="commRefresh();commHistRender()"> %
           </div>
           <div style="display:flex;align-items:center;gap:5px;">
             <span style="font-size:.74rem;color:var(--g600);">Taux après dépassement :</span>
             <input type="number" id="comm-global-taux2" value="2" min="0" max="100" step="0.1"
-              style="width:48px;border:1px solid var(--border-med);border-radius:5px;padding:3px 5px;text-align:center;font-size:.8rem;font-weight:600;color:var(--em600);" oninput="commRefresh()"> %
+              style="width:48px;border:1px solid var(--border-med);border-radius:5px;padding:3px 5px;text-align:center;font-size:.8rem;font-weight:600;color:var(--em600);" oninput="commRefresh();commHistRender()"> %
           </div>
         </div>
       </div>
@@ -1827,7 +1827,38 @@ textarea { resize:vertical; min-height:80px; }
       </div>
   </div>
 
-  <!-- GESTION DES COMPTES (admin uniquement) -->
+  <!-- Historique annuel des commissions -->
+  <div class="card" style="margin-top:1.5rem;">
+    <div class="card-head">
+      <span class="card-title">📅 Historique annuel</span>
+      <div style="display:flex;align-items:center;gap:8px;">
+        <label style="font-size:.75rem;color:var(--g600);">Année :</label>
+        <select id="comm-hist-year" onchange="commHistRender()" style="font-size:.78rem;padding:.3rem .6rem;border:1px solid var(--border-med);border-radius:6px;"></select>
+        <button class="btn btn-ghost" onclick="commHistRender()" style="font-size:.72rem;padding:.3rem .6rem;">🔄</button>
+      </div>
+    </div>
+    <div style="padding:1rem;">
+      <canvas id="comm-hist-chart" height="100"></canvas>
+    </div>
+    <div style="overflow-x:auto;">
+      <table style="width:100%;border-collapse:collapse;font-size:.78rem;">
+        <thead>
+          <tr style="background:var(--blue-p50);">
+            <th style="padding:.55rem .75rem;text-align:left;color:var(--blue-p800);">Mois</th>
+            <th style="padding:.55rem .75rem;text-align:right;color:var(--blue-p800);">CA Facturé</th>
+            <th style="padding:.55rem .75rem;text-align:right;color:var(--blue-p800);">Objectif</th>
+            <th style="padding:.55rem .75rem;text-align:right;color:var(--blue-p800);">Dépassement</th>
+            <th style="padding:.55rem .75rem;text-align:right;color:var(--amber);">Commission</th>
+            <th style="padding:.55rem .75rem;text-align:center;color:var(--g600);">Statut</th>
+          </tr>
+        </thead>
+        <tbody id="comm-hist-tbody"></tbody>
+        <tfoot id="comm-hist-tfoot"></tfoot>
+      </table>
+    </div>
+  </div>
+
+
   <div id="sec-comptes" class="hidden" style="padding:1.75rem 2rem;overflow-y:auto;flex:1;background:var(--bg);box-sizing:border-box;">
     <div class="page-header">
       <div>
@@ -4592,8 +4623,187 @@ function commRefresh() {
 }
 
 
+// ─── Historique annuel des commissions ────────────────────────────────────
+var commHistChart = null;
+var MOIS_LABELS = ['Jan','Fév','Mar','Avr','Mai','Jun','Jul','Aoû','Sep','Oct','Nov','Déc'];
+
+function commHistInit() {
+  var sel = document.getElementById('comm-hist-year');
+  if (!sel) return;
+  var curY = new Date().getFullYear();
+  sel.innerHTML = '';
+  for (var y = curY; y >= curY - 3; y--) {
+    var opt = document.createElement('option');
+    opt.value = y; opt.textContent = y;
+    if (y === curY) opt.selected = true;
+    sel.appendChild(opt);
+  }
+}
+
+function commHistRender() {
+  var sel = document.getElementById('comm-hist-year');
+  var year = sel ? parseInt(sel.value) : new Date().getFullYear();
+
+  // Récupérer les taux configurés
+  var elT1 = document.getElementById('comm-global-taux1');
+  var elT2 = document.getElementById('comm-global-taux2');
+  var taux1 = elT1 ? (parseFloat(elT1.value) || 1) : 1;
+  var taux2 = elT2 ? (parseFloat(elT2.value) || 2) : 2;
+
+  var dataCA = [], dataObj = [], dataComm = [], dataDepass = [];
+  var totalCA = 0, totalComm = 0, totalObj = 0;
+
+  for (var m = 1; m <= 12; m++) {
+    var moisKey = year + '-' + String(m).padStart(2,'0');
+
+    // CA facturé du mois depuis dashCaRows
+    var ca = 0;
+    if (typeof dashCaRows !== 'undefined' && dashCaRows.length) {
+      dashCaRows.forEach(function(row) {
+        if (row && row.statut === 'facturee' && (row.ca||0) > 0 && row.mois === moisKey) {
+          ca += row.ca;
+        }
+      });
+    }
+
+    // Objectif du mois depuis dashObjectifs
+    var obj = (typeof dashObjectifs !== 'undefined' && dashObjectifs[moisKey]) || 0;
+
+    // Commission selon formule 1%/2%
+    var depass = Math.max(0, ca - obj);
+    var comm = (ca * taux1 / 100) + (depass * taux2 / 100);
+
+    dataCA.push(ca);
+    dataObj.push(obj);
+    dataComm.push(Math.round(comm * 100) / 100);
+    dataDepass.push(Math.round(depass * 100) / 100);
+    totalCA += ca; totalComm += comm; totalObj += obj;
+  }
+
+  // ── Graphique ──
+  var ctx = document.getElementById('comm-hist-chart');
+  if (ctx) {
+    if (commHistChart) { commHistChart.destroy(); commHistChart = null; }
+    if (typeof Chart !== 'undefined') {
+      commHistChart = new Chart(ctx, {
+        data: {
+          labels: MOIS_LABELS,
+          datasets: [
+            {
+              type: 'bar', label: 'CA Facturé (€)',
+              data: dataCA,
+              backgroundColor: 'rgba(12,68,124,.18)', borderColor: 'rgba(12,68,124,.7)',
+              borderWidth: 1, yAxisID: 'yCA', order: 2
+            },
+            {
+              type: 'bar', label: 'Objectif (€)',
+              data: dataObj,
+              backgroundColor: 'rgba(245,158,11,.15)', borderColor: 'rgba(245,158,11,.7)',
+              borderWidth: 1, borderDash: [4,2], yAxisID: 'yCA', order: 3
+            },
+            {
+              type: 'line', label: 'Commission (€)',
+              data: dataComm,
+              borderColor: '#7c3aed', backgroundColor: 'rgba(124,58,237,.12)',
+              borderWidth: 2.5, pointRadius: 4, pointBackgroundColor: '#7c3aed',
+              tension: 0.3, fill: true, yAxisID: 'yComm', order: 1
+            }
+          ]
+        },
+        options: {
+          responsive: true,
+          interaction: { mode: 'index', intersect: false },
+          plugins: {
+            legend: { position: 'top', labels: { font: { size: 11 } } },
+            tooltip: {
+              callbacks: {
+                label: function(ctx) {
+                  return ctx.dataset.label + ' : ' + ctx.parsed.y.toLocaleString('fr-FR', { minimumFractionDigits: 2 }) + ' €';
+                }
+              }
+            }
+          },
+          scales: {
+            yCA: {
+              type: 'linear', position: 'left',
+              ticks: { callback: function(v) { return (v/1000).toFixed(0) + 'k€'; }, font: { size: 10 } },
+              grid: { color: 'rgba(0,0,0,.05)' }
+            },
+            yComm: {
+              type: 'linear', position: 'right',
+              ticks: { callback: function(v) { return v.toLocaleString('fr-FR', {minimumFractionDigits:0}) + '€'; }, font: { size: 10 } },
+              grid: { drawOnChartArea: false }
+            }
+          }
+        }
+      });
+    } else {
+      // Chart.js pas encore chargé — chargement lazy
+      lazyLoad(['https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js'], function() { commHistRender(); });
+      return;
+    }
+  }
+
+  // ── Tableau ──
+  var tbody = document.getElementById('comm-hist-tbody');
+  var tfoot = document.getElementById('comm-hist-tfoot');
+  if (!tbody) return;
+
+  var now = new Date();
+  var curYear = now.getFullYear(), curMois = now.getMonth() + 1;
+
+  tbody.innerHTML = MOIS_LABELS.map(function(label, i) {
+    var m = i + 1;
+    var ca = dataCA[i], obj = dataObj[i], comm = dataComm[i], depass = dataDepass[i];
+    var moisKey = year + '-' + String(m).padStart(2,'0');
+    var isFuture = (year > curYear) || (year === curYear && m > curMois);
+    var isCur = (year === curYear && m === curMois);
+
+    if (isFuture) {
+      return '<tr style="opacity:.4;">' +
+        '<td style="padding:.5rem .75rem;font-weight:500;">' + label + ' ' + year + '</td>' +
+        '<td colspan="5" style="padding:.5rem .75rem;color:var(--g400);font-style:italic;">—</td>' +
+        '</tr>';
+    }
+
+    var statut = '';
+    if (ca === 0 && obj === 0) {
+      statut = '<span style="color:var(--g400);font-size:.72rem;">—</span>';
+    } else if (ca >= obj && obj > 0) {
+      statut = '<span style="background:#dcfce7;color:#15803d;padding:2px 8px;border-radius:20px;font-size:.7rem;font-weight:600;">✅ Dépassé</span>';
+    } else if (ca > 0) {
+      statut = '<span style="background:#fef9c3;color:#92400e;padding:2px 8px;border-radius:20px;font-size:.7rem;font-weight:600;">⏳ En cours</span>';
+    } else {
+      statut = '<span style="background:#fee2e2;color:#b91c1c;padding:2px 8px;border-radius:20px;font-size:.7rem;font-weight:600;">❌ Aucun CA</span>';
+    }
+
+    var rowStyle = isCur ? 'background:var(--blue-p50);font-weight:600;' : '';
+    var fmt = function(v) { return v > 0 ? v.toLocaleString('fr-FR',{minimumFractionDigits:2,maximumFractionDigits:2})+'€' : '—'; };
+
+    return '<tr style="border-bottom:1px solid var(--border);' + rowStyle + '">' +
+      '<td style="padding:.5rem .75rem;">' + label + ' ' + year + (isCur ? ' 📍' : '') + '</td>' +
+      '<td style="padding:.5rem .75rem;text-align:right;color:var(--blue-p800);">' + fmt(ca) + '</td>' +
+      '<td style="padding:.5rem .75rem;text-align:right;color:var(--amber);">' + fmt(obj) + '</td>' +
+      '<td style="padding:.5rem .75rem;text-align:right;color:' + (depass > 0 ? '#15803d' : 'var(--g400)') + ';">' + fmt(depass) + '</td>' +
+      '<td style="padding:.5rem .75rem;text-align:right;font-weight:700;color:#7c3aed;">' + fmt(comm) + '</td>' +
+      '<td style="padding:.5rem .75rem;text-align:center;">' + statut + '</td>' +
+    '</tr>';
+  }).join('');
+
+  var fmtT = function(v) { return v.toLocaleString('fr-FR',{minimumFractionDigits:2,maximumFractionDigits:2})+'€'; };
+  tfoot.innerHTML = '<tr style="background:var(--surface2);font-weight:700;border-top:2px solid var(--border);">' +
+    '<td style="padding:.6rem .75rem;">Total ' + year + '</td>' +
+    '<td style="padding:.6rem .75rem;text-align:right;color:var(--blue-p800);">' + fmtT(totalCA) + '</td>' +
+    '<td style="padding:.6rem .75rem;text-align:right;color:var(--amber);">' + fmtT(totalObj) + '</td>' +
+    '<td style="padding:.6rem .75rem;text-align:right;"></td>' +
+    '<td style="padding:.6rem .75rem;text-align:right;color:#7c3aed;">' + fmtT(totalComm) + '</td>' +
+    '<td></td>' +
+  '</tr>';
+}
+
 function commInit() {
   commApplyModeUI();
+  commHistInit();
   // Charger les taux depuis Firestore si dispo
   try {
     if (typeof db !== 'undefined' && db) {
@@ -4607,11 +4817,13 @@ function commInit() {
           if (el2 && data._global_fact) el2.value = data._global_fact;
         }
         commRefresh();
-      }).catch(function() { commRefresh(); });
+        commHistRender();
+      }).catch(function() { commRefresh(); commHistRender(); });
     } else {
       commRefresh();
+      commHistRender();
     }
-  } catch(e) { commRefresh(); }
+  } catch(e) { commRefresh(); commHistRender(); }
 }
 
 
