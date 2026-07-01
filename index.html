@@ -1830,7 +1830,6 @@ textarea { resize:vertical; min-height:80px; }
           </table>
         </div>
       </div>
-  </div>
 
   <!-- Historique annuel des commissions -->
   <div class="card" style="margin-top:1.5rem;">
@@ -1862,6 +1861,8 @@ textarea { resize:vertical; min-height:80px; }
       </table>
     </div>
   </div>
+
+  </div><!-- fin sec-commissions -->
 
 
   <div id="sec-comptes" class="hidden" style="padding:1.75rem 2rem;overflow-y:auto;flex:1;background:var(--bg);box-sizing:border-box;">
@@ -5464,7 +5465,12 @@ function bdcOpenOutlook() {
     + '?subject=' + encodeURIComponent(subject);
 
   function openMailClient() {
-    window.location.href = mailtoUrl;
+    var _a = document.createElement('a');
+    _a.href = mailtoUrl;
+    _a.style.display = 'none';
+    document.body.appendChild(_a);
+    _a.click();
+    setTimeout(function(){ document.body.removeChild(_a); }, 300);
   }
 
   function copyFallback() {
@@ -9905,7 +9911,14 @@ function mlSendAll() {
   if (bccAddrs) mailtoUrl += '&bcc=' + encodeURIComponent(bccAddrs);
 
   // Copie du contenu dans le presse-papiers, puis ouverture eM Client
-  function openClient() { window.location.href = mailtoUrl; }
+  function openClient() {
+    var a = document.createElement('a');
+    a.href = mailtoUrl;
+    a.style.display = 'none';
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(function(){ document.body.removeChild(a); }, 300);
+  }
 
   if (navigator.clipboard && navigator.clipboard.writeText) {
     navigator.clipboard.writeText(bodyToSend).then(function() {
