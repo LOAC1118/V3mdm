@@ -1933,7 +1933,7 @@ textarea { resize:vertical; min-height:80px; }
         <div class="card">
           <div class="card-head"><span class="card-title">✉️ Objet</span></div>
           <div style="padding:1rem;">
-            <input type="text" id="ml-subject" placeholder="Ex: 🌿 Promo bio d'avril — jusqu'à -20% sur la gamme truffes" maxlength="120" style="font-size:.9rem;font-weight:500;"/>
+            <input type="text" id="ml-subject" oninput="mlUpdateSubject()" placeholder="Ex: 🌿 Promo bio d'avril — jusqu'à -20% sur la gamme truffes" maxlength="120" style="font-size:.9rem;font-weight:500;"/>
             <div style="font-size:.68rem;color:var(--g500);margin-top:.3rem;"><span id="ml-subject-count">0</span>/120 caractères</div>
           </div>
         </div>
@@ -1972,7 +1972,7 @@ textarea { resize:vertical; min-height:80px; }
             <span class="ml-tbsep"></span>
             <button type="button" onclick="mlExec('removeFormat')" title="Effacer mise en forme" style="color:#dc2626;">⨯ Format</button>
           </div>
-          <div id="ml-editor" contenteditable="true" style="min-height:280px;max-height:500px;overflow-y:auto;padding:1rem 1.2rem;font-size:.9rem;line-height:1.55;color:var(--g800);outline:none;border-top:1px solid var(--border);"></div>
+          <div id="ml-editor" contenteditable="true" oninput="if(typeof mlUpdateSendBtn==='function')mlUpdateSendBtn();" style="min-height:280px;max-height:500px;overflow-y:auto;padding:1rem 1.2rem;font-size:.9rem;line-height:1.55;color:var(--g800);outline:none;border-top:1px solid var(--border);"></div>
         </div>
 
         <!-- PJ + envoi -->
@@ -2002,9 +2002,9 @@ textarea { resize:vertical; min-height:80px; }
         <div style="display:flex;gap:10px;align-items:center;justify-content:space-between;padding:1rem;background:var(--blue-p50);border-radius:10px;border:1px solid var(--blue-p300);">
           <div style="font-size:.78rem;color:var(--g700);">
             <strong id="ml-send-summary">Aucune adresse saisie</strong>
-            <div id="ml-send-info" style="font-size:.68rem;color:var(--g500);margin-top:2px;">L'envoi se fera via Web3Forms vers cspoto@moulindesmoines.com</div>
+            <div style="font-size:.68rem;color:var(--g500);margin-top:2px;">Ouvre votre client mail avec destinataires et sujet pré-remplis — collez le contenu (Ctrl+V)</div>
           </div>
-          <button class="btn btn-primary" onclick="mlSendAll()" id="ml-send-btn" style="font-size:.88rem;padding:.6rem 1.2rem;" disabled>✉️ Ouvrir dans eM Client</button>
+          <button class="btn btn-primary" onclick="mlSendAll()" id="ml-send-btn" style="font-size:.88rem;padding:.6rem 1.2rem;" disabled>✉️ Ouvrir dans le client mail</button>
         </div>
 
       </div>
