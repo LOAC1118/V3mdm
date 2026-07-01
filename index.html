@@ -4408,16 +4408,24 @@ function commApplyModeUI() {
   var btnGlobal = document.getElementById('comm-mode-btn-global');
   var globalConfig = document.getElementById('comm-global-config');
   var globalDetail = document.getElementById('comm-global-detail');
-  var thTaux = document.getElementById('comm-th-taux');
-  var tableTitle = document.getElementById('comm-table-title');
+  var tableCard = document.getElementById('comm-table-card');
   var isGlobal = (mode === 'global');
 
   if (btnClient) { btnClient.className = isGlobal ? 'btn btn-ghost' : 'btn'; btnClient.style.background = isGlobal ? 'transparent' : 'var(--surface)'; btnClient.style.boxShadow = isGlobal ? 'none' : '0 1px 2px rgba(0,0,0,.08)'; }
   if (btnGlobal) { btnGlobal.className = isGlobal ? 'btn' : 'btn btn-ghost'; btnGlobal.style.background = isGlobal ? 'var(--surface)' : 'transparent'; btnGlobal.style.boxShadow = isGlobal ? '0 1px 2px rgba(0,0,0,.08)' : 'none'; }
   if (globalConfig) globalConfig.style.display = isGlobal ? 'flex' : 'none';
-  if (globalDetail) globalDetail.style.display = isGlobal ? 'block' : 'none';
-  if (thTaux) thTaux.textContent = isGlobal ? 'Taux effectif %' : 'Taux %';
-  if (tableTitle) tableTitle.textContent = isGlobal ? '📊 Répartition par client (calcul global)' : '📊 Détail par client';
+  if (globalDetail) {
+    globalDetail.style.display = isGlobal ? 'block' : 'none';
+    // En mode global on agrandit le bloc de calcul pour qu'il soit plus lisible
+    if (isGlobal) {
+      globalDetail.style.padding = '1.25rem 1.5rem';
+      globalDetail.style.fontSize = '.95rem';
+      var txt = document.getElementById('comm-global-detail-text');
+      if (txt) txt.style.fontSize = '.9rem';
+    }
+  }
+  // Masquer le tableau par client en mode global — il n'est pas utile
+  if (tableCard) tableCard.style.display = isGlobal ? 'none' : '';
 
   // En mode global, les taux individuels ne sont plus éditables (calculés automatiquement)
   document.querySelectorAll('#comm-tbody input[id^="comm-fact-"]').forEach(function(inp) {
@@ -4559,15 +4567,28 @@ function commRefresh() {
     var detailEl = document.getElementById('comm-global-detail-text');
     if (detailEl) {
       if (globalCAtotal <= 0) {
-        detailEl.innerHTML = 'Aucun CA facturé sur ' + moisLabel + ' pour le moment.';
-      } else if (globalObjectif <= 0) {
-        detailEl.innerHTML = '⚠️ Aucun objectif défini pour ' + moisLabel + ' (à saisir dans Dashboard → Objectifs). Le calcul applique le taux de base (' + taux1 + '%) sur tout le CA, sans bonus de dépassement.';
-      } else if (depassement > 0) {
-        detailEl.innerHTML = 'Objectif ' + moisLabel + ' : <b>' + commFmt(globalObjectif) + '</b> — Réalisé : <b>' + commFmt(globalCAtotal) + '</b> ✅ Objectif dépassé de <b>' + commFmt(depassement) + '</b><br>' +
-          'Commission = ' + taux1 + '% × ' + commFmt(globalCAtotal) + ' (' + commFmt(globalCAtotal*taux1/100) + ') + ' + taux2 + '% × ' + commFmt(depassement) + ' (' + commFmt(depassement*taux2/100) + ') = <b>' + commFmt(globalCommTotal) + '</b>';
+        detailEl.innerHTML = '<span style="color:var(--g500);">Aucun CA facturé sur ' + moisLabel + ' pour le moment.</span>';
       } else {
-        detailEl.innerHTML = 'Objectif ' + moisLabel + ' : <b>' + commFmt(globalObjectif) + '</b> — Réalisé : <b>' + commFmt(globalCAtotal) + '</b><br>' +
-          'Objectif pas encore atteint (reste ' + commFmt(globalObjectif - globalCAtotal) + ') — Commission = ' + taux1 + '% × ' + commFmt(globalCAtotal) + ' = <b>' + commFmt(globalCommTotal) + '</b>';
+        var objLine = globalObjectif > 0
+          ? '<tr><td style="padding:.4rem .6rem;color:var(--blue-p700);font-weight:600;">🎯 Objectif ' + moisLabel + '</td><td style="padding:.4rem .6rem;text-align:right;font-size:1.15rem;font-weight:700;color:var(--blue-p800);">' + commFmt(globalObjectif) + '</td></tr>'
+          : '<tr><td colspan="2" style="padding:.3rem .6rem;font-size:.8rem;color:var(--amber);">⚠️ Aucun objectif défini — à saisir dans Dashboard → Objectifs pour activer le bonus 2%</td></tr>';
+
+        var depassLine = (globalObjectif > 0 && depassement > 0)
+          ? '<tr><td style="padding:.4rem .6rem;color:#15803d;font-weight:600;">📈 Dépassement</td><td style="padding:.4rem .6rem;text-align:right;font-size:1.15rem;font-weight:700;color:#15803d;">+' + commFmt(depassement) + '</td></tr>'
+          : (globalObjectif > 0 ? '<tr><td style="padding:.4rem .6rem;color:var(--amber);font-weight:600;">⏳ Reste à faire</td><td style="padding:.4rem .6rem;text-align:right;font-size:1rem;color:var(--amber);">' + commFmt(globalObjectif - globalCAtotal) + '</td></tr>' : '');
+
+        var commDetail = globalObjectif > 0 && depassement > 0
+          ? taux1 + '% × ' + commFmt(globalCAtotal) + ' = ' + commFmt(globalCAtotal*taux1/100) + ' &nbsp;+&nbsp; ' + taux2 + '% × ' + commFmt(depassement) + ' = ' + commFmt(depassement*taux2/100)
+          : taux1 + '% × ' + commFmt(globalCAtotal) + ' = ' + commFmt(globalCAtotal*taux1/100);
+
+        detailEl.innerHTML =
+          '<table style="width:100%;border-collapse:collapse;">' +
+            '<tr><td style="padding:.4rem .6rem;color:var(--blue-p700);font-weight:600;">📄 CA Facturé ' + moisLabel + '</td><td style="padding:.4rem .6rem;text-align:right;font-size:1.15rem;font-weight:700;color:var(--blue-p800);">' + commFmt(globalCAtotal) + '</td></tr>' +
+            objLine +
+            depassLine +
+            '<tr style="border-top:2px solid var(--blue-p300);"><td style="padding:.5rem .6rem;font-weight:700;color:var(--blue-p900);">💶 Commission totale</td><td style="padding:.5rem .6rem;text-align:right;font-size:1.4rem;font-weight:800;color:#7c3aed;">' + commFmt(globalCommTotal) + '</td></tr>' +
+            '<tr><td colspan="2" style="padding:.3rem .6rem;font-size:.78rem;color:var(--blue-p700);border-top:1px solid var(--blue-p200);">Calcul : ' + commDetail + '</td></tr>' +
+          '</table>';
       }
     }
   }
