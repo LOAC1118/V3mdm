@@ -5464,48 +5464,28 @@ function bdcOpenOutlook() {
   var mailtoUrl = 'mailto:' + encodeURIComponent('commande@moulindesmoines.com')
     + '?subject=' + encodeURIComponent(subject);
 
-  function openMailClient() {
-    var _a = document.createElement('a');
-    _a.href = mailtoUrl;
-    _a.style.display = 'none';
-    document.body.appendChild(_a);
-    _a.click();
-    setTimeout(function(){ document.body.removeChild(_a); }, 300);
-  }
+  // Ouvrir eM Client de façon SYNCHRONE (dans le geste utilisateur direct)
+  var _a = document.createElement('a');
+  _a.href = mailtoUrl;
+  _a.style.display = 'none';
+  document.body.appendChild(_a);
+  _a.click();
+  setTimeout(function(){ document.body.removeChild(_a); }, 300);
 
-  function copyFallback() {
-    try {
-      var ta = document.createElement('textarea');
-      ta.value = body;
-      ta.style.position = 'fixed';
-      ta.style.opacity = '0';
-      document.body.appendChild(ta);
-      ta.focus(); ta.select();
-      document.execCommand('copy');
-      document.body.removeChild(ta);
-      return true;
-    } catch(e) { return false; }
-  }
-
+  // Copie du BDC dans le presse-papiers en asynchrone
   if (navigator.clipboard && navigator.clipboard.writeText) {
     navigator.clipboard.writeText(body).then(function() {
       bdcShowAlert('📋 Commande copiée — collez-la (Ctrl+V) dans le mail qui s\'ouvre.', 'ok');
-      openMailClient();
     }).catch(function() {
-      if (copyFallback()) {
-        bdcShowAlert('📋 Commande copiée — collez-la (Ctrl+V) dans le mail qui s\'ouvre.', 'ok');
-      } else {
-        bdcShowAlert('⚠️ Copie automatique impossible — pensez à copier le BDC manuellement.', 'err');
-      }
-      openMailClient();
+      var ta = document.createElement('textarea');
+      ta.value = body; ta.style.cssText = 'position:fixed;opacity:0;';
+      document.body.appendChild(ta); ta.focus(); ta.select();
+      try { document.execCommand('copy'); bdcShowAlert('📋 Commande copiée — collez-la (Ctrl+V) dans le mail.', 'ok'); }
+      catch(e) { bdcShowAlert('⚠️ Copie impossible — copiez le BDC manuellement.', 'err'); }
+      document.body.removeChild(ta);
     });
   } else {
-    if (copyFallback()) {
-      bdcShowAlert('📋 Commande copiée — collez-la (Ctrl+V) dans le mail qui s\'ouvre.', 'ok');
-    } else {
-      bdcShowAlert('⚠️ Copie automatique impossible — pensez à copier le BDC manuellement.', 'err');
-    }
-    openMailClient();
+    bdcShowAlert('✉️ Mail ouvert — copiez le BDC manuellement si besoin.', 'ok');
   }
 }
 
@@ -9910,27 +9890,26 @@ function mlSendAll() {
   mailtoUrl += '?subject=' + encodeURIComponent(subject);
   if (bccAddrs) mailtoUrl += '&bcc=' + encodeURIComponent(bccAddrs);
 
-  // Copie du contenu dans le presse-papiers, puis ouverture eM Client
-  function openClient() {
-    var a = document.createElement('a');
-    a.href = mailtoUrl;
-    a.style.display = 'none';
-    document.body.appendChild(a);
-    a.click();
-    setTimeout(function(){ document.body.removeChild(a); }, 300);
-  }
+  // On ouvre eM Client de façon SYNCHRONE (dans le clic utilisateur direct)
+  // car les navigateurs bloquent les ouvertures de liens déclenchées depuis une Promise.
+  // La copie du presse-papiers se fait ensuite en asynchrone (pas de contrainte de sécurité).
+  var a = document.createElement('a');
+  a.href = mailtoUrl;
+  a.style.display = 'none';
+  document.body.appendChild(a);
+  a.click();
+  setTimeout(function(){ document.body.removeChild(a); }, 300);
 
+  // Copie du contenu dans le presse-papiers (asynchrone, pas critique)
   if (navigator.clipboard && navigator.clipboard.writeText) {
     navigator.clipboard.writeText(bodyToSend).then(function() {
-      toast('📋 Contenu copié — collez-le (Ctrl+V) dans le mail qui s\'ouvre. ' +
-            mlRecipients.length + ' destinataire' + (mlRecipients.length > 1 ? 's (bcc)' : ''), 'ok');
-      openClient();
+      toast('📋 ' + mlRecipients.length + ' destinataire' + (mlRecipients.length > 1 ? 's (bcc)' : '') +
+            ' — contenu copié, collez-le (Ctrl+V) dans eM Client', 'ok');
     }).catch(function() {
-      openClient();
-      toast('⚠️ Copie automatique impossible — collez le contenu manuellement', 'err');
+      toast('✉️ Mail ouvert dans eM Client — copiez le contenu manuellement depuis l\'éditeur', 'ok');
     });
   } else {
-    openClient();
+    toast('✉️ Mail ouvert dans eM Client — copiez le contenu manuellement depuis l\'éditeur', 'ok');
   }
 }
 
