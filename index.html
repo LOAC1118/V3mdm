@@ -4515,9 +4515,21 @@ function commRefresh() {
   if (typeof dashCaRows !== 'undefined' && dashCaRows && dashCaRows.length) {
     dashCaRows.forEach(function(row) {
       if (!row || (row.ca||0) <= 0 || row.statut !== 'facturee') return;
-      // Filtrer exactement comme le Dashboard : par row.mois (ex: "2026-07")
-      // C'est le champ calculé à l'import, identique à ce qu'affiche le Dashboard.
-      if (row.mois !== moisKey) return;
+
+      // Pour les commissions, on utilise la date de référence SANS fallback :
+      // si le Dashboard est en mode "date de facture", on exige une vraie dateFac.
+      // Une commande facturée sans date de facturation explicite ne doit pas être
+      // attribuée à un mois via dLiv/dCmd — cela provoquerait des erreurs de mois.
+      var dateMode = (typeof dashCaDateCol !== 'undefined') ? dashCaDateCol : 'facture';
+      var dateRef;
+      if (dateMode === 'livraison') dateRef = row.dateLiv;
+      else if (dateMode === 'commande') dateRef = row.dateCmd;
+      else dateRef = row.dateFac; // mode "facture" : dateFac UNIQUEMENT, pas de fallback
+
+      if (!dateRef || !(dateRef instanceof Date) || isNaN(dateRef)) return;
+      var rowMois = dateRef.getFullYear() + '-' + String(dateRef.getMonth()+1).padStart(2,'0');
+      if (rowMois !== moisKey) return;
+
       var nom = (row.client||'').trim().toUpperCase();
       if (!nom || nom === '---') return;
       caFact[nom] = (caFact[nom]||0) + (row.ca||0);
@@ -4685,13 +4697,17 @@ function commHistRender() {
   for (var m = 1; m <= 12; m++) {
     var moisKey = year + '-' + String(m).padStart(2,'0');
 
-    // CA facturé du mois depuis dashCaRows
+    // CA facturé du mois depuis dashCaRows — même logique que commRefresh :
+    // date de référence sans fallback selon le mode du Dashboard.
     var ca = 0;
     if (typeof dashCaRows !== 'undefined' && dashCaRows.length) {
+      var dateMode = (typeof dashCaDateCol !== 'undefined') ? dashCaDateCol : 'facture';
       dashCaRows.forEach(function(row) {
-        if (row && row.statut === 'facturee' && (row.ca||0) > 0 && row.mois === moisKey) {
-          ca += row.ca;
-        }
+        if (!row || row.statut !== 'facturee' || (row.ca||0) <= 0) return;
+        var dr = (dateMode === 'livraison') ? row.dateLiv : (dateMode === 'commande') ? row.dateCmd : row.dateFac;
+        if (!dr || !(dr instanceof Date) || isNaN(dr)) return;
+        var rm = dr.getFullYear() + '-' + String(dr.getMonth()+1).padStart(2,'0');
+        if (rm === moisKey) ca += row.ca;
       });
     }
 
