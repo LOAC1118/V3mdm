@@ -1445,9 +1445,19 @@ textarea { resize:vertical; min-height:80px; }
         </div>
       </div>
     </div>
-  </div>
 
-  <!-- FRAIS -->
+    <!-- ═══ HISTORIQUE DES COMMANDES BDC ═══ -->
+    <div style="padding:0 1rem 1.5rem;" id="bdc-historique-section">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.75rem;">
+        <div style="font-size:.8rem;font-weight:700;color:var(--g700);letter-spacing:.04em;text-transform:uppercase;">📋 Historique des commandes envoyées</div>
+        <button class="btn btn-ghost" onclick="bdcHistLoad()" style="font-size:.72rem;padding:.3rem .6rem;">🔄 Actualiser</button>
+      </div>
+      <div id="bdc-hist-list">
+        <div style="text-align:center;padding:1.5rem;color:var(--g400);font-size:.82rem;">Chargement…</div>
+      </div>
+    </div>
+
+  </div><!-- fin sec-bdc -->
   <div id="sec-frais" class="hidden">
     <div class="page-header">
       <div>
@@ -4348,6 +4358,8 @@ function bdcActivate() {
   const sec = document.getElementById('sec-bdc');
   sec.style.display = 'flex';
   if (!bdcInitDone) { buildTable(); bdcInitDone = true; }
+  // Charger l'historique des commandes au premier accès
+  if (typeof bdcHistLoad === 'function') setTimeout(bdcHistLoad, 300);
 }
 
 function bdcFmt(n) { return n.toFixed(2).replace('.',',')+'€'; }
@@ -5005,6 +5017,284 @@ function bdcClearLocal() {
       });
     }
   } catch(e) { console.warn('[BDC] bdcClearLocal cloud err:', e); }
+}
+
+// ─── Historique des commandes BDC ─────────────────────────────────────────
+var bdcHistCache = [];
+
+function bdcHistLoad() {
+  var listEl = document.getElementById('bdc-hist-list');
+  if (!listEl) return;
+  listEl.innerHTML = '<div style="text-align:center;padding:1.5rem;color:var(--g400);font-size:.82rem;">Chargement…</div>';
+  if (!db || !currentUser) { listEl.innerHTML = '<div style="text-align:center;padding:1rem;color:var(--g400);">Non connecté</div>'; return; }
+  bcol('commandes').orderBy('createdAt','desc').limit(50).get().then(function(snap) {
+    bdcHistCache = [];
+    snap.forEach(function(doc) { bdcHistCache.push(Object.assign({ _id: doc.id }, doc.data())); });
+    bdcHistRender();
+  }).catch(function(e) {
+    listEl.innerHTML = '<div style="text-align:center;padding:1rem;color:var(--g400);">Erreur de chargement</div>';
+    console.warn('[BDC Hist]', e);
+  });
+}
+
+function bdcHistRender() {
+  var listEl = document.getElementById('bdc-hist-list');
+  if (!listEl) return;
+  if (!bdcHistCache.length) {
+    listEl.innerHTML = '<div style="text-align:center;padding:1.5rem;color:var(--g400);font-size:.82rem;">Aucune commande enregistrée</div>';
+    return;
+  }
+  listEl.innerHTML = bdcHistCache.map(function(cmd) {
+    var date = cmd.createdAt ? new Date(cmd.createdAt.seconds ? cmd.createdAt.seconds*1000 : cmd.createdAt).toLocaleDateString('fr-FR') : '—';
+    var heure = cmd.createdAt ? new Date(cmd.createdAt.seconds ? cmd.createdAt.seconds*1000 : cmd.createdAt).toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'}) : '';
+    var statut = cmd.statut || 'Saisie';
+    var statutColor = statut === 'Envoyée' ? '#15803d' : '#92400e';
+    var statutBg = statut === 'Envoyée' ? '#dcfce7' : '#fef9c3';
+    var nbRefs = cmd.nbRefs || (cmd.lignes ? cmd.lignes.length : '?');
+    var montant = cmd.montant ? cmd.montant.toLocaleString('fr-FR',{minimumFractionDigits:2,maximumFractionDigits:2})+'€' : '—';
+    return '<div style="display:flex;align-items:center;gap:10px;padding:.6rem .75rem;border-radius:8px;border:1px solid var(--border);margin-bottom:.5rem;background:var(--surface);">' +
+      '<div style="flex:1;min-width:0;">' +
+        '<div style="display:flex;align-items:center;gap:6px;margin-bottom:.2rem;">' +
+          '<span style="font-weight:600;font-size:.83rem;color:var(--g800);">' + (cmd.clientNom||'—') + '</span>' +
+          '<span style="padding:1px 7px;border-radius:10px;font-size:.68rem;font-weight:600;background:'+statutBg+';color:'+statutColor+';">' + statut + '</span>' +
+        '</div>' +
+        '<div style="font-size:.74rem;color:var(--g500);">' + date + (heure?' · '+heure:'') + ' · ' + nbRefs + ' réf. · ' + montant + (cmd.remise?' · remise '+cmd.remise+'%':'') + '</div>' +
+        (cmd.commentaire ? '<div style="font-size:.72rem;color:var(--g600);font-style:italic;margin-top:.15rem;">'+cmd.commentaire+'</div>' : '') +
+      '</div>' +
+      '<div style="display:flex;gap:5px;flex-shrink:0;">' +
+        '<button class="btn btn-ghost" onclick="bdcHistReload(\''+cmd._id+'\')" title="Recharger dans le BDC" style="font-size:.72rem;padding:.3rem .5rem;">✏️</button>' +
+        '<button class="btn btn-ghost" onclick="bdcHistResend(\''+cmd._id+'\')" title="Réenvoyer par mail" style="font-size:.72rem;padding:.3rem .5rem;">✉️</button>' +
+        '<button class="btn btn-ghost" onclick="bdcHistExportPDF(\''+cmd._id+'\')" title="Télécharger en PDF" style="font-size:.72rem;padding:.3rem .5rem;">📄</button>' +
+        '<button class="btn btn-ghost" onclick="bdcHistExportXLS(\''+cmd._id+'\')" title="Télécharger en Excel" style="font-size:.72rem;padding:.3rem .5rem;">📊</button>' +
+        '<button class="btn btn-ghost" onclick="bdcHistDelete(\''+cmd._id+'\')" title="Supprimer" style="font-size:.72rem;padding:.3rem .5rem;color:#dc2626;">🗑</button>' +
+      '</div>' +
+    '</div>';
+  }).join('');
+}
+
+function bdcHistReload(id) {
+  var cmd = bdcHistCache.find(function(c){ return c._id === id; });
+  if (!cmd) return;
+  if (!confirm('Recharger cette commande dans le BDC ?\nLe panier en cours sera remplacé.')) return;
+
+  // Vider le panier actuel
+  bdcQtys = {}; bdcRemiseLigne = {}; bdcRemise = 0;
+
+  // Recharger les quantités depuis les lignes
+  if (cmd.lignes && cmd.lignes.length) {
+    cmd.lignes.forEach(function(l) {
+      if (l.code && (l.qty || l.qt)) {
+        bdcQtys[l.code] = l.qty || l.qt;
+        if (l.remiseLigne) bdcRemiseLigne[l.code] = l.remiseLigne;
+      }
+    });
+  }
+  if (cmd.remise) bdcRemise = cmd.remise;
+
+  // Recharger les infos client
+  var set = function(id, val) { var el = document.getElementById(id); if (el && val) el.value = val; };
+  set('bdc-magasin', cmd.clientNom);
+  set('bdc-numclient', cmd.numClient);
+  set('bdc-contact', cmd.contact);
+  set('bdc-email', cmd.email);
+  set('bdc-tel', cmd.tel);
+  set('bdc-datelivraison', cmd.datelivraison);
+  set('bdc-comment', cmd.commentaire);
+
+  buildTable();
+  bdcUpdateTotals();
+  bdcSaveLocal();
+
+  // Remonter en haut du BDC
+  var bdc = document.getElementById('sec-bdc');
+  if (bdc) bdc.scrollTo({ top: 0, behavior: 'smooth' });
+  toast('✅ Commande rechargée dans le BDC — modifiez puis renvoyez', 'ok');
+}
+
+function bdcHistResend(id) {
+  var cmd = bdcHistCache.find(function(c){ return c._id === id; });
+  if (!cmd || !cmd.lignes) { toast('Données insuffisantes pour réenvoyer', 'err'); return; }
+
+  // Reconstruit le texte de la commande depuis les lignes sauvegardées
+  var date = new Date().toLocaleDateString('fr-FR');
+  var lines = ['BON DE COMMANDE — ' + (CURRENT_BRAND==='naturaline'?'NATURALINE':'MOULIN DES MOINES'), ''];
+  if (cmd.clientNom) lines.push('Client : ' + cmd.clientNom);
+  if (cmd.numClient) lines.push('N° Client : ' + cmd.numClient);
+  if (cmd.contact) lines.push('Contact : ' + cmd.contact);
+  if (cmd.email) lines.push('Email : ' + cmd.email);
+  lines.push('Date : ' + date);
+  if (cmd.datelivraison) lines.push('Livraison : ' + cmd.datelivraison);
+  lines.push('');
+  lines.push('ARTICLES :');
+  cmd.lignes.forEach(function(l) {
+    var qt = l.qty || l.qt || 0;
+    var total = l.total_ht || l.total || 0;
+    lines.push(l.code + ' — ' + (l.libelle||'') + ' | ' + qt + ' col. | ' + (l.pu_ht||0).toFixed(2).replace('.',',') + '€/u | Total : ' + total.toFixed(2).replace('.',',') + '€');
+  });
+  if (cmd.remise) { lines.push(''); lines.push('Remise : ' + cmd.remise + '%'); }
+  lines.push(''); lines.push('TOTAL HT NET : ' + (cmd.montant||0).toFixed(2).replace('.',',') + '€');
+  if (cmd.commentaire) { lines.push(''); lines.push('Commentaire : ' + cmd.commentaire); }
+  var body = lines.join('\n');
+
+  var subject = 'Bon de commande MDM 2026 — ' + (cmd.clientNom||'') + ' — ' + date;
+  var mailtoUrl = 'mailto:' + encodeURIComponent('commande@moulindesmoines.com') + '?subject=' + encodeURIComponent(subject);
+
+  // Ouvrir le client mail de façon synchrone
+  var a = document.createElement('a'); a.href = mailtoUrl; a.style.display='none';
+  document.body.appendChild(a); a.click();
+  setTimeout(function(){ document.body.removeChild(a); }, 300);
+
+  // Copier le corps en asynchrone
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(body).then(function() {
+      toast('📋 Commande copiée — collez-la (Ctrl+V) dans le mail qui s\'ouvre', 'ok');
+    }).catch(function(){ toast('✉️ Mail ouvert — copiez le contenu manuellement', 'ok'); });
+  } else {
+    toast('✉️ Mail ouvert — copiez le contenu manuellement', 'ok');
+  }
+}
+
+// ─── Export PDF d'une commande historique ─────────────────────────────────
+function bdcHistExportPDF(id) {
+  var cmd = bdcHistCache.find(function(c){ return c._id === id; });
+  if (!cmd) return;
+
+  lazyLoad([LIB_JSPDF, LIB_JSPDF_AT], function() {
+    var doc = new window.jspdf.jsPDF({ unit:'mm', format:'a4' });
+    var brand = CURRENT_BRAND === 'naturaline' ? 'NATURALINE' : 'MOULIN DES MOINES';
+    var date = cmd.createdAt ? new Date(cmd.createdAt.seconds ? cmd.createdAt.seconds*1000 : cmd.createdAt).toLocaleDateString('fr-FR') : '—';
+    var fname = 'BDC_' + (cmd.clientNom||'client').replace(/[^a-zA-Z0-9]/g,'_') + '_' + date.replace(/\//g,'-') + '.pdf';
+
+    // En-tête
+    doc.setFillColor(12, 68, 124);
+    doc.rect(0, 0, 210, 28, 'F');
+    doc.setTextColor(255,255,255);
+    doc.setFontSize(16); doc.setFont('helvetica','bold');
+    doc.text(brand, 12, 11);
+    doc.setFontSize(10); doc.setFont('helvetica','normal');
+    doc.text('Bon de Commande', 12, 18);
+    doc.setFontSize(11); doc.setFont('helvetica','bold');
+    doc.text(cmd.clientNom||'—', 198, 11, {align:'right'});
+    doc.setFontSize(9); doc.setFont('helvetica','normal');
+    doc.text('Date : ' + date, 198, 18, {align:'right'});
+
+    // Infos commande
+    doc.setTextColor(30,30,30);
+    doc.setFontSize(9);
+    var y = 36;
+    var infos = [];
+    if (cmd.numClient) infos.push(['N° Client', cmd.numClient]);
+    if (cmd.contact) infos.push(['Contact', cmd.contact]);
+    if (cmd.email) infos.push(['Email', cmd.email]);
+    if (cmd.tel) infos.push(['Tél', cmd.tel]);
+    if (cmd.datelivraison) infos.push(['Livraison souhaitée', cmd.datelivraison]);
+    if (cmd.commentaire) infos.push(['Commentaire', cmd.commentaire]);
+    if (infos.length) {
+      doc.setFont('helvetica','bold'); doc.text('Informations', 12, y); y += 5;
+      doc.setFont('helvetica','normal');
+      infos.forEach(function(row) {
+        doc.setTextColor(100,116,139); doc.text(row[0], 14, y);
+        doc.setTextColor(30,30,30); doc.text(String(row[1]), 55, y);
+        y += 5;
+      });
+      y += 3;
+    }
+
+    // Tableau articles
+    if (cmd.lignes && cmd.lignes.length) {
+      var tableRows = cmd.lignes.map(function(l) {
+        var qt = l.qty || l.qt || 0;
+        var pcb = l.pcb || 1;
+        var total = l.total_ht || l.total || (l.pu_ht * qt * pcb) || 0;
+        return [l.code, l.libelle||'', qt + ' col.', (qt*(l.pcb||1))+' UVC',
+          (l.pu_ht||0).toLocaleString('fr-FR',{minimumFractionDigits:2})+'€',
+          total.toLocaleString('fr-FR',{minimumFractionDigits:2})+'€'];
+      });
+
+      doc.autoTable({
+        startY: y,
+        head: [['Code','Désignation','Colis','UVC','PU HT','Total HT']],
+        body: tableRows,
+        styles: { fontSize: 8, cellPadding: 2.5 },
+        headStyles: { fillColor: [12,68,124], textColor: 255, fontStyle:'bold' },
+        columnStyles: { 0:{cellWidth:22}, 1:{cellWidth:'auto'}, 2:{cellWidth:16,halign:'center'}, 3:{cellWidth:16,halign:'center'}, 4:{cellWidth:20,halign:'right'}, 5:{cellWidth:22,halign:'right',fontStyle:'bold'} },
+        alternateRowStyles: { fillColor: [246,249,253] },
+        foot: [[{content: (cmd.nbRefs||cmd.lignes.length)+' réf.', colSpan:4}, 'TOTAL HT NET', (cmd.montant||0).toLocaleString('fr-FR',{minimumFractionDigits:2})+'€']],
+        footStyles: { fillColor:[238,246,253], textColor:[12,68,124], fontStyle:'bold' }
+      });
+    }
+
+    // Pied de page
+    var pageH = doc.internal.pageSize.height;
+    doc.setFontSize(8); doc.setTextColor(148,163,184);
+    doc.text('MDM CRM 2026 · LOAC DEV Solutions', 12, pageH-8);
+    doc.text('Page 1', 198, pageH-8, {align:'right'});
+
+    doc.save(fname);
+    toast('📄 PDF téléchargé', 'ok');
+  });
+}
+
+// ─── Export Excel d'une commande historique ────────────────────────────────
+function bdcHistExportXLS(id) {
+  var cmd = bdcHistCache.find(function(c){ return c._id === id; });
+  if (!cmd || !cmd.lignes) { toast('Données insuffisantes pour l\'export', 'err'); return; }
+
+  lazyLoad([LIB_XLSX], function() {
+    var date = cmd.createdAt ? new Date(cmd.createdAt.seconds ? cmd.createdAt.seconds*1000 : cmd.createdAt).toLocaleDateString('fr-FR') : '—';
+    var fname = 'BDC_' + (cmd.clientNom||'client').replace(/[^a-zA-Z0-9]/g,'_') + '_' + date.replace(/\//g,'-') + '.xlsx';
+
+    // Feuille 1 : détail articles
+    var rows = [
+      ['BON DE COMMANDE — ' + (CURRENT_BRAND==='naturaline'?'NATURALINE':'MOULIN DES MOINES')],
+      [],
+      ['Client', cmd.clientNom||'—'],
+      ['N° Client', cmd.numClient||''],
+      ['Contact', cmd.contact||''],
+      ['Email', cmd.email||''],
+      ['Tél', cmd.tel||''],
+      ['Date', date],
+      ['Livraison souhaitée', cmd.datelivraison||''],
+      ['Commentaire', cmd.commentaire||''],
+      [],
+      ['Code','Désignation','Colis','UVC','PCB','PU HT (€)','Total HT (€)']
+    ];
+
+    cmd.lignes.forEach(function(l) {
+      var qt = l.qty || l.qt || 0;
+      var pcb = l.pcb || 1;
+      var total = l.total_ht || l.total || (l.pu_ht * qt * pcb) || 0;
+      rows.push([l.code, l.libelle||'', qt, qt*pcb, pcb,
+        parseFloat((l.pu_ht||0).toFixed(4)),
+        parseFloat(total.toFixed(2))]);
+    });
+
+    rows.push([]);
+    if (cmd.remise) rows.push(['Remise', cmd.remise + '%']);
+    rows.push(['TOTAL HT NET (€)', '', '', '', '', '', parseFloat((cmd.montant||0).toFixed(2))]);
+
+    var ws = XLSX.utils.aoa_to_sheet(rows);
+
+    // Largeurs colonnes
+    ws['!cols'] = [{wch:18},{wch:50},{wch:8},{wch:8},{wch:6},{wch:12},{wch:14}];
+
+    var wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Commande');
+    XLSX.writeFile(wb, fname);
+    toast('📊 Excel téléchargé', 'ok');
+  });
+}
+
+async function bdcHistDelete(id) {
+  if (!confirm('Supprimer définitivement cette commande de l\'historique ?')) return;
+  try {
+    await bcol('commandes').doc(id).delete();
+    bdcHistCache = bdcHistCache.filter(function(c){ return c._id !== id; });
+    bdcHistRender();
+    toast('🗑️ Commande supprimée', 'ok');
+  } catch(e) {
+    toast('Erreur suppression : ' + (e.message||e), 'err');
+  }
 }
 
 function bdcUpdateRecapBar() {
