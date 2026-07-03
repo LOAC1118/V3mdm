@@ -942,6 +942,7 @@ textarea { resize:vertical; min-height:80px; }
     <button class="t-tab" onclick="showSection('frais',this)">Frais</button>
     <button class="t-tab" onclick="showSection('commissions',this)">💶 Commissions</button>
     <button class="t-tab" onclick="showSection('contacts-db',this)">Clients</button>
+    <button class="t-tab" onclick="showSection('accords',this)">🤝 Accords</button>
     <button class="t-tab hidden" id="t-tab-comptes" onclick="showSection('comptes',this)">👥 Comptes</button>
     <button class="t-tab" onclick="showSection('mailing',this)">✉️ Mailing</button>
 
@@ -977,6 +978,10 @@ textarea { resize:vertical; min-height:80px; }
     <div class="nav-item" onclick="showSection('contacts-db',null,this)">
       <svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="5" cy="5" r="2.5"/><path d="M1 14c0-2.5 1.8-4.5 4-4.5s4 2 4 4.5"/><circle cx="12" cy="6" r="2"/><path d="M10 14c0-2 1-3.5 2-3.5s3 1.5 3 3.5"/></svg>
       Base clients
+    </div>
+    <div class="nav-item" onclick="showSection('accords',null,this)">
+      <svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 8l3 3 9-9"/><rect x="1" y="1" width="14" height="14" rx="2"/></svg>
+      Accords
     </div>
     <div class="nav-item" onclick="showSection('frais',null,this)">
       <svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="1" y="3" width="14" height="10" rx="2"/><path d="M1 6h14"/><circle cx="5" cy="9.5" r="1"/></svg>
@@ -1740,6 +1745,8 @@ textarea { resize:vertical; min-height:80px; }
           <div><label class="lb">Ville</label><input type="text" id="cdb-edit-ville"/></div>
           <div style="grid-column:span 2;"><label class="lb">Notes</label><textarea id="cdb-edit-notes" style="min-height:60px;"></textarea></div>
         </div>
+        <!-- Encart accord commercial -->
+        <div id="cdb-accord-encart" style="display:none;padding:0 1.25rem .5rem;"></div>
       </div>
 
       <!-- Tab CA -->
@@ -1758,6 +1765,64 @@ textarea { resize:vertical; min-height:80px; }
       <button class="btn btn-ghost" onclick="document.getElementById('cdb-modal-edit').classList.add('hidden')">Annuler</button>
       <button class="btn btn-primary" onclick="cdbSave()">💾 Enregistrer</button>
     </div>
+  </div></div>
+
+  <!-- ACCORDS COMMERCIAUX -->
+  <div id="sec-accords" class="hidden" style="padding:1.75rem 2rem;overflow-y:auto;flex:1;background:var(--bg);box-sizing:border-box;">
+    <div class="page-header">
+      <div>
+        <div class="page-title">🤝 Accords commerciaux</div>
+        <div class="page-sub">Conditions par groupement · Rattachement clients</div>
+      </div>
+      <div style="display:flex;gap:8px;" id="accords-admin-btns" class="hidden">
+        <button class="btn btn-primary" onclick="accordsNewModal()" style="font-size:.8rem;">➕ Nouvel accord</button>
+      </div>
+    </div>
+    <div id="accords-list" style="display:grid;gap:1rem;"></div>
+    <div id="accords-empty" class="hidden" style="text-align:center;padding:3rem;color:var(--g400);">
+      <div style="font-size:2.5rem;margin-bottom:.75rem;">🤝</div>
+      <div style="font-weight:600;font-size:1rem;">Aucun accord commercial</div>
+    </div>
+  </div>
+
+  <!-- MODALE ACCORD édition -->
+  <div class="modal-bg hidden" id="modal-accord"><div class="modal" style="max-width:700px;">
+    <div class="modal-head"><span class="modal-title" id="modal-accord-title">Nouvel accord</span><button class="close-btn" onclick="closeModal('accord')">✕</button></div>
+    <div class="modal-body" style="max-height:75vh;overflow-y:auto;">
+      <input type="hidden" id="acc-id">
+      <div class="form-row"><label>Nom du groupement *</label><input type="text" id="acc-nom" placeholder="ex: Accord Bio 2026"></div>
+      <div class="form-row-2">
+        <div><label>Début de validité</label><input type="date" id="acc-debut"></div>
+        <div><label>Fin de validité</label><input type="date" id="acc-fin"></div>
+      </div>
+      <div style="margin:.75rem 0 .4rem;font-size:.75rem;font-weight:700;color:var(--g700);text-transform:uppercase;letter-spacing:.05em;">💰 Remises paliers</div>
+      <div id="acc-paliers"></div>
+      <button class="btn btn-ghost" onclick="accordAddPalier()" style="font-size:.73rem;margin-bottom:.75rem;">➕ Ajouter un palier</button>
+      <div style="margin:.75rem 0 .4rem;font-size:.75rem;font-weight:700;color:var(--g700);text-transform:uppercase;letter-spacing:.05em;">📅 Plan promotionnel</div>
+      <div id="acc-promos"></div>
+      <button class="btn btn-ghost" onclick="accordAddPromo()" style="font-size:.73rem;margin-bottom:.75rem;">➕ Ajouter une promo</button>
+      <div style="margin:.75rem 0 .4rem;font-size:.75rem;font-weight:700;color:var(--g700);text-transform:uppercase;letter-spacing:.05em;">📋 Autres conditions</div>
+      <div class="form-row-2">
+        <div><label>Franco (€ HT net)</label><input type="number" id="acc-franco" min="0" placeholder="ex: 450"></div>
+        <div><label>Remise implantation</label><input type="text" id="acc-implantation" placeholder="ex: 5% en cascade"></div>
+      </div>
+      <div class="form-row-2">
+        <div><label>Remise anniversaire</label><input type="text" id="acc-anniversaire" placeholder="ex: 5% en cascade"></div>
+        <div><label>Délai paiement</label><input type="text" id="acc-paiement" placeholder="ex: 30 jours fin de mois"></div>
+      </div>
+      <div class="form-row"><label>Notes libres</label><textarea id="acc-notes" rows="3" placeholder="Conditions particulières…"></textarea></div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-ghost" onclick="closeModal('accord')">Annuler</button>
+      <button class="btn btn-primary" onclick="accordsSave()">💾 Enregistrer</button>
+    </div>
+  </div></div>
+
+  <!-- MODALE ACCORD vue détail -->
+  <div class="modal-bg hidden" id="modal-accord-view"><div class="modal" style="max-width:680px;">
+    <div class="modal-head"><span class="modal-title" id="modal-accord-view-title">Accord commercial</span><button class="close-btn" onclick="closeModal('accord-view')">✕</button></div>
+    <div class="modal-body" id="modal-accord-view-body" style="max-height:75vh;overflow-y:auto;"></div>
+    <div class="modal-foot" id="modal-accord-view-foot"></div>
   </div></div>
 
   <!-- MAILING PROMO -->
@@ -2157,6 +2222,7 @@ textarea { resize:vertical; min-height:80px; }
       <div><label>Profil</label><select id="c-profil"><option>Biocoop</option><option>Biomonde</option><option>Indépendant</option><option>Restaurateur</option><option>Grossiste</option></select></div>
       <div><label>Remise (%)</label><input type="number" id="c-remise" min="0" max="50" value="0"></div>
     </div>
+    <div class="form-row"><label>Accord commercial</label><select id="c-accord"><option value="">— Aucun —</option></select></div>
     <div class="form-row-2"><div><label>SIRET</label><input type="text" id="c-siret" placeholder="123 456 789 00012"></div><div><label>N° TVA</label><input type="text" id="c-tva" placeholder="FR00123456789"></div></div>
     <div class="form-row"><label>Notes</label><textarea id="c-notes" placeholder="Conditions, historique…"></textarea></div>
   </div>
@@ -2513,6 +2579,271 @@ function initBrandSwitcherUI() {
   if (label) label.textContent = isNat ? 'Naturaline' : 'Moulin des Moines';
 }
 
+// ─── Accords commerciaux ──────────────────────────────────────────────────
+var accordsCache = []; // chargé depuis Firestore collection "accords"
+
+// Accord Bio 2026 pré-chargé depuis le PDF fourni — sera enregistré si aucun accord n'existe
+var ACCORD_BIO_DEFAULT = {
+  nom: 'Accord Bio 2026',
+  debut: '2026-01-01', fin: '2026-12-31',
+  paliers: [
+    { seuil: 500, remise: 10, label: 'Franco 500€ → remise 10%' },
+    { seuil: 750, remise: 13, label: 'Franco 750€ → remise 13%' }
+  ],
+  promos: [
+    { periode: 'Août 2026', remise: 15, label: 'Remise 15% NET', produits: 'BREROY, GREOLI, BREAIL' },
+    { periode: 'Septembre 2026', remise: 20, label: 'Remise 20% NET', produits: 'FARSAR500, FARBLEPAT01, FARBLEBLC01, BISCOTTE' },
+    { periode: 'Décembre 2026', remise: 20, label: 'Remise 20% NET', produits: 'FARSAR500, FARBLEPAT01, FARBLEBLC01, BISCOTTE' }
+  ],
+  franco: 450, implantation: '5% en cascade', anniversaire: '5% en cascade',
+  paiement: '', notes: 'Franco 450€ HT net sans remise. Pas de reprise sur périmés et invendus.'
+};
+
+async function accordsLoad() {
+  try {
+    var snap = await db.collection('accords_global').get();
+    accordsCache = [];
+    snap.forEach(function(doc){ accordsCache.push(Object.assign({ _id: doc.id }, doc.data())); });
+    // Si aucun accord, initialiser avec Accord Bio 2026
+    if (!accordsCache.length) {
+      var ref = await db.collection('accords_global').add(Object.assign({ createdAt: firebase.firestore.FieldValue.serverTimestamp() }, ACCORD_BIO_DEFAULT));
+      accordsCache.push(Object.assign({ _id: ref.id }, ACCORD_BIO_DEFAULT));
+    }
+    accordsRender();
+    accordsPopulateSelect();
+  } catch(e) { console.warn('[Accords]', e); }
+}
+
+function accordsRender() {
+  var listEl = document.getElementById('accords-list');
+  var emptyEl = document.getElementById('accords-empty');
+  var adminBtns = document.getElementById('accords-admin-btns');
+  if (adminBtns) adminBtns.classList.toggle('hidden', !isAdminUser());
+
+  if (!accordsCache.length) {
+    listEl.innerHTML = ''; emptyEl.classList.remove('hidden'); return;
+  }
+  emptyEl.classList.add('hidden');
+  listEl.innerHTML = accordsCache.map(function(acc) {
+    var paliersBadges = (acc.paliers||[]).map(function(p) {
+      return '<span style="display:inline-block;padding:2px 8px;background:var(--blue-p100);color:var(--blue-p800);border-radius:12px;font-size:.72rem;font-weight:600;margin:2px;">' +
+        (p.label || ('≥'+p.seuil+'€ → '+p.remise+'%')) + '</span>';
+    }).join('');
+    var promosBadges = (acc.promos||[]).map(function(p) {
+      return '<span style="display:inline-block;padding:2px 8px;background:var(--em100,#dcfce7);color:var(--em700,#15803d);border-radius:12px;font-size:.72rem;font-weight:600;margin:2px;">' +
+        p.periode + ' −' + p.remise + '%</span>';
+    }).join('');
+    var validite = (acc.debut && acc.fin) ? acc.debut.slice(0,7).replace('-','/') + ' → ' + acc.fin.slice(0,7).replace('-','/') : '—';
+    var adminBtns = isAdminUser()
+      ? '<button class="btn btn-ghost" onclick="accordsEdit(\''+acc._id+'\')" style="font-size:.72rem;padding:.25rem .5rem;">✏️</button> ' +
+        '<button class="btn btn-ghost" onclick="accordsDelete(\''+acc._id+'\')" style="font-size:.72rem;padding:.25rem .5rem;color:#dc2626;">🗑</button>'
+      : '';
+    return '<div class="card" style="padding:1rem;">' +
+      '<div style="display:flex;justify-content:space-between;align-items:flex-start;">' +
+        '<div>' +
+          '<div style="font-size:1rem;font-weight:700;color:var(--g900);">🤝 ' + acc.nom + '</div>' +
+          '<div style="font-size:.73rem;color:var(--g500);margin-top:2px;">Validité : ' + validite + '</div>' +
+        '</div>' +
+        '<div style="display:flex;gap:6px;align-items:center;">' +
+          '<button class="btn btn-ghost" onclick="accordsView(\''+acc._id+'\')" style="font-size:.72rem;padding:.25rem .6rem;">👁 Voir</button>' +
+          adminBtns +
+        '</div>' +
+      '</div>' +
+      (paliersBadges ? '<div style="margin-top:.6rem;"><span style="font-size:.7rem;color:var(--g500);">Remises : </span>' + paliersBadges + '</div>' : '') +
+      (promosBadges ? '<div style="margin-top:.4rem;"><span style="font-size:.7rem;color:var(--g500);">Promos : </span>' + promosBadges + '</div>' : '') +
+      (acc.franco ? '<div style="margin-top:.4rem;font-size:.75rem;color:var(--g600);">Franco : <strong>' + acc.franco + '€</strong>' +
+        (acc.implantation ? ' · Implantation : <strong>' + acc.implantation + '</strong>' : '') + '</div>' : '') +
+    '</div>';
+  }).join('');
+}
+
+function accordsView(id) {
+  var acc = accordsCache.find(function(a){ return a._id === id; });
+  if (!acc) return;
+  document.getElementById('modal-accord-view-title').textContent = '🤝 ' + acc.nom;
+  var validite = (acc.debut && acc.fin) ? acc.debut + ' → ' + acc.fin : '—';
+  var html = '<table style="width:100%;border-collapse:collapse;font-size:.83rem;">';
+  var row = function(label, val) {
+    if (!val) return '';
+    return '<tr><td style="padding:.45rem .5rem;color:var(--g500);white-space:nowrap;font-size:.75rem;">' + label + '</td>' +
+           '<td style="padding:.45rem .5rem;font-weight:500;color:var(--g800);">' + val + '</td></tr>';
+  };
+  html += row('Validité', validite);
+  html += row('Franco', acc.franco ? acc.franco + ' € HT net' : '');
+  html += row('Implantation', acc.implantation);
+  html += row('Anniversaire', acc.anniversaire);
+  html += row('Paiement', acc.paiement);
+  html += '</table>';
+  if ((acc.paliers||[]).length) {
+    html += '<div style="margin-top:.9rem;font-size:.75rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--g600);">Remises paliers</div>';
+    html += '<ul style="margin:.4rem 0;padding-left:1.2rem;font-size:.83rem;">';
+    acc.paliers.forEach(function(p){ html += '<li>' + (p.label || ('≥'+p.seuil+'€ → '+p.remise+'%')) + '</li>'; });
+    html += '</ul>';
+  }
+  if ((acc.promos||[]).length) {
+    html += '<div style="margin-top:.9rem;font-size:.75rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--g600);">Plan promotionnel</div>';
+    html += '<table style="width:100%;border-collapse:collapse;font-size:.8rem;margin-top:.4rem;">';
+    html += '<tr style="background:var(--blue-p50);"><th style="padding:.4rem;text-align:left;">Période</th><th style="padding:.4rem;text-align:left;">Remise</th><th style="padding:.4rem;text-align:left;">Produits</th></tr>';
+    acc.promos.forEach(function(p) {
+      html += '<tr style="border-bottom:1px solid var(--border);"><td style="padding:.4rem;">' + p.periode + '</td><td style="padding:.4rem;font-weight:600;color:var(--em600);">−' + p.remise + '% NET</td><td style="padding:.4rem;color:var(--g600);font-size:.74rem;">' + (p.produits||'') + '</td></tr>';
+    });
+    html += '</table>';
+  }
+  if (acc.notes) html += '<div style="margin-top:.8rem;padding:.6rem .8rem;background:var(--surface2);border-radius:6px;font-size:.78rem;color:var(--g600);">'+acc.notes+'</div>';
+  document.getElementById('modal-accord-view-body').innerHTML = html;
+  var foot = document.getElementById('modal-accord-view-foot');
+  foot.innerHTML = isAdminUser()
+    ? '<button class="btn btn-ghost" onclick="closeModal(\'accord-view\')">Fermer</button>' +
+      '<button class="btn btn-primary" onclick="closeModal(\'accord-view\');accordsEdit(\''+id+'\')">✏️ Modifier</button>'
+    : '<button class="btn btn-ghost" onclick="closeModal(\'accord-view\')">Fermer</button>';
+  document.getElementById('modal-accord-view').classList.remove('hidden');
+}
+
+var accordPaliersCount = 0, accordPromosCount = 0;
+
+function accordsNewModal() {
+  if (!isAdminUser()) return;
+  document.getElementById('acc-id').value = '';
+  document.getElementById('modal-accord-title').textContent = 'Nouvel accord commercial';
+  ['acc-nom','acc-debut','acc-fin','acc-franco','acc-implantation','acc-anniversaire','acc-paiement','acc-notes']
+    .forEach(function(id){ document.getElementById(id).value = ''; });
+  document.getElementById('acc-paliers').innerHTML = '';
+  document.getElementById('acc-promos').innerHTML = '';
+  accordPaliersCount = 0; accordPromosCount = 0;
+  accordAddPalier(); // 1 palier vide par défaut
+  document.getElementById('modal-accord').classList.remove('hidden');
+}
+
+function accordsEdit(id) {
+  if (!isAdminUser()) return;
+  var acc = accordsCache.find(function(a){ return a._id === id; });
+  if (!acc) return;
+  document.getElementById('acc-id').value = id;
+  document.getElementById('modal-accord-title').textContent = 'Modifier : ' + acc.nom;
+  document.getElementById('acc-nom').value = acc.nom || '';
+  document.getElementById('acc-debut').value = acc.debut || '';
+  document.getElementById('acc-fin').value = acc.fin || '';
+  document.getElementById('acc-franco').value = acc.franco || '';
+  document.getElementById('acc-implantation').value = acc.implantation || '';
+  document.getElementById('acc-anniversaire').value = acc.anniversaire || '';
+  document.getElementById('acc-paiement').value = acc.paiement || '';
+  document.getElementById('acc-notes').value = acc.notes || '';
+  document.getElementById('acc-paliers').innerHTML = '';
+  document.getElementById('acc-promos').innerHTML = '';
+  accordPaliersCount = 0; accordPromosCount = 0;
+  (acc.paliers||[]).forEach(function(p){ accordAddPalier(p); });
+  (acc.promos||[]).forEach(function(p){ accordAddPromo(p); });
+  if (!accordPaliersCount) accordAddPalier();
+  document.getElementById('modal-accord').classList.remove('hidden');
+}
+
+function accordAddPalier(data) {
+  var i = accordPaliersCount++;
+  var div = document.createElement('div');
+  div.id = 'palier-'+i;
+  div.style.cssText = 'display:flex;gap:6px;align-items:center;margin-bottom:.4rem;';
+  div.innerHTML = '≥ <input type="number" id="pal-seuil-'+i+'" min="0" placeholder="Seuil €" value="'+(data&&data.seuil||'')+'" style="width:90px;border:1px solid var(--border-med);border-radius:5px;padding:.3rem .5rem;font-size:.8rem;"> € → ' +
+    '<input type="number" id="pal-remise-'+i+'" min="0" max="100" placeholder="%" value="'+(data&&data.remise||'')+'" style="width:70px;border:1px solid var(--border-med);border-radius:5px;padding:.3rem .5rem;font-size:.8rem;"> % · ' +
+    '<input type="text" id="pal-label-'+i+'" placeholder="Libellé (optionnel)" value="'+(data&&data.label?data.label.replace(/"/g,'&quot;'):'')+'" style="flex:1;border:1px solid var(--border-med);border-radius:5px;padding:.3rem .5rem;font-size:.8rem;">' +
+    '<button onclick="this.parentElement.remove()" style="background:none;border:none;color:var(--g400);cursor:pointer;font-size:1rem;">✕</button>';
+  document.getElementById('acc-paliers').appendChild(div);
+}
+
+function accordAddPromo(data) {
+  var i = accordPromosCount++;
+  var div = document.createElement('div');
+  div.id = 'promo-'+i;
+  div.style.cssText = 'display:flex;gap:6px;align-items:center;margin-bottom:.4rem;';
+  div.innerHTML = '<input type="text" id="prm-periode-'+i+'" placeholder="Période (ex: Août 2026)" value="'+(data&&data.periode||'')+'" style="width:130px;border:1px solid var(--border-med);border-radius:5px;padding:.3rem .5rem;font-size:.8rem;">' +
+    '<input type="number" id="prm-remise-'+i+'" min="0" max="100" placeholder="%" value="'+(data&&data.remise||'')+'" style="width:70px;border:1px solid var(--border-med);border-radius:5px;padding:.3rem .5rem;font-size:.8rem;"> % NET' +
+    '<input type="text" id="prm-produits-'+i+'" placeholder="Codes produits…" value="'+(data&&data.produits?data.produits.replace(/"/g,'&quot;'):'')+'" style="flex:1;border:1px solid var(--border-med);border-radius:5px;padding:.3rem .5rem;font-size:.8rem;">' +
+    '<button onclick="this.parentElement.remove()" style="background:none;border:none;color:var(--g400);cursor:pointer;font-size:1rem;">✕</button>';
+  document.getElementById('acc-promos').appendChild(div);
+}
+
+async function accordsSave() {
+  if (!isAdminUser()) return;
+  var nom = document.getElementById('acc-nom').value.trim();
+  if (!nom) { toast('Nom du groupement requis', 'err'); return; }
+  // Lire paliers
+  var paliers = [];
+  document.getElementById('acc-paliers').querySelectorAll('[id^="palier-"]').forEach(function(el) {
+    var i = el.id.split('-')[1];
+    var seuil = parseFloat(document.getElementById('pal-seuil-'+i).value);
+    var remise = parseFloat(document.getElementById('pal-remise-'+i).value);
+    if (seuil && remise) paliers.push({ seuil:seuil, remise:remise, label:document.getElementById('pal-label-'+i).value.trim()||'' });
+  });
+  // Lire promos
+  var promos = [];
+  document.getElementById('acc-promos').querySelectorAll('[id^="promo-"]').forEach(function(el) {
+    var i = el.id.split('-')[1];
+    var periode = document.getElementById('prm-periode-'+i).value.trim();
+    var remise = parseFloat(document.getElementById('prm-remise-'+i).value);
+    if (periode && remise) promos.push({ periode:periode, remise:remise, produits:document.getElementById('prm-produits-'+i).value.trim()||'' });
+  });
+  var data = {
+    nom:nom, debut:document.getElementById('acc-debut').value, fin:document.getElementById('acc-fin').value,
+    paliers:paliers, promos:promos,
+    franco:parseFloat(document.getElementById('acc-franco').value)||null,
+    implantation:document.getElementById('acc-implantation').value.trim(),
+    anniversaire:document.getElementById('acc-anniversaire').value.trim(),
+    paiement:document.getElementById('acc-paiement').value.trim(),
+    notes:document.getElementById('acc-notes').value.trim(),
+    updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+  };
+  var id = document.getElementById('acc-id').value;
+  try {
+    if (id) { await db.collection('accords_global').doc(id).update(data); }
+    else { var ref = await db.collection('accords_global').add(Object.assign({ createdAt: firebase.firestore.FieldValue.serverTimestamp() }, data)); id = ref.id; }
+    closeModal('accord');
+    await accordsLoad();
+    toast('✅ Accord enregistré', 'ok');
+  } catch(e) { toast('Erreur : '+(e.message||e), 'err'); }
+}
+
+async function accordsDelete(id) {
+  if (!isAdminUser()) return;
+  if (!confirm('Supprimer cet accord ? Les clients rattachés ne seront plus liés.')) return;
+  await db.collection('accords_global').doc(id).delete();
+  await accordsLoad();
+  toast('🗑️ Accord supprimé', 'ok');
+}
+
+function accordsPopulateSelect() {
+  var sel = document.getElementById('c-accord');
+  if (!sel) return;
+  var cur = sel.value;
+  sel.innerHTML = '<option value="">— Aucun —</option>';
+  accordsCache.forEach(function(acc) {
+    var opt = document.createElement('option');
+    opt.value = acc._id; opt.textContent = acc.nom;
+    if (acc._id === cur) opt.selected = true;
+    sel.appendChild(opt);
+  });
+}
+
+// Encart accord sur fiche client — appelé depuis cdbShowDetail ou modal client
+function accordsGetHtml(accordId) {
+  if (!accordId) return '';
+  var acc = accordsCache.find(function(a){ return a._id === accordId; });
+  if (!acc) return '';
+  var palieresHtml = (acc.paliers||[]).map(function(p){
+    return '<li>'+( p.label || ('≥'+p.seuil+'€ → '+p.remise+'%') )+'</li>';
+  }).join('');
+  var promoHtml = (acc.promos||[]).map(function(p){
+    return '<li><strong>'+p.periode+'</strong> : −'+p.remise+'% NET' + (p.produits ? ' ('+p.produits+')' : '') +'</li>';
+  }).join('');
+  return '<div style="margin-top:.75rem;padding:.75rem .9rem;background:var(--blue-p50);border-radius:8px;border:1px solid var(--blue-p300);">' +
+    '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.4rem;">' +
+      '<div style="font-size:.76rem;font-weight:700;color:var(--blue-p800);">🤝 ' + acc.nom + '</div>' +
+      '<button onclick="accordsView(\''+acc._id+'\')" style="font-size:.68rem;background:none;border:none;color:var(--blue-p700);cursor:pointer;text-decoration:underline;">Voir détail</button>' +
+    '</div>' +
+    (acc.franco ? '<div style="font-size:.74rem;color:var(--g700);">Franco : <strong>'+acc.franco+'€</strong>' + (acc.implantation?' · Implantation : <strong>'+acc.implantation+'</strong>':'') + '</div>' : '') +
+    (palieresHtml ? '<div style="font-size:.74rem;color:var(--g700);margin-top:.3rem;">Remises :<ul style="margin:.2rem 0;padding-left:1.1rem;">'+palieresHtml+'</ul></div>' : '') +
+    (promoHtml ? '<div style="font-size:.74rem;color:var(--g700);">Promos :<ul style="margin:.2rem 0;padding-left:1.1rem;">'+promoHtml+'</ul></div>' : '') +
+  '</div>';
+}
+
 // ─── Gestion des comptes (admin uniquement) ───────────────────────────────
 var ADMIN_EMAIL = 'loacdev@outlook.fr';
 function isAdminUser() {
@@ -2858,6 +3189,7 @@ async function showApp() {
   await migrateLegacyDataToCurrentUser();
   loadStockMapFromCache();
   initAdminAccountsUI();
+  accordsLoad();
 
   startListeners();
 
@@ -2948,7 +3280,7 @@ if (typeof cdbPageSize  === 'undefined') window.cdbPageSize  = 50;
 // ═══════════════════════════════════════════════
 //  NAVIGATION
 // ═══════════════════════════════════════════════
-const SECTIONS = ['dashboard','bdc','frais','contacts-db','commissions','comptes','mailing'];
+const SECTIONS = ['dashboard','bdc','frais','contacts-db','commissions','comptes','mailing','accords'];
 function showSection(name, tabEl, sideEl) {
   if (name === 'comptes' && !isAdminUser()) {
     toast('Accès réservé.', 'err');
@@ -4023,7 +4355,7 @@ async function convertirEnClient(id) {
 async function saveClient() {
   const id=g('c-edit-id'), raison=g('c-raison').trim();
   if (!raison) { toast('Raison sociale obligatoire','err'); return; }
-  const row = { raison, contact:g('c-contact'), tel:g('c-tel'), email:g('c-email'), ville:g('c-ville'), cp:g('c-cp'), profil:g('c-profil'), remise:parseFloat(g('c-remise'))||0, siret:g('c-siret'), tva:g('c-tva'), notes:g('c-notes'), createdBy:currentUser.uid, createdAt:firebase.firestore.FieldValue.serverTimestamp() };
+  const row = { raison, contact:g('c-contact'), tel:g('c-tel'), email:g('c-email'), ville:g('c-ville'), cp:g('c-cp'), profil:g('c-profil'), remise:parseFloat(g('c-remise'))||0, accord:g('c-accord')||'', siret:g('c-siret'), tva:g('c-tva'), notes:g('c-notes'), createdBy:currentUser.uid, createdAt:firebase.firestore.FieldValue.serverTimestamp() };
   setSyncing(true);
   try {
     if (id) { await bcol('clients').doc(id).update(row); }
@@ -4056,6 +4388,10 @@ function editClient(id) {
   s('c-raison',c.raison); s('c-contact',c.contact||''); s('c-tel',c.tel||''); s('c-email',c.email||'');
   s('c-ville',c.ville||''); s('c-cp',c.cp||''); s('c-profil',c.profil); s('c-remise',c.remise||0);
   s('c-siret',c.siret||''); s('c-tva',c.tva||''); s('c-notes',c.notes||'');
+  // Accord commercial
+  accordsPopulateSelect();
+  var accSel = document.getElementById('c-accord');
+  if (accSel) accSel.value = c.accord || '';
   document.getElementById('modal-client').classList.remove('hidden');
 }
 
@@ -9435,6 +9771,16 @@ function cdbOpenEdit(id) {
 
   // Onglet infos par défaut
   cdbSwitchTab('infos');
+
+  // Encart accord commercial (si le contact a un champ accord)
+  var accordContainer = document.getElementById('cdb-accord-encart');
+  if (accordContainer && c && c.accord) {
+    accordContainer.innerHTML = accordsGetHtml(c.accord);
+    accordContainer.style.display = '';
+  } else if (accordContainer) {
+    accordContainer.innerHTML = '';
+    accordContainer.style.display = 'none';
+  }
 
   // Construire le bloc CA si on a des données
   cdbBuildCATab(c);
