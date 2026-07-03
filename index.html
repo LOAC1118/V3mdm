@@ -1048,8 +1048,12 @@ textarea { resize:vertical; min-height:80px; }
       <button class="btn btn-primary" onclick="openModal('prospect')">+ Nouveau prospect</button>
     </div>
     <div class="stats-row">
-      <div class="stat-card"><div class="stat-label">Prospects</div><div class="stat-val" id="stat-prospects">—</div><div class="stat-delta">en qualification</div></div>
       <div class="stat-card"><div class="stat-label">Contacts</div><div class="stat-val" id="stat-clients">—</div><div class="stat-delta">base clients</div></div>
+      <div class="stat-card" id="dash-actifs-card" style="cursor:pointer;" onclick="showSection('contacts-db',null,null)" title="Voir la base clients">
+        <div class="stat-label">✅ Clients actifs</div>
+        <div style="display:flex;align-items:baseline;gap:6px;"><div class="stat-val" id="stat-actifs" style="color:#059669;">—</div><div style="font-size:.7rem;color:#dc2626;font-weight:600;" id="stat-inactifs-badge"></div></div>
+        <div class="stat-delta" id="stat-actifs-delta">cmd dans les 3 derniers mois</div>
+      </div>
       <div class="stat-card"><div class="stat-label">BDC saisis</div><div class="stat-val" id="stat-commandes">—</div><div class="stat-delta">bons de commande</div></div>
       <div class="stat-card"><div class="stat-label">Frais du mois</div><div class="stat-val" id="ro-count" style="font-size:1.1rem;">—</div><div class="stat-delta">note de frais</div></div>
       <div class="stat-card" id="dash-comm-card" style="cursor:pointer;" onclick="showSection('commissions',null,null)" title="Voir le détail dans Commissions">
@@ -1133,14 +1137,29 @@ textarea { resize:vertical; min-height:80px; }
           </div>
         </div>
 
-        <!-- ── KPI BDC SAISIS (séparé, source Firestore) ──────── -->
-        <div style="background:#f0fdf4;border:1.5px solid #bbf7d0;border-radius:10px;padding:.75rem 1rem;margin-bottom:1.25rem;display:flex;align-items:center;gap:1.5rem;">
-          <div style="font-size:.62rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#166534;">📝 BDC saisis manuellement</div>
-          <div style="display:flex;align-items:baseline;gap:.5rem;">
-            <span style="font-size:1.35rem;font-weight:800;color:#166534;" id="dash-bdc-ca">—</span>
-            <span style="font-size:.7rem;color:#4ade80;" id="dash-bdc-nb">—</span>
+        <!-- ── STATS COMPLÉMENTAIRES : N-1 + Panier moyen + Clients actifs ─── -->
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:1.25rem;">
+          <!-- Évolution vs N-1 -->
+          <div style="background:#fff;border-radius:10px;padding:.9rem 1rem;border:1px solid var(--border);border-left:4px solid #7c3aed;">
+            <div style="font-size:.62rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--g400);margin-bottom:4px;">📈 vs Même mois N-1</div>
+            <div style="font-size:1.35rem;font-weight:800;line-height:1;" id="dash-n1-delta">—</div>
+            <div style="font-size:.7rem;color:var(--g500);margin-top:4px;" id="dash-n1-detail">Chargez un fichier multi-années</div>
           </div>
-          <div style="margin-left:auto;font-size:.68rem;color:#15803d;">Source : Firestore (BDC saisis dans l'onglet Bon de Commande)</div>
+          <!-- Panier moyen -->
+          <div style="background:#fff;border-radius:10px;padding:.9rem 1rem;border:1px solid var(--border);border-left:4px solid #f59e0b;">
+            <div style="font-size:.62rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--g400);margin-bottom:4px;">🛒 Panier moyen / client</div>
+            <div style="font-size:1.35rem;font-weight:800;color:#b45309;line-height:1;" id="dash-panier-moy">—</div>
+            <div style="font-size:.7rem;color:var(--g500);margin-top:4px;" id="dash-panier-detail">—</div>
+          </div>
+          <!-- Clients actifs / inactifs -->
+          <div style="background:#fff;border-radius:10px;padding:.9rem 1rem;border:1px solid var(--border);border-left:4px solid #059669;cursor:pointer;" onclick="dashShowInactifs()" title="Cliquez pour voir les clients inactifs">
+            <div style="font-size:.62rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--g400);margin-bottom:4px;">👥 Clients actifs du mois</div>
+            <div style="display:flex;align-items:baseline;gap:8px;">
+              <div style="font-size:1.35rem;font-weight:800;color:#059669;line-height:1;" id="dash-actifs-mois">—</div>
+              <div style="font-size:.82rem;font-weight:600;color:#dc2626;" id="dash-inactifs-mois"></div>
+            </div>
+            <div style="font-size:.7rem;color:var(--g500);margin-top:4px;" id="dash-actifs-detail">ayant commandé ce mois</div>
+          </div>
         </div>
 
         <!-- ── MOIS EN COURS + GRAPHIQUE côte à côte ─────────── -->
@@ -1196,7 +1215,7 @@ textarea { resize:vertical; min-height:80px; }
           <!-- Top clients CA -->
           <div style="background:#fff;border:1px solid var(--border);border-radius:12px;padding:1rem;">
             <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.75rem;">
-              <div style="font-size:.78rem;font-weight:700;color:var(--g800);">🏆 CA par client — fichier importé</div>
+              <div style="font-size:.78rem;font-weight:700;color:var(--g800);">🏆 TOP 10 clients — CA fichier importé</div>
               <span id="dash-ca-nb-clients" style="font-size:.68rem;color:var(--g500);"></span>
             </div>
             <div id="dash-top-clients" style="font-size:.78rem;"></div>
@@ -8689,6 +8708,115 @@ function dashCaRenderCurrentMonth(filtered, byMonth, months) {
   } else {
     document.getElementById('cur-top-clients').style.display = 'none';
   }
+
+  // ── Nouvelles stats complémentaires ────────────────────────────────────
+
+  // 1. Évolution vs N-1 (même mois l'année précédente)
+  var n1Key = (now.getFullYear()-1) + '-' + String(now.getMonth()+1).padStart(2,'0');
+  var n1Data = byMonth[n1Key];
+  var n1El = document.getElementById('dash-n1-delta');
+  var n1DetailEl = document.getElementById('dash-n1-detail');
+  if (n1El && n1DetailEl) {
+    if (n1Data && n1Data.facture > 0 && cur.facture > 0) {
+      var n1Diff = cur.facture - n1Data.facture;
+      var n1Pct = n1Diff / n1Data.facture * 100;
+      var n1Color = n1Diff >= 0 ? '#059669' : '#dc2626';
+      var n1Arrow = n1Diff >= 0 ? '▲' : '▼';
+      n1El.innerHTML = '<span style="color:'+n1Color+';">'+n1Arrow+' '+(n1Pct >= 0?'+':'')+n1Pct.toFixed(1)+'%</span>';
+      n1DetailEl.textContent = dashCaFmt(cur.facture) + ' vs ' + dashCaFmt(n1Data.facture) + ' en ' + (now.getFullYear()-1);
+    } else if (n1Data && (n1Data.facture > 0 || n1Data.en_cours > 0)) {
+      n1El.innerHTML = '<span style="color:var(--g400);">—</span>';
+      n1DetailEl.textContent = 'Pas encore de facturé ce mois · N-1 : ' + dashCaFmt(n1Data.facture);
+    } else {
+      n1El.innerHTML = '<span style="color:var(--g400);">—</span>';
+      n1DetailEl.textContent = 'Pas de données N-1 dans le fichier';
+    }
+  }
+
+  // 2. Panier moyen par client (sur les commandes facturées du mois)
+  var panierEl = document.getElementById('dash-panier-moy');
+  var panierDetailEl = document.getElementById('dash-panier-detail');
+  if (panierEl && rowsCur.length) {
+    var clientsAvecCmd = Object.keys(byClient || {});
+    var nbClientsActifs = clientsAvecCmd.length;
+    var panierMoyClient = nbClientsActifs > 0 ? cur.facture / nbClientsActifs : 0;
+    panierEl.textContent = nbClientsActifs > 0 ? dashCaFmt(panierMoyClient) : '—';
+    if (panierDetailEl) panierDetailEl.textContent = nbClientsActifs + ' clients · ' + cur.nb + ' cmd · moy. ' + (cur.nb > 0 ? dashCaFmt(cur.facture / cur.nb) + '/cmd' : '—');
+  } else if (panierEl) {
+    panierEl.textContent = '—';
+    if (panierDetailEl) panierDetailEl.textContent = 'Aucune commande ce mois';
+  }
+
+  // 3. Clients actifs ce mois / inactifs (sans commande depuis 3 mois)
+  var actifsMoisEl = document.getElementById('dash-actifs-mois');
+  var inactifsMoisEl = document.getElementById('dash-inactifs-mois');
+  var actifsDetailEl = document.getElementById('dash-actifs-detail');
+  if (actifsMoisEl && rowsCur.length) {
+    var clientsCeMois = new Set(rowsCur.map(function(r){ return r.client; }));
+    var nbActifsCeMois = clientsCeMois.size;
+
+    // Clients ayant commandé dans les 3 derniers mois
+    var limit3m = new Date(now.getFullYear(), now.getMonth()-3, 1);
+    var cle3m = limit3m.getFullYear() + '-' + String(limit3m.getMonth()+1).padStart(2,'0');
+    var clientsActifs3m = new Set(filtered.filter(function(r) {
+      return r.mois >= cle3m && r.statut !== 'avoir';
+    }).map(function(r){ return r.client; }));
+
+    // Clients uniques dans tout le fichier
+    var tousClients = new Set(filtered.filter(function(r){ return r.statut !== 'avoir'; }).map(function(r){ return r.client; }));
+    var nbInactifs3m = tousClients.size - clientsActifs3m.size;
+
+    actifsMoisEl.textContent = nbActifsCeMois;
+    if (inactifsMoisEl) inactifsMoisEl.textContent = nbInactifs3m > 0 ? ('⚠ ' + nbInactifs3m + ' inactifs') : '';
+    if (actifsDetailEl) actifsDetailEl.textContent = clientsActifs3m.size + ' actifs sur 3 mois · ' + tousClients.size + ' au total';
+
+    // Mise à jour de la stat-card en haut
+    var statActifsEl = document.getElementById('stat-actifs');
+    var statInactifsBadge = document.getElementById('stat-inactifs-badge');
+    var statActifsDelta = document.getElementById('stat-actifs-delta');
+    if (statActifsEl) statActifsEl.textContent = clientsActifs3m.size;
+    if (statInactifsBadge) statInactifsBadge.textContent = nbInactifs3m > 0 ? ('⚠ ' + nbInactifs3m + ' inactifs') : '✓ tous actifs';
+    if (statActifsDelta) statActifsDelta.textContent = 'cmd dans les 3 derniers mois';
+  }
+}
+
+function dashShowInactifs() {
+  if (!dashCaRows || !dashCaRows.length) { toast('Importez un fichier de commandes d\'abord', 'err'); return; }
+  var now = new Date();
+  var limit3m = new Date(now.getFullYear(), now.getMonth()-3, 1);
+  var cle3m = limit3m.getFullYear() + '-' + String(limit3m.getMonth()+1).padStart(2,'0');
+  var actifs3m = new Set(dashCaRows.filter(function(r){ return r.mois >= cle3m && r.statut !== 'avoir'; }).map(function(r){ return r.client; }));
+  var tousClients = {};
+  dashCaRows.filter(function(r){ return r.statut !== 'avoir'; }).forEach(function(r) {
+    if (!tousClients[r.client] || r.mois > tousClients[r.client].dernierMois) {
+      tousClients[r.client] = { nom: r.client, dernierMois: r.mois, ca: (tousClients[r.client]||{ca:0}).ca + r.ca };
+    } else {
+      tousClients[r.client].ca += r.ca;
+    }
+  });
+  var inactifs = Object.values(tousClients).filter(function(c){ return !actifs3m.has(c.nom); })
+    .sort(function(a,b){ return b.ca - a.ca; });
+  if (!inactifs.length) { toast('✅ Tous les clients ont commandé ces 3 derniers mois !', 'ok'); return; }
+
+  var overlay = document.createElement('div');
+  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:900;display:flex;align-items:center;justify-content:center;padding:1rem;';
+  overlay.onclick = function(e){ if(e.target===overlay) document.body.removeChild(overlay); };
+  var box = document.createElement('div');
+  box.style.cssText = 'background:var(--surface);border-radius:12px;width:100%;max-width:560px;max-height:80vh;display:flex;flex-direction:column;box-shadow:0 20px 60px rgba(0,0,0,.3);';
+  box.innerHTML = '<div style="padding:1rem 1.25rem;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;">' +
+    '<span style="font-weight:700;">⚠️ Clients inactifs (sans cmd depuis 3 mois)</span>' +
+    '<button onclick="this.closest(\'[style]\').parentElement.remove()" style="background:none;border:none;font-size:1.2rem;cursor:pointer;color:var(--g500);">✕</button></div>' +
+    '<div style="overflow-y:auto;flex:1;padding:.5rem 0;">' +
+    inactifs.map(function(c) {
+      var moisLabel = c.dernierMois ? c.dernierMois.slice(0,7).replace('-','/') : '—';
+      return '<div style="display:flex;justify-content:space-between;align-items:center;padding:.5rem 1.25rem;border-bottom:1px solid var(--border);">' +
+        '<div><div style="font-size:.83rem;font-weight:500;">' + c.nom + '</div><div style="font-size:.7rem;color:var(--g500);">Dernière cmd : ' + moisLabel + '</div></div>' +
+        '<div style="font-size:.8rem;font-weight:600;color:var(--blue-p700);">' + dashCaFmt(c.ca) + '</div></div>';
+    }).join('') +
+    '</div>' +
+    '<div style="padding:.75rem 1rem;border-top:1px solid var(--border);font-size:.75rem;color:var(--g500);">' + inactifs.length + ' client(s) sans commande depuis plus de 3 mois</div>';
+  overlay.appendChild(box);
+  document.body.appendChild(overlay);
 }
 
 function dashCaDrawCharts(filtered, months, moisNames) {
@@ -8879,8 +9007,8 @@ function dashCaDrawTops(filtered) {
     }).join('');
   }
 
-  // Tous les clients (pas de limite) pour la vue CA par client
-  renderClients(document.getElementById('dash-top-clients'), topN('client', 999));
+  // TOP 10 clients par CA
+  renderClients(document.getElementById('dash-top-clients'), topN('client', 10));
   renderSmall(document.getElementById('dash-top-ops'),   topN('operateur', 6));
   renderSmall(document.getElementById('dash-top-trans'), topN('transporteur', 5));
 }
