@@ -2583,31 +2583,98 @@ function initBrandSwitcherUI() {
 var accordsCache = []; // chargé depuis Firestore collection "accords"
 
 // Accord Bio 2026 pré-chargé depuis le PDF fourni — sera enregistré si aucun accord n'existe
-var ACCORD_BIO_DEFAULT = {
-  nom: 'Accord Bio 2026',
-  debut: '2026-01-01', fin: '2026-12-31',
-  paliers: [
-    { seuil: 500, remise: 10, label: 'Franco 500€ → remise 10%' },
-    { seuil: 750, remise: 13, label: 'Franco 750€ → remise 13%' }
-  ],
-  promos: [
-    { periode: 'Août 2026', remise: 15, label: 'Remise 15% NET', produits: 'BREROY, GREOLI, BREAIL' },
-    { periode: 'Septembre 2026', remise: 20, label: 'Remise 20% NET', produits: 'FARSAR500, FARBLEPAT01, FARBLEBLC01, BISCOTTE' },
-    { periode: 'Décembre 2026', remise: 20, label: 'Remise 20% NET', produits: 'FARSAR500, FARBLEPAT01, FARBLEBLC01, BISCOTTE' }
-  ],
-  franco: 450, implantation: '5% en cascade', anniversaire: '5% en cascade',
-  paiement: '', notes: 'Franco 450€ HT net sans remise. Pas de reprise sur périmés et invendus.'
-};
+// ─── Accords commerciaux par défaut (pré-chargés depuis les contrats 2026) ─
+var ACCORDS_DEFAUT = [
+  {
+    nom: 'Accord Bio 2026',
+    debut: '2026-01-01', fin: '2026-12-31',
+    paliers: [
+      { seuil: 500, remise: 10, label: 'Franco 500€ → remise 10%' },
+      { seuil: 750, remise: 13, label: 'Franco 750€ → remise 13%' }
+    ],
+    promos: [
+      { periode: 'Août 2026', remise: 15, label: 'Remise 15% NET', produits: 'BREROY, GREOLI, BREAIL' },
+      { periode: 'Septembre 2026', remise: 20, label: 'Remise 20% NET', produits: 'FARSAR500, FARBLEPAT01, FARBLEBLC01, BISCOTTE' },
+      { periode: 'Décembre 2026', remise: 20, label: 'Remise 20% NET', produits: 'FARSAR500, FARBLEPAT01, FARBLEBLC01, BISCOTTE' }
+    ],
+    franco: 450, implantation: '5% en cascade', anniversaire: '5% en cascade',
+    paiement: '', notes: 'Franco 450€ HT net sans remise. Pas de reprise sur périmés et invendus.'
+  },
+  {
+    nom: 'KOALIBIO 2026',
+    debut: '2026-01-01', fin: '2026-12-31',
+    paliers: [
+      { seuil: 650, remise: 11, label: 'Franco 650€ brut → 11% (578€ net) — MDM/Bionade/Valdéna/Chocolats tablettes' },
+      { seuil: 950, remise: 13, label: 'Franco 950€ brut → 13% (826€ net) — MDM/Bionade/Valdéna/Chocolats tablettes' }
+    ],
+    promos: [],
+    franco: 450, implantation: '15% net (commande à passer avec le commercial secteur)',
+    anniversaire: '15% net (commande à passer avec le commercial secteur)',
+    paiement: 'LCR Directe / Virement · 30 jours · Escompte 1%',
+    notes: [
+      'Délai de livraison : 6 jours.',
+      'Celtic bouteilles RPET : 13% (sauf eau plate 1,5L à la palette). Aucune remise sur bouteilles verre.',
+      'Autres marques du catalogue : sans remise.',
+      'Chocolats vrac / thématiques Pâques & Noël : prix nets de toutes remises.',
+      'TC KOALIBIO — Remise 15% NET permanente sur : FARAVO500, FARSAR500, SPELTY, SPAPET, SABAVO, FARRIZBLC500, DELCHACHO, SPECULOS, BISCOTTE, FARCHA, BRETZEL, FARPEPBLC500, GREEPE, FARBLESST01, THAFRO, FARBLEPAT01.',
+      'RFA max 2% : 1% détention TC KOALIBIO (0,25% Celtic + 0,50% si 120 réfs catalogue) + bonus chocolats festifs 1% max.'
+    ].join('\n')
+  },
+  {
+    nom: 'Marcel & Fils 2026',
+    debut: '2026-01-01', fin: '2026-12-31',
+    paliers: [
+      { seuil: 501, remise: 18, label: '501€ Net → 18% RSF assortiment (hors Celtic, farine, fiston)' },
+      { seuil: 800, remise: 18, label: '800€ Net pour op "Marcel a dit"' }
+    ],
+    promos: [
+      { periode: '4 temps forts annuels', remise: 10, label: '+10% en cascade', produits: 'Hors prix fiston et coup de cœur — à convenir avec Célia Lebougault' }
+    ],
+    franco: 501, implantation: '', anniversaire: '',
+    paiement: '',
+    notes: [
+      'Gamme farine : 20% RSF (sous condition T1=25 réfs / T2-T3=37 réfs, non cumulable).',
+      'Gamme fiston : FARPETEPE01 22%, GREEPE 20%, FARAVO500 22%, EAUPLA150 0,46€ HT/uvc, BREROY 20%, PURPATCAC 20%, BUCHETTE 20%.',
+      'Coup de cœur : DELICES 20%, PLUCAKEPE 20%, THAFRO 20%.',
+      'Franco 800€ Net pour op Marcel a dit.',
+      'RFA 2026 (base CA groupe 2025) : 0-5% progression → 0,25% / 5-8% → 0,50% / 8-15% → 1% / 15-20% → 2% / >20% → 2,2%.',
+      'Interlocuteur : M. Clément Meckert — ordo@moulindesmoines.com — 03 90 29 11 86.'
+    ].join('\n')
+  },
+  {
+    nom: 'MyBioShop 2026',
+    debut: '2026-01-01', fin: '2026-12-31',
+    paliers: [
+      { seuil: 550, remise: 16, label: '550€ Net → 16% RSF assortiment (hors gamme farine)' }
+    ],
+    promos: [],
+    franco: 550, implantation: '', anniversaire: '',
+    paiement: '',
+    notes: [
+      'Gamme farine : 20% RSF (non cumulable avec le 16%).',
+      'Condition de passage de 15% à 16% : passage de 9 à 12 magasins partenaires avec 120 réfs minimum en permanent. Sinon retour à 15% en 2027.',
+      'RFA 2026 (base CA 2025 = 83 929€) : +5% CA → 0,5% / +10% CA → 1% / +15% CA → 1,5%.',
+      'Magasins commandant chez MDM : Bagnols, Bollène, Carpentras, Montélimar, Morières, Orange, Perpignan, Uzes, Entrepôt.',
+      'Interlocuteur : M. Clément Meckert — ordo@moulindesmoines.com — 03 90 29 11 86.'
+    ].join('\n')
+  }
+];
 
 async function accordsLoad() {
   try {
     var snap = await db.collection('accords_global').get();
     accordsCache = [];
     snap.forEach(function(doc){ accordsCache.push(Object.assign({ _id: doc.id }, doc.data())); });
-    // Si aucun accord, initialiser avec Accord Bio 2026
-    if (!accordsCache.length) {
-      var ref = await db.collection('accords_global').add(Object.assign({ createdAt: firebase.firestore.FieldValue.serverTimestamp() }, ACCORD_BIO_DEFAULT));
-      accordsCache.push(Object.assign({ _id: ref.id }, ACCORD_BIO_DEFAULT));
+    // Initialiser les accords manquants parmi les 4 accords 2026 pré-chargés.
+    // On compare par nom pour éviter les doublons (même si la collection n'est pas vide).
+    var existingNames = accordsCache.map(function(a){ return a.nom; });
+    for (var i = 0; i < ACCORDS_DEFAUT.length; i++) {
+      if (existingNames.indexOf(ACCORDS_DEFAUT[i].nom) === -1) {
+        var ref = await db.collection('accords_global').add(
+          Object.assign({ createdAt: firebase.firestore.FieldValue.serverTimestamp() }, ACCORDS_DEFAUT[i])
+        );
+        accordsCache.push(Object.assign({ _id: ref.id }, ACCORDS_DEFAUT[i]));
+      }
     }
     accordsRender();
     accordsPopulateSelect();
