@@ -5924,6 +5924,8 @@ function buildTable() {
   }
   document.getElementById('bdc-tbody').innerHTML = rows;
   bdcUpdateTotals();
+  // Appliquer le filtre : par défaut seuls les produits commandés (qty>0) sont visibles
+  bdcDoSearch();
 }
 
 function bdcStepQty(code, pcb, direction) {
@@ -5949,6 +5951,8 @@ function bdcOnQty(input) {
   var cell = document.getElementById('bdc-t-'+code);
   if (cell) cell.textContent = val ? bdcFmt(bdcPrixNet(p)*val*(parseFloat(p.pcb)||1)) : '';
   bdcUpdateTotals();
+  // Rafraîchir la visibilité : si qty=0 et pas de recherche active, masquer la ligne
+  bdcDoSearch();
 }
 
 function bdcUpdateTotals() {
@@ -5989,16 +5993,33 @@ function bdcDoSearch() {
   var rows = document.querySelectorAll('#bdc-tbody tr');
   var vis = 0;
   rows.forEach(function(tr){
+    var hasQty = tr.classList.contains('bdc-tr-has-qty');
     var show = false;
-    if (!q) { show=true; }
-    else if (bdcSearchMode==='all') { show=tr.dataset.lib.includes(q)||tr.dataset.code.toLowerCase().includes(q)||tr.dataset.ean.includes(q); }
-    else if (bdcSearchMode==='libelle') { show=tr.dataset.lib.includes(q); }
-    else if (bdcSearchMode==='code') { show=tr.dataset.code.toLowerCase().includes(q); }
-    else if (bdcSearchMode==='ean') { show=tr.dataset.ean.includes(q); }
+    if (!q) {
+      // Sans recherche : uniquement les produits déjà commandés
+      show = hasQty;
+    } else {
+      // Avec recherche : résultats + produits déjà commandés (toujours visibles)
+      var match = false;
+      if (bdcSearchMode==='all')          { match=tr.dataset.lib.includes(q)||tr.dataset.code.toLowerCase().includes(q)||tr.dataset.ean.includes(q); }
+      else if (bdcSearchMode==='libelle') { match=tr.dataset.lib.includes(q); }
+      else if (bdcSearchMode==='code')    { match=tr.dataset.code.toLowerCase().includes(q); }
+      else if (bdcSearchMode==='ean')     { match=tr.dataset.ean.includes(q); }
+      show = match || hasQty;
+    }
     tr.classList.toggle('bdc-tr-hidden', !show);
     if (show) vis++;
   });
-  s2('bdc-search-count', q?(vis+' / '+PRODUCTS.length+' produits'):'');
+  // Message d'état contextuel
+  var countEl = document.getElementById('bdc-search-count');
+  if (!q) {
+    var nbCmd = document.querySelectorAll('#bdc-tbody tr.bdc-tr-has-qty').length;
+    countEl.textContent = nbCmd > 0
+      ? nbCmd + ' produit' + (nbCmd > 1 ? 's' : '') + ' commandé' + (nbCmd > 1 ? 's' : '')
+      : '🔍 Recherchez dans les ' + PRODUCTS.length + ' produits du catalogue';
+  } else {
+    countEl.textContent = vis + ' résultat' + (vis > 1 ? 's' : '') + ' sur ' + PRODUCTS.length;
+  }
 }
 
 function bdcClearSearch() {
