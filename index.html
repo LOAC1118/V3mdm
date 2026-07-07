@@ -945,6 +945,7 @@ textarea { resize:vertical; min-height:80px; }
     <button class="t-tab" onclick="showSection('accords',this)">🤝 Accords</button>
     <button class="t-tab hidden" id="t-tab-comptes" onclick="showSection('comptes',this)">👥 Comptes</button>
     <button class="t-tab" onclick="showSection('mailing',this)">✉️ Mailing</button>
+    <button class="t-tab" onclick="showSection('promos',this)">🎨 Promos PDF</button>
 
   </div>
   <div class="topbar-right">
@@ -1993,7 +1994,12 @@ textarea { resize:vertical; min-height:80px; }
     </div>
   </div>
 
-  <div id="sec-mailing" class="hidden">
+  <!-- GÉNÉRATEUR DE PROMOS PDF -->
+  <div id="sec-promos" class="hidden" style="flex:1;display:flex;flex-direction:column;overflow:hidden;">
+    <div id="pgm-container" style="flex:1;overflow:hidden;"></div>
+  </div>
+
+    <div id="sec-mailing" class="hidden">
     <div class="page-header">
       <div>
         <div class="page-title">Mailing promotionnel</div>
@@ -2341,6 +2347,81 @@ function lazyLoad(urls, callback, onError) {
 
 // URLs des libs
 var LIB_XLSX    = 'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js';
+// PromoGenerator : fichier JS déployé à côté de index.html sur GitHub Pages
+var LIB_PROMO_GENERATOR = './promo-generator.js';
+var promoGeneratorMounted = false;
+
+// ─── Intégration PromoGenerator dans le CRM ──────────────────────────────
+function promoInit() {
+  var container = document.getElementById('pgm-container');
+  if (!container) return;
+
+  // Construire le catalogue au format attendu par PromoGenerator
+  // Le module est prévu pour les champs MDM (libelle, code, ean, pu_ht, poids, pcb, tva)
+  function buildPGMCatalog() {
+    return PRODUCTS.map(function(p) {
+      return {
+        libelle: p.libelle || '',
+        code:    p.code || '',
+        ean:     p.ean || '',
+        prixHT:  bdcPrixNet ? bdcPrixNet(p) : (p.pu_ht || 0),
+        poids:   p.poids ? (typeof p.poids === 'number' ? p.poids + ' kg' : String(p.poids)) : '',
+        pcb:     p.pcb || 1,
+        tva:     p.tva || 5.5,
+        marque:  p.certif || '',
+        image:   null
+      };
+    });
+  }
+
+  function mountPGM() {
+    var brand = CURRENT_BRAND === 'naturaline' ? 'natura' : 'mdm';
+    var nom = currentUser ? (currentUser.displayName || currentUser.email.split('@')[0]) : '';
+    var email = currentUser ? currentUser.email : '';
+    PromoGenerator.mount(container, {
+      brand:    brand,
+      catalogue: buildPGMCatalog(),
+      map:      { name:'libelle', ref:'code', ean:'ean', price:'prixHT',
+                  weight:'poids', pcb:'pcb', tva:'tva', brand:'marque', img:'image' },
+      contact:  { name: nom, email: email, phone: '' }
+    });
+    promoGeneratorMounted = true;
+  }
+
+  if (typeof PromoGenerator !== 'undefined') {
+    mountPGM();
+  } else {
+    lazyLoad([LIB_PROMO_GENERATOR], function() {
+      mountPGM();
+    }, function() {
+      container.innerHTML = '<div style="text-align:center;padding:3rem;color:#888;">' +
+        '⚠️ Impossible de charger le générateur.<br>Vérifiez que <code>promo-generator.js</code> est bien déployé à côté de <code>index.html</code>.</div>';
+    });
+  }
+}
+
+function promoUnmount() {
+  if (promoGeneratorMounted && typeof PromoGenerator !== 'undefined') {
+    try { PromoGenerator.unmount(); } catch(e) {}
+    promoGeneratorMounted = false;
+  }
+}
+
+// Met à jour le catalogue si PRODUCTS change (changement de marque)
+function promoRefreshCatalogue() {
+  if (promoGeneratorMounted && typeof PromoGenerator !== 'undefined') {
+    try {
+      PromoGenerator.setCatalogue(PRODUCTS.map(function(p) {
+        return {
+          libelle: p.libelle || '', code: p.code || '', ean: p.ean || '',
+          prixHT: bdcPrixNet ? bdcPrixNet(p) : (p.pu_ht || 0),
+          poids: p.poids ? String(p.poids) : '', pcb: p.pcb || 1,
+          tva: p.tva || 5.5, marque: p.certif || '', image: null
+        };
+      }));
+    } catch(e) {}
+  }
+}
 var LIB_PDFJS   = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js';
 var LIB_PDFJS_WORKER = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
 // Fallback si cdnjs.cloudflare.com est bloqué (pare-feu/proxy d'entreprise) :
@@ -3366,7 +3447,7 @@ if (typeof cdbPageSize  === 'undefined') window.cdbPageSize  = 50;
 // ═══════════════════════════════════════════════
 //  NAVIGATION
 // ═══════════════════════════════════════════════
-const SECTIONS = ['dashboard','bdc','frais','contacts-db','commissions','comptes','mailing','accords'];
+const SECTIONS = ['dashboard','bdc','frais','contacts-db','commissions','comptes','mailing','accords','promos'];
 function showSection(name, tabEl, sideEl) {
   if (name === 'comptes' && !isAdminUser()) {
     toast('Accès réservé.', 'err');
@@ -3384,6 +3465,9 @@ function showSection(name, tabEl, sideEl) {
   if (name==='frais') { if (typeof refreshFraisStats === 'function') { try{refreshFraisStats();}catch(e){} } if (typeof nfdRender === 'function') nfdRender(); }
   if (name==='bdc') { if (!bdcInitDone) { buildTable(); bdcInitDone=true; } }
   if (name==='commissions') { setTimeout(function(){ if (typeof commInit === 'function') commInit(); }, 80); }
+  if (name==='promos') { setTimeout(function(){ if (typeof promoInit === 'function') promoInit(); }, 80); }
+  // Démonter le générateur quand on quitte l'onglet Promos
+  if (name !== 'promos' && typeof promoUnmount === 'function') promoUnmount();
   if (name==='comptes') { if (typeof comptesRender === 'function') comptesRender(); }
   // remonte en haut de la zone de contenu à chaque changement de section (utile sur mobile)
   const mainEl = document.querySelector('.main'); if (mainEl) mainEl.scrollTop = 0;
