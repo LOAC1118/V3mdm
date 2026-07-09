@@ -724,7 +724,7 @@ textarea { resize:vertical; min-height:80px; }
    tableaux, modales et zones tactiles. Le desktop n'est pas
    affecté (tout est dans cette media query).
 ══════════════════════════════════════════════════════════ */
-.mobile-navbar, .mmenu-sheet, .mmenu-backdrop { display:none; }
+.mobile-tabbar { display:none; }
 
 @media (max-width: 768px) {
 
@@ -742,61 +742,26 @@ textarea { resize:vertical; min-height:80px; }
   .sidebar { display: none; }
   .main { padding: 1rem .9rem 76px; } /* 76px = place pour la tab bar fixe */
 
-  /* ── BARRE DE NAV BASSE (zone pouce) : déclencheur du menu déroulant ── */
-  .mobile-navbar {
+  /* ── TAB BAR BASSE (façon app native), zone pouce ── */
+  .mobile-tabbar {
     display: flex;
     position: fixed; left:0; right:0; bottom:0;
-    height: 60px;
+    height: 64px;
     background: var(--blue-p900);
     border-top: 1px solid rgba(255,255,255,.08);
     box-shadow: 0 -4px 16px rgba(4,44,83,.18);
     z-index: 400;
-    padding: 8px 12px calc(8px + env(safe-area-inset-bottom, 0px));
+    padding-bottom: env(safe-area-inset-bottom, 0px);
   }
-  .mnav-trigger {
-    flex:1; display:flex; align-items:center; justify-content:space-between; gap:10px;
-    background:rgba(255,255,255,.08); border:1px solid rgba(255,255,255,.12);
-    border-radius:12px; color:#fff; font-family:var(--fd); font-weight:600;
-    font-size:.9rem; padding:0 14px; cursor:pointer; min-height:44px;
+  .mtab {
+    flex: 1; display:flex; flex-direction:column; align-items:center; justify-content:center;
+    gap: 3px; color: var(--blue-p300); background:none; border:none;
+    font-family: var(--fd); font-size: .62rem; font-weight:600;
+    cursor:pointer; padding: 6px 2px; min-height: 56px;
   }
-  .mnav-cur { display:flex; align-items:center; gap:10px; min-width:0; }
-  .mnav-cur-ico { display:flex; }
-  .mnav-cur-ico svg { width:20px; height:20px; }
-  .mnav-cur-label { white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-  .mnav-chevron { width:18px; height:18px; flex-shrink:0; opacity:.9; transition:transform .22s ease; }
-  .mnav-trigger.open .mnav-chevron { transform:rotate(180deg); }
-
-  /* ── FOND ASSOMBRI ── */
-  .mmenu-backdrop {
-    display:block; position:fixed; inset:0; background:rgba(4,20,40,.45);
-    z-index:410; opacity:0; pointer-events:none; transition:opacity .22s ease;
-  }
-  .mmenu-backdrop.open { opacity:1; pointer-events:auto; }
-
-  /* ── FEUILLE DÉROULANTE (slide-up) : liste des sections ── */
-  .mmenu-sheet {
-    display:block; position:fixed; left:0; right:0; bottom:0;
-    background:var(--blue-p900); z-index:420;
-    border-radius:18px 18px 0 0;
-    padding:10px 12px calc(14px + env(safe-area-inset-bottom, 0px));
-    box-shadow:0 -10px 30px rgba(4,44,83,.35);
-    transform:translateY(105%); transition:transform .26s cubic-bezier(.22,.61,.36,1);
-    max-height:76vh; overflow-y:auto; -webkit-overflow-scrolling:touch;
-  }
-  .mmenu-sheet.open { transform:translateY(0); }
-  .mmenu-handle { width:40px; height:4px; border-radius:99px; background:rgba(255,255,255,.25); margin:2px auto 10px; }
-  .mmenu-title { font-family:var(--fd); font-size:.68rem; text-transform:uppercase; letter-spacing:.1em; color:var(--blue-p300); font-weight:700; padding:0 8px 8px; }
-  .mmenu-item {
-    display:flex; align-items:center; gap:14px; width:100%;
-    background:none; border:none; border-radius:12px;
-    color:var(--blue-p300); font-family:var(--fd); font-size:.98rem; font-weight:600;
-    padding:14px 12px; cursor:pointer; text-align:left; min-height:52px;
-  }
-  .mmenu-item:active { background:rgba(255,255,255,.06); }
-  .mmenu-item .mmenu-ico { display:flex; flex-shrink:0; }
-  .mmenu-item .mmenu-ico svg { width:22px; height:22px; opacity:.8; }
-  .mmenu-item.active { color:#fff; background:rgba(255,255,255,.10); }
-  .mmenu-item.active .mmenu-ico svg { opacity:1; filter:brightness(1.3); }
+  .mtab svg { width:20px; height:20px; opacity:.75; }
+  .mtab.active { color:#fff; }
+  .mtab.active svg { opacity:1; filter:brightness(1.3); }
 
   /* ── ZONES TACTILES : on agrandit ce qui se clique ── */
   .btn, button, select, .nav-item, .t-tab { min-height: 40px; }
@@ -981,6 +946,7 @@ textarea { resize:vertical; min-height:80px; }
     <button class="t-tab hidden" id="t-tab-comptes" onclick="showSection('comptes',this)">👥 Comptes</button>
     <button class="t-tab" onclick="showSection('mailing',this)">✉️ Mailing</button>
     <button class="t-tab" onclick="showSection('promos',this)">🎨 Promos PDF</button>
+    <button class="t-tab" onclick="showSection('top100',this)">🏆 Top 100</button>
 
   </div>
   <div class="topbar-right">
@@ -1034,6 +1000,10 @@ textarea { resize:vertical; min-height:80px; }
     <div class="nav-item" onclick="showSection('mailing',null,this)">
       <svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="1" y="3" width="14" height="10" rx="1.5"/><path d="M1 4.5l7 5 7-5"/></svg>
       Mailing
+    </div>
+    <div class="nav-item" onclick="showSection('top100',null,this)">
+      <svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 2h8v3a4 4 0 0 1-8 0z"/><path d="M12 3h2v1a2 2 0 0 1-2 2M4 3H2v1a2 2 0 0 0 2 2"/><path d="M6.5 9h3M8 9v3M6 13h4"/></svg>
+      Top 100
     </div>
   </div>
 
@@ -2029,6 +1999,105 @@ textarea { resize:vertical; min-height:80px; }
     </div>
   </div>
 
+  <!-- TOP 100 PRODUITS -->
+  <div id="sec-top100" class="hidden" style="padding:1.75rem 2rem;overflow-y:auto;flex:1;background:var(--bg);box-sizing:border-box;">
+    <div class="page-header">
+      <div>
+        <div class="page-title">🏆 Top 100 Produits</div>
+        <div style="font-size:.75rem;color:var(--g500);margin-top:2px;">Classement des ventes · <span id="top100-brand-label">Moulin des Moines</span></div>
+      </div>
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+        <button class="btn btn-ghost" onclick="top100Reload()" style="font-size:.75rem;">🔄 Actualiser</button>
+        <button class="btn btn-ghost" onclick="top100ExportCSV()" style="font-size:.75rem;">📄 CSV</button>
+        <button class="btn btn-ghost" onclick="top100ExportXLS()" style="font-size:.75rem;">📊 Excel</button>
+      </div>
+    </div>
+
+    <!-- Contrôles -->
+    <div class="card" style="padding:.85rem 1rem;margin-bottom:1.25rem;display:flex;align-items:center;gap:14px;flex-wrap:wrap;">
+      <div style="display:flex;align-items:center;gap:8px;">
+        <span style="font-size:.78rem;font-weight:600;color:var(--g700);">Classer par :</span>
+        <div style="display:flex;background:var(--bg);border-radius:9px;padding:3px;border:1px solid var(--border);">
+          <button id="top100-metric-ca" onclick="top100SetMetric('ca')" class="btn btn-primary" style="font-size:.74rem;padding:.4rem .85rem;border:none;">💶 Chiffre d'affaires</button>
+          <button id="top100-metric-qte" onclick="top100SetMetric('qte')" class="btn btn-ghost" style="font-size:.74rem;padding:.4rem .85rem;border:none;">📦 Quantité (colis)</button>
+        </div>
+      </div>
+      <div style="display:flex;align-items:center;gap:6px;">
+        <span style="font-size:.75rem;color:var(--g600);">Période :</span>
+        <select onchange="top100SetPeriod(this.value)" style="font-size:.78rem;padding:.35rem .5rem;border:1px solid var(--border-med);border-radius:6px;background:var(--surface);color:var(--g700);">
+          <option value="all">Depuis le début</option>
+          <option value="ytd">Année en cours</option>
+          <option value="12m">12 derniers mois</option>
+          <option value="year">Année précise…</option>
+        </select>
+        <span id="top100-year-wrap" style="display:none;align-items:center;">
+          <select id="top100-year" onchange="top100SetYear(this.value)" style="font-size:.78rem;padding:.35rem .5rem;border:1px solid var(--border-med);border-radius:6px;background:var(--surface);color:var(--g700);"></select>
+        </span>
+      </div>
+      <div style="display:flex;align-items:center;gap:6px;">
+        <span style="font-size:.75rem;color:var(--g600);">Afficher :</span>
+        <select onchange="top100SetTopN(this.value)" style="font-size:.78rem;padding:.35rem .5rem;border:1px solid var(--border-med);border-radius:6px;background:var(--surface);color:var(--g700);">
+          <option value="25">Top 25</option>
+          <option value="50">Top 50</option>
+          <option value="100" selected>Top 100</option>
+          <option value="all">Tout</option>
+        </select>
+      </div>
+      <input type="text" placeholder="🔍 Filtrer désignation, code, EAN…" oninput="top100SetSearch(this.value)"
+        style="flex:1;min-width:180px;font-size:.8rem;padding:.4rem .7rem;border:1px solid var(--border-med);border-radius:7px;background:var(--surface);color:var(--g700);">
+    </div>
+
+    <!-- Statistiques -->
+    <div class="stats-row-5" style="display:grid;grid-template-columns:repeat(4,1fr);gap:1rem;margin-bottom:1.25rem;">
+      <div class="card" style="padding:1rem;">
+        <div style="font-size:.72rem;color:var(--g500);text-transform:uppercase;letter-spacing:.04em;font-weight:600;">Références classées</div>
+        <div class="stat-val" id="top100-stat-refs" style="font-size:1.5rem;color:var(--blue-p700);margin-top:4px;">—</div>
+      </div>
+      <div class="card" style="padding:1rem;">
+        <div style="font-size:.72rem;color:var(--g500);text-transform:uppercase;letter-spacing:.04em;font-weight:600;">CA HT cumulé</div>
+        <div class="stat-val" id="top100-stat-ca" style="font-size:1.5rem;color:var(--em600,#059669);margin-top:4px;">—</div>
+      </div>
+      <div class="card" style="padding:1rem;">
+        <div style="font-size:.72rem;color:var(--g500);text-transform:uppercase;letter-spacing:.04em;font-weight:600;">Colis vendus</div>
+        <div class="stat-val" id="top100-stat-colis" style="font-size:1.5rem;color:var(--g800);margin-top:4px;">—</div>
+      </div>
+      <div class="card" style="padding:1rem;">
+        <div style="font-size:.72rem;color:var(--g500);text-transform:uppercase;letter-spacing:.04em;font-weight:600;">Commandes analysées</div>
+        <div class="stat-val" id="top100-stat-cmds" style="font-size:1.5rem;color:var(--g800);margin-top:4px;">—</div>
+      </div>
+    </div>
+
+    <!-- Graphique top 15 -->
+    <div class="card" style="padding:1rem 1.1rem;margin-bottom:1.25rem;">
+      <div style="font-size:.82rem;font-weight:600;color:var(--g700);margin-bottom:.6rem;">Top 15 <span id="top100-chart-metric">par chiffre d'affaires</span></div>
+      <div style="height:420px;position:relative;"><canvas id="top100-chart"></canvas></div>
+    </div>
+
+    <!-- Tableau -->
+    <div class="card" style="padding:0;overflow:hidden;">
+      <div class="tbl-wrap" style="overflow-x:auto;">
+        <table style="width:100%;border-collapse:collapse;">
+          <thead>
+            <tr style="background:var(--blue-p50);border-bottom:2px solid var(--border-med);">
+              <th style="padding:.6rem;text-align:center;font-size:.72rem;color:var(--g600);">#</th>
+              <th style="padding:.6rem;text-align:left;font-size:.72rem;color:var(--g600);">Désignation</th>
+              <th style="padding:.6rem;text-align:left;font-size:.72rem;color:var(--g600);">Code</th>
+              <th style="padding:.6rem;text-align:left;font-size:.72rem;color:var(--g600);">EAN</th>
+              <th style="padding:.6rem;text-align:right;font-size:.72rem;color:var(--g600);">Colis</th>
+              <th style="padding:.6rem;text-align:right;font-size:.72rem;color:var(--g600);">CA HT</th>
+              <th style="padding:.6rem;text-align:center;font-size:.72rem;color:var(--g600);">Cmd.</th>
+              <th style="padding:.6rem;text-align:center;font-size:.72rem;color:var(--g600);">Clients</th>
+              <th style="padding:.6rem;text-align:right;font-size:.72rem;color:var(--g600);">Stock</th>
+            </tr>
+          </thead>
+          <tbody id="top100-tbody">
+            <tr><td colspan="9" style="text-align:center;padding:1.5rem;color:var(--g400);">Chargement…</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
   <!-- GÉNÉRATEUR DE PROMOS PDF -->
   <div id="sec-promos" class="hidden" style="flex:1;display:flex;flex-direction:column;overflow:hidden;">
     <div id="pgm-container" style="flex:1;overflow:hidden;"></div>
@@ -2169,58 +2238,38 @@ textarea { resize:vertical; min-height:80px; }
 <!-- ══════════════════════════════════════════
      TAB BAR MOBILE (visible uniquement ≤768px)
 ══════════════════════════════════════════ -->
-<!-- ══ NAV MOBILE : barre basse (zone pouce) + menu déroulant ══ -->
-<div class="mobile-navbar">
-  <button class="mnav-trigger" id="mnav-trigger" onclick="toggleMobileMenu()" aria-haspopup="true" aria-expanded="false">
-    <span class="mnav-cur">
-      <span class="mnav-cur-ico" id="mnav-current-ico"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="1" y="1" width="6" height="6" rx="1.5"/><rect x="9" y="1" width="6" height="6" rx="1.5"/><rect x="1" y="9" width="6" height="6" rx="1.5"/><rect x="9" y="9" width="6" height="6" rx="1.5"/></svg></span>
-      <span class="mnav-cur-label" id="mnav-current-label">Dashboard</span>
-    </span>
-    <svg class="mnav-chevron" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 10l4-4 4 4"/></svg>
+<div class="mobile-tabbar">
+  <button class="mtab active" data-sec="dashboard" onclick="showSection('dashboard',null,null)">
+    <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="1" y="1" width="6" height="6" rx="1.5"/><rect x="9" y="1" width="6" height="6" rx="1.5"/><rect x="1" y="9" width="6" height="6" rx="1.5"/><rect x="9" y="9" width="6" height="6" rx="1.5"/></svg>
+    <span>Dashboard</span>
   </button>
-</div>
-
-<div class="mmenu-backdrop" id="mmenu-backdrop" onclick="closeMobileMenu()"></div>
-
-<div class="mmenu-sheet" id="mmenu-sheet" role="menu" aria-hidden="true">
-  <div class="mmenu-handle"></div>
-  <div class="mmenu-title">Sections</div>
-
-  <button class="mmenu-item active" role="menuitem" data-sec="dashboard" onclick="mnavGo('dashboard')">
-    <span class="mmenu-ico"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="1" y="1" width="6" height="6" rx="1.5"/><rect x="9" y="1" width="6" height="6" rx="1.5"/><rect x="1" y="9" width="6" height="6" rx="1.5"/><rect x="9" y="9" width="6" height="6" rx="1.5"/></svg></span>
-    <span class="mmenu-label">Dashboard</span>
+  <button class="mtab" data-sec="bdc" onclick="showSection('bdc',null,null)">
+    <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 2h12l-1 8H3z"/><circle cx="6" cy="14" r="1"/><circle cx="11" cy="14" r="1"/></svg>
+    <span>Commande</span>
   </button>
-  <button class="mmenu-item" role="menuitem" data-sec="bdc" onclick="mnavGo('bdc')">
-    <span class="mmenu-ico"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 2h12l-1 8H3z"/><circle cx="6" cy="14" r="1"/><circle cx="11" cy="14" r="1"/></svg></span>
-    <span class="mmenu-label">Bon de commande</span>
+  <button class="mtab" data-sec="contacts-db" onclick="showSection('contacts-db',null,null)">
+    <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="5" cy="5" r="2.5"/><path d="M1 14c0-2.5 1.8-4.5 4-4.5s4 2 4 4.5"/><circle cx="12" cy="6" r="2"/><path d="M10 14c0-2 1-3.5 2-3.5s3 1.5 3 3.5"/></svg>
+    <span>Clients</span>
   </button>
-  <button class="mmenu-item" role="menuitem" data-sec="contacts-db" onclick="mnavGo('contacts-db')">
-    <span class="mmenu-ico"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="5" cy="5" r="2.5"/><path d="M1 14c0-2.5 1.8-4.5 4-4.5s4 2 4 4.5"/><circle cx="12" cy="6" r="2"/><path d="M10 14c0-2 1-3.5 2-3.5s3 1.5 3 3.5"/></svg></span>
-    <span class="mmenu-label">Base clients</span>
+  <button class="mtab" data-sec="frais" onclick="showSection('frais',null,null)">
+    <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="1" y="3" width="14" height="10" rx="2"/><path d="M1 6h14"/><circle cx="5" cy="9.5" r="1"/></svg>
+    <span>Frais</span>
   </button>
-  <button class="mmenu-item" role="menuitem" data-sec="accords" onclick="mnavGo('accords')">
-    <span class="mmenu-ico"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 8l3 3 9-9"/><rect x="1" y="1" width="14" height="14" rx="2"/></svg></span>
-    <span class="mmenu-label">Accords</span>
+  <button class="mtab" data-sec="commissions" onclick="showSection('commissions',null,null)">
+    <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="8" cy="8" r="6"/><path d="M8 5v6M6 7h3.5a1.5 1.5 0 0 1 0 3H6"/></svg>
+    <span>Commiss.</span>
   </button>
-  <button class="mmenu-item" role="menuitem" data-sec="frais" onclick="mnavGo('frais')">
-    <span class="mmenu-ico"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="1" y="3" width="14" height="10" rx="2"/><path d="M1 6h14"/><circle cx="5" cy="9.5" r="1"/></svg></span>
-    <span class="mmenu-label">Frais</span>
+  <button class="mtab hidden" id="mtab-comptes" data-sec="comptes" onclick="showSection('comptes',null,null)">
+    <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="5.5" cy="5.5" r="2.5"/><circle cx="11" cy="6" r="2"/><path d="M1 14c0-2.5 1.8-4.5 4.5-4.5S10 11.5 10 14"/><path d="M9.5 9.7c2 .2 3.5 1.8 3.5 4.3"/></svg>
+    <span>Comptes</span>
   </button>
-  <button class="mmenu-item" role="menuitem" data-sec="commissions" onclick="mnavGo('commissions')">
-    <span class="mmenu-ico"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="8" cy="8" r="6"/><path d="M8 5v6M6 7h3.5a1.5 1.5 0 0 1 0 3H6"/></svg></span>
-    <span class="mmenu-label">Commissions</span>
+  <button class="mtab" data-sec="mailing" onclick="showSection('mailing',null,null)">
+    <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="1" y="3" width="14" height="10" rx="1.5"/><path d="M1 4.5l7 5 7-5"/></svg>
+    <span>Mailing</span>
   </button>
-  <button class="mmenu-item hidden" id="mtab-comptes" role="menuitem" data-sec="comptes" onclick="mnavGo('comptes')">
-    <span class="mmenu-ico"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="5.5" cy="5.5" r="2.5"/><circle cx="11" cy="6" r="2"/><path d="M1 14c0-2.5 1.8-4.5 4.5-4.5S10 11.5 10 14"/><path d="M9.5 9.7c2 .2 3.5 1.8 3.5 4.3"/></svg></span>
-    <span class="mmenu-label">Comptes</span>
-  </button>
-  <button class="mmenu-item" role="menuitem" data-sec="mailing" onclick="mnavGo('mailing')">
-    <span class="mmenu-ico"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="1" y="3" width="14" height="10" rx="1.5"/><path d="M1 4.5l7 5 7-5"/></svg></span>
-    <span class="mmenu-label">Mailing</span>
-  </button>
-  <button class="mmenu-item" role="menuitem" data-sec="promos" onclick="mnavGo('promos')">
-    <span class="mmenu-ico"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="5" cy="5" r="1.6"/><circle cx="11" cy="11" r="1.6"/><path d="M4 12L12 4"/></svg></span>
-    <span class="mmenu-label">Promos PDF</span>
+  <button class="mtab" data-sec="top100" onclick="showSection('top100',null,null)">
+    <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 2h8v3a4 4 0 0 1-8 0z"/><path d="M12 3h2v1a2 2 0 0 1-2 2M4 3H2v1a2 2 0 0 0 2 2"/><path d="M6.5 9h3M8 9v3M6 13h4"/></svg>
+    <span>Top 100</span>
   </button>
 </div>
 
@@ -3506,7 +3555,7 @@ if (typeof cdbPageSize  === 'undefined') window.cdbPageSize  = 50;
 // ═══════════════════════════════════════════════
 //  NAVIGATION
 // ═══════════════════════════════════════════════
-const SECTIONS = ['dashboard','bdc','frais','contacts-db','commissions','comptes','mailing','accords','promos'];
+const SECTIONS = ['dashboard','bdc','frais','contacts-db','commissions','comptes','mailing','accords','promos','top100'];
 function showSection(name, tabEl, sideEl) {
   if (name === 'comptes' && !isAdminUser()) {
     toast('Accès réservé.', 'err');
@@ -3516,16 +3565,16 @@ function showSection(name, tabEl, sideEl) {
   const sec=document.getElementById('sec-'+name); if(!sec){console.warn('Section absente:',name);return;} sec.classList.remove('hidden'); sec.style.display=(name==='bdc')?'flex':'';
   document.querySelectorAll('.t-tab').forEach(t=>t.classList.remove('active'));
   document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
-  document.querySelectorAll('.mmenu-item').forEach(t=>t.classList.remove('active'));
+  document.querySelectorAll('.mtab').forEach(t=>t.classList.remove('active'));
   if (tabEl) tabEl.classList.add('active');
   if (sideEl) sideEl.classList.add('active');
-  document.querySelectorAll('.mmenu-item[data-sec="'+name+'"]').forEach(t=>t.classList.add('active'));
-  updateMobileNav(name);
+  document.querySelectorAll('.mtab[data-sec="'+name+'"]').forEach(t=>t.classList.add('active'));
   if (name==='dashboard') { refreshDashboard(); if (typeof dashRenderInactiveClients === 'function') dashRenderInactiveClients(); }
   if (name==='frais') { if (typeof refreshFraisStats === 'function') { try{refreshFraisStats();}catch(e){} } if (typeof nfdRender === 'function') nfdRender(); }
   if (name==='bdc') { if (!bdcInitDone) { buildTable(); bdcInitDone=true; } }
   if (name==='commissions') { setTimeout(function(){ if (typeof commInit === 'function') commInit(); }, 80); }
   if (name==='promos') { setTimeout(function(){ if (typeof promoInit === 'function') promoInit(); }, 80); }
+  if (name==='top100') { setTimeout(function(){ if (typeof top100Init === 'function') top100Init(); }, 80); }
   // Démonter le générateur quand on quitte l'onglet Promos
   if (name !== 'promos' && typeof promoUnmount === 'function') promoUnmount();
   if (name==='comptes') { if (typeof comptesRender === 'function') comptesRender(); }
@@ -3534,35 +3583,225 @@ function showSection(name, tabEl, sideEl) {
 }
 
 // ═══════════════════════════════════════════════
-//  MENU DÉROULANT MOBILE (remplace la tab bar basse)
+//  TOP 100 PRODUITS — agrégation des ventes par produit
+//  Source : bcol('commandes') (scopé par marque) → lignes[]
+//  Enrichi via le catalogue PRODUCTS (EAN, stock…)
 // ═══════════════════════════════════════════════
-function updateMobileNav(name) {
-  var sheet = document.getElementById('mmenu-sheet'); if (!sheet) return;
-  var item = sheet.querySelector('.mmenu-item[data-sec="' + name + '"]'); if (!item) return;
-  var ico = item.querySelector('.mmenu-ico');
-  var lbl = item.querySelector('.mmenu-label');
-  var curIco = document.getElementById('mnav-current-ico');
-  var curLbl = document.getElementById('mnav-current-label');
-  if (ico && curIco) curIco.innerHTML = ico.innerHTML;
-  if (lbl && curLbl) curLbl.textContent = lbl.textContent;
+var top100Cmds = null;            // cache des commandes chargées
+var top100CmdsBrand = null;       // marque pour laquelle le cache a été construit
+var top100Rows = [];              // lignes agrégées après filtre/tri
+var top100Chart = null;
+var top100State = { metric:'ca', period:'all', year:null, topN:'100', search:'' };
+
+function top100Esc(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+function top100Eur(n){return Number(n||0).toLocaleString('fr-FR',{minimumFractionDigits:2,maximumFractionDigits:2})+' €';}
+function top100Int(n){return Number(n||0).toLocaleString('fr-FR');}
+
+function top100Init(){
+  var lbl = document.getElementById('top100-brand-label');
+  if (lbl) lbl.textContent = (CURRENT_BRAND==='naturaline'?'NATURALINE':'Moulin des Moines');
+  if (top100Cmds === null || top100CmdsBrand !== CURRENT_BRAND) { top100Load(); }
+  else { top100Compute(); }
 }
-function openMobileMenu() {
-  var s = document.getElementById('mmenu-sheet'), b = document.getElementById('mmenu-backdrop'), t = document.getElementById('mnav-trigger');
-  if (s) { s.classList.add('open'); s.setAttribute('aria-hidden', 'false'); }
-  if (b) b.classList.add('open');
-  if (t) { t.classList.add('open'); t.setAttribute('aria-expanded', 'true'); }
+
+function top100Load(){
+  var tb = document.getElementById('top100-tbody');
+  if (tb) tb.innerHTML = '<tr><td colspan="9" style="text-align:center;padding:1.5rem;color:var(--g400);">Chargement des ventes…</td></tr>';
+  if (!db || !currentUser) { if(tb) tb.innerHTML='<tr><td colspan="9" style="text-align:center;padding:1rem;color:var(--g400);">Non connecté</td></tr>'; return; }
+  bcol('commandes').get().then(function(snap){
+    top100Cmds = [];
+    snap.forEach(function(doc){ top100Cmds.push(doc.data()); });
+    top100CmdsBrand = CURRENT_BRAND;
+    top100Compute();
+  }).catch(function(e){
+    console.warn('[Top100]', e);
+    if(tb) tb.innerHTML='<tr><td colspan="9" style="text-align:center;padding:1rem;color:var(--g400);">Erreur de chargement</td></tr>';
+  });
 }
-function closeMobileMenu() {
-  var s = document.getElementById('mmenu-sheet'), b = document.getElementById('mmenu-backdrop'), t = document.getElementById('mnav-trigger');
-  if (s) { s.classList.remove('open'); s.setAttribute('aria-hidden', 'true'); }
-  if (b) b.classList.remove('open');
-  if (t) { t.classList.remove('open'); t.setAttribute('aria-expanded', 'false'); }
+
+function top100Reload(){ top100Cmds = null; top100Init(); }
+
+function top100CmdDate(c){
+  var t = c.createdAt; if(!t) return null;
+  try { return new Date(t.seconds ? t.seconds*1000 : t); } catch(e){ return null; }
 }
-function toggleMobileMenu() {
-  var s = document.getElementById('mmenu-sheet');
-  if (s && s.classList.contains('open')) closeMobileMenu(); else openMobileMenu();
+function top100Years(){
+  var ys = {};
+  (top100Cmds||[]).forEach(function(c){ var d = top100CmdDate(c); if (d) ys[d.getFullYear()] = true; });
+  return Object.keys(ys).map(Number).sort(function(a,b){return b-a;});
 }
-function mnavGo(name) { closeMobileMenu(); showSection(name, null, null); }
+function top100InPeriod(c){
+  var st = top100State;
+  if (st.period==='all') return true;
+  var d = top100CmdDate(c); if(!d) return false;
+  var now = new Date();
+  if (st.period==='ytd') return d.getFullYear()===now.getFullYear();
+  if (st.period==='12m'){ var lim=new Date(); lim.setMonth(lim.getMonth()-12); return d>=lim; }
+  if (st.period==='year' && st.year) return d.getFullYear()===Number(st.year);
+  return true;
+}
+
+function top100Compute(){
+  var agg = {};      // code -> agrégat
+  var totCmd = 0;
+  (top100Cmds||[]).forEach(function(c, ci){
+    if (!top100InPeriod(c)) return;
+    if (!c.lignes || !c.lignes.length) return;
+    totCmd++;
+    var cid = c.numClient || c.clientNom || '?';
+    c.lignes.forEach(function(l){
+      var code = l.code || '(sans code)';
+      var qte = Number(l.qty || l.qt || 0) || 0;
+      var ca  = Number(l.total_ht || l.total || (Number(l.pu_ht||0)*qte)) || 0;
+      if (!agg[code]) agg[code] = { code:code, libelle:l.libelle||'', qte:0, ca:0, cmds:{}, clients:{} };
+      agg[code].qte += qte;
+      agg[code].ca  += ca;
+      agg[code].cmds[ci] = 1;       // ci = index unique de la commande
+      agg[code].clients[cid] = 1;
+    });
+  });
+
+  var rows = Object.keys(agg).map(function(code){
+    var a = agg[code];
+    var prod = (typeof PRODUCTS !== 'undefined') ? PRODUCTS.find(function(p){ return String(p.code)===String(code); }) : null;
+    return {
+      code: code,
+      libelle: a.libelle || (prod?prod.libelle:''),
+      ean: prod?prod.ean:'',
+      stock: prod?prod.stock:null,
+      qte: a.qte,
+      ca: a.ca,
+      nbCmd: Object.keys(a.cmds).length,
+      nbCli: Object.keys(a.clients).length
+    };
+  });
+
+  var q = (top100State.search||'').toLowerCase().trim();
+  if (q) rows = rows.filter(function(r){ return (r.libelle+' '+r.code+' '+(r.ean||'')).toLowerCase().indexOf(q)>=0; });
+
+  rows.sort(function(a,b){ return top100State.metric==='qte' ? (b.qte-a.qte) : (b.ca-a.ca); });
+
+  var n = top100State.topN;
+  if (n && n!=='all') rows = rows.slice(0, Number(n));
+  top100Rows = rows;
+
+  top100RenderStats(totCmd);
+  top100RenderTable();
+  top100RenderChart();
+  top100PopulateYears();
+}
+
+function top100RenderStats(totCmd){
+  var sumCA = top100Rows.reduce(function(s,r){return s+r.ca;},0);
+  var sumQ  = top100Rows.reduce(function(s,r){return s+r.qte;},0);
+  var set=function(id,v){var el=document.getElementById(id); if(el) el.textContent=v;};
+  set('top100-stat-refs', top100Int(top100Rows.length));
+  set('top100-stat-ca', top100Eur(sumCA));
+  set('top100-stat-colis', top100Int(sumQ));
+  set('top100-stat-cmds', top100Int(totCmd));
+}
+
+function top100RenderTable(){
+  var tb = document.getElementById('top100-tbody'); if(!tb) return;
+  if (!top100Rows.length){ tb.innerHTML='<tr><td colspan="9" style="text-align:center;padding:1.5rem;color:var(--g400);">Aucune vente sur cette période</td></tr>'; return; }
+  var metric = top100State.metric;
+  tb.innerHTML = top100Rows.map(function(r,i){
+    var rank = i+1;
+    var medal = rank===1?'🥇':rank===2?'🥈':rank===3?'🥉':String(rank);
+    var stock = (r.stock==null)?'—':top100Int(r.stock);
+    var stockStyle = (typeof r.stock==='number' && r.stock<0)?'color:#dc2626;font-weight:600;':'color:var(--g600);';
+    return '<tr style="border-bottom:1px solid var(--border);">'+
+      '<td style="padding:.5rem .6rem;text-align:center;font-weight:700;color:var(--g600);">'+medal+'</td>'+
+      '<td style="padding:.5rem .6rem;font-weight:600;color:var(--g800);min-width:220px;">'+top100Esc(r.libelle)+'</td>'+
+      '<td style="padding:.5rem .6rem;font-family:monospace;font-size:.74rem;color:var(--g500);white-space:nowrap;">'+top100Esc(r.code)+'</td>'+
+      '<td style="padding:.5rem .6rem;font-family:monospace;font-size:.72rem;color:var(--g500);white-space:nowrap;">'+top100Esc(r.ean||'—')+'</td>'+
+      '<td style="padding:.5rem .6rem;text-align:right;font-weight:'+(metric==='qte'?'700':'400')+';color:'+(metric==='qte'?'var(--blue-p700)':'var(--g700)')+';">'+top100Int(r.qte)+'</td>'+
+      '<td style="padding:.5rem .6rem;text-align:right;white-space:nowrap;font-weight:'+(metric==='ca'?'700':'400')+';color:'+(metric==='ca'?'var(--em600,#059669)':'var(--g700)')+';">'+top100Eur(r.ca)+'</td>'+
+      '<td style="padding:.5rem .6rem;text-align:center;color:var(--g600);">'+top100Int(r.nbCmd)+'</td>'+
+      '<td style="padding:.5rem .6rem;text-align:center;color:var(--g600);">'+top100Int(r.nbCli)+'</td>'+
+      '<td style="padding:.5rem .6rem;text-align:right;'+stockStyle+'">'+stock+'</td>'+
+    '</tr>';
+  }).join('');
+}
+
+function top100RenderChart(){
+  var canvas = document.getElementById('top100-chart'); if(!canvas) return;
+  var metric = top100State.metric;
+  var ml = document.getElementById('top100-chart-metric');
+  if (ml) ml.textContent = (metric==='qte'?'par quantité (colis)':"par chiffre d'affaires");
+  withChartJs(function(){
+    var top = top100Rows.slice(0,15);
+    var labels = top.map(function(r){ var l=r.libelle||r.code; return l.length>30?l.slice(0,28)+'…':l; });
+    var data = top.map(function(r){ return metric==='qte'?r.qte:Math.round(r.ca); });
+    if (top100Chart) { top100Chart.destroy(); top100Chart=null; }
+    top100Chart = new Chart(canvas.getContext('2d'), {
+      type:'bar',
+      data:{ labels:labels, datasets:[{
+        label: metric==='qte'?'Colis vendus':'CA HT (€)',
+        data:data,
+        backgroundColor: metric==='qte' ? 'rgba(59,130,212,.78)' : 'rgba(5,150,105,.78)',
+        borderRadius:4
+      }]},
+      options:{
+        indexAxis:'y', responsive:true, maintainAspectRatio:false,
+        plugins:{ legend:{display:false},
+          tooltip:{ callbacks:{ label:function(ctx){ return metric==='qte' ? (top100Int(ctx.parsed.x)+' colis') : top100Eur(ctx.parsed.x); } } } },
+        scales:{ x:{ beginAtZero:true, ticks:{ font:{size:10} } }, y:{ ticks:{ font:{size:10} } } }
+      }
+    });
+  });
+}
+
+function top100PopulateYears(){
+  var sel=document.getElementById('top100-year'); if(!sel) return;
+  if (sel.dataset.filled) return;
+  var ys=top100Years(); if (!ys.length) return;
+  sel.innerHTML = ys.map(function(y){ return '<option value="'+y+'">'+y+'</option>'; }).join('');
+  sel.dataset.filled='1';
+  if (!top100State.year) top100State.year = ys[0];
+}
+
+function top100SetMetric(m){
+  top100State.metric=m;
+  ['ca','qte'].forEach(function(k){ var b=document.getElementById('top100-metric-'+k); if(b){ b.className = (k===m)?'btn btn-primary':'btn btn-ghost'; b.style.border='none'; } });
+  top100Compute();
+}
+function top100SetPeriod(v){
+  top100State.period=v;
+  var w=document.getElementById('top100-year-wrap'); if(w) w.style.display=(v==='year')?'inline-flex':'none';
+  if (v==='year' && !top100State.year){ var ys=top100Years(); if(ys.length) top100State.year=ys[0]; }
+  top100Compute();
+}
+function top100SetYear(v){ top100State.year=v; top100Compute(); }
+function top100SetTopN(v){ top100State.topN=v; top100Compute(); }
+function top100SetSearch(v){ top100State.search=v; top100Compute(); }
+
+function top100ExportCSV(){
+  if (!top100Rows.length){ toast('Rien à exporter','err'); return; }
+  var head=['Rang','Désignation','Code','EAN','Colis','CA HT','Nb commandes','Nb clients','Stock'];
+  var lines=[head.join(';')];
+  top100Rows.forEach(function(r,i){
+    lines.push([ i+1, '"'+String(r.libelle||'').replace(/"/g,'""')+'"', r.code, r.ean||'', r.qte,
+      String(r.ca.toFixed(2)).replace('.',','), r.nbCmd, r.nbCli, (r.stock==null?'':r.stock) ].join(';'));
+  });
+  var blob=new Blob(['\ufeff'+lines.join('\r\n')],{type:'text/csv;charset=utf-8;'});
+  var a=document.createElement('a'); a.href=URL.createObjectURL(blob);
+  a.download='Top_produits_'+(CURRENT_BRAND==='naturaline'?'NATURALINE':'MDM')+'_'+new Date().toISOString().slice(0,10)+'.csv';
+  a.click(); URL.revokeObjectURL(a.href);
+  toast('Export CSV : '+top100Rows.length+' produits','ok');
+}
+
+function top100ExportXLS(){
+  if (!top100Rows.length){ toast('Rien à exporter','err'); return; }
+  withXLSX(function(){
+    var aoa=[['Rang','Désignation','Code','EAN','Colis','CA HT','Nb commandes','Nb clients','Stock']];
+    top100Rows.forEach(function(r,i){ aoa.push([ i+1, r.libelle||'', r.code, r.ean||'', r.qte, Math.round(r.ca*100)/100, r.nbCmd, r.nbCli, (r.stock==null?'':r.stock) ]); });
+    var ws=XLSX.utils.aoa_to_sheet(aoa);
+    var wb=XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, 'Top produits');
+    XLSX.writeFile(wb, 'Top_produits_'+(CURRENT_BRAND==='naturaline'?'NATURALINE':'MDM')+'_'+new Date().toISOString().slice(0,10)+'.xlsx');
+    toast('Export Excel généré','ok');
+  });
+}
 
 function toggleAvatarMenu() { document.getElementById('avatar-menu').classList.toggle('open'); }
 document.addEventListener('click', e => { if(!e.target.closest('#avatar-btn')) document.getElementById('avatar-menu')?.classList.remove('open'); });
