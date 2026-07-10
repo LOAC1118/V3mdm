@@ -426,6 +426,7 @@
 
   /* ---------- export / projet ---------- */
   function exportPDF(){
+    console.log('%c[PGM] export PDF — build CLONE-v3 (2026-07)', 'color:#5b8c2a;font-weight:bold');
     var btn=q('#pgm-pdf'),prev=btn.textContent;btn.textContent='Génération…';btn.disabled=true;
     var page=q('#pgm-page');
     // Clone de la page dans un conteneur isolé de 210mm : ni zoom, ni grille/sidebar parente,
