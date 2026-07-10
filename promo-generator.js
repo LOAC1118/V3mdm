@@ -82,6 +82,7 @@
         accroche:'',
         validity:'',
         conditions:'Prix HT indicatifs, hors taxes. Offre valable dans la limite des stocks disponibles.',
+        barcodes:true,
         contactName:c.name||'', contactPhone:c.phone||'', contactEmail:c.email||''
       },
       products:(opt&&opt.products)?JSON.parse(JSON.stringify(opt.products)):[]
@@ -112,6 +113,65 @@
     });
   }
 
+  /* ---------- codes-barres EAN (JsBarcode) ---------- */
+  var BARCODE_CACHE = {};   // ean -> dataURL | null (null = déjà tenté & invalide)
+  function ensureBarcode(){
+    return new Promise(function(res,rej){
+      if(global.JsBarcode) return res();
+      var cdns=[
+        'https://cdnjs.cloudflare.com/ajax/libs/jsbarcode/3.11.6/JsBarcode.all.min.js',
+        'https://cdn.jsdelivr.net/npm/jsbarcode@3.11.6/dist/JsBarcode.all.min.js'
+      ], i=0;
+      (function load(){
+        if(i>=cdns.length) return rej(new Error('JsBarcode indisponible (hors-ligne ?)'));
+        var s=document.createElement('script'); s.src=cdns[i++];
+        s.onload=function(){res();}; s.onerror=function(){load();};
+        document.head.appendChild(s);
+      })();
+    });
+  }
+  function eanDigits(ean){return String(ean==null?'':ean).replace(/\D/g,'');}
+  function eanFormat(code){
+    if(code.length===13||code.length===12) return 'EAN13'; // 12 => clé calculée auto
+    if(code.length===8 ||code.length===7)  return 'EAN8';
+    return null;
+  }
+  function barcodeDataURL(ean){
+    var code=eanDigits(ean), fmt=eanFormat(code);
+    if(!fmt) return null;
+    if(BARCODE_CACHE[code]!==undefined) return BARCODE_CACHE[code];
+    if(!global.JsBarcode) return null;
+    try{
+      var canvas=document.createElement('canvas');
+      global.JsBarcode(canvas,code,{format:fmt,width:3,height:38,displayValue:true,fontSize:16,textMargin:2,margin:6});
+      var url=canvas.toDataURL('image/png');
+      BARCODE_CACHE[code]=url; return url;
+    }catch(e){
+      BARCODE_CACHE[code]=null;  // EAN à clé de contrôle invalide -> on ignore silencieusement
+      return null;
+    }
+  }
+  function barcodeHtml(p){
+    if(!S||!S.doc.barcodes) return '';
+    var code=eanDigits(p.ean);
+    if(!eanFormat(code)) return '';
+    if(BARCODE_CACHE[code]===null) return '';      // déjà connu comme invalide
+    var cached=BARCODE_CACHE[code];
+    return '<div class="pgm-bc"><img class="pgm-barcode" data-ean="'+esc(code)+'"'+(cached?(' src="'+cached+'"'):'')+' alt="Code-barres '+esc(code)+'"></div>';
+  }
+  function fillBarcodes(){
+    if(!S||!S.doc.barcodes) return;
+    var imgs=qa('img.pgm-barcode');
+    if(!imgs.length) return;
+    if(!global.JsBarcode){ ensureBarcode().then(fillBarcodes).catch(function(){}); return; }
+    imgs.forEach(function(img){
+      if(img.getAttribute('src')) return;          // déjà rempli (cache)
+      var url=barcodeDataURL(img.getAttribute('data-ean'));
+      if(url){ img.src=url; }
+      else{ var w=img.closest('.pgm-bc'); if(w&&w.parentNode)w.parentNode.removeChild(w); }
+    });
+  }
+
   /* ======================= MOUNT ======================= */
   function mount(container, options){
     options = options||{};
@@ -128,6 +188,7 @@
     renderDoc();
     syncInputs();
     setTimeout(fitZoom,60);
+    ensureBarcode().then(fillBarcodes).catch(function(){});
     return PGM;
   }
   function unmount(){ if(ROOT){ROOT.innerHTML='';ROOT.classList.remove('pgm-root');} S=null; }
@@ -164,6 +225,7 @@
           '<label>Sous-titre</label><input id="pgm-subtitle" data-bind="subtitle">'+
           '<label>Accroche manuscrite</label><input id="pgm-accroche" data-bind="accroche" placeholder="ex : Les tofus à griller">'+
           '<label>Validité</label><input id="pgm-validity" data-bind="validity" placeholder="Du 1er au 31 juillet 2026">'+
+          '<label class="pgm-check"><input type="checkbox" id="pgm-barcodes"> Afficher les codes-barres EAN</label>'+
         '</div>'+
 
         '<div class="pgm-sec">'+
@@ -238,6 +300,7 @@
     q('#pgm-save').addEventListener('click',saveProject);
     q('#pgm-loadBtn').addEventListener('click',function(){q('#pgm-load').click();});
     q('#pgm-load').addEventListener('change',loadProject);
+    q('#pgm-barcodes').addEventListener('change',function(e){S.doc.barcodes=e.target.checked;renderDoc();});
   }
 
   function applyPreset(k){var p=PRESETS[k];if(!p)return;S.doc.brand=p.brand;S.doc.accent=p.accent;S.doc.brandName=p.name;S.doc.brandTag=p.tag;syncInputs();renderDoc();}
@@ -249,6 +312,7 @@
     ['brandName','brandTag','eyebrow','title','subtitle','accroche','validity','conditions','contactName','contactPhone','contactEmail']
       .forEach(function(k){var el=q('#pgm-'+k);if(el)el.value=d[k]||'';});
     q('#pgm-cBrand').value=d.brand;q('#pgm-cAccent').value=d.accent;
+    var bc=q('#pgm-barcodes');if(bc)bc.checked=!!d.barcodes;
   }
 
   /* ---------- catalogue picker ---------- */
@@ -375,6 +439,7 @@
       '<div class="pgm-contact">'+(d.contactName?'<b>'+esc(d.contactName)+'</b><br>':'')+
       (d.contactPhone?esc(d.contactPhone)+'<br>':'')+(d.contactEmail?esc(d.contactEmail):'')+'</div></div>';
     page.innerHTML=head+body+foot;
+    fillBarcodes();
   }
 
   function badgesHtml(p){
@@ -394,7 +459,7 @@
       return '<div class="pgm-prow">'+
         '<div class="pgm-pmain">'+(p.img?'<img class="pgm-thumb" src="'+p.img+'">':'')+
           '<div style="min-width:0"><div class="pgm-pn">'+esc(p.name)+'</div><div class="pgm-badges">'+badgesHtml(p)+'</div>'+
-          (refline?'<div class="pgm-pref">'+refline+'</div>':'')+'</div></div>'+
+          (refline?'<div class="pgm-pref">'+refline+'</div>':'')+barcodeHtml(p)+'</div></div>'+
         '<div class="pgm-pspecs">'+specs.join('<br>')+'</div>'+
         '<div class="pgm-pprice">'+price+'</div></div>';
     }).join('');
@@ -419,6 +484,7 @@
           (meta?'<div class="pgm-c-meta">'+meta+'</div>':'')+
           (p.ref?'<div class="pgm-c-ref">'+esc(p.ref)+'</div>':'')+
           '<div class="pgm-c-price">'+price+'</div>'+
+          barcodeHtml(p)+
         '</div></div>';
     }).join('');
     return '<div class="pgm-grid">'+cards+'</div>';
@@ -548,6 +614,14 @@
   '.pgm-dfoot{background:var(--pgm-brand-dark);color:#fff;padding:6mm 14mm;display:flex;justify-content:space-between;gap:10mm;font-size:8.5pt;margin-top:auto}'+
   '.pgm-cond{max-width:105mm;opacity:.92;line-height:1.5}.pgm-contact{text-align:right;line-height:1.5}.pgm-contact b{font-size:9.5pt}'+
   '.pgm-empty{padding:40mm 14mm;text-align:center;color:#aaa;font-size:11pt}'+
+  /* codes-barres EAN */
+  '.pgm-bc{margin-top:3mm}'+
+  '.pgm-barcode{display:block;width:34mm;height:auto;image-rendering:crisp-edges}'+
+  '.pgm-grid .pgm-bc{margin-top:6px}'+
+  '.pgm-grid .pgm-barcode{width:100%;max-width:32mm;margin:0}'+
+  /* case à cocher (sidebar) */
+  '.pgm-root label.pgm-check{display:flex;align-items:center;gap:8px;cursor:pointer;margin-top:12px;color:#cdd9e6;font-size:12.5px;font-weight:500}'+
+  '.pgm-root label.pgm-check input{width:auto;margin:0}'+
   '@media (max-width:920px){.pgm-app{grid-template-columns:1fr}.pgm-side{max-height:none}.pgm-stage{padding:14px 6px}}';
 
   /* ---------- API ---------- */
