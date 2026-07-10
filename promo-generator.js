@@ -427,20 +427,28 @@
   /* ---------- export / projet ---------- */
   function exportPDF(){
     var btn=q('#pgm-pdf'),prev=btn.textContent;btn.textContent='Génération…';btn.disabled=true;
-    var inner=q('#pgm-stagein'),saved=inner.style.transform,savedOrigin=inner.style.transformOrigin;
-    inner.style.transform='none';inner.style.transformOrigin='top left';
+    var page=q('#pgm-page');
+    // Clone de la page dans un conteneur isolé de 210mm : ni zoom, ni grille/sidebar parente,
+    // ni centrage de scène. html2canvas capture ainsi exactement la page, sans décalage.
+    var holder=document.createElement('div');
+    holder.style.cssText='position:fixed;left:0;top:0;width:210mm;background:#fff;z-index:-1;pointer-events:none;';
+    var clone=page.cloneNode(true);
+    clone.style.transform='none';clone.style.margin='0';clone.style.boxShadow='none';clone.style.width='210mm';
+    holder.appendChild(clone);
+    document.body.appendChild(holder);
+    var cleanup=function(){ if(holder&&holder.parentNode) holder.parentNode.removeChild(holder); btn.textContent=prev;btn.disabled=false; };
     ensurePdf().then(function(){
       return (document.fonts&&document.fonts.ready)?document.fonts.ready.catch(function(){}):null;
     }).then(function(){
       var name=(S.doc.title||'promo').toLowerCase().replace(/[^\w\-]+/g,'-').replace(/^-+|-+$/g,'')||'promo';
       return global.html2pdf().set({
         margin:0,filename:name+'.pdf',image:{type:'jpeg',quality:0.98},
-        html2canvas:{scale:2,useCORS:true,backgroundColor:'#ffffff',windowWidth:794,scrollX:0,scrollY:0},
+        html2canvas:{scale:2,useCORS:true,backgroundColor:'#ffffff',width:794,windowWidth:794,scrollX:0,scrollY:0},
         jsPDF:{unit:'mm',format:'a4',orientation:'portrait'},pagebreak:{mode:['css','legacy']}
-      }).from(q('#pgm-page')).save();
+      }).from(clone).save();
     }).catch(function(e){
       alert('Export PDF impossible : '+e.message+'\nUtilise « Imprimer » puis « Enregistrer en PDF ».');
-    }).then(function(){inner.style.transform=saved;inner.style.transformOrigin=savedOrigin;btn.textContent=prev;btn.disabled=false;});
+    }).then(cleanup);
   }
   function saveProject(){
     var blob=new Blob([JSON.stringify(S,null,2)],{type:'application/json'});
