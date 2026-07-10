@@ -426,30 +426,30 @@
 
   /* ---------- export / projet ---------- */
   function exportPDF(){
-    console.log('%c[PGM] export PDF — build CLONE-v3 (2026-07)', 'color:#5b8c2a;font-weight:bold');
-    var btn=q('#pgm-pdf'),prev=btn.textContent;btn.textContent='Génération…';btn.disabled=true;
+    console.log('%c[PGM] export PDF — build PRINT-v4 (2026-07)', 'color:#5b8c2a;font-weight:bold');
     var page=q('#pgm-page');
-    // Clone de la page dans un conteneur isolé de 210mm : ni zoom, ni grille/sidebar parente,
-    // ni centrage de scène. html2canvas capture ainsi exactement la page, sans décalage.
-    var holder=document.createElement('div');
-    holder.style.cssText='position:fixed;left:0;top:0;width:210mm;background:#fff;z-index:-1;pointer-events:none;';
-    var clone=page.cloneNode(true);
-    clone.style.transform='none';clone.style.margin='0';clone.style.boxShadow='none';clone.style.width='210mm';
-    holder.appendChild(clone);
-    document.body.appendChild(holder);
-    var cleanup=function(){ if(holder&&holder.parentNode) holder.parentNode.removeChild(holder); btn.textContent=prev;btn.disabled=false; };
-    ensurePdf().then(function(){
-      return (document.fonts&&document.fonts.ready)?document.fonts.ready.catch(function(){}):null;
-    }).then(function(){
-      var name=(S.doc.title||'promo').toLowerCase().replace(/[^\w\-]+/g,'-').replace(/^-+|-+$/g,'')||'promo';
-      return global.html2pdf().set({
-        margin:0,filename:name+'.pdf',image:{type:'jpeg',quality:0.98},
-        html2canvas:{scale:2,useCORS:true,backgroundColor:'#ffffff',width:794,windowWidth:794,scrollX:0,scrollY:0},
-        jsPDF:{unit:'mm',format:'a4',orientation:'portrait'},pagebreak:{mode:['css','legacy']}
-      }).from(clone).save();
-    }).catch(function(e){
-      alert('Export PDF impossible : '+e.message+'\nUtilise « Imprimer » puis « Enregistrer en PDF ».');
-    }).then(cleanup);
+    if(!page){return;}
+    var name=(S.doc.title||'promo').toLowerCase().replace(/[^\w\-]+/g,'-').replace(/^-+|-+$/g,'')||'promo';
+    // Impression native : le navigateur rend la page A4 en PDF vectoriel (net, cadré),
+    // sans html2canvas. On isole la page dans une fenêtre propre avec ses polices et styles.
+    var w=window.open('','_blank');
+    if(!w){ alert('Le navigateur a bloqué la fenêtre. Autorise les pop-ups pour ce site,\nou fais Ctrl+P directement sur la page puis « Enregistrer en PDF ».'); return; }
+    var doc='<!DOCTYPE html><html><head><meta charset="utf-8"><title>'+name+'</title>'+
+      '<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&family=Pacifico&display=swap">'+
+      '<style>'+PGM_CSS+'</style>'+
+      '<style>@page{size:A4;margin:0}html,body{margin:0;padding:0;background:#fff}'+
+        '#pgm-page{transform:none!important;margin:0!important;box-shadow:none!important;width:210mm!important}</style>'+
+      '</head><body>'+page.outerHTML+'</body></html>';
+    w.document.open(); w.document.write(doc); w.document.close();
+    var printed=false;
+    var go=function(){ if(printed)return; printed=true; try{ w.focus(); w.print(); }catch(e){} };
+    if(w.document.readyState==='complete'){ setTimeout(go,300); }
+    w.onload=function(){
+      var fp=(w.document.fonts&&w.document.fonts.ready)?w.document.fonts.ready:null;
+      if(fp){ fp.then(function(){ setTimeout(go,150); }); } else { setTimeout(go,300); }
+    };
+    setTimeout(go,1800); // filet de sécurité si onload/fonts ne répondent pas
+    try{ w.onafterprint=function(){ w.close(); }; }catch(e){}
   }
   function saveProject(){
     var blob=new Blob([JSON.stringify(S,null,2)],{type:'application/json'});
