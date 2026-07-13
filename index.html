@@ -2859,12 +2859,20 @@ function withChartJs(fn) {
   });
 }
 
-function withJsPdf(fn) {
-  if (typeof jspdf !== 'undefined') { fn(); return; }
-  lazyLoad([LIB_JSPDF, LIB_JSPDF_AT], function() {
-    console.log('[LazyLoad] jsPDF chargé');
-    fn();
-  });
+function withJsPdf(fn, onError) {
+  // Le plugin autotable DÉPEND de jsPDF : il faut donc les charger en SÉQUENCE.
+  // (l'ancien chargement parallèle provoquait une course : si autotable arrivait
+  //  avant jsPDF, il ne s'enregistrait pas et doc.autoTable restait indéfini)
+  var J = window.jspdf;
+  var hasPdf = !!(J && J.jsPDF);
+  var hasAT  = !!(hasPdf && J.jsPDF.API && J.jsPDF.API.autoTable);
+  if (hasPdf && hasAT) { fn(); return; }
+  lazyLoad(LIB_JSPDF, function() {
+    lazyLoad(LIB_JSPDF_AT, function() {
+      console.log('[LazyLoad] jsPDF + autotable chargés');
+      fn();
+    }, onError);
+  }, onError);
 }
 
 // ═══════════════════════════════════════════════
@@ -3906,7 +3914,9 @@ function top100PeriodLabel(){
 function top100ExportPDF(){
   if (!top100Rows.length){ toast('Rien à exporter','err'); return; }
   withJsPdf(function(){
+   try {
     var doc = new window.jspdf.jsPDF({ orientation:'portrait', unit:'mm', format:'a4' });
+    if (typeof doc.autoTable !== 'function') { toast('Plugin PDF non chargé — réessayez','err'); return; }
     var brand = (CURRENT_BRAND === 'naturaline') ? 'NATURALINE' : 'Moulin des Moines';
     var metric = (top100State.metric === 'qte') ? 'quantité (colis)' : "chiffre d'affaires";
     var W = doc.internal.pageSize.getWidth();
@@ -3964,14 +3974,17 @@ function top100ExportPDF(){
                 '_' + new Date().toISOString().slice(0,10) + '.pdf';
     doc.save(fname);
     toast('PDF généré : ' + top100Rows.length + ' produits', 'ok');
-  });
+   } catch(e) { console.error('[Top100 PDF]', e); toast('Erreur PDF : ' + e.message, 'err'); }
+  }, function(){ toast('Impossible de charger la librairie PDF (hors-ligne ?)','err'); });
 }
 
 // Export PDF "terrain" — 1 seule page A4, 2 colonnes, format poche
 function top100ExportPDFTerrain(){
   if (!top100Rows.length){ toast('Rien à exporter','err'); return; }
   withJsPdf(function(){
+   try {
     var doc = new window.jspdf.jsPDF({ orientation:'portrait', unit:'mm', format:'a4' });
+    if (typeof doc.autoTable !== 'function') { toast('Plugin PDF non chargé — réessayez','err'); return; }
     var brand  = (CURRENT_BRAND === 'naturaline') ? 'NATURALINE' : 'Moulin des Moines';
     var isQte  = (top100State.metric === 'qte');
     var W = doc.internal.pageSize.getWidth();
@@ -4032,7 +4045,8 @@ function top100ExportPDFTerrain(){
                 '_' + new Date().toISOString().slice(0,10) + '.pdf';
     doc.save(fname);
     toast('PDF terrain généré (1 page)', 'ok');
-  });
+   } catch(e) { console.error('[Top100 PDF terrain]', e); toast('Erreur PDF : ' + e.message, 'err'); }
+  }, function(){ toast('Impossible de charger la librairie PDF (hors-ligne ?)','err'); });
 }
 
 function top100ExportCSV(){
@@ -6285,7 +6299,7 @@ function bdcHistExportPDF(id) {
   var cmd = bdcHistCache.find(function(c){ return c._id === id; });
   if (!cmd) return;
 
-  lazyLoad([LIB_JSPDF, LIB_JSPDF_AT], function() {
+  withJsPdf(function() {
     var doc = new window.jspdf.jsPDF({ unit:'mm', format:'a4' });
     var brand = CURRENT_BRAND === 'naturaline' ? 'NATURALINE' : 'MOULIN DES MOINES';
     var date = cmd.createdAt ? new Date(cmd.createdAt.seconds ? cmd.createdAt.seconds*1000 : cmd.createdAt).toLocaleDateString('fr-FR') : '—';
