@@ -11686,6 +11686,24 @@ function mlAiParseJson(txt){
   return out;
 }
 
+// Après génération : amener le résultat sous les yeux (l'éditeur est plus bas
+// que la carte IA, sinon on ne voit rien et on croit qu'il ne s'est rien passé)
+function mlAiReveal(){
+  var ed = document.getElementById('ml-editor');
+  var subj = document.getElementById('ml-subject');
+  if (subj) {
+    subj.style.transition = 'box-shadow .4s';
+    subj.style.boxShadow = '0 0 0 3px rgba(5,150,105,.45)';
+    setTimeout(function(){ subj.style.boxShadow = ''; }, 2200);
+  }
+  if (ed) {
+    try { ed.scrollIntoView({ behavior:'smooth', block:'center' }); } catch(e){ ed.scrollIntoView(); }
+    ed.style.transition = 'box-shadow .4s';
+    ed.style.boxShadow = 'inset 0 0 0 3px rgba(5,150,105,.45)';
+    setTimeout(function(){ ed.style.boxShadow = ''; }, 2200);
+  }
+}
+
 function mlAiGenerate(){
   var brief = (document.getElementById('ml-ai-brief').value || '').trim();
   if (!brief) { mlAiStatus('Décrivez d\'abord ce que vous voulez dire à vos clients.', 'err'); return; }
@@ -11721,7 +11739,8 @@ function mlAiGenerate(){
       console.error('[IA] Erreur affichage :', domErr);
       throw new Error('Email généré mais affichage impossible : ' + domErr.message);
     }
-    mlAiStatus('✅ Email rédigé — relisez et ajustez avant envoi.', 'ok');
+    mlAiStatus('✅ Email rédigé — voir « Objet » ci-dessus et « Contenu de l\'email » ci-dessous.', 'ok');
+    mlAiReveal();
   }).catch(function(e){
     console.error('[IA] Erreur :', e);
     if (e.message !== 'no-key') mlAiStatus('Erreur : ' + e.message, 'err');
@@ -11771,7 +11790,8 @@ function mlAiRewrite(action){
       if (!bodyHtml) { console.warn('[IA] Champs inattendus :', out); throw new Error('Réponse vide'); }
       ed.innerHTML = bodyHtml;
       mlUpdatePreview(); mlUpdateSendBtn();
-      mlAiStatus('✅ Texte retravaillé — relisez avant envoi.', 'ok');
+      mlAiStatus('✅ Texte retravaillé — voir « Contenu de l\'email » ci-dessous.', 'ok');
+      mlAiReveal();
     }).catch(function(e){ console.error('[IA] Erreur :', e); if (e.message !== 'no-key') mlAiStatus('Erreur : ' + e.message, 'err'); });
 }
 
