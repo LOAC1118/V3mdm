@@ -2187,14 +2187,19 @@ textarea { resize:vertical; min-height:80px; }
           </div>
 
           <div id="ml-ai-settings" style="display:none;padding:1rem;background:var(--blue-p50);border-bottom:1px solid var(--border);">
-            <label class="lb" style="display:block;margin-bottom:.4rem;">Clé API Anthropic (stockée uniquement dans ce navigateur, jamais envoyée sur GitHub)</label>
+            <label class="lb" style="display:block;margin-bottom:.4rem;">Fournisseur IA</label>
+            <select id="ml-ai-provider" onchange="mlAiSetProvider(this.value)" style="width:100%;font-size:.82rem;padding:.4rem .5rem;border:1px solid var(--border-med);border-radius:6px;background:var(--surface);color:var(--g700);margin-bottom:.7rem;">
+              <option value="gemini">Google Gemini 2.5 Flash — gratuit (250 req./jour)</option>
+              <option value="claude">Anthropic Claude — payant à l'usage</option>
+            </select>
+            <label class="lb" style="display:block;margin-bottom:.4rem;">Clé API <span id="ml-ai-key-hint" style="font-weight:400;color:var(--g500);"></span></label>
             <div style="display:flex;gap:8px;">
-              <input type="password" id="ml-ai-key" placeholder="sk-ant-..." style="flex:1;font-family:ui-monospace,monospace;font-size:.8rem;"/>
+              <input type="password" id="ml-ai-key" placeholder="Collez votre clé…" style="flex:1;font-family:ui-monospace,monospace;font-size:.8rem;"/>
               <button class="btn btn-primary" onclick="mlAiSaveKey()" style="font-size:.75rem;padding:.4rem .8rem;">Enregistrer</button>
               <button class="btn btn-ghost" onclick="mlAiClearKey()" style="font-size:.75rem;padding:.4rem .8rem;color:#dc2626;">Effacer</button>
             </div>
             <div style="font-size:.68rem;color:var(--g500);margin-top:.4rem;">
-              Clé à créer sur console.anthropic.com → API Keys. <span id="ml-ai-key-status" style="font-weight:600;"></span>
+              <span id="ml-ai-key-where"></span> — la clé reste dans ce navigateur, jamais sur GitHub. <span id="ml-ai-key-status" style="font-weight:600;"></span>
             </div>
           </div>
 
@@ -11399,38 +11404,54 @@ var ML_TEMPLATES = {
 //  La clé API est stockée UNIQUEMENT dans le localStorage de ce navigateur.
 //  Elle n'est jamais dans le code source ni sur GitHub.
 // ═══════════════════════════════════════════════
-var ML_AI_MODEL = 'claude-sonnet-4-5-20250929';
+var ML_AI_MODEL_CLAUDE = 'claude-sonnet-4-5-20250929';
+var ML_AI_MODEL_GEMINI = 'gemini-2.5-flash';   // niveau gratuit (Flash / Flash-Lite uniquement)
 
-function mlAiKeyName(){
-  var uid = (currentUser && currentUser.uid) ? ('_' + currentUser.uid) : '';
-  return 'mdm_ai_key' + uid;
+function mlAiUid(){ return (currentUser && currentUser.uid) ? ('_' + currentUser.uid) : ''; }
+function mlAiGetProvider(){
+  try { return localStorage.getItem('mdm_ai_provider' + mlAiUid()) || 'gemini'; } catch(e){ return 'gemini'; }
 }
+function mlAiSetProvider(p){
+  try { localStorage.setItem('mdm_ai_provider' + mlAiUid(), p); } catch(e){}
+  mlAiRefreshSettings();
+}
+function mlAiKeyName(p){ return 'mdm_ai_key_' + (p || mlAiGetProvider()) + mlAiUid(); }
 function mlAiGetKey(){ try { return localStorage.getItem(mlAiKeyName()) || ''; } catch(e){ return ''; } }
+
+function mlAiRefreshSettings(){
+  var p = mlAiGetProvider();
+  var sel = document.getElementById('ml-ai-provider'); if (sel) sel.value = p;
+  var k = mlAiGetKey();
+  var inp = document.getElementById('ml-ai-key'); if (inp) inp.value = k;
+  var hint = document.getElementById('ml-ai-key-hint');
+  var where = document.getElementById('ml-ai-key-where');
+  if (p === 'gemini') {
+    if (hint)  hint.textContent = '(commence par AIza…)';
+    if (where) where.textContent = 'Clé gratuite à créer sur aistudio.google.com → Get API key';
+  } else {
+    if (hint)  hint.textContent = '(commence par sk-ant-…)';
+    if (where) where.textContent = 'Clé à créer sur console.anthropic.com → API Keys';
+  }
+  var st = document.getElementById('ml-ai-key-status');
+  if (st) { st.textContent = k ? '✅ Clé enregistrée' : '⚠️ Aucune clé'; st.style.color = k ? '#059669' : '#dc2626'; }
+}
 function mlAiToggleSettings(){
   var el = document.getElementById('ml-ai-settings');
   if (!el) return;
   var show = (el.style.display === 'none');
   el.style.display = show ? 'block' : 'none';
-  if (show) {
-    var k = mlAiGetKey();
-    document.getElementById('ml-ai-key').value = k;
-    var st = document.getElementById('ml-ai-key-status');
-    if (st) { st.textContent = k ? '✅ Clé enregistrée' : '⚠️ Aucune clé'; st.style.color = k ? '#059669' : '#dc2626'; }
-  }
+  if (show) mlAiRefreshSettings();
 }
 function mlAiSaveKey(){
   var v = (document.getElementById('ml-ai-key').value || '').trim();
   if (!v) { toast('Clé vide', 'err'); return; }
   try { localStorage.setItem(mlAiKeyName(), v); } catch(e){}
-  var st = document.getElementById('ml-ai-key-status');
-  if (st) { st.textContent = '✅ Clé enregistrée'; st.style.color = '#059669'; }
-  toast('Clé API enregistrée dans ce navigateur', 'ok');
+  mlAiRefreshSettings();
+  toast('Clé enregistrée dans ce navigateur', 'ok');
 }
 function mlAiClearKey(){
   try { localStorage.removeItem(mlAiKeyName()); } catch(e){}
-  document.getElementById('ml-ai-key').value = '';
-  var st = document.getElementById('ml-ai-key-status');
-  if (st) { st.textContent = '⚠️ Aucune clé'; st.style.color = '#dc2626'; }
+  mlAiRefreshSettings();
   toast('Clé effacée', 'ok');
 }
 
@@ -11445,14 +11466,45 @@ function mlAiStatus(msg, kind){
   else { el.style.background = 'var(--blue-p50)'; el.style.color = 'var(--blue-p700)'; }
 }
 
-// Appel à l'API Anthropic depuis le navigateur
+// Appel IA — aiguille vers Gemini (gratuit) ou Claude selon le fournisseur choisi
 function mlAiCall(systemPrompt, userPrompt){
   var key = mlAiGetKey();
+  var provider = mlAiGetProvider();
   if (!key) {
     mlAiStatus('Aucune clé API. Cliquez sur « 🔑 Clé API » pour en saisir une.', 'err');
-    mlAiToggleSettings();
+    var el = document.getElementById('ml-ai-settings');
+    if (el && el.style.display === 'none') mlAiToggleSettings();
     return Promise.reject(new Error('no-key'));
   }
+
+  if (provider === 'gemini') {
+    var url = 'https://generativelanguage.googleapis.com/v1beta/models/' + ML_AI_MODEL_GEMINI + ':generateContent';
+    return fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-goog-api-key': key },
+      body: JSON.stringify({
+        system_instruction: { parts: [{ text: systemPrompt }] },
+        contents: [{ role: 'user', parts: [{ text: userPrompt }] }],
+        generationConfig: { temperature: 0.7, maxOutputTokens: 2048, responseMimeType: 'application/json' }
+      })
+    }).then(function(r){
+      if (!r.ok) {
+        return r.json().catch(function(){ return {}; }).then(function(j){
+          var m = (j && j.error && j.error.message) ? j.error.message : ('Erreur HTTP ' + r.status);
+          if (r.status === 400 && /API key/i.test(m)) m = 'Clé Gemini invalide.';
+          if (r.status === 429) m = 'Quota gratuit atteint (250 requêtes/jour). Réessayez plus tard.';
+          throw new Error(m);
+        });
+      }
+      return r.json();
+    }).then(function(data){
+      var c = data && data.candidates && data.candidates[0];
+      if (!c || !c.content || !c.content.parts) throw new Error('Réponse vide de Gemini');
+      return c.content.parts.map(function(p){ return p.text || ''; }).join('').trim();
+    });
+  }
+
+  // Anthropic Claude
   return fetch('https://api.anthropic.com/v1/messages', {
     method: 'POST',
     headers: {
@@ -11462,7 +11514,7 @@ function mlAiCall(systemPrompt, userPrompt){
       'anthropic-dangerous-direct-browser-access': 'true'
     },
     body: JSON.stringify({
-      model: ML_AI_MODEL,
+      model: ML_AI_MODEL_CLAUDE,
       max_tokens: 1500,
       system: systemPrompt,
       messages: [{ role: 'user', content: userPrompt }]
