@@ -11523,8 +11523,9 @@ function mlAiStatus(msg, kind){
   else { el.style.background = 'var(--blue-p50)'; el.style.color = 'var(--blue-p700)'; }
 }
 
-// Appel IA — aiguille vers Gemini (gratuit) ou Claude selon le fournisseur choisi
-function mlAiCall(systemPrompt, userPrompt){
+// Appel IA — aiguille vers Gemini (gratuit) ou Claude selon le fournisseur choisi.
+// `schema` (optionnel) force Gemini à renvoyer exactement les champs attendus.
+function mlAiCall(systemPrompt, userPrompt, schema){
   var key = mlAiGetKey();
   var provider = mlAiGetProvider();
   if (!key) {
@@ -11552,6 +11553,7 @@ function mlAiCall(systemPrompt, userPrompt){
       }
     };
     if (sys) { payload.systemInstruction = { parts: [{ text: sys }] }; }
+    if (schema) { payload.generationConfig.responseSchema = schema; }
 
     var doCall = function(model, noThinkingCfg){
       var body = JSON.parse(JSON.stringify(payload));
@@ -11652,6 +11654,26 @@ var ML_AI_SYS = 'Tu es un assistant qui rédige des emails commerciaux B2B en fr
   'Tu réponds UNIQUEMENT avec un objet JSON valide, sans balises markdown, au format exact : ' +
   '{"subject":"...","body_html":"..."} où body_html contient du HTML simple (<p>, <strong>, <ul>, <li>, <br>) — jamais de <html>, <head> ni <style>.';
 
+// Schémas de sortie (Gemini les respecte strictement)
+var ML_AI_SCHEMA_EMAIL = { type:'OBJECT',
+  properties: { subject:{type:'STRING'}, body_html:{type:'STRING'} },
+  required: ['subject','body_html'] };
+var ML_AI_SCHEMA_BODY = { type:'OBJECT',
+  properties: { body_html:{type:'STRING'} },
+  required: ['body_html'] };
+var ML_AI_SCHEMA_SUBJECTS = { type:'OBJECT',
+  properties: { subjects:{ type:'ARRAY', items:{type:'STRING'} } },
+  required: ['subjects'] };
+
+// Tolérance : si un modèle renvoie d'autres noms de champs, on les retrouve quand même
+function mlAiPick(obj, names){
+  for (var i=0;i<names.length;i++){
+    var v = obj[names[i]];
+    if (typeof v === 'string' && v.trim()) return v.trim();
+  }
+  return '';
+}
+
 function mlAiParseJson(txt){
   var clean = String(txt || '').replace(/```json/gi, '').replace(/```/g, '').trim();
   var i = clean.indexOf('{'), j = clean.lastIndexOf('}');
@@ -11683,17 +11705,22 @@ function mlAiGenerate(){
     'Ton souhaité : ' + toneLabel + '.\n' +
     'Brief du commercial : ' + brief;
 
-  mlAiCall(ML_AI_SYS, user).then(function(txt){
+  mlAiCall(ML_AI_SYS, user, ML_AI_SCHEMA_EMAIL).then(function(txt){
     var out = mlAiParseJson(txt);
+    var subject = mlAiPick(out, ['subject','objet','sujet','title','titre']);
+    var bodyHtml = mlAiPick(out, ['body_html','bodyHtml','body','html','corps','content','contenu','message']);
+    if (!subject && !bodyHtml) {
+      console.warn('[IA] Champs inattendus :', out);
+      throw new Error('Réponse IA vide — réessayez.');
+    }
     try {
-      if (out.subject)   { document.getElementById('ml-subject').value = out.subject; mlUpdateSubject(); }
-      if (out.body_html) { document.getElementById('ml-editor').innerHTML = out.body_html; mlUpdatePreview(); }
+      if (subject)  { document.getElementById('ml-subject').value = subject; mlUpdateSubject(); }
+      if (bodyHtml) { document.getElementById('ml-editor').innerHTML = bodyHtml; mlUpdatePreview(); }
       if (typeof mlUpdateSendBtn === 'function') mlUpdateSendBtn();
     } catch(domErr){
       console.error('[IA] Erreur affichage :', domErr);
       throw new Error('Email généré mais affichage impossible : ' + domErr.message);
     }
-    if (!out.subject && !out.body_html) throw new Error('Réponse IA vide — réessayez.');
     mlAiStatus('✅ Email rédigé — relisez et ajustez avant envoi.', 'ok');
   }).catch(function(e){
     console.error('[IA] Erreur :', e);
@@ -11713,16 +11740,18 @@ function mlAiRewrite(action){
   if (action === 'objets') {
     var sysO = 'Tu proposes des objets d\'email B2B en français, courts (max 60 caractères), concrets, sans clickbait. ' +
       'Réponds UNIQUEMENT en JSON : {"subjects":["...","...","..."]}';
-    mlAiCall(sysO, mlAiBrandCtx() + '\n\nVoici le corps de l\'email :\n' + current + '\n\nPropose 3 objets.')
+    mlAiCall(sysO, mlAiBrandCtx() + '\n\nVoici le corps de l\'email :\n' + current + '\n\nPropose 3 objets.', ML_AI_SCHEMA_SUBJECTS)
       .then(function(txt){
         var out = mlAiParseJson(txt);
-        var list = out.subjects || [];
-        if (!list.length) throw new Error('Aucune proposition');
-        var pick = prompt('Choisissez un objet (1, 2 ou 3) :\n\n1. ' + list[0] + '\n2. ' + list[1] + '\n3. ' + list[2], '1');
+        var list = out.subjects || out.objets || out.sujets || [];
+        if (!Array.isArray(list) || !list.length) { console.warn('[IA] Champs inattendus :', out); throw new Error('Aucune proposition'); }
+        var opts = list.slice(0,3);
+        var msg = 'Choisissez un objet :\n\n' + opts.map(function(o,n){ return (n+1)+'. '+o; }).join('\n');
+        var pick = prompt(msg, '1');
         var idx = parseInt(pick, 10) - 1;
-        if (list[idx]) { document.getElementById('ml-subject').value = list[idx]; mlUpdateSubject(); mlAiStatus('✅ Objet appliqué.', 'ok'); }
+        if (opts[idx]) { document.getElementById('ml-subject').value = opts[idx]; mlUpdateSubject(); mlAiStatus('✅ Objet appliqué.', 'ok'); }
         else mlAiStatus('', null);
-      }).catch(function(e){ if (e.message !== 'no-key') mlAiStatus('Erreur : ' + e.message, 'err'); });
+      }).catch(function(e){ console.error('[IA] Erreur :', e); if (e.message !== 'no-key') mlAiStatus('Erreur : ' + e.message, 'err'); });
     return;
   }
 
@@ -11735,14 +11764,15 @@ function mlAiRewrite(action){
   var sysR = 'Tu retravailles des emails commerciaux B2B en français. ' + instr + ' ' +
     'Réponds UNIQUEMENT en JSON : {"body_html":"..."} avec du HTML simple (<p>, <strong>, <ul>, <li>, <br>).';
 
-  mlAiCall(sysR, mlAiBrandCtx() + '\n\nEmail actuel (HTML) :\n' + html)
+  mlAiCall(sysR, mlAiBrandCtx() + '\n\nEmail actuel (HTML) :\n' + html, ML_AI_SCHEMA_BODY)
     .then(function(txt){
       var out = mlAiParseJson(txt);
-      if (!out.body_html) throw new Error('Réponse vide');
-      ed.innerHTML = out.body_html;
+      var bodyHtml = mlAiPick(out, ['body_html','bodyHtml','body','html','corps','content','contenu','message']);
+      if (!bodyHtml) { console.warn('[IA] Champs inattendus :', out); throw new Error('Réponse vide'); }
+      ed.innerHTML = bodyHtml;
       mlUpdatePreview(); mlUpdateSendBtn();
       mlAiStatus('✅ Texte retravaillé — relisez avant envoi.', 'ok');
-    }).catch(function(e){ if (e.message !== 'no-key') mlAiStatus('Erreur : ' + e.message, 'err'); });
+    }).catch(function(e){ console.error('[IA] Erreur :', e); if (e.message !== 'no-key') mlAiStatus('Erreur : ' + e.message, 'err'); });
 }
 
 function mlSetTemplate(key) {
