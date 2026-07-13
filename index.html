@@ -11479,14 +11479,22 @@ function mlAiCall(systemPrompt, userPrompt){
 
   if (provider === 'gemini') {
     var url = 'https://generativelanguage.googleapis.com/v1beta/models/' + ML_AI_MODEL_GEMINI + ':generateContent';
+    // L'API REST attend systemInstruction en camelCase, et refuse une partie vide
+    // (proto3 : une chaîne vide = champ non renseigné -> erreur "parts[0].data").
+    // On ne l'envoie donc que s'il contient vraiment du texte ; sinon on replie
+    // les consignes dans le message utilisateur.
+    var sys  = (systemPrompt == null) ? '' : String(systemPrompt).trim();
+    var usr  = (userPrompt   == null) ? '' : String(userPrompt).trim();
+    if (!usr) return Promise.reject(new Error('Message vide'));
+    var payload = {
+      contents: [{ role: 'user', parts: [{ text: usr }] }],
+      generationConfig: { temperature: 0.7, maxOutputTokens: 2048, responseMimeType: 'application/json' }
+    };
+    if (sys) { payload.systemInstruction = { parts: [{ text: sys }] }; }
     return fetch(url, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'x-goog-api-key': key },
-      body: JSON.stringify({
-        system_instruction: { parts: [{ text: systemPrompt }] },
-        contents: [{ role: 'user', parts: [{ text: userPrompt }] }],
-        generationConfig: { temperature: 0.7, maxOutputTokens: 2048, responseMimeType: 'application/json' }
-      })
+      body: JSON.stringify(payload)
     }).then(function(r){
       if (!r.ok) {
         return r.json().catch(function(){ return {}; }).then(function(j){
