@@ -11478,7 +11478,10 @@ function mlAiCall(systemPrompt, userPrompt){
   }
 
   if (provider === 'gemini') {
-    var url = 'https://generativelanguage.googleapis.com/v1beta/models/' + ML_AI_MODEL_GEMINI + ':generateContent';
+    // Repli explicite : même si la constante globale manque (fichier partiellement
+    // déployé), on ne peut jamais construire une URL "models/undefined".
+    var gModel = (typeof ML_AI_MODEL_GEMINI !== 'undefined' && ML_AI_MODEL_GEMINI) ? ML_AI_MODEL_GEMINI : 'gemini-2.5-flash';
+    var url = 'https://generativelanguage.googleapis.com/v1beta/models/' + gModel + ':generateContent';
     // L'API REST attend systemInstruction en camelCase, et refuse une partie vide
     // (proto3 : une chaîne vide = champ non renseigné -> erreur "parts[0].data").
     // On ne l'envoie donc que s'il contient vraiment du texte ; sinon on replie
@@ -11522,7 +11525,7 @@ function mlAiCall(systemPrompt, userPrompt){
       'anthropic-dangerous-direct-browser-access': 'true'
     },
     body: JSON.stringify({
-      model: ML_AI_MODEL_CLAUDE,
+      model: (typeof ML_AI_MODEL_CLAUDE !== 'undefined' && ML_AI_MODEL_CLAUDE) ? ML_AI_MODEL_CLAUDE : 'claude-sonnet-4-5-20250929',
       max_tokens: 1500,
       system: systemPrompt,
       messages: [{ role: 'user', content: userPrompt }]
