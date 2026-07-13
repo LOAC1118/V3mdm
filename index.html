@@ -11544,7 +11544,7 @@ function mlAiCall(systemPrompt, userPrompt, schema){
       contents: [{ role: 'user', parts: [{ text: usr }] }],
       generationConfig: {
         temperature: 0.7,
-        maxOutputTokens: 4096,
+        maxOutputTokens: 8192,
         responseMimeType: 'application/json',
         // Les modèles Flash récents "réfléchissent" avant de répondre et peuvent
         // consommer tout le budget en réflexion interne -> réponse sans texte.
@@ -11724,16 +11724,36 @@ function mlAiGenerate(){
     'Brief du commercial : ' + brief;
 
   mlAiCall(ML_AI_SYS, user, ML_AI_SCHEMA_EMAIL).then(function(txt){
+    console.log('[IA] Réponse brute :', txt);
     var out = mlAiParseJson(txt);
     var subject = mlAiPick(out, ['subject','objet','sujet','title','titre']);
     var bodyHtml = mlAiPick(out, ['body_html','bodyHtml','body','html','corps','content','contenu','message']);
-    if (!subject && !bodyHtml) {
-      console.warn('[IA] Champs inattendus :', out);
-      throw new Error('Réponse IA vide — réessayez.');
+
+    // Le corps est bien plus long que l'objet : il arrive qu'il revienne vide.
+    // Dans ce cas on le redemande seul, avec son propre schéma.
+    if (!bodyHtml) {
+      mlAiStatus('Rédaction du corps du message…', 'info');
+      var sysB = 'Tu rédiges le CORPS d\'un email commercial B2B en français pour le secteur bio. ' +
+        'Concret et bref (150-220 mots), bénéfice revendeur, appel à l\'action simple. ' +
+        'Réponds UNIQUEMENT en JSON : {"body_html":"..."} avec du HTML simple (<p>, <strong>, <ul>, <li>, <br>).';
+      return mlAiCall(sysB, user + '\n\nObjet retenu : ' + (subject || ''), ML_AI_SCHEMA_BODY)
+        .then(function(t2){
+          console.log('[IA] Réponse brute (corps) :', t2);
+          var o2 = mlAiParseJson(t2);
+          return { subject: subject, bodyHtml: mlAiPick(o2, ['body_html','bodyHtml','body','html','corps','contenu']) };
+        });
+    }
+    return { subject: subject, bodyHtml: bodyHtml };
+
+  }).then(function(res){
+    if (!res.bodyHtml) {
+      console.warn('[IA] Corps introuvable dans la réponse.');
+      throw new Error('L\'IA n\'a pas renvoyé de contenu — réessayez.');
     }
     try {
-      if (subject)  { document.getElementById('ml-subject').value = subject; mlUpdateSubject(); }
-      if (bodyHtml) { document.getElementById('ml-editor').innerHTML = bodyHtml; mlUpdatePreview(); }
+      if (res.subject) { document.getElementById('ml-subject').value = res.subject; mlUpdateSubject(); }
+      document.getElementById('ml-editor').innerHTML = res.bodyHtml;
+      mlUpdatePreview();
       if (typeof mlUpdateSendBtn === 'function') mlUpdateSendBtn();
     } catch(domErr){
       console.error('[IA] Erreur affichage :', domErr);
