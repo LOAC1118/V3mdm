@@ -2043,6 +2043,8 @@ textarea { resize:vertical; min-height:80px; }
       </div>
       <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
         <button class="btn btn-ghost" onclick="top100Reload()" style="font-size:.75rem;">🔄 Actualiser</button>
+        <button class="btn btn-ghost" onclick="top100ExportPDF()" style="font-size:.75rem;">📕 PDF</button>
+        <button class="btn btn-ghost" onclick="top100ExportPDFTerrain()" style="font-size:.75rem;">📋 PDF terrain</button>
         <button class="btn btn-ghost" onclick="top100ExportCSV()" style="font-size:.75rem;">📄 CSV</button>
         <button class="btn btn-ghost" onclick="top100ExportXLS()" style="font-size:.75rem;">📊 Excel</button>
       </div>
@@ -2174,6 +2176,62 @@ textarea { resize:vertical; min-height:80px; }
           <div style="padding:1rem;">
             <input type="text" id="ml-subject" oninput="mlUpdateSubject()" placeholder="Ex: 🌿 Promo bio d'avril — jusqu'à -20% sur la gamme truffes" maxlength="120" style="font-size:.9rem;font-weight:500;"/>
             <div style="font-size:.68rem;color:var(--g500);margin-top:.3rem;"><span id="ml-subject-count">0</span>/120 caractères</div>
+          </div>
+        </div>
+
+        <!-- Assistant IA -->
+        <div class="card">
+          <div class="card-head">
+            <span class="card-title">🤖 Assistant IA</span>
+            <button class="btn btn-ghost" onclick="mlAiToggleSettings()" style="font-size:.68rem;padding:.28rem .6rem;">🔑 Clé API</button>
+          </div>
+
+          <div id="ml-ai-settings" style="display:none;padding:1rem;background:var(--blue-p50);border-bottom:1px solid var(--border);">
+            <label class="lb" style="display:block;margin-bottom:.4rem;">Clé API Anthropic (stockée uniquement dans ce navigateur, jamais envoyée sur GitHub)</label>
+            <div style="display:flex;gap:8px;">
+              <input type="password" id="ml-ai-key" placeholder="sk-ant-..." style="flex:1;font-family:ui-monospace,monospace;font-size:.8rem;"/>
+              <button class="btn btn-primary" onclick="mlAiSaveKey()" style="font-size:.75rem;padding:.4rem .8rem;">Enregistrer</button>
+              <button class="btn btn-ghost" onclick="mlAiClearKey()" style="font-size:.75rem;padding:.4rem .8rem;color:#dc2626;">Effacer</button>
+            </div>
+            <div style="font-size:.68rem;color:var(--g500);margin-top:.4rem;">
+              Clé à créer sur console.anthropic.com → API Keys. <span id="ml-ai-key-status" style="font-weight:600;"></span>
+            </div>
+          </div>
+
+          <div style="padding:1rem;">
+            <label class="lb" style="display:block;margin-bottom:.4rem;">Que voulez-vous dire à vos clients ?</label>
+            <textarea id="ml-ai-brief" placeholder="Ex : promo -15% sur la gamme petit-épeautre jusqu'au 31 juillet, insister sur la nouvelle récolte et le stock limité" style="min-height:70px;font-size:.85rem;"></textarea>
+
+            <div style="display:flex;gap:14px;align-items:center;flex-wrap:wrap;margin-top:.6rem;">
+              <div style="display:flex;align-items:center;gap:6px;">
+                <span style="font-size:.74rem;color:var(--g600);">Type :</span>
+                <select id="ml-ai-type" style="font-size:.78rem;padding:.3rem .5rem;border:1px solid var(--border-med);border-radius:6px;background:var(--surface);color:var(--g700);">
+                  <option value="promo">Promotion</option>
+                  <option value="nouveaute">Nouveauté produit</option>
+                  <option value="relance">Relance client inactif</option>
+                  <option value="info">Information / actualité</option>
+                </select>
+              </div>
+              <div style="display:flex;align-items:center;gap:6px;">
+                <span style="font-size:.74rem;color:var(--g600);">Ton :</span>
+                <select id="ml-ai-tone" style="font-size:.78rem;padding:.3rem .5rem;border:1px solid var(--border-med);border-radius:6px;background:var(--surface);color:var(--g700);">
+                  <option value="chaleureux">Chaleureux</option>
+                  <option value="direct">Direct / efficace</option>
+                  <option value="pro">Professionnel</option>
+                </select>
+              </div>
+              <button class="btn btn-primary" id="ml-ai-btn" onclick="mlAiGenerate()" style="font-size:.8rem;padding:.45rem 1rem;margin-left:auto;">✨ Rédiger l'email</button>
+            </div>
+
+            <div style="display:flex;gap:6px;margin-top:.7rem;flex-wrap:wrap;border-top:1px solid var(--border);padding-top:.7rem;">
+              <span style="font-size:.72rem;color:var(--g500);align-self:center;">Sur le texte actuel :</span>
+              <button class="btn btn-ghost" onclick="mlAiRewrite('ameliorer')" style="font-size:.7rem;padding:.28rem .6rem;">💡 Améliorer</button>
+              <button class="btn btn-ghost" onclick="mlAiRewrite('raccourcir')" style="font-size:.7rem;padding:.28rem .6rem;">✂️ Raccourcir</button>
+              <button class="btn btn-ghost" onclick="mlAiRewrite('corriger')" style="font-size:.7rem;padding:.28rem .6rem;">✅ Corriger</button>
+              <button class="btn btn-ghost" onclick="mlAiRewrite('objets')" style="font-size:.7rem;padding:.28rem .6rem;">🎯 3 idées d'objet</button>
+            </div>
+
+            <div id="ml-ai-status" style="display:none;font-size:.76rem;margin-top:.6rem;padding:.5rem .7rem;border-radius:6px;"></div>
           </div>
         </div>
 
@@ -3835,6 +3893,147 @@ function top100SetPeriod(v){
 function top100SetYear(v){ top100State.year=v; top100Compute(); }
 function top100SetTopN(v){ top100State.topN=v; top100Compute(); }
 function top100SetSearch(v){ top100State.search=v; top100Compute(); }
+
+function top100PeriodLabel(){
+  var st = top100State;
+  if (st.period === 'ytd')  return 'Année en cours (' + new Date().getFullYear() + ')';
+  if (st.period === '12m')  return '12 derniers mois';
+  if (st.period === 'year') return 'Année ' + (st.year || '');
+  return 'Depuis le début';
+}
+
+// Export PDF — jsPDF + autotable (rendu vectoriel natif, pas de capture d'image)
+function top100ExportPDF(){
+  if (!top100Rows.length){ toast('Rien à exporter','err'); return; }
+  withJsPdf(function(){
+    var doc = new window.jspdf.jsPDF({ orientation:'portrait', unit:'mm', format:'a4' });
+    var brand = (CURRENT_BRAND === 'naturaline') ? 'NATURALINE' : 'Moulin des Moines';
+    var metric = (top100State.metric === 'qte') ? 'quantité (colis)' : "chiffre d'affaires";
+    var W = doc.internal.pageSize.getWidth();
+
+    // Bandeau de titre
+    doc.setFillColor(4, 44, 83);
+    doc.rect(0, 0, W, 26, 'F');
+    doc.setTextColor(255, 255, 255);
+    doc.setFont('helvetica', 'bold'); doc.setFontSize(15);
+    doc.text('Top ' + top100Rows.length + ' Produits', 14, 12);
+    doc.setFont('helvetica', 'normal'); doc.setFontSize(9);
+    doc.text(brand + '  •  Classement par ' + metric + '  •  ' + top100PeriodLabel(), 14, 19);
+
+    // Totaux
+    var sumCA = top100Rows.reduce(function(s,r){ return s + r.ca; }, 0);
+    var sumQ  = top100Rows.reduce(function(s,r){ return s + r.qte; }, 0);
+    doc.setTextColor(90, 90, 90); doc.setFontSize(8.5);
+    doc.text('CA HT cumulé : ' + top100Eur(sumCA) + '     Colis vendus : ' + top100Int(sumQ) +
+             '     Édité le ' + new Date().toLocaleDateString('fr-FR'), 14, 33);
+
+    var body = top100Rows.map(function(r, i){
+      return [ String(i+1), r.libelle || '', r.code || '', r.ean || '—',
+               top100Int(r.qte), top100Eur(r.ca), String(r.nbCmd), String(r.nbCli) ];
+    });
+
+    doc.autoTable({
+      startY: 38,
+      head: [['#','Désignation','Code','EAN','Colis','CA HT','Cmd.','Clients']],
+      body: body,
+      theme: 'grid',
+      styles: { font:'helvetica', fontSize:7.5, cellPadding:1.6, overflow:'linebreak', textColor:[40,40,40] },
+      headStyles: { fillColor:[4,44,83], textColor:[255,255,255], fontStyle:'bold', fontSize:7.5, halign:'center' },
+      alternateRowStyles: { fillColor:[244,248,252] },
+      columnStyles: {
+        0: { cellWidth:9,  halign:'center', fontStyle:'bold' },
+        1: { cellWidth:58 },
+        2: { cellWidth:20 },
+        3: { cellWidth:24 },
+        4: { cellWidth:14, halign:'right' },
+        5: { cellWidth:22, halign:'right' },
+        6: { cellWidth:12, halign:'center' },
+        7: { cellWidth:14, halign:'center' }
+      },
+      margin: { left:14, right:14, bottom:16 },
+      didDrawPage: function(data){
+        var page = doc.internal.getCurrentPageInfo().pageNumber;
+        var H = doc.internal.pageSize.getHeight();
+        doc.setFontSize(7.5); doc.setTextColor(140,140,140);
+        doc.text(brand + ' — Top produits', 14, H - 8);
+        doc.text('Page ' + page, W - 14, H - 8, { align:'right' });
+      }
+    });
+
+    var fname = 'Top_produits_' + (CURRENT_BRAND === 'naturaline' ? 'NATURALINE' : 'MDM') +
+                '_' + new Date().toISOString().slice(0,10) + '.pdf';
+    doc.save(fname);
+    toast('PDF généré : ' + top100Rows.length + ' produits', 'ok');
+  });
+}
+
+// Export PDF "terrain" — 1 seule page A4, 2 colonnes, format poche
+function top100ExportPDFTerrain(){
+  if (!top100Rows.length){ toast('Rien à exporter','err'); return; }
+  withJsPdf(function(){
+    var doc = new window.jspdf.jsPDF({ orientation:'portrait', unit:'mm', format:'a4' });
+    var brand  = (CURRENT_BRAND === 'naturaline') ? 'NATURALINE' : 'Moulin des Moines';
+    var isQte  = (top100State.metric === 'qte');
+    var W = doc.internal.pageSize.getWidth();
+    var H = doc.internal.pageSize.getHeight();
+
+    var rows = top100Rows.slice(0, 100);          // 1 page = 100 lignes max
+    var half = Math.ceil(rows.length / 2);
+
+    // Bandeau compact
+    doc.setFillColor(4, 44, 83);
+    doc.rect(0, 0, W, 17, 'F');
+    doc.setTextColor(255,255,255);
+    doc.setFont('helvetica','bold'); doc.setFontSize(12);
+    doc.text('Top ' + rows.length + ' — ' + brand, 12, 8);
+    doc.setFont('helvetica','normal'); doc.setFontSize(7.5);
+    doc.text('Par ' + (isQte ? 'quantité (colis)' : 'CA HT') + '  •  ' + top100PeriodLabel() +
+             '  •  ' + new Date().toLocaleDateString('fr-FR'), 12, 13.5);
+
+    var mk = function(list, offset){
+      return list.map(function(r, i){
+        var lib = (r.libelle || r.code || '');
+        if (lib.length > 34) lib = lib.slice(0, 33) + '…';
+        return [ String(offset + i + 1), lib, isQte ? top100Int(r.qte) : top100Eur(r.ca) ];
+      });
+    };
+
+    var head = [['#', 'Désignation', isQte ? 'Colis' : 'CA HT']];
+    var common = {
+      startY: 21,
+      theme: 'plain',
+      styles: { font:'helvetica', fontSize:6.6, cellPadding:0.9, overflow:'hidden', textColor:[35,35,35], lineWidth:0 },
+      headStyles: { fillColor:[230,238,246], textColor:[4,44,83], fontStyle:'bold', fontSize:6.8 },
+      alternateRowStyles: { fillColor:[247,250,253] },
+      columnStyles: {
+        0: { cellWidth:7,  halign:'center', textColor:[120,120,120] },
+        1: { cellWidth:56 },
+        2: { cellWidth:23, halign:'right', fontStyle:'bold' }
+      },
+      tableWidth: 86
+    };
+
+    // Colonne gauche (1 → 50)
+    doc.autoTable(Object.assign({}, common, {
+      head: head, body: mk(rows.slice(0, half), 0), margin: { left:12, right:112 }
+    }));
+
+    // Colonne droite (51 → 100)
+    if (rows.length > half) {
+      doc.autoTable(Object.assign({}, common, {
+        head: head, body: mk(rows.slice(half), half), margin: { left:112, right:12 }
+      }));
+    }
+
+    doc.setFontSize(6.5); doc.setTextColor(150,150,150);
+    doc.text('Édité depuis le CRM ' + brand, 12, H - 7);
+
+    var fname = 'Top_terrain_' + (CURRENT_BRAND === 'naturaline' ? 'NATURALINE' : 'MDM') +
+                '_' + new Date().toISOString().slice(0,10) + '.pdf';
+    doc.save(fname);
+    toast('PDF terrain généré (1 page)', 'ok');
+  });
+}
 
 function top100ExportCSV(){
   if (!top100Rows.length){ toast('Rien à exporter','err'); return; }
@@ -11180,6 +11379,189 @@ var ML_TEMPLATES = {
           '<p>À très bientôt,<br/><b>L\'équipe commerciale</b></p>'
   }
 };
+
+// ═══════════════════════════════════════════════
+//  ASSISTANT IA — rédaction des emails (API Anthropic)
+//  La clé API est stockée UNIQUEMENT dans le localStorage de ce navigateur.
+//  Elle n'est jamais dans le code source ni sur GitHub.
+// ═══════════════════════════════════════════════
+var ML_AI_MODEL = 'claude-sonnet-4-5-20250929';
+
+function mlAiKeyName(){
+  var uid = (currentUser && currentUser.uid) ? ('_' + currentUser.uid) : '';
+  return 'mdm_ai_key' + uid;
+}
+function mlAiGetKey(){ try { return localStorage.getItem(mlAiKeyName()) || ''; } catch(e){ return ''; } }
+function mlAiToggleSettings(){
+  var el = document.getElementById('ml-ai-settings');
+  if (!el) return;
+  var show = (el.style.display === 'none');
+  el.style.display = show ? 'block' : 'none';
+  if (show) {
+    var k = mlAiGetKey();
+    document.getElementById('ml-ai-key').value = k;
+    var st = document.getElementById('ml-ai-key-status');
+    if (st) { st.textContent = k ? '✅ Clé enregistrée' : '⚠️ Aucune clé'; st.style.color = k ? '#059669' : '#dc2626'; }
+  }
+}
+function mlAiSaveKey(){
+  var v = (document.getElementById('ml-ai-key').value || '').trim();
+  if (!v) { toast('Clé vide', 'err'); return; }
+  try { localStorage.setItem(mlAiKeyName(), v); } catch(e){}
+  var st = document.getElementById('ml-ai-key-status');
+  if (st) { st.textContent = '✅ Clé enregistrée'; st.style.color = '#059669'; }
+  toast('Clé API enregistrée dans ce navigateur', 'ok');
+}
+function mlAiClearKey(){
+  try { localStorage.removeItem(mlAiKeyName()); } catch(e){}
+  document.getElementById('ml-ai-key').value = '';
+  var st = document.getElementById('ml-ai-key-status');
+  if (st) { st.textContent = '⚠️ Aucune clé'; st.style.color = '#dc2626'; }
+  toast('Clé effacée', 'ok');
+}
+
+function mlAiStatus(msg, kind){
+  var el = document.getElementById('ml-ai-status');
+  if (!el) return;
+  if (!msg) { el.style.display = 'none'; return; }
+  el.style.display = 'block';
+  el.textContent = msg;
+  if (kind === 'err') { el.style.background = '#fee2e2'; el.style.color = '#991b1b'; }
+  else if (kind === 'ok') { el.style.background = '#d1fae5'; el.style.color = '#065f46'; }
+  else { el.style.background = 'var(--blue-p50)'; el.style.color = 'var(--blue-p700)'; }
+}
+
+// Appel à l'API Anthropic depuis le navigateur
+function mlAiCall(systemPrompt, userPrompt){
+  var key = mlAiGetKey();
+  if (!key) {
+    mlAiStatus('Aucune clé API. Cliquez sur « 🔑 Clé API » pour en saisir une.', 'err');
+    mlAiToggleSettings();
+    return Promise.reject(new Error('no-key'));
+  }
+  return fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-api-key': key,
+      'anthropic-version': '2023-06-01',
+      'anthropic-dangerous-direct-browser-access': 'true'
+    },
+    body: JSON.stringify({
+      model: ML_AI_MODEL,
+      max_tokens: 1500,
+      system: systemPrompt,
+      messages: [{ role: 'user', content: userPrompt }]
+    })
+  }).then(function(r){
+    if (!r.ok) {
+      return r.json().catch(function(){ return {}; }).then(function(j){
+        var m = (j && j.error && j.error.message) ? j.error.message : ('Erreur HTTP ' + r.status);
+        if (r.status === 401) m = 'Clé API invalide ou expirée.';
+        if (r.status === 429) m = 'Trop de requêtes / crédit épuisé.';
+        throw new Error(m);
+      });
+    }
+    return r.json();
+  }).then(function(data){
+    return (data.content || []).filter(function(b){ return b.type === 'text'; })
+      .map(function(b){ return b.text; }).join('\n').trim();
+  });
+}
+
+function mlAiBrandCtx(){
+  var brand = (CURRENT_BRAND === 'naturaline') ? 'NATURALINE' : 'Moulin des Moines';
+  return 'Tu rédiges pour ' + brand + ', marque française de produits biologiques (épicerie bio, farines, céréales, petit-épeautre). ' +
+    'Les destinataires sont des professionnels : magasins bio, épiceries, revendeurs — PAS des particuliers. ' +
+    'Les prix sont HT. Le ton doit être celui d\'un commercial de terrain qui connaît ses clients.';
+}
+
+var ML_AI_SYS = 'Tu es un assistant qui rédige des emails commerciaux B2B en français, pour le secteur bio. ' +
+  'Règles : sois concret et bref (150-220 mots max), pas de blabla marketing creux, pas de superlatifs vides. ' +
+  'Va droit au bénéfice pour le revendeur (marge, rotation, nouveauté, saisonnalité). ' +
+  'Termine par un appel à l\'action simple et concret. ' +
+  'Tu réponds UNIQUEMENT avec un objet JSON valide, sans balises markdown, au format exact : ' +
+  '{"subject":"...","body_html":"..."} où body_html contient du HTML simple (<p>, <strong>, <ul>, <li>, <br>) — jamais de <html>, <head> ni <style>.';
+
+function mlAiParseJson(txt){
+  var clean = String(txt || '').replace(/```json/gi, '').replace(/```/g, '').trim();
+  var i = clean.indexOf('{'), j = clean.lastIndexOf('}');
+  if (i >= 0 && j > i) clean = clean.slice(i, j + 1);
+  return JSON.parse(clean);
+}
+
+function mlAiGenerate(){
+  var brief = (document.getElementById('ml-ai-brief').value || '').trim();
+  if (!brief) { mlAiStatus('Décrivez d\'abord ce que vous voulez dire à vos clients.', 'err'); return; }
+  var type = document.getElementById('ml-ai-type').value;
+  var tone = document.getElementById('ml-ai-tone').value;
+  var btn = document.getElementById('ml-ai-btn'), prev = btn.textContent;
+  btn.disabled = true; btn.textContent = '✨ Rédaction…';
+  mlAiStatus('Rédaction en cours…', 'info');
+
+  var typeLabel = { promo:'une promotion commerciale', nouveaute:'le lancement d\'une nouveauté produit',
+    relance:'une relance de client inactif (sans culpabiliser, donner envie de recommander)',
+    info:'une information / actualité' }[type] || 'un email commercial';
+  var toneLabel = { chaleureux:'chaleureux et proche', direct:'direct et efficace', pro:'professionnel et sobre' }[tone] || 'professionnel';
+
+  var user = mlAiBrandCtx() + '\n\n' +
+    'Objectif de l\'email : ' + typeLabel + '.\n' +
+    'Ton souhaité : ' + toneLabel + '.\n' +
+    'Brief du commercial : ' + brief;
+
+  mlAiCall(ML_AI_SYS, user).then(function(txt){
+    var out = mlAiParseJson(txt);
+    if (out.subject) { document.getElementById('ml-subject').value = out.subject; mlUpdateSubject(); }
+    if (out.body_html) { document.getElementById('ml-editor').innerHTML = out.body_html; mlUpdatePreview(); mlUpdateSendBtn(); }
+    mlAiStatus('✅ Email rédigé — relisez et ajustez avant envoi.', 'ok');
+  }).catch(function(e){
+    if (e.message !== 'no-key') mlAiStatus('Erreur : ' + e.message, 'err');
+  }).then(function(){
+    btn.disabled = false; btn.textContent = prev;
+  });
+}
+
+function mlAiRewrite(action){
+  var ed = document.getElementById('ml-editor');
+  var current = (ed.innerText || '').trim();
+  if (!current) { mlAiStatus('L\'éditeur est vide — rédigez d\'abord un email.', 'err'); return; }
+  var html = ed.innerHTML;
+  mlAiStatus('Traitement en cours…', 'info');
+
+  if (action === 'objets') {
+    var sysO = 'Tu proposes des objets d\'email B2B en français, courts (max 60 caractères), concrets, sans clickbait. ' +
+      'Réponds UNIQUEMENT en JSON : {"subjects":["...","...","..."]}';
+    mlAiCall(sysO, mlAiBrandCtx() + '\n\nVoici le corps de l\'email :\n' + current + '\n\nPropose 3 objets.')
+      .then(function(txt){
+        var out = mlAiParseJson(txt);
+        var list = out.subjects || [];
+        if (!list.length) throw new Error('Aucune proposition');
+        var pick = prompt('Choisissez un objet (1, 2 ou 3) :\n\n1. ' + list[0] + '\n2. ' + list[1] + '\n3. ' + list[2], '1');
+        var idx = parseInt(pick, 10) - 1;
+        if (list[idx]) { document.getElementById('ml-subject').value = list[idx]; mlUpdateSubject(); mlAiStatus('✅ Objet appliqué.', 'ok'); }
+        else mlAiStatus('', null);
+      }).catch(function(e){ if (e.message !== 'no-key') mlAiStatus('Erreur : ' + e.message, 'err'); });
+    return;
+  }
+
+  var instr = {
+    ameliorer: 'Améliore cet email : plus percutant, plus concret, meilleur rythme. Garde le sens et les informations chiffrées.',
+    raccourcir: 'Raccourcis cet email d\'environ 40%, en gardant l\'essentiel et l\'appel à l\'action.',
+    corriger: 'Corrige uniquement l\'orthographe, la grammaire et la ponctuation. Ne change RIEN au style ni au contenu.'
+  }[action];
+
+  var sysR = 'Tu retravailles des emails commerciaux B2B en français. ' + instr + ' ' +
+    'Réponds UNIQUEMENT en JSON : {"body_html":"..."} avec du HTML simple (<p>, <strong>, <ul>, <li>, <br>).';
+
+  mlAiCall(sysR, mlAiBrandCtx() + '\n\nEmail actuel (HTML) :\n' + html)
+    .then(function(txt){
+      var out = mlAiParseJson(txt);
+      if (!out.body_html) throw new Error('Réponse vide');
+      ed.innerHTML = out.body_html;
+      mlUpdatePreview(); mlUpdateSendBtn();
+      mlAiStatus('✅ Texte retravaillé — relisez avant envoi.', 'ok');
+    }).catch(function(e){ if (e.message !== 'no-key') mlAiStatus('Erreur : ' + e.message, 'err'); });
+}
 
 function mlSetTemplate(key) {
   var tpl = ML_TEMPLATES[key];
