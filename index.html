@@ -11405,7 +11405,56 @@ var ML_TEMPLATES = {
 //  Elle n'est jamais dans le code source ni sur GitHub.
 // ═══════════════════════════════════════════════
 var ML_AI_MODEL_CLAUDE = 'claude-sonnet-4-5-20250929';
-var ML_AI_MODEL_GEMINI = 'gemini-2.5-flash';   // niveau gratuit (Flash / Flash-Lite uniquement)
+
+// ── Détection automatique du modèle Gemini ──────────────────────────────
+// Google déprécie ses modèles très vite (2.0 Flash arrêté, 2.5 Flash fermé aux
+// nouveaux comptes...) et la disponibilité varie selon les comptes. On interroge
+// donc ListModels avec la clé de l'utilisateur et on choisit le meilleur Flash
+// accessible. Le résultat est mémorisé, et redétecté si le modèle devient invalide.
+function mlAiGeminiModelKey(){ return 'mdm_ai_gemini_model' + mlAiUid(); }
+function mlAiGetGeminiModel(){ try { return localStorage.getItem(mlAiGeminiModelKey()) || ''; } catch(e){ return ''; } }
+function mlAiSetGeminiModel(m){ try { localStorage.setItem(mlAiGeminiModelKey(), m); } catch(e){} }
+
+function mlAiScoreGeminiModel(id){
+  var n = id.toLowerCase();
+  if (n.indexOf('gemini') < 0) return -1;
+  // le niveau gratuit ne couvre que Flash / Flash-Lite
+  if (n.indexOf('flash') < 0) return -1;
+  // écarter les modèles spécialisés (image, audio, temps réel, embeddings…)
+  var bad = ['image','tts','audio','live','embedding','vision','native'];
+  for (var i=0;i<bad.length;i++){ if (n.indexOf(bad[i]) >= 0) return -1; }
+  var v = 0;
+  var m = n.match(/gemini-(\d+(?:\.\d+)?)/);
+  if (m) v = parseFloat(m[1]) || 0;
+  var score = v * 10;
+  if (n.indexOf('lite') >= 0)    score -= 1;   // Flash complet préféré à Flash-Lite
+  if (n.indexOf('preview') >= 0) score -= 2;   // stable préféré à preview
+  if (n.indexOf('exp') >= 0)     score -= 3;
+  return score;
+}
+
+function mlAiDetectGeminiModel(key){
+  return fetch('https://generativelanguage.googleapis.com/v1beta/models?pageSize=200', {
+    headers: { 'x-goog-api-key': key }
+  }).then(function(r){
+    if (!r.ok) throw new Error('Impossible de lister les modèles (clé invalide ?)');
+    return r.json();
+  }).then(function(data){
+    var list = (data && data.models) || [];
+    var best = null, bestScore = -1;
+    list.forEach(function(mo){
+      var methods = mo.supportedGenerationMethods || [];
+      if (methods.indexOf('generateContent') < 0) return;
+      var id = String(mo.name || '').replace(/^models\//, '');
+      var sc = mlAiScoreGeminiModel(id);
+      if (sc > bestScore) { bestScore = sc; best = id; }
+    });
+    if (!best) throw new Error('Aucun modèle Gemini compatible sur ce compte');
+    mlAiSetGeminiModel(best);
+    console.log('[IA] Modèle Gemini détecté :', best);
+    return best;
+  });
+}
 
 function mlAiUid(){ return (currentUser && currentUser.uid) ? ('_' + currentUser.uid) : ''; }
 function mlAiGetProvider(){
@@ -11433,7 +11482,14 @@ function mlAiRefreshSettings(){
     if (where) where.textContent = 'Clé à créer sur console.anthropic.com → API Keys';
   }
   var st = document.getElementById('ml-ai-key-status');
-  if (st) { st.textContent = k ? '✅ Clé enregistrée' : '⚠️ Aucune clé'; st.style.color = k ? '#059669' : '#dc2626'; }
+  if (st) {
+    if (!k) { st.textContent = '⚠️ Aucune clé'; st.style.color = '#dc2626'; }
+    else if (p === 'gemini') {
+      var gm = mlAiGetGeminiModel();
+      st.textContent = gm ? ('✅ Clé OK — modèle : ' + gm) : '✅ Clé enregistrée (modèle détecté au 1er usage)';
+      st.style.color = '#059669';
+    } else { st.textContent = '✅ Clé enregistrée'; st.style.color = '#059669'; }
+  }
 }
 function mlAiToggleSettings(){
   var el = document.getElementById('ml-ai-settings');
@@ -11446,6 +11502,7 @@ function mlAiSaveKey(){
   var v = (document.getElementById('ml-ai-key').value || '').trim();
   if (!v) { toast('Clé vide', 'err'); return; }
   try { localStorage.setItem(mlAiKeyName(), v); } catch(e){}
+  mlAiSetGeminiModel('');   // nouvelle clé -> on redétecte le modèle
   mlAiRefreshSettings();
   toast('Clé enregistrée dans ce navigateur', 'ok');
 }
@@ -11478,40 +11535,52 @@ function mlAiCall(systemPrompt, userPrompt){
   }
 
   if (provider === 'gemini') {
-    // Repli explicite : même si la constante globale manque (fichier partiellement
-    // déployé), on ne peut jamais construire une URL "models/undefined".
-    var gModel = (typeof ML_AI_MODEL_GEMINI !== 'undefined' && ML_AI_MODEL_GEMINI) ? ML_AI_MODEL_GEMINI : 'gemini-2.5-flash';
-    var url = 'https://generativelanguage.googleapis.com/v1beta/models/' + gModel + ':generateContent';
-    // L'API REST attend systemInstruction en camelCase, et refuse une partie vide
-    // (proto3 : une chaîne vide = champ non renseigné -> erreur "parts[0].data").
-    // On ne l'envoie donc que s'il contient vraiment du texte ; sinon on replie
-    // les consignes dans le message utilisateur.
-    var sys  = (systemPrompt == null) ? '' : String(systemPrompt).trim();
-    var usr  = (userPrompt   == null) ? '' : String(userPrompt).trim();
+    var sys = (systemPrompt == null) ? '' : String(systemPrompt).trim();
+    var usr = (userPrompt   == null) ? '' : String(userPrompt).trim();
     if (!usr) return Promise.reject(new Error('Message vide'));
+
     var payload = {
       contents: [{ role: 'user', parts: [{ text: usr }] }],
       generationConfig: { temperature: 0.7, maxOutputTokens: 2048, responseMimeType: 'application/json' }
     };
     if (sys) { payload.systemInstruction = { parts: [{ text: sys }] }; }
-    return fetch(url, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'x-goog-api-key': key },
-      body: JSON.stringify(payload)
-    }).then(function(r){
-      if (!r.ok) {
-        return r.json().catch(function(){ return {}; }).then(function(j){
-          var m = (j && j.error && j.error.message) ? j.error.message : ('Erreur HTTP ' + r.status);
-          if (r.status === 400 && /API key/i.test(m)) m = 'Clé Gemini invalide.';
-          if (r.status === 429) m = 'Quota gratuit atteint (250 requêtes/jour). Réessayez plus tard.';
-          throw new Error(m);
-        });
+
+    var doCall = function(model){
+      var url = 'https://generativelanguage.googleapis.com/v1beta/models/' + model + ':generateContent';
+      return fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-goog-api-key': key },
+        body: JSON.stringify(payload)
+      }).then(function(r){
+        if (!r.ok) {
+          return r.json().catch(function(){ return {}; }).then(function(j){
+            var m = (j && j.error && j.error.message) ? j.error.message : ('Erreur HTTP ' + r.status);
+            var e = new Error(m); e.status = r.status; throw e;
+          });
+        }
+        return r.json();
+      }).then(function(data){
+        var c = data && data.candidates && data.candidates[0];
+        if (!c || !c.content || !c.content.parts) throw new Error('Réponse vide de Gemini');
+        return c.content.parts.map(function(p){ return p.text || ''; }).join('').trim();
+      });
+    };
+
+    var cached = mlAiGetGeminiModel();
+    var start = cached ? Promise.resolve(cached) : mlAiDetectGeminiModel(key);
+
+    return start.then(doCall).catch(function(e){
+      // Modèle périmé / retiré / indisponible -> on redétecte une fois et on réessaie
+      var msg = String(e.message || '');
+      var stale = (e.status === 404) || /no longer available|is not found|not supported/i.test(msg);
+      if (stale) {
+        mlAiSetGeminiModel('');
+        mlAiStatus('Modèle indisponible — détection d\'un modèle à jour…', 'info');
+        return mlAiDetectGeminiModel(key).then(doCall);
       }
-      return r.json();
-    }).then(function(data){
-      var c = data && data.candidates && data.candidates[0];
-      if (!c || !c.content || !c.content.parts) throw new Error('Réponse vide de Gemini');
-      return c.content.parts.map(function(p){ return p.text || ''; }).join('').trim();
+      if (e.status === 429) throw new Error('Quota gratuit atteint. Réessayez dans quelques minutes.');
+      if (e.status === 400 && /API key/i.test(msg)) throw new Error('Clé Gemini invalide.');
+      throw e;
     });
   }
 
