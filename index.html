@@ -11541,16 +11541,26 @@ function mlAiCall(systemPrompt, userPrompt){
 
     var payload = {
       contents: [{ role: 'user', parts: [{ text: usr }] }],
-      generationConfig: { temperature: 0.7, maxOutputTokens: 2048, responseMimeType: 'application/json' }
+      generationConfig: {
+        temperature: 0.7,
+        maxOutputTokens: 4096,
+        responseMimeType: 'application/json',
+        // Les modèles Flash récents "réfléchissent" avant de répondre et peuvent
+        // consommer tout le budget en réflexion interne -> réponse sans texte.
+        // Inutile pour rédiger un mail : on désactive.
+        thinkingConfig: { thinkingBudget: 0 }
+      }
     };
     if (sys) { payload.systemInstruction = { parts: [{ text: sys }] }; }
 
-    var doCall = function(model){
+    var doCall = function(model, noThinkingCfg){
+      var body = JSON.parse(JSON.stringify(payload));
+      if (noThinkingCfg) { delete body.generationConfig.thinkingConfig; }
       var url = 'https://generativelanguage.googleapis.com/v1beta/models/' + model + ':generateContent';
       return fetch(url, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'x-goog-api-key': key },
-        body: JSON.stringify(payload)
+        body: JSON.stringify(body)
       }).then(function(r){
         if (!r.ok) {
           return r.json().catch(function(){ return {}; }).then(function(j){
@@ -11561,8 +11571,21 @@ function mlAiCall(systemPrompt, userPrompt){
         return r.json();
       }).then(function(data){
         var c = data && data.candidates && data.candidates[0];
-        if (!c || !c.content || !c.content.parts) throw new Error('Réponse vide de Gemini');
-        return c.content.parts.map(function(p){ return p.text || ''; }).join('').trim();
+        if (!c) throw new Error('Gemini n\'a renvoyé aucune réponse (contenu peut-être bloqué).');
+        var parts = (c.content && c.content.parts) ? c.content.parts : [];
+        var txt = parts.map(function(p){ return (p && p.text) ? p.text : ''; }).join('').trim();
+        if (!txt) {
+          var fr = c.finishReason ? (' [' + c.finishReason + ']') : '';
+          throw new Error('Réponse vide de Gemini' + fr + ' — réessayez.');
+        }
+        return txt;
+      }).catch(function(e){
+        // certains modèles n'acceptent pas thinkingConfig -> on réessaie sans
+        var m = String(e.message || '');
+        if (!noThinkingCfg && e.status === 400 && /thinking|unknown name|invalid.*argument/i.test(m)) {
+          return doCall(model, true);
+        }
+        throw e;
       });
     };
 
@@ -11633,7 +11656,12 @@ function mlAiParseJson(txt){
   var clean = String(txt || '').replace(/```json/gi, '').replace(/```/g, '').trim();
   var i = clean.indexOf('{'), j = clean.lastIndexOf('}');
   if (i >= 0 && j > i) clean = clean.slice(i, j + 1);
-  return JSON.parse(clean);
+  var out;
+  try { out = JSON.parse(clean); }
+  catch(e){ throw new Error('Réponse IA illisible : ' + clean.slice(0, 120)); }
+  if (Array.isArray(out)) out = out[0] || {};          // certains modèles renvoient un tableau
+  if (!out || typeof out !== 'object') throw new Error('Réponse IA inattendue.');
+  return out;
 }
 
 function mlAiGenerate(){
@@ -11657,10 +11685,18 @@ function mlAiGenerate(){
 
   mlAiCall(ML_AI_SYS, user).then(function(txt){
     var out = mlAiParseJson(txt);
-    if (out.subject) { document.getElementById('ml-subject').value = out.subject; mlUpdateSubject(); }
-    if (out.body_html) { document.getElementById('ml-editor').innerHTML = out.body_html; mlUpdatePreview(); mlUpdateSendBtn(); }
+    try {
+      if (out.subject)   { document.getElementById('ml-subject').value = out.subject; mlUpdateSubject(); }
+      if (out.body_html) { document.getElementById('ml-editor').innerHTML = out.body_html; mlUpdatePreview(); }
+      if (typeof mlUpdateSendBtn === 'function') mlUpdateSendBtn();
+    } catch(domErr){
+      console.error('[IA] Erreur affichage :', domErr);
+      throw new Error('Email généré mais affichage impossible : ' + domErr.message);
+    }
+    if (!out.subject && !out.body_html) throw new Error('Réponse IA vide — réessayez.');
     mlAiStatus('✅ Email rédigé — relisez et ajustez avant envoi.', 'ok');
   }).catch(function(e){
+    console.error('[IA] Erreur :', e);
     if (e.message !== 'no-key') mlAiStatus('Erreur : ' + e.message, 'err');
   }).then(function(){
     btn.disabled = false; btn.textContent = prev;
@@ -11771,6 +11807,7 @@ function mlRemovePJ() {
 }
 
 function mlUpdateSendBtn() {
+  if (!Array.isArray(mlRecipients)) mlRecipients = [];
   var hasEmails = mlRecipients.length > 0;
   var hasSubject = document.getElementById('ml-subject').value.trim().length > 0;
   var hasBody = document.getElementById('ml-editor').innerHTML.trim().length > 0;
