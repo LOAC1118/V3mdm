@@ -3815,7 +3815,7 @@ function showLoginScreen() {
   if (loader) loader.classList.add('done');
   document.getElementById('login-screen').style.display  = 'flex';
   auth.onAuthStateChanged(user => {
-    if (user) { currentUser = user; showApp(); if (typeof mlAiSyncFromCloud === 'function') mlAiSyncFromCloud(); }
+    if (user) { currentUser = user; showApp(); if (typeof mlAiSyncFromCloud === 'function') mlAiSyncFromCloud(); if (typeof botLoadCloud === 'function') botLoadCloud(); }
   });
 }
 
@@ -12915,8 +12915,10 @@ function iaInit(){
     lbl.style.color = key ? 'var(--g500)' : '#dc2626';
   }
   if (!mlAiGetKey()) { iaToggleConfig(true); }
-  if (!botState().length) botPush('ai', botGreeting());
-  else botRender();
+  botLoadCloud().then(function(){
+    if (!botState().length) botPush('ai', botGreeting());
+    else botRender();
+  });
   setTimeout(function(){ var t = document.getElementById('bot-text'); if (t) t.focus(); }, 150);
 }
 // ── Bulle flottante (même conversation que la section dédiée) ──
@@ -12933,8 +12935,10 @@ function botPanelToggle(){
         ? ((mlAiGetProvider() === 'gemini' ? 'Gemini' : 'Claude') + ' · ' + (CURRENT_BRAND === 'naturaline' ? 'NATURALINE' : 'MDM'))
         : 'Aucune clé configurée';
     }
-    if (!botState().length) botPush('ai', botGreeting());
-    else botRender();
+    botLoadCloud().then(function(){
+      if (!botState().length) botPush('ai', botGreeting());
+      else botRender();
+    });
     setTimeout(function(){ var t = document.getElementById('botp-text'); if (t) t.focus(); }, 120);
   }
 }
@@ -12950,7 +12954,7 @@ function botGreeting(){
 
 function botClear(){
   botHistory = [];
-  botPush('ai', 'Nouvelle conversation. Que voulez-vous savoir ?');
+  botPush('ai', 'Nouvelle conversation. Que voulez-vous savoir ?');  // écrit aussi dans le cloud
 }
 function botEsc(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 
@@ -12971,9 +12975,43 @@ function botRender(){
     box.scrollTop = box.scrollHeight;
   });
 }
+// ── Persistance de la conversation entre appareils (Firestore) ──
+// La conversation est enregistrée sur le compte : on la retrouve sur PC,
+// iPhone et Android. On ne garde que les 60 derniers messages.
+var BOT_MAX_MSGS = 60;
+var botSaveTimer = null;
+var botCloudLoaded = false;
+
+function botSaveCloud(){
+  if (!db || !currentUser) return;
+  clearTimeout(botSaveTimer);
+  botSaveTimer = setTimeout(function(){
+    var msgs = botState().filter(function(m){ return m.role !== 'err'; }).slice(-BOT_MAX_MSGS);
+    bcol('config').doc('bot_chat').set({
+      messages: msgs,
+      updatedAt: new Date().toISOString()
+    }).catch(function(e){ console.warn('[BOT] Sauvegarde conversation :', e.message); });
+  }, 900);
+}
+
+function botLoadCloud(){
+  if (!db || !currentUser || botCloudLoaded) return Promise.resolve();
+  botCloudLoaded = true;
+  return bcol('config').doc('bot_chat').get().then(function(doc){
+    if (!doc.exists) return;
+    var d = doc.data() || {};
+    if (Array.isArray(d.messages) && d.messages.length) {
+      botHistory = d.messages.slice(-BOT_MAX_MSGS);
+      botRender();
+      console.log('[BOT] Conversation restaurée (' + botHistory.length + ' messages)');
+    }
+  }).catch(function(e){ console.warn('[BOT] Lecture conversation :', e.message); });
+}
+
 function botPush(kind, text){
   botState().push({ role: (kind === 'user' ? 'user' : (kind === 'err' ? 'err' : 'model')), text: text });
   botRender();
+  botSaveCloud();
 }
 
 // ── Instantané des données du CRM (compact, pour tenir dans le contexte) ──
