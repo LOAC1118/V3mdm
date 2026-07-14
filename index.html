@@ -1038,6 +1038,7 @@ textarea { resize:vertical; min-height:80px; }
     <button class="t-tab" onclick="showSection('mailing',this)">✉️ Mailing</button>
     <button class="t-tab" onclick="showSection('promos',this)">🎨 Promos PDF</button>
     <button class="t-tab" onclick="showSection('top100',this)">🏆 Top 100</button>
+    <button class="t-tab" onclick="showSection('cadencier',this)">📅 Cadencier</button>
 
   </div>
   <div class="topbar-right">
@@ -1095,6 +1096,10 @@ textarea { resize:vertical; min-height:80px; }
     <div class="nav-item" onclick="showSection('top100',null,this)">
       <svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 2h8v3a4 4 0 0 1-8 0z"/><path d="M12 3h2v1a2 2 0 0 1-2 2M4 3H2v1a2 2 0 0 0 2 2"/><path d="M6.5 9h3M8 9v3M6 13h4"/></svg>
       Top 100
+    </div>
+    <div class="nav-item" onclick="showSection('cadencier',null,this)">
+      <svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="1.5" y="3" width="13" height="11.5" rx="1.5"/><path d="M1.5 6.5h13M5 1.5v3M11 1.5v3"/><path d="M4.5 9h2M4.5 11.5h2M9.5 9h2M9.5 11.5h2"/></svg>
+      Cadencier
     </div>
   </div>
 
@@ -2090,6 +2095,81 @@ textarea { resize:vertical; min-height:80px; }
     </div>
   </div>
 
+  <!-- CADENCIER CLIENT -->
+  <div id="sec-cadencier" class="hidden" style="padding:1.75rem 2rem;overflow-y:auto;flex:1;background:var(--bg);box-sizing:border-box;">
+    <div class="page-header">
+      <div>
+        <div class="page-title">📅 Cadencier client</div>
+        <div style="font-size:.75rem;color:var(--g500);margin-top:2px;">Produits commandés par client, mois par mois</div>
+      </div>
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+        <button class="btn btn-ghost" onclick="cadReload()" style="font-size:.75rem;">🔄 Actualiser</button>
+        <button class="btn btn-ghost" onclick="cadExportPDF()" style="font-size:.75rem;">📕 PDF</button>
+        <button class="btn btn-ghost" onclick="cadExportXLS()" style="font-size:.75rem;">📊 Excel</button>
+      </div>
+    </div>
+
+    <!-- Sélection client -->
+    <div class="card" style="padding:.85rem 1rem;margin-bottom:1.25rem;display:flex;align-items:center;gap:14px;flex-wrap:wrap;">
+      <div style="display:flex;align-items:center;gap:8px;flex:1;min-width:240px;">
+        <span style="font-size:.78rem;font-weight:600;color:var(--g700);">Client :</span>
+        <select id="cad-client" onchange="cadSetClient(this.value)" style="flex:1;font-size:.82rem;padding:.4rem .5rem;border:1px solid var(--border-med);border-radius:6px;background:var(--surface);color:var(--g700);">
+          <option value="">— Sélectionnez un client —</option>
+        </select>
+      </div>
+      <div style="display:flex;align-items:center;gap:6px;">
+        <span style="font-size:.75rem;color:var(--g600);">Période :</span>
+        <select id="cad-months" onchange="cadSetMonths(this.value)" style="font-size:.78rem;padding:.35rem .5rem;border:1px solid var(--border-med);border-radius:6px;background:var(--surface);color:var(--g700);">
+          <option value="6">6 derniers mois</option>
+          <option value="12" selected>12 derniers mois</option>
+          <option value="24">24 derniers mois</option>
+        </select>
+      </div>
+      <div style="display:flex;align-items:center;gap:6px;">
+        <span style="font-size:.75rem;color:var(--g600);">Unité :</span>
+        <select id="cad-unit" onchange="cadSetUnit(this.value)" style="font-size:.78rem;padding:.35rem .5rem;border:1px solid var(--border-med);border-radius:6px;background:var(--surface);color:var(--g700);">
+          <option value="qte">Colis</option>
+          <option value="ca">CA HT (€)</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- Synthèse client -->
+    <div id="cad-stats" style="display:none;grid-template-columns:repeat(4,1fr);gap:1rem;margin-bottom:1.25rem;">
+      <div class="card" style="padding:1rem;">
+        <div style="font-size:.72rem;color:var(--g500);text-transform:uppercase;letter-spacing:.04em;font-weight:600;">Références commandées</div>
+        <div class="stat-val" id="cad-stat-refs" style="font-size:1.5rem;color:var(--blue-p700);margin-top:4px;">—</div>
+      </div>
+      <div class="card" style="padding:1rem;">
+        <div style="font-size:.72rem;color:var(--g500);text-transform:uppercase;letter-spacing:.04em;font-weight:600;">CA HT cumulé</div>
+        <div class="stat-val" id="cad-stat-ca" style="font-size:1.5rem;color:var(--em600,#059669);margin-top:4px;">—</div>
+      </div>
+      <div class="card" style="padding:1rem;">
+        <div style="font-size:.72rem;color:var(--g500);text-transform:uppercase;letter-spacing:.04em;font-weight:600;">Commandes</div>
+        <div class="stat-val" id="cad-stat-cmds" style="font-size:1.5rem;color:var(--g800);margin-top:4px;">—</div>
+      </div>
+      <div class="card" style="padding:1rem;">
+        <div style="font-size:.72rem;color:var(--g500);text-transform:uppercase;letter-spacing:.04em;font-weight:600;">Dernière commande</div>
+        <div class="stat-val" id="cad-stat-last" style="font-size:1.1rem;color:var(--g800);margin-top:8px;">—</div>
+      </div>
+    </div>
+
+    <!-- Produits à relancer -->
+    <div id="cad-alert" style="display:none;" class="card"></div>
+
+    <!-- Cadencier -->
+    <div class="card" style="padding:0;overflow:hidden;">
+      <div class="tbl-wrap" style="overflow-x:auto;">
+        <table id="cad-table" style="width:100%;border-collapse:collapse;min-width:700px;">
+          <thead id="cad-thead"></thead>
+          <tbody id="cad-tbody">
+            <tr><td style="text-align:center;padding:1.5rem;color:var(--g400);">Sélectionnez un client pour afficher son cadencier</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
   <!-- TOP 100 PRODUITS -->
   <div id="sec-top100" class="hidden" style="padding:1.75rem 2rem;overflow-y:auto;flex:1;background:var(--bg);box-sizing:border-box;">
     <div class="page-header">
@@ -2498,6 +2578,10 @@ textarea { resize:vertical; min-height:80px; }
   <button class="mmenu-item" role="menuitem" data-sec="top100" onclick="mnavGo('top100')">
     <span class="mmenu-ico"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 2h8v3a4 4 0 0 1-8 0z"/><path d="M12 3h2v1a2 2 0 0 1-2 2M4 3H2v1a2 2 0 0 0 2 2"/><path d="M6.5 9h3M8 9v3M6 13h4"/></svg></span>
     <span class="mmenu-label">Top 100 Produits</span>
+  </button>
+  <button class="mmenu-item" role="menuitem" data-sec="cadencier" onclick="mnavGo('cadencier')">
+    <span class="mmenu-ico"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="1.5" y="3" width="13" height="11.5" rx="1.5"/><path d="M1.5 6.5h13M5 1.5v3M11 1.5v3"/><path d="M4.5 9h2M4.5 11.5h2M9.5 9h2M9.5 11.5h2"/></svg></span>
+    <span class="mmenu-label">Cadencier</span>
   </button>
 </div>
 
@@ -3791,7 +3875,7 @@ if (typeof cdbPageSize  === 'undefined') window.cdbPageSize  = 50;
 // ═══════════════════════════════════════════════
 //  NAVIGATION
 // ═══════════════════════════════════════════════
-const SECTIONS = ['dashboard','bdc','frais','contacts-db','commissions','comptes','mailing','accords','promos','top100'];
+const SECTIONS = ['dashboard','bdc','frais','contacts-db','commissions','comptes','mailing','accords','promos','top100','cadencier'];
 function showSection(name, tabEl, sideEl) {
   if (name === 'comptes' && !isAdminUser()) {
     toast('Accès réservé.', 'err');
@@ -3812,6 +3896,7 @@ function showSection(name, tabEl, sideEl) {
   if (name==='commissions') { setTimeout(function(){ if (typeof commInit === 'function') commInit(); }, 80); }
   if (name==='promos') { setTimeout(function(){ if (typeof promoInit === 'function') promoInit(); }, 80); }
   if (name==='top100') { setTimeout(function(){ if (typeof top100Init === 'function') top100Init(); }, 80); }
+  if (name==='cadencier') { setTimeout(function(){ if (typeof cadInit === 'function') cadInit(); }, 80); }
   // Démonter le générateur quand on quitte l'onglet Promos
   if (name !== 'promos' && typeof promoUnmount === 'function') promoUnmount();
   if (name==='comptes') { if (typeof comptesRender === 'function') comptesRender(); }
@@ -4012,6 +4097,274 @@ function top100SetPeriod(v){
 function top100SetYear(v){ top100State.year=v; top100Compute(); }
 function top100SetTopN(v){ top100State.topN=v; top100Compute(); }
 function top100SetSearch(v){ top100State.search=v; top100Compute(); }
+
+// ═══════════════════════════════════════════════
+//  CADENCIER CLIENT — produits commandés par client, mois par mois
+//  Source : bcol('commandes') (scopé par marque) → lignes[]
+// ═══════════════════════════════════════════════
+var cadCmds = null, cadCmdsBrand = null;
+var cadState = { client:'', months:12, unit:'qte' };
+var cadMatrix = null;   // { months:[], rows:[], totals:[] }
+
+function cadEur(n){ return Number(n||0).toLocaleString('fr-FR',{minimumFractionDigits:2,maximumFractionDigits:2})+' €'; }
+function cadInt(n){ return Number(n||0).toLocaleString('fr-FR'); }
+function cadEsc(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function cadDate(c){ var t=c.createdAt; if(!t) return null; try { return new Date(t.seconds? t.seconds*1000 : t); } catch(e){ return null; } }
+function cadKeyOf(c){ return (c.clientNom || c.numClient || '—'); }
+
+function cadInit(){
+  if (cadCmds === null || cadCmdsBrand !== CURRENT_BRAND) cadLoad();
+  else { cadFillClients(); cadRender(); }
+}
+function cadReload(){ cadCmds = null; cadInit(); }
+
+function cadLoad(){
+  var tb = document.getElementById('cad-tbody');
+  if (tb) tb.innerHTML = '<tr><td style="text-align:center;padding:1.5rem;color:var(--g400);">Chargement des commandes…</td></tr>';
+  if (!db || !currentUser) return;
+  bcol('commandes').get().then(function(snap){
+    cadCmds = [];
+    snap.forEach(function(d){ cadCmds.push(d.data()); });
+    cadCmdsBrand = CURRENT_BRAND;
+    cadFillClients();
+    cadRender();
+  }).catch(function(e){
+    console.warn('[Cadencier]', e);
+    if (tb) tb.innerHTML = '<tr><td style="text-align:center;padding:1rem;color:var(--g400);">Erreur de chargement</td></tr>';
+  });
+}
+
+function cadFillClients(){
+  var sel = document.getElementById('cad-client'); if (!sel) return;
+  var seen = {};
+  (cadCmds||[]).forEach(function(c){
+    var k = cadKeyOf(c);
+    if (!seen[k]) seen[k] = { n:0, last:null };
+    seen[k].n++;
+    var d = cadDate(c);
+    if (d && (!seen[k].last || d > seen[k].last)) seen[k].last = d;
+  });
+  var names = Object.keys(seen).sort(function(a,b){ return a.localeCompare(b,'fr'); });
+  var cur = cadState.client;
+  sel.innerHTML = '<option value="">— Sélectionnez un client (' + names.length + ') —</option>' +
+    names.map(function(n){
+      var o = seen[n];
+      return '<option value="' + cadEsc(n) + '">' + cadEsc(n) + ' (' + o.n + ' cmd.)</option>';
+    }).join('');
+  if (cur && names.indexOf(cur) >= 0) sel.value = cur;
+}
+
+function cadSetClient(v){ cadState.client = v; cadRender(); }
+function cadSetMonths(v){ cadState.months = parseInt(v,10) || 12; cadRender(); }
+function cadSetUnit(v){ cadState.unit = v; cadRender(); }
+
+// Construit la matrice produits × mois pour le client sélectionné
+function cadBuild(){
+  var client = cadState.client;
+  if (!client) return null;
+
+  // liste des N derniers mois (clés 'YYYY-MM')
+  var months = [], now = new Date();
+  for (var i = cadState.months - 1; i >= 0; i--) {
+    var d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+    months.push({ key: d.getFullYear() + '-' + ('0'+(d.getMonth()+1)).slice(-2),
+                  label: d.toLocaleDateString('fr-FR', { month:'short' }).replace('.','') + '\n' + String(d.getFullYear()).slice(2) });
+  }
+  var mIdx = {}; months.forEach(function(m,i){ mIdx[m.key] = i; });
+
+  var prods = {}, nbCmd = 0, lastDate = null, totalCA = 0;
+  (cadCmds||[]).forEach(function(c){
+    if (cadKeyOf(c) !== client) return;
+    var d = cadDate(c); if (!d) return;
+    if (!lastDate || d > lastDate) lastDate = d;
+    var key = d.getFullYear() + '-' + ('0'+(d.getMonth()+1)).slice(-2);
+    var col = mIdx[key];
+    nbCmd++;
+    (c.lignes||[]).forEach(function(l){
+      var code = l.code || '(sans code)';
+      var qte = Number(l.qty || l.qt || 0) || 0;
+      var ca  = Number(l.total_ht || l.total || (Number(l.pu_ht||0)*qte)) || 0;
+      totalCA += ca;
+      if (!prods[code]) {
+        var p = (typeof PRODUCTS !== 'undefined') ? PRODUCTS.find(function(x){ return String(x.code)===String(code); }) : null;
+        prods[code] = { code:code, libelle: l.libelle || (p?p.libelle:''), ean: p?p.ean:'',
+                        cells: new Array(months.length).fill(0), caCells: new Array(months.length).fill(0),
+                        totQ:0, totCA:0, nb:0, last:null };
+      }
+      var P = prods[code];
+      if (col !== undefined) { P.cells[col] += qte; P.caCells[col] += ca; }
+      P.totQ += qte; P.totCA += ca; P.nb++;
+      if (!P.last || d > P.last) P.last = d;
+    });
+  });
+
+  var rows = Object.keys(prods).map(function(k){ return prods[k]; })
+    .sort(function(a,b){ return b.totQ - a.totQ; });
+
+  // totaux par colonne
+  var totals = new Array(months.length).fill(0);
+  rows.forEach(function(r){
+    r.cells.forEach(function(v,i){ totals[i] += (cadState.unit === 'ca') ? r.caCells[i] : v; });
+  });
+
+  return { months:months, rows:rows, totals:totals, nbCmd:nbCmd, lastDate:lastDate, totalCA:totalCA };
+}
+
+function cadRender(){
+  var thead = document.getElementById('cad-thead');
+  var tbody = document.getElementById('cad-tbody');
+  var stats = document.getElementById('cad-stats');
+  var alert = document.getElementById('cad-alert');
+  if (!thead || !tbody) return;
+
+  cadMatrix = cadBuild();
+  if (!cadMatrix) {
+    thead.innerHTML = '';
+    tbody.innerHTML = '<tr><td style="text-align:center;padding:1.5rem;color:var(--g400);">Sélectionnez un client pour afficher son cadencier</td></tr>';
+    if (stats) stats.style.display = 'none';
+    if (alert) alert.style.display = 'none';
+    return;
+  }
+
+  var M = cadMatrix, isCA = (cadState.unit === 'ca');
+
+  if (!M.rows.length) {
+    thead.innerHTML = '';
+    tbody.innerHTML = '<tr><td style="text-align:center;padding:1.5rem;color:var(--g400);">Aucune commande pour ce client</td></tr>';
+    if (stats) stats.style.display = 'none';
+    if (alert) alert.style.display = 'none';
+    return;
+  }
+
+  // stats
+  if (stats) {
+    stats.style.display = 'grid';
+    document.getElementById('cad-stat-refs').textContent = cadInt(M.rows.length);
+    document.getElementById('cad-stat-ca').textContent = cadEur(M.totalCA);
+    document.getElementById('cad-stat-cmds').textContent = cadInt(M.nbCmd);
+    document.getElementById('cad-stat-last').textContent = M.lastDate ? M.lastDate.toLocaleDateString('fr-FR') : '—';
+  }
+
+  // produits à relancer : commandés au moins 2 fois, mais rien sur les 3 derniers mois
+  var recent = 3;
+  var lapsed = M.rows.filter(function(r){
+    if (r.nb < 2) return false;
+    var s = 0;
+    for (var i = Math.max(0, M.months.length - recent); i < M.months.length; i++) s += r.cells[i];
+    return s === 0;
+  }).slice(0, 8);
+  if (alert) {
+    if (lapsed.length) {
+      alert.style.display = 'block';
+      alert.style.padding = '1rem';
+      alert.style.borderLeft = '4px solid #f59e0b';
+      alert.style.marginBottom = '1.25rem';
+      alert.innerHTML = '<div style="font-size:.82rem;font-weight:600;color:var(--g800);margin-bottom:.5rem;">⚠️ Produits habituels non repris depuis 3 mois</div>' +
+        '<div style="display:flex;flex-wrap:wrap;gap:6px;">' +
+        lapsed.map(function(r){
+          return '<span style="font-size:.74rem;background:#fef3c7;color:#92400e;padding:.25rem .6rem;border-radius:99px;">' +
+            cadEsc(r.libelle || r.code) + ' <span style="opacity:.7;">· dernier : ' +
+            (r.last ? r.last.toLocaleDateString('fr-FR') : '—') + '</span></span>';
+        }).join('') + '</div>';
+    } else { alert.style.display = 'none'; }
+  }
+
+  // en-tête
+  thead.innerHTML = '<tr style="background:var(--blue-p50);border-bottom:2px solid var(--border-med);">' +
+    '<th style="padding:.55rem .6rem;text-align:left;font-size:.72rem;color:var(--g600);position:sticky;left:0;background:var(--blue-p50);min-width:190px;">Produit</th>' +
+    M.months.map(function(m){
+      return '<th style="padding:.55rem .3rem;text-align:center;font-size:.66rem;color:var(--g600);white-space:pre-line;min-width:44px;">' + m.label + '</th>';
+    }).join('') +
+    '<th style="padding:.55rem .6rem;text-align:right;font-size:.72rem;color:var(--g600);background:var(--blue-p50);">Total</th></tr>';
+
+  // lignes
+  tbody.innerHTML = M.rows.map(function(r){
+    var cells = r.cells.map(function(v, i){
+      var val = isCA ? r.caCells[i] : v;
+      if (!val) return '<td style="padding:.4rem .3rem;text-align:center;font-size:.72rem;color:var(--g300);">·</td>';
+      var txt = isCA ? Math.round(val) : cadInt(val);
+      return '<td style="padding:.4rem .3rem;text-align:center;font-size:.74rem;font-weight:600;color:var(--blue-p700);background:rgba(59,130,212,.07);">' + txt + '</td>';
+    }).join('');
+    var tot = isCA ? cadEur(r.totCA) : cadInt(r.totQ);
+    return '<tr style="border-bottom:1px solid var(--border);">' +
+      '<td style="padding:.45rem .6rem;position:sticky;left:0;background:var(--surface);">' +
+        '<div style="font-size:.78rem;font-weight:600;color:var(--g800);">' + cadEsc(r.libelle || r.code) + '</div>' +
+        '<div style="font-size:.66rem;color:var(--g500);font-family:monospace;">' + cadEsc(r.code) + (r.ean ? ' · ' + cadEsc(r.ean) : '') + '</div>' +
+      '</td>' + cells +
+      '<td style="padding:.45rem .6rem;text-align:right;font-size:.78rem;font-weight:700;color:var(--g800);white-space:nowrap;">' + tot + '</td></tr>';
+  }).join('') +
+  '<tr style="background:var(--blue-p50);border-top:2px solid var(--border-med);font-weight:700;">' +
+    '<td style="padding:.5rem .6rem;font-size:.76rem;color:var(--g800);position:sticky;left:0;background:var(--blue-p50);">TOTAL</td>' +
+    M.totals.map(function(v){
+      return '<td style="padding:.5rem .3rem;text-align:center;font-size:.74rem;color:var(--g800);">' + (v ? (isCA ? Math.round(v) : cadInt(v)) : '·') + '</td>';
+    }).join('') +
+    '<td style="padding:.5rem .6rem;text-align:right;font-size:.78rem;color:var(--g800);white-space:nowrap;">' +
+      (isCA ? cadEur(M.totalCA) : cadInt(M.rows.reduce(function(s,r){ return s + r.totQ; }, 0))) + '</td></tr>';
+}
+
+function cadExportXLS(){
+  if (!cadMatrix || !cadMatrix.rows.length) { toast('Sélectionnez un client','err'); return; }
+  withXLSX(function(){
+    var M = cadMatrix, isCA = (cadState.unit === 'ca');
+    var head = ['Produit','Code','EAN'].concat(M.months.map(function(m){ return m.label.replace('\n',' '); })).concat(['Total']);
+    var aoa = [head];
+    M.rows.forEach(function(r){
+      var line = [r.libelle || '', r.code, r.ean || ''];
+      for (var i=0;i<M.months.length;i++) line.push(isCA ? Math.round(r.caCells[i]*100)/100 : r.cells[i]);
+      line.push(isCA ? Math.round(r.totCA*100)/100 : r.totQ);
+      aoa.push(line);
+    });
+    var ws = XLSX.utils.aoa_to_sheet(aoa);
+    var wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Cadencier');
+    XLSX.writeFile(wb, 'Cadencier_' + cadState.client.replace(/[^a-zA-Z0-9]/g,'_') + '_' + new Date().toISOString().slice(0,10) + '.xlsx');
+    toast('Export Excel généré','ok');
+  });
+}
+
+function cadExportPDF(){
+  if (!cadMatrix || !cadMatrix.rows.length) { toast('Sélectionnez un client','err'); return; }
+  withJsPdf(function(){
+   try {
+    var M = cadMatrix, isCA = (cadState.unit === 'ca');
+    var doc = new window.jspdf.jsPDF({ orientation:'landscape', unit:'mm', format:'a4' });
+    if (typeof doc.autoTable !== 'function') { toast('Plugin PDF non chargé — réessayez','err'); return; }
+    var brand = (CURRENT_BRAND === 'naturaline') ? 'NATURALINE' : 'Moulin des Moines';
+    var W = doc.internal.pageSize.getWidth();
+
+    doc.setFillColor(4,44,83); doc.rect(0,0,W,22,'F');
+    doc.setTextColor(255,255,255); doc.setFont('helvetica','bold'); doc.setFontSize(13);
+    doc.text('Cadencier — ' + cadState.client, 12, 10);
+    doc.setFont('helvetica','normal'); doc.setFontSize(8);
+    doc.text(brand + '  •  ' + cadState.months + ' derniers mois  •  ' + (isCA ? 'CA HT' : 'Colis') +
+             '  •  CA cumulé : ' + cadEur(M.totalCA) +
+             '  •  Dernière commande : ' + (M.lastDate ? M.lastDate.toLocaleDateString('fr-FR') : '—'), 12, 17);
+
+    var head = [['Produit'].concat(M.months.map(function(m){ return m.label.replace('\n',' '); })).concat(['Total'])];
+    var body = M.rows.map(function(r){
+      var line = [ (r.libelle || r.code).slice(0,38) ];
+      for (var i=0;i<M.months.length;i++){
+        var v = isCA ? r.caCells[i] : r.cells[i];
+        line.push(v ? (isCA ? String(Math.round(v)) : cadInt(v)) : '');
+      }
+      line.push(isCA ? String(Math.round(r.totCA)) : cadInt(r.totQ));
+      return line;
+    });
+
+    doc.autoTable({
+      startY: 26, head: head, body: body, theme:'grid',
+      styles:{ font:'helvetica', fontSize:6.6, cellPadding:1.2, textColor:[40,40,40], halign:'center' },
+      headStyles:{ fillColor:[4,44,83], textColor:[255,255,255], fontSize:6.6, fontStyle:'bold' },
+      alternateRowStyles:{ fillColor:[244,248,252] },
+      columnStyles:{ 0:{ cellWidth:52, halign:'left', fontStyle:'bold' } },
+      margin:{ left:10, right:10 }
+    });
+
+    doc.save('Cadencier_' + cadState.client.replace(/[^a-zA-Z0-9]/g,'_') + '_' + new Date().toISOString().slice(0,10) + '.pdf');
+    toast('PDF cadencier généré','ok');
+   } catch(e){ console.error('[Cadencier PDF]', e); toast('Erreur PDF : ' + e.message, 'err'); }
+  }, function(){ toast('Impossible de charger la librairie PDF','err'); });
+}
 
 function top100PeriodLabel(){
   var st = top100State;
