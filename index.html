@@ -724,60 +724,31 @@ textarea { resize:vertical; min-height:80px; }
    tableaux, modales et zones tactiles. Le desktop n'est pas
    affecté (tout est dans cette media query).
 ══════════════════════════════════════════════════════════ */
-/* ══ BOT IA ══ */
-#bot-fab {
-  position:fixed; right:22px; bottom:22px; width:56px; height:56px; border-radius:50%;
-  background:linear-gradient(135deg,#0b5ea8,#042c53); color:#fff; border:none; cursor:pointer;
-  box-shadow:0 6px 20px rgba(4,44,83,.35); z-index:450;
-  display:flex; align-items:center; justify-content:center; transition:transform .18s, box-shadow .18s;
-}
-#bot-fab:hover { transform:translateY(-2px) scale(1.04); box-shadow:0 10px 26px rgba(4,44,83,.45); }
-#bot-fab svg { width:26px; height:26px; }
-#bot-fab.open { transform:rotate(90deg) scale(.9); opacity:.6; }
-
-#bot-panel {
-  position:fixed; right:22px; bottom:88px; width:380px; max-width:calc(100vw - 32px);
-  height:min(560px, calc(100vh - 130px));
-  background:var(--surface); border:1px solid var(--border-med); border-radius:16px;
-  box-shadow:0 18px 50px rgba(4,44,83,.28); z-index:451;
-  display:none; flex-direction:column; overflow:hidden;
-}
-#bot-panel.open { display:flex; animation:botIn .22s ease; }
-@keyframes botIn { from{opacity:0; transform:translateY(12px);} to{opacity:1; transform:none;} }
-
-.bot-head {
-  display:flex; align-items:center; justify-content:space-between; gap:8px;
-  padding:12px 14px; background:var(--blue-p900); color:#fff; flex-shrink:0;
-}
-.bot-icon { background:rgba(255,255,255,.12); border:none; color:#fff; width:26px; height:26px;
-  border-radius:7px; cursor:pointer; font-size:.72rem; line-height:1; }
-.bot-icon:hover { background:rgba(255,255,255,.24); }
-
-#bot-msgs { flex:1; overflow-y:auto; padding:14px; display:flex; flex-direction:column; gap:10px; background:var(--bg); }
-.bot-msg { max-width:88%; padding:.6rem .8rem; border-radius:12px; font-size:.84rem; line-height:1.5; white-space:pre-wrap; word-wrap:break-word; }
+/* ══ ASSISTANT IA (section dédiée) ══ */
+.bot-msg { max-width:82%; padding:.65rem .85rem; border-radius:12px; font-size:.86rem; line-height:1.55; white-space:pre-wrap; word-wrap:break-word; }
 .bot-msg.user { align-self:flex-end; background:var(--blue-p700); color:#fff; border-bottom-right-radius:4px; }
 .bot-msg.ai   { align-self:flex-start; background:var(--surface); color:var(--g800); border:1px solid var(--border); border-bottom-left-radius:4px; }
 .bot-msg.err  { align-self:flex-start; background:#fee2e2; color:#991b1b; border:1px solid #fca5a5; }
 .bot-msg.ai strong { color:var(--blue-p700); }
-.bot-typing { align-self:flex-start; color:var(--g500); font-size:.8rem; font-style:italic; padding:.3rem .5rem; }
+.bot-typing { align-self:flex-start; color:var(--g500); font-size:.82rem; font-style:italic; padding:.3rem .5rem; }
 
-#bot-sugg { display:flex; gap:6px; padding:8px 12px; overflow-x:auto; flex-shrink:0;
+#bot-sugg { display:flex; gap:6px; padding:9px 14px; overflow-x:auto; flex-shrink:0;
   border-top:1px solid var(--border); background:var(--surface); }
 #bot-sugg button { flex-shrink:0; background:var(--blue-p50); border:1px solid var(--border);
-  color:var(--blue-p700); font-size:.7rem; font-weight:600; padding:.32rem .6rem; border-radius:99px; cursor:pointer; white-space:nowrap; }
-#bot-sugg button:hover { background:var(--blue-p100,#dbeafe); }
+  color:var(--blue-p700); font-size:.72rem; font-weight:600; padding:.34rem .7rem; border-radius:99px; cursor:pointer; white-space:nowrap; }
+#bot-sugg button:hover { background:#dbeafe; }
 
-.bot-input { display:flex; gap:7px; padding:10px 12px; border-top:1px solid var(--border); background:var(--surface); flex-shrink:0; }
-.bot-input textarea { flex:1; resize:none; max-height:90px; font-family:inherit; font-size:.84rem;
-  padding:.5rem .7rem; border:1px solid var(--border-med); border-radius:9px; background:var(--bg); color:var(--g800); outline:none; }
-.bot-input textarea:focus { border-color:var(--blue-p500,#3b82d4); }
-#bot-send { width:38px; border:none; border-radius:9px; background:var(--blue-p700); color:#fff; cursor:pointer; font-size:.9rem; flex-shrink:0; }
+.bot-input { display:flex; gap:8px; padding:11px 14px; border-top:1px solid var(--border); background:var(--surface); flex-shrink:0; }
+.bot-input textarea { flex:1; resize:none; max-height:110px; font-family:inherit; font-size:.86rem;
+  padding:.55rem .75rem; border:1px solid var(--border-med); border-radius:9px; background:var(--bg); color:var(--g800); outline:none; }
+.bot-input textarea:focus { border-color:#3b82d4; }
+#bot-send { border:none; border-radius:9px; background:var(--blue-p700); color:#fff; cursor:pointer;
+  font-size:.8rem; font-weight:600; padding:0 1.1rem; flex-shrink:0; }
 #bot-send:disabled { opacity:.5; cursor:not-allowed; }
 
 @media (max-width: 768px) {
-  /* au-dessus de la barre de nav basse */
-  #bot-fab { right:14px; bottom:74px; width:50px; height:50px; }
-  #bot-panel { right:8px; left:8px; width:auto; bottom:74px; height:min(70vh, calc(100vh - 150px)); }
+  #sec-ia { padding:1rem !important; }
+  .bot-msg { max-width:92%; }
 }
 
 .mobile-navbar, .mmenu-sheet, .mmenu-backdrop { display:none; }
@@ -1031,15 +1002,15 @@ textarea { resize:vertical; min-height:80px; }
     <button class="t-tab active" onclick="showSection('dashboard',this)">Dashboard</button>
     <button class="t-tab" onclick="showSection('bdc',this)">Bon de Commande</button>
     <button class="t-tab" onclick="showSection('frais',this)">Frais</button>
-    <button class="t-tab" onclick="showSection('commissions',this)">💶 Commissions</button>
+    <button class="t-tab" onclick="showSection('commissions',this)">Commissions</button>
     <button class="t-tab" onclick="showSection('contacts-db',this)">Clients</button>
-    <button class="t-tab" onclick="showSection('accords',this)">🤝 Accords</button>
-    <button class="t-tab hidden" id="t-tab-comptes" onclick="showSection('comptes',this)">👥 Comptes</button>
-    <button class="t-tab" onclick="showSection('mailing',this)">✉️ Mailing</button>
-    <button class="t-tab" onclick="showSection('promos',this)">🎨 Promos PDF</button>
-    <button class="t-tab" onclick="showSection('top100',this)">🏆 Top 100</button>
-    <button class="t-tab" onclick="showSection('cadencier',this)">📅 Cadencier</button>
-
+    <button class="t-tab" onclick="showSection('cadencier',this)">Cadencier</button>
+    <button class="t-tab" onclick="showSection('accords',this)">Accords</button>
+    <button class="t-tab hidden" id="t-tab-comptes" onclick="showSection('comptes',this)">Comptes</button>
+    <button class="t-tab" onclick="showSection('mailing',this)">Mailing</button>
+    <button class="t-tab" onclick="showSection('promos',this)">Promos PDF</button>
+    <button class="t-tab" onclick="showSection('top100',this)">Top 100</button>
+    <button class="t-tab" onclick="showSection('ia',this)">Assistant IA</button>
   </div>
   <div class="topbar-right">
     <div class="sync-indicator"><div class="sync-dot" id="sync-dot"></div><span id="sync-label">Connecté</span></div>
@@ -1050,7 +1021,7 @@ textarea { resize:vertical; min-height:80px; }
         <div class="avatar-menu-item" style="font-size:.72rem;color:var(--s500);cursor:default;" id="menu-email">—</div>
         <div class="avatar-menu-item" id="menu-role-lbl">Commercial</div>
         <div class="avatar-menu-sep"></div>
-        <div class="avatar-menu-item" onclick="openProfilModal()">⚙️ Mon profil</div>
+        <div class="avatar-menu-item" onclick="openProfilModal()">Mon profil</div>
         <div class="avatar-menu-sep"></div>
         <div class="avatar-menu-item danger" onclick="doLogout()">Se déconnecter</div>
       </div>
@@ -1102,6 +1073,10 @@ textarea { resize:vertical; min-height:80px; }
     <div class="nav-item" onclick="showSection('cadencier',null,this)">
       <svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="1.5" y="3" width="13" height="11.5" rx="1.5"/><path d="M1.5 6.5h13M5 1.5v3M11 1.5v3"/><path d="M4.5 9h2M4.5 11.5h2M9.5 9h2M9.5 11.5h2"/></svg>
       Cadencier
+    </div>
+    <div class="nav-item" onclick="showSection('ia',null,this)">
+      <svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2.5" y="5.5" width="11" height="8" rx="2"/><path d="M8 5.5V3M6.5 2h3"/><circle cx="6" cy="9.5" r=".9" fill="currentColor" stroke="none"/><circle cx="10" cy="9.5" r=".9" fill="currentColor" stroke="none"/></svg>
+      Assistant IA
     </div>
   </div>
 
@@ -2097,11 +2072,70 @@ textarea { resize:vertical; min-height:80px; }
     </div>
   </div>
 
+  <!-- ASSISTANT IA (section dédiée : chat + configuration) -->
+  <div id="sec-ia" class="hidden" style="padding:1.75rem 2rem;overflow-y:auto;flex:1;background:var(--bg);box-sizing:border-box;">
+    <div class="page-header">
+      <div>
+        <div class="page-title">Assistant IA</div>
+        <div style="font-size:.75rem;color:var(--g500);margin-top:2px;">Posez vos questions sur vos clients, vos ventes et vos produits</div>
+      </div>
+      <div style="display:flex;gap:8px;align-items:center;">
+        <span id="ia-provider-lbl" style="font-size:.72rem;color:var(--g500);"></span>
+        <button class="btn btn-ghost" onclick="iaToggleConfig()" style="font-size:.75rem;">Configuration</button>
+        <button class="btn btn-ghost" onclick="botClear()" style="font-size:.75rem;">Nouvelle conversation</button>
+      </div>
+    </div>
+
+    <!-- Configuration -->
+    <div id="ia-config" class="card" style="display:none;padding:1.1rem;margin-bottom:1.25rem;">
+      <div style="font-size:.85rem;font-weight:600;color:var(--g800);margin-bottom:.8rem;">Configuration de l'IA</div>
+
+      <label class="lb" style="display:block;margin-bottom:.3rem;">Fournisseur</label>
+      <select id="ml-ai-provider" onchange="mlAiSetProvider(this.value)" style="width:100%;max-width:420px;font-size:.82rem;padding:.4rem .5rem;border:1px solid var(--border-med);border-radius:6px;background:var(--surface);color:var(--g700);margin-bottom:.9rem;">
+        <option value="gemini">Google Gemini — gratuit (250 requêtes/jour)</option>
+        <option value="claude">Anthropic Claude — payant à l'usage</option>
+      </select>
+
+      <label class="lb" style="display:block;margin-bottom:.3rem;">Clé API <span id="ml-ai-key-hint" style="font-weight:400;color:var(--g500);"></span></label>
+      <div style="display:flex;gap:8px;max-width:560px;flex-wrap:wrap;">
+        <input type="password" id="ml-ai-key" placeholder="Collez votre clé…" style="flex:1;min-width:200px;font-family:ui-monospace,monospace;font-size:.8rem;"/>
+        <button class="btn btn-primary" onclick="mlAiSaveKey()" style="font-size:.75rem;padding:.4rem .9rem;">Enregistrer</button>
+        <button class="btn btn-ghost" onclick="mlAiClearKey()" style="font-size:.75rem;padding:.4rem .9rem;color:#dc2626;">Effacer</button>
+      </div>
+      <div style="font-size:.7rem;color:var(--g500);margin-top:.5rem;">
+        <span id="ml-ai-key-where"></span> — enregistrée sur votre compte : utilisable sur PC, iPhone et Android sans ressaisie.
+        <span id="ml-ai-key-status" style="font-weight:600;"></span>
+      </div>
+      <div style="font-size:.7rem;color:var(--g500);margin-top:.5rem;padding:.55rem .7rem;background:var(--blue-p50);border-radius:6px;max-width:640px;">
+        Cette clé sert à la fois à cet assistant et à la rédaction d'emails dans le module Mailing.
+      </div>
+    </div>
+
+    <!-- Chat -->
+    <div class="card" style="padding:0;overflow:hidden;display:flex;flex-direction:column;height:min(620px, calc(100vh - 260px));">
+      <div id="bot-msgs" style="flex:1;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:10px;background:var(--bg);"></div>
+
+      <div id="bot-sugg">
+        <button onclick="botAsk('Quels clients n\'ont pas commandé depuis 3 mois ?')">Clients inactifs</button>
+        <button onclick="botAsk('Quels sont mes 5 meilleurs produits ?')">Top produits</button>
+        <button onclick="botAsk('Fais-moi un résumé de mon activité commerciale.')">Résumé activité</button>
+        <button onclick="botAsk('Quels clients sont en baisse par rapport à l\'an dernier ?')">Clients en baisse</button>
+        <button onclick="botAsk('Prépare-moi une tournée : quels clients relancer en priorité et pourquoi ?')">Préparer une tournée</button>
+      </div>
+
+      <div class="bot-input">
+        <textarea id="bot-text" rows="1" placeholder="Posez une question sur vos clients, ventes, produits…"
+          onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();botSend();}"></textarea>
+        <button id="bot-send" onclick="botSend()" title="Envoyer">Envoyer</button>
+      </div>
+    </div>
+  </div>
+
   <!-- CADENCIER CLIENT -->
   <div id="sec-cadencier" class="hidden" style="padding:1.75rem 2rem;overflow-y:auto;flex:1;background:var(--bg);box-sizing:border-box;">
     <div class="page-header">
       <div>
-        <div class="page-title">📅 Cadencier client</div>
+        <div class="page-title">Cadencier client</div>
         <div style="font-size:.75rem;color:var(--g500);margin-top:2px;">Produits commandés par client, mois par mois</div>
       </div>
       <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
@@ -2178,7 +2212,7 @@ textarea { resize:vertical; min-height:80px; }
   <div id="sec-top100" class="hidden" style="padding:1.75rem 2rem;overflow-y:auto;flex:1;background:var(--bg);box-sizing:border-box;">
     <div class="page-header">
       <div>
-        <div class="page-title">🏆 Top 100 Produits</div>
+        <div class="page-title">Top 100 Produits</div>
         <div style="font-size:.75rem;color:var(--g500);margin-top:2px;">Classement des ventes · <span id="top100-brand-label">Moulin des Moines</span></div>
       </div>
       <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
@@ -2322,25 +2356,8 @@ textarea { resize:vertical; min-height:80px; }
         <!-- Assistant IA -->
         <div class="card">
           <div class="card-head">
-            <span class="card-title">🤖 Assistant IA</span>
-            <button class="btn btn-ghost" onclick="mlAiToggleSettings()" style="font-size:.68rem;padding:.28rem .6rem;">🔑 Clé API</button>
-          </div>
-
-          <div id="ml-ai-settings" style="display:none;padding:1rem;background:var(--blue-p50);border-bottom:1px solid var(--border);">
-            <label class="lb" style="display:block;margin-bottom:.4rem;">Fournisseur IA</label>
-            <select id="ml-ai-provider" onchange="mlAiSetProvider(this.value)" style="width:100%;font-size:.82rem;padding:.4rem .5rem;border:1px solid var(--border-med);border-radius:6px;background:var(--surface);color:var(--g700);margin-bottom:.7rem;">
-              <option value="gemini">Google Gemini 2.5 Flash — gratuit (250 req./jour)</option>
-              <option value="claude">Anthropic Claude — payant à l'usage</option>
-            </select>
-            <label class="lb" style="display:block;margin-bottom:.4rem;">Clé API <span id="ml-ai-key-hint" style="font-weight:400;color:var(--g500);"></span></label>
-            <div style="display:flex;gap:8px;">
-              <input type="password" id="ml-ai-key" placeholder="Collez votre clé…" style="flex:1;font-family:ui-monospace,monospace;font-size:.8rem;"/>
-              <button class="btn btn-primary" onclick="mlAiSaveKey()" style="font-size:.75rem;padding:.4rem .8rem;">Enregistrer</button>
-              <button class="btn btn-ghost" onclick="mlAiClearKey()" style="font-size:.75rem;padding:.4rem .8rem;color:#dc2626;">Effacer</button>
-            </div>
-            <div style="font-size:.68rem;color:var(--g500);margin-top:.4rem;">
-              <span id="ml-ai-key-where"></span> — enregistrée sur votre compte, donc utilisable sur PC, iPhone et Android sans ressaisie. <span id="ml-ai-key-status" style="font-weight:600;"></span>
-            </div>
+            <span class="card-title">Rédaction assistée</span>
+            <button class="btn btn-ghost" onclick="showSection('ia',null,null)" style="font-size:.68rem;padding:.28rem .6rem;">Configurer l'IA</button>
           </div>
 
           <div style="padding:1rem;">
@@ -2558,44 +2575,6 @@ textarea { resize:vertical; min-height:80px; }
   </div>
 </div>
 
-<!-- ══ BOT IA — assistant flottant, disponible sur toutes les sections ══ -->
-<button id="bot-fab" onclick="botToggle()" title="Assistant IA" aria-label="Assistant IA">
-  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-    <rect x="3" y="8" width="18" height="12" rx="3"/><path d="M12 8V5M9 3.5h6"/><circle cx="8.5" cy="14" r="1.2" fill="currentColor" stroke="none"/><circle cx="15.5" cy="14" r="1.2" fill="currentColor" stroke="none"/>
-  </svg>
-</button>
-
-<div id="bot-panel" aria-hidden="true">
-  <div class="bot-head">
-    <div style="display:flex;align-items:center;gap:9px;min-width:0;">
-      <span style="font-size:1.05rem;">🤖</span>
-      <div style="min-width:0;">
-        <div style="font-weight:700;font-size:.9rem;line-height:1.1;">Assistant CRM</div>
-        <div id="bot-sub" style="font-size:.66rem;opacity:.75;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">Connecté à vos données</div>
-      </div>
-    </div>
-    <div style="display:flex;gap:4px;">
-      <button class="bot-icon" onclick="botClear()" title="Nouvelle conversation">🗑</button>
-      <button class="bot-icon" onclick="botToggle()" title="Fermer">✕</button>
-    </div>
-  </div>
-
-  <div id="bot-msgs"></div>
-
-  <div id="bot-sugg">
-    <button onclick="botAsk('Quels clients n\'ont pas commandé depuis 3 mois ?')">Clients inactifs</button>
-    <button onclick="botAsk('Quels sont mes 5 meilleurs produits ?')">Top produits</button>
-    <button onclick="botAsk('Fais-moi un résumé de mon activité commerciale.')">Résumé activité</button>
-    <button onclick="botAsk('Quels clients sont en baisse par rapport à l\'an dernier ?')">Clients en baisse</button>
-  </div>
-
-  <div class="bot-input">
-    <textarea id="bot-text" rows="1" placeholder="Posez une question sur vos clients, ventes, produits…"
-      onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();botSend();}"></textarea>
-    <button id="bot-send" onclick="botSend()" title="Envoyer">➤</button>
-  </div>
-</div>
-
 <div class="mmenu-sheet" id="mmenu-sheet" role="menu" aria-hidden="true">
   <div class="mmenu-handle"></div>
   <div class="mmenu-title">Sections</div>
@@ -2643,6 +2622,10 @@ textarea { resize:vertical; min-height:80px; }
   <button class="mmenu-item" role="menuitem" data-sec="cadencier" onclick="mnavGo('cadencier')">
     <span class="mmenu-ico"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="1.5" y="3" width="13" height="11.5" rx="1.5"/><path d="M1.5 6.5h13M5 1.5v3M11 1.5v3"/><path d="M4.5 9h2M4.5 11.5h2M9.5 9h2M9.5 11.5h2"/></svg></span>
     <span class="mmenu-label">Cadencier</span>
+  </button>
+  <button class="mmenu-item" role="menuitem" data-sec="ia" onclick="mnavGo('ia')">
+    <span class="mmenu-ico"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2.5" y="5.5" width="11" height="8" rx="2"/><path d="M8 5.5V3M6.5 2h3"/><circle cx="6" cy="9.5" r=".9" fill="currentColor" stroke="none"/><circle cx="10" cy="9.5" r=".9" fill="currentColor" stroke="none"/></svg></span>
+    <span class="mmenu-label">Assistant IA</span>
   </button>
 </div>
 
@@ -3948,7 +3931,7 @@ if (typeof cdbPageSize  === 'undefined') window.cdbPageSize  = 50;
 // ═══════════════════════════════════════════════
 //  NAVIGATION
 // ═══════════════════════════════════════════════
-const SECTIONS = ['dashboard','bdc','frais','contacts-db','commissions','comptes','mailing','accords','promos','top100','cadencier'];
+const SECTIONS = ['dashboard','bdc','frais','contacts-db','commissions','comptes','mailing','accords','promos','top100','cadencier','ia'];
 function showSection(name, tabEl, sideEl) {
   if (name === 'comptes' && !isAdminUser()) {
     toast('Accès réservé.', 'err');
@@ -3970,6 +3953,7 @@ function showSection(name, tabEl, sideEl) {
   if (name==='promos') { setTimeout(function(){ if (typeof promoInit === 'function') promoInit(); }, 80); }
   if (name==='top100') { setTimeout(function(){ if (typeof top100Init === 'function') top100Init(); }, 80); }
   if (name==='cadencier') { setTimeout(function(){ if (typeof cadInit === 'function') cadInit(); }, 80); }
+  if (name==='ia') { setTimeout(function(){ if (typeof iaInit === 'function') iaInit(); }, 80); }
   // Démonter le générateur quand on quitte l'onglet Promos
   if (name !== 'promos' && typeof promoUnmount === 'function') promoUnmount();
   if (name==='comptes') { if (typeof comptesRender === 'function') comptesRender(); }
@@ -12391,10 +12375,12 @@ function mlAiRefreshSettings(){
     } else { st.textContent = '✅ Clé enregistrée'; st.style.color = '#059669'; }
   }
 }
-function mlAiToggleSettings(){
-  var el = document.getElementById('ml-ai-settings');
+// La configuration vit désormais dans la section IA dédiée
+function mlAiToggleSettings(){ iaToggleConfig(true); }
+function iaToggleConfig(forceOpen){
+  var el = document.getElementById('ia-config');
   if (!el) return;
-  var show = (el.style.display === 'none');
+  var show = forceOpen ? true : (el.style.display === 'none');
   el.style.display = show ? 'block' : 'none';
   if (show) mlAiRefreshSettings();
 }
@@ -12432,9 +12418,7 @@ function mlAiCall(systemPrompt, userPrompt, schema, pdf){
   var key = mlAiGetKey();
   var provider = mlAiGetProvider();
   if (!key) {
-    mlAiStatus('Aucune clé API. Cliquez sur « 🔑 Clé API » pour en saisir une.', 'err');
-    var el = document.getElementById('ml-ai-settings');
-    if (el && el.style.display === 'none') mlAiToggleSettings();
+    mlAiStatus('Aucune clé API. Rendez-vous dans la section « Assistant IA » pour la configurer.', 'err');
     return Promise.reject(new Error('no-key'));
   }
 
@@ -12792,20 +12776,24 @@ function botState(){
   return botHistory;
 }
 
-function botToggle(){
-  var p = document.getElementById('bot-panel'), f = document.getElementById('bot-fab');
-  if (!p) return;
-  var open = p.classList.toggle('open');
-  p.setAttribute('aria-hidden', open ? 'false' : 'true');
-  if (f) f.classList.toggle('open', open);
-  if (open) {
-    var sub = document.getElementById('bot-sub');
-    if (sub) sub.textContent = (mlAiGetProvider() === 'gemini' ? 'Gemini' : 'Claude') +
-      ' · ' + (CURRENT_BRAND === 'naturaline' ? 'NATURALINE' : 'MDM');
-    if (!botState().length) botPush('ai', 'Bonjour Christophe 👋\nJe peux répondre sur vos clients, vos ventes et vos produits. Posez votre question, ou utilisez un raccourci ci-dessous.');
-    setTimeout(function(){ var t = document.getElementById('bot-text'); if (t) t.focus(); }, 120);
+function iaInit(){
+  var lbl = document.getElementById('ia-provider-lbl');
+  if (lbl) {
+    var key = mlAiGetKey();
+    lbl.textContent = key
+      ? ((mlAiGetProvider() === 'gemini' ? 'Gemini' : 'Claude') + ' · ' + (CURRENT_BRAND === 'naturaline' ? 'NATURALINE' : 'MDM'))
+      : 'Aucune clé configurée';
+    lbl.style.color = key ? 'var(--g500)' : '#dc2626';
   }
+  if (!mlAiGetKey()) { iaToggleConfig(true); }
+  if (!botState().length) {
+    botPush('ai', 'Bonjour 👋\nJe peux répondre sur vos clients, vos ventes et vos produits — à partir des données réelles de votre CRM. Posez votre question, ou utilisez un raccourci ci-dessous.');
+  }
+  setTimeout(function(){ var t = document.getElementById('bot-text'); if (t) t.focus(); }, 150);
 }
+// Conservé pour compatibilité (la bulle flottante a été remplacée par la section IA)
+function botToggle(){ showSection('ia', null, null); }
+
 function botClear(){
   botHistory = [];
   document.getElementById('bot-msgs').innerHTML = '';
