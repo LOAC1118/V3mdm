@@ -12509,7 +12509,12 @@ function botSend(){
   }
   prompt += 'QUESTION DU COMMERCIAL : ' + q;
 
-  botCall(BOT_SYS, prompt).then(function(txt){
+  var sysPrompt = (typeof BOT_SYS !== 'undefined' && BOT_SYS) ? BOT_SYS :
+    'Tu es l\'assistant du CRM d\'un commercial en alimentaire bio (clients = magasins bio, prix HT). ' +
+    'Réponds en français, brièvement et concrètement. Appuie-toi UNIQUEMENT sur les données CRM fournies : ' +
+    'si une information n\'y figure pas, dis-le au lieu d\'inventer un chiffre ou un nom de client.';
+
+  botCall(sysPrompt, prompt).then(function(txt){
     typing.remove();
     botPush('ai', txt);
     botHistory.push({ role:'model', text:txt });
@@ -12529,12 +12534,19 @@ function botCall(systemPrompt, userPrompt){
   var provider = mlAiGetProvider();
   if (!key) return Promise.reject(new Error('Aucune clé API'));
 
+  // Garde : une chaîne vide est refusée par l'API (proto3) -> on n'envoie
+  // systemInstruction que s'il a du contenu, sinon on replie dans le message.
+  var sysTxt = (systemPrompt == null) ? '' : String(systemPrompt).trim();
+  var usrTxt = (userPrompt == null) ? '' : String(userPrompt).trim();
+  if (!usrTxt) return Promise.reject(new Error('Question vide'));
+  if (!sysTxt) { usrTxt = 'Réponds en français, brièvement, en te basant uniquement sur les données CRM fournies.\n\n' + usrTxt; }
+
   if (provider === 'gemini') {
     var payload = {
-      contents: [{ role:'user', parts:[{ text: userPrompt }] }],
-      systemInstruction: { parts:[{ text: systemPrompt }] },
+      contents: [{ role:'user', parts:[{ text: usrTxt }] }],
       generationConfig: { temperature:0.4, maxOutputTokens:2048, thinkingConfig:{ thinkingBudget:0 } }
     };
+    if (sysTxt) payload.systemInstruction = { parts:[{ text: sysTxt }] };
     var doCall = function(model, noThink){
       var body = JSON.parse(JSON.stringify(payload));
       if (noThink) delete body.generationConfig.thinkingConfig;
@@ -12580,8 +12592,8 @@ function botCall(systemPrompt, userPrompt){
       'anthropic-version':'2023-06-01', 'anthropic-dangerous-direct-browser-access':'true' },
     body: JSON.stringify({
       model: (typeof ML_AI_MODEL_CLAUDE !== 'undefined' ? ML_AI_MODEL_CLAUDE : 'claude-sonnet-4-5-20250929'),
-      max_tokens: 2048, system: systemPrompt,
-      messages: [{ role:'user', content: userPrompt }]
+      max_tokens: 2048, system: sysTxt || undefined,
+      messages: [{ role:'user', content: usrTxt }]
     })
   }).then(function(r){
     if (!r.ok) return r.json().catch(function(){return {};}).then(function(j){
