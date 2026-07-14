@@ -2339,7 +2339,7 @@ textarea { resize:vertical; min-height:80px; }
               <button class="btn btn-ghost" onclick="mlAiClearKey()" style="font-size:.75rem;padding:.4rem .8rem;color:#dc2626;">Effacer</button>
             </div>
             <div style="font-size:.68rem;color:var(--g500);margin-top:.4rem;">
-              <span id="ml-ai-key-where"></span> — la clé reste dans ce navigateur, jamais sur GitHub. <span id="ml-ai-key-status" style="font-weight:600;"></span>
+              <span id="ml-ai-key-where"></span> — enregistrée sur votre compte, donc utilisable sur PC, iPhone et Android sans ressaisie. <span id="ml-ai-key-status" style="font-weight:600;"></span>
             </div>
           </div>
 
@@ -3751,7 +3751,7 @@ function showLoginScreen() {
   if (loader) loader.classList.add('done');
   document.getElementById('login-screen').style.display  = 'flex';
   auth.onAuthStateChanged(user => {
-    if (user) { currentUser = user; showApp(); }
+    if (user) { currentUser = user; showApp(); if (typeof mlAiSyncFromCloud === 'function') mlAiSyncFromCloud(); }
   });
 }
 
@@ -12312,8 +12312,47 @@ function mlAiDetectGeminiModel(key){
     if (!best) throw new Error('Aucun modèle Gemini compatible sur ce compte');
     mlAiSetGeminiModel(best);
     console.log('[IA] Modèle Gemini détecté :', best);
+    if (typeof mlAiSyncToCloud === 'function') mlAiSyncToCloud();
     return best;
   });
+}
+
+// ── Synchronisation de la clé API entre appareils (via Firestore) ──
+// La clé est stockée sur le compte de l'utilisateur (collection 'config',
+// scopée par uid), donc disponible sur PC, iOS et Android sans ressaisie.
+// Le localStorage sert de cache local (fonctionne hors-ligne).
+function mlAiSyncToCloud(){
+  if (!db || !currentUser) return Promise.resolve();
+  var payload = {
+    provider: mlAiGetProvider(),
+    geminiKey: (function(){ try { return localStorage.getItem('mdm_ai_key_gemini' + mlAiUid()) || ''; } catch(e){ return ''; } })(),
+    claudeKey: (function(){ try { return localStorage.getItem('mdm_ai_key_claude' + mlAiUid()) || ''; } catch(e){ return ''; } })(),
+    geminiModel: mlAiGetGeminiModel(),
+    updatedAt: new Date().toISOString()
+  };
+  return bcol('config').doc('ai').set(payload)
+    .then(function(){ console.log('[IA] Clé synchronisée sur le compte'); })
+    .catch(function(e){ console.warn('[IA] Sync cloud impossible :', e.message); });
+}
+
+function mlAiSyncFromCloud(){
+  if (!db || !currentUser) return Promise.resolve();
+  return bcol('config').doc('ai').get().then(function(doc){
+    if (!doc.exists) return;
+    var d = doc.data() || {};
+    try {
+      // on n'écrase le local que si le cloud a une valeur
+      if (d.geminiKey)   localStorage.setItem('mdm_ai_key_gemini' + mlAiUid(), d.geminiKey);
+      if (d.claudeKey)   localStorage.setItem('mdm_ai_key_claude' + mlAiUid(), d.claudeKey);
+      if (d.provider)    localStorage.setItem('mdm_ai_provider' + mlAiUid(), d.provider);
+      if (d.geminiModel) localStorage.setItem(mlAiGeminiModelKey(), d.geminiModel);
+      console.log('[IA] Clé récupérée depuis le compte');
+    } catch(e){}
+    if (typeof mlAiRefreshSettings === 'function') {
+      var el = document.getElementById('ml-ai-settings');
+      if (el && el.style.display !== 'none') mlAiRefreshSettings();
+    }
+  }).catch(function(e){ console.warn('[IA] Lecture cloud impossible :', e.message); });
 }
 
 function mlAiUid(){ return (currentUser && currentUser.uid) ? ('_' + currentUser.uid) : ''; }
@@ -12323,6 +12362,7 @@ function mlAiGetProvider(){
 function mlAiSetProvider(p){
   try { localStorage.setItem('mdm_ai_provider' + mlAiUid(), p); } catch(e){}
   mlAiRefreshSettings();
+  mlAiSyncToCloud();
 }
 function mlAiKeyName(p){ return 'mdm_ai_key_' + (p || mlAiGetProvider()) + mlAiUid(); }
 function mlAiGetKey(){ try { return localStorage.getItem(mlAiKeyName()) || ''; } catch(e){ return ''; } }
@@ -12364,12 +12404,14 @@ function mlAiSaveKey(){
   try { localStorage.setItem(mlAiKeyName(), v); } catch(e){}
   mlAiSetGeminiModel('');   // nouvelle clé -> on redétecte le modèle
   mlAiRefreshSettings();
-  toast('Clé enregistrée dans ce navigateur', 'ok');
+  mlAiSyncToCloud();        // disponible sur tous vos appareils
+  toast('Clé enregistrée et synchronisée sur vos appareils', 'ok');
 }
 function mlAiClearKey(){
   try { localStorage.removeItem(mlAiKeyName()); } catch(e){}
   mlAiRefreshSettings();
-  toast('Clé effacée', 'ok');
+  mlAiSyncToCloud();
+  toast('Clé effacée (sur tous vos appareils)', 'ok');
 }
 
 function mlAiStatus(msg, kind){
