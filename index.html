@@ -85,6 +85,50 @@
   --shadow-xl:  0 16px 50px rgba(8,50,110,.15);
 }
 
+/* ═══════════════════════════════════════════════════════════
+   THÈME NATURALINE — palette verte naturelle.
+   Toute l'interface s'appuie sur ces variables : les redéfinir
+   suffit à re-thémer le CRM sans toucher aux règles existantes.
+   Objectif : voir d'un coup d'œil sur quelle marque on travaille.
+   ═══════════════════════════════════════════════════════════ */
+body.brand-naturaline {
+  --bg:       #f0f6ef;
+  --bg2:      #e6f0e4;
+  --surface:  #ffffff;
+  --surface2: #f6faf5;
+
+  --g900: #16351f;
+  --g800: #1e4a2b;
+  --g700: #3a6349;
+  --g600: #5f8c6e;
+  --g500: #89ae96;
+  --g400: #b2cbbb;
+  --g300: #d2e4d8;
+  --g200: #e3efe7;
+  --g100: #f1f7f2;
+
+  --blue-p900: #16351f;
+  --blue-p800: #1f4b2c;
+  --blue-p700: #2d6b41;
+  --blue-p600: #388450;
+  --blue-p500: #4ea369;
+  --blue-p400: #8dc7a2;
+  --blue-p300: #badcc7;
+  --blue-p100: #e3efe7;
+  --blue-p50:  #f1f7f2;
+
+  --blue:      #388450;
+  --blue-bg:   #e3efe7;
+
+  --border:     rgba(22,53,31,.12);
+  --border-med: rgba(22,53,31,.18);
+  --shadow-xs:  0 1px 3px rgba(22,53,31,.06);
+  --shadow-sm:  0 2px 8px rgba(22,53,31,.08);
+  --shadow-md:  0 4px 16px rgba(22,53,31,.10);
+  --shadow-lg:  0 8px 28px rgba(22,53,31,.12);
+  --shadow-xl:  0 16px 50px rgba(22,53,31,.15);
+}
+
 /* ── RESET ── */
 *, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
 
@@ -727,7 +771,7 @@ textarea { resize:vertical; min-height:80px; }
 /* ══ BULLE IA FLOTTANTE ══ */
 #bot-fab {
   position:fixed; right:22px; bottom:22px; width:54px; height:54px; border-radius:50%;
-  background:linear-gradient(135deg,#0b5ea8,#042c53); color:#fff; border:none; cursor:pointer;
+  background:linear-gradient(135deg, var(--blue-p600), var(--blue-p900)); color:#fff; border:none; cursor:pointer;
   box-shadow:0 6px 20px rgba(4,44,83,.35); z-index:450;
   display:flex; align-items:center; justify-content:center; transition:transform .18s, box-shadow .18s;
 }
@@ -968,6 +1012,14 @@ textarea { resize:vertical; min-height:80px; }
 <!-- jsPDF chargé en lazy au besoin -->
 </head>
 <body>
+<script>
+  // Thème appliqué AVANT le rendu pour éviter un flash de la mauvaise couleur
+  try {
+    if (localStorage.getItem('mdm_current_brand') === 'naturaline') {
+      document.body.classList.add('brand-naturaline');
+    }
+  } catch(e) {}
+</script>
 
 <div id="boot-loader">
   <div style="font-size:2rem;margin-bottom:.2rem;">🌾</div>
@@ -3220,8 +3272,14 @@ function setCurrentBrand(brand) {
   // Rechargement complet pour repartir avec des données/collections propres à la marque
   location.reload();
 }
+function applyBrandTheme() {
+  // Bascule toute la palette CSS (fond, topbar, sidebar, boutons, graphiques…)
+  document.body.classList.toggle('brand-naturaline', CURRENT_BRAND === 'naturaline');
+}
+
 function initBrandSwitcherUI() {
   var isNat = (CURRENT_BRAND === 'naturaline');
+  applyBrandTheme();
   var btnMdm = document.getElementById('brand-btn-mdm');
   var btnNat = document.getElementById('brand-btn-naturaline');
   var ico = document.getElementById('brand-ico');
@@ -4199,7 +4257,7 @@ function top100RenderChart(){
       data:{ labels:labels, datasets:[{
         label: metric==='qte'?'Colis vendus':'CA HT (€)',
         data:data,
-        backgroundColor: metric==='qte' ? 'rgba(59,130,212,.78)' : 'rgba(5,150,105,.78)',
+        backgroundColor: (CURRENT_BRAND === 'naturaline') ? 'rgba(56,132,80,.78)' : (metric==='qte' ? 'rgba(59,130,212,.78)' : 'rgba(5,150,105,.78)'),
         borderRadius:4
       }]},
       options:{
@@ -4654,7 +4712,7 @@ function cadRender(){
       var val = isCA ? r.caCells[i] : v;
       if (!val) return '<td style="padding:.4rem .3rem;text-align:center;font-size:.72rem;color:var(--g300);">·</td>';
       var txt = isCA ? Math.round(val) : cadInt(val);
-      return '<td style="padding:.4rem .3rem;text-align:center;font-size:.74rem;font-weight:600;color:var(--blue-p700);background:rgba(59,130,212,.07);">' + txt + '</td>';
+      return '<td style="padding:.4rem .3rem;text-align:center;font-size:.74rem;font-weight:600;color:var(--blue-p700);background:var(--blue-p50);">' + txt + '</td>';
     }).join('');
     var tot = isCA ? cadEur(r.totCA) : cadInt(r.totQ);
     return '<tr style="border-bottom:1px solid var(--border);">' +
@@ -4757,7 +4815,8 @@ function top100ExportPDF(){
     var W = doc.internal.pageSize.getWidth();
 
     // Bandeau de titre
-    doc.setFillColor(4, 44, 83);
+    var HDR = (CURRENT_BRAND === 'naturaline') ? [22,53,31] : [4,44,83];
+    doc.setFillColor(HDR[0], HDR[1], HDR[2]);
     doc.rect(0, 0, W, 26, 'F');
     doc.setTextColor(255, 255, 255);
     doc.setFont('helvetica', 'bold'); doc.setFontSize(15);
@@ -4783,7 +4842,7 @@ function top100ExportPDF(){
       body: body,
       theme: 'grid',
       styles: { font:'helvetica', fontSize:7.5, cellPadding:1.6, overflow:'linebreak', textColor:[40,40,40] },
-      headStyles: { fillColor:[4,44,83], textColor:[255,255,255], fontStyle:'bold', fontSize:7.5, halign:'center' },
+      headStyles: { fillColor:HDR, textColor:[255,255,255], fontStyle:'bold', fontSize:7.5, halign:'center' },
       alternateRowStyles: { fillColor:[244,248,252] },
       columnStyles: {
         0: { cellWidth:9,  halign:'center', fontStyle:'bold' },
