@@ -724,6 +724,62 @@ textarea { resize:vertical; min-height:80px; }
    tableaux, modales et zones tactiles. Le desktop n'est pas
    affecté (tout est dans cette media query).
 ══════════════════════════════════════════════════════════ */
+/* ══ BOT IA ══ */
+#bot-fab {
+  position:fixed; right:22px; bottom:22px; width:56px; height:56px; border-radius:50%;
+  background:linear-gradient(135deg,#0b5ea8,#042c53); color:#fff; border:none; cursor:pointer;
+  box-shadow:0 6px 20px rgba(4,44,83,.35); z-index:450;
+  display:flex; align-items:center; justify-content:center; transition:transform .18s, box-shadow .18s;
+}
+#bot-fab:hover { transform:translateY(-2px) scale(1.04); box-shadow:0 10px 26px rgba(4,44,83,.45); }
+#bot-fab svg { width:26px; height:26px; }
+#bot-fab.open { transform:rotate(90deg) scale(.9); opacity:.6; }
+
+#bot-panel {
+  position:fixed; right:22px; bottom:88px; width:380px; max-width:calc(100vw - 32px);
+  height:min(560px, calc(100vh - 130px));
+  background:var(--surface); border:1px solid var(--border-med); border-radius:16px;
+  box-shadow:0 18px 50px rgba(4,44,83,.28); z-index:451;
+  display:none; flex-direction:column; overflow:hidden;
+}
+#bot-panel.open { display:flex; animation:botIn .22s ease; }
+@keyframes botIn { from{opacity:0; transform:translateY(12px);} to{opacity:1; transform:none;} }
+
+.bot-head {
+  display:flex; align-items:center; justify-content:space-between; gap:8px;
+  padding:12px 14px; background:var(--blue-p900); color:#fff; flex-shrink:0;
+}
+.bot-icon { background:rgba(255,255,255,.12); border:none; color:#fff; width:26px; height:26px;
+  border-radius:7px; cursor:pointer; font-size:.72rem; line-height:1; }
+.bot-icon:hover { background:rgba(255,255,255,.24); }
+
+#bot-msgs { flex:1; overflow-y:auto; padding:14px; display:flex; flex-direction:column; gap:10px; background:var(--bg); }
+.bot-msg { max-width:88%; padding:.6rem .8rem; border-radius:12px; font-size:.84rem; line-height:1.5; white-space:pre-wrap; word-wrap:break-word; }
+.bot-msg.user { align-self:flex-end; background:var(--blue-p700); color:#fff; border-bottom-right-radius:4px; }
+.bot-msg.ai   { align-self:flex-start; background:var(--surface); color:var(--g800); border:1px solid var(--border); border-bottom-left-radius:4px; }
+.bot-msg.err  { align-self:flex-start; background:#fee2e2; color:#991b1b; border:1px solid #fca5a5; }
+.bot-msg.ai strong { color:var(--blue-p700); }
+.bot-typing { align-self:flex-start; color:var(--g500); font-size:.8rem; font-style:italic; padding:.3rem .5rem; }
+
+#bot-sugg { display:flex; gap:6px; padding:8px 12px; overflow-x:auto; flex-shrink:0;
+  border-top:1px solid var(--border); background:var(--surface); }
+#bot-sugg button { flex-shrink:0; background:var(--blue-p50); border:1px solid var(--border);
+  color:var(--blue-p700); font-size:.7rem; font-weight:600; padding:.32rem .6rem; border-radius:99px; cursor:pointer; white-space:nowrap; }
+#bot-sugg button:hover { background:var(--blue-p100,#dbeafe); }
+
+.bot-input { display:flex; gap:7px; padding:10px 12px; border-top:1px solid var(--border); background:var(--surface); flex-shrink:0; }
+.bot-input textarea { flex:1; resize:none; max-height:90px; font-family:inherit; font-size:.84rem;
+  padding:.5rem .7rem; border:1px solid var(--border-med); border-radius:9px; background:var(--bg); color:var(--g800); outline:none; }
+.bot-input textarea:focus { border-color:var(--blue-p500,#3b82d4); }
+#bot-send { width:38px; border:none; border-radius:9px; background:var(--blue-p700); color:#fff; cursor:pointer; font-size:.9rem; flex-shrink:0; }
+#bot-send:disabled { opacity:.5; cursor:not-allowed; }
+
+@media (max-width: 768px) {
+  /* au-dessus de la barre de nav basse */
+  #bot-fab { right:14px; bottom:74px; width:50px; height:50px; }
+  #bot-panel { right:8px; left:8px; width:auto; bottom:74px; height:min(70vh, calc(100vh - 150px)); }
+}
+
 .mobile-navbar, .mmenu-sheet, .mmenu-backdrop { display:none; }
 
 @media (max-width: 768px) {
@@ -2348,6 +2404,44 @@ textarea { resize:vertical; min-height:80px; }
 </div>
 
 <div class="mmenu-backdrop" id="mmenu-backdrop" onclick="closeMobileMenu()"></div>
+
+<!-- ══ BOT IA — assistant flottant, disponible sur toutes les sections ══ -->
+<button id="bot-fab" onclick="botToggle()" title="Assistant IA" aria-label="Assistant IA">
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+    <rect x="3" y="8" width="18" height="12" rx="3"/><path d="M12 8V5M9 3.5h6"/><circle cx="8.5" cy="14" r="1.2" fill="currentColor" stroke="none"/><circle cx="15.5" cy="14" r="1.2" fill="currentColor" stroke="none"/>
+  </svg>
+</button>
+
+<div id="bot-panel" aria-hidden="true">
+  <div class="bot-head">
+    <div style="display:flex;align-items:center;gap:9px;min-width:0;">
+      <span style="font-size:1.05rem;">🤖</span>
+      <div style="min-width:0;">
+        <div style="font-weight:700;font-size:.9rem;line-height:1.1;">Assistant CRM</div>
+        <div id="bot-sub" style="font-size:.66rem;opacity:.75;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">Connecté à vos données</div>
+      </div>
+    </div>
+    <div style="display:flex;gap:4px;">
+      <button class="bot-icon" onclick="botClear()" title="Nouvelle conversation">🗑</button>
+      <button class="bot-icon" onclick="botToggle()" title="Fermer">✕</button>
+    </div>
+  </div>
+
+  <div id="bot-msgs"></div>
+
+  <div id="bot-sugg">
+    <button onclick="botAsk('Quels clients n\'ont pas commandé depuis 3 mois ?')">Clients inactifs</button>
+    <button onclick="botAsk('Quels sont mes 5 meilleurs produits ?')">Top produits</button>
+    <button onclick="botAsk('Fais-moi un résumé de mon activité commerciale.')">Résumé activité</button>
+    <button onclick="botAsk('Quels clients sont en baisse par rapport à l\'an dernier ?')">Clients en baisse</button>
+  </div>
+
+  <div class="bot-input">
+    <textarea id="bot-text" rows="1" placeholder="Posez une question sur vos clients, ventes, produits…"
+      onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();botSend();}"></textarea>
+    <button id="bot-send" onclick="botSend()" title="Envoyer">➤</button>
+  </div>
+</div>
 
 <div class="mmenu-sheet" id="mmenu-sheet" role="menu" aria-hidden="true">
   <div class="mmenu-handle"></div>
@@ -11813,6 +11907,268 @@ function mlAiRewrite(action){
       mlAiStatus('✅ Texte retravaillé — voir « Contenu de l\'email » ci-dessous.', 'ok');
       mlAiReveal();
     }).catch(function(e){ console.error('[IA] Erreur :', e); if (e.message !== 'no-key') mlAiStatus('Erreur : ' + e.message, 'err'); });
+}
+
+// ═══════════════════════════════════════════════
+//  BOT IA — assistant CRM (réutilise la clé/fournisseur du module Mailing)
+//  Il reçoit un instantané des données réelles (clients, CA, produits) pour
+//  répondre sur la base des chiffres du CRM, pas de généralités.
+// ═══════════════════════════════════════════════
+var botHistory = [];      // [{role:'user'|'model', text:''}]
+var botBusy = false;
+
+function botToggle(){
+  var p = document.getElementById('bot-panel'), f = document.getElementById('bot-fab');
+  if (!p) return;
+  var open = p.classList.toggle('open');
+  p.setAttribute('aria-hidden', open ? 'false' : 'true');
+  if (f) f.classList.toggle('open', open);
+  if (open) {
+    var sub = document.getElementById('bot-sub');
+    if (sub) sub.textContent = (mlAiGetProvider() === 'gemini' ? 'Gemini' : 'Claude') +
+      ' · ' + (CURRENT_BRAND === 'naturaline' ? 'NATURALINE' : 'MDM');
+    if (!botHistory.length) botPush('ai', 'Bonjour Christophe 👋\nJe peux répondre sur vos clients, vos ventes et vos produits. Posez votre question, ou utilisez un raccourci ci-dessous.');
+    setTimeout(function(){ var t = document.getElementById('bot-text'); if (t) t.focus(); }, 120);
+  }
+}
+function botClear(){
+  botHistory = [];
+  document.getElementById('bot-msgs').innerHTML = '';
+  botPush('ai', 'Nouvelle conversation. Que voulez-vous savoir ?');
+}
+function botEsc(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function botPush(kind, text){
+  var box = document.getElementById('bot-msgs'); if (!box) return;
+  var d = document.createElement('div');
+  d.className = 'bot-msg ' + (kind === 'user' ? 'user' : (kind === 'err' ? 'err' : 'ai'));
+  // gras markdown simple + retours ligne
+  d.innerHTML = botEsc(text).replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+  box.appendChild(d);
+  box.scrollTop = box.scrollHeight;
+}
+
+// ── Instantané des données du CRM (compact, pour tenir dans le contexte) ──
+function botBuildContext(){
+  var L = [];
+  var brand = (CURRENT_BRAND === 'naturaline') ? 'NATURALINE' : 'Moulin des Moines';
+  var today = new Date();
+  L.push('DATE DU JOUR : ' + today.toLocaleDateString('fr-FR'));
+  L.push('MARQUE ACTIVE : ' + brand);
+
+  // Chiffre d'affaires par client (dashCaRows)
+  try {
+    if (typeof dashCaRows !== 'undefined' && dashCaRows.length) {
+      var yNow = today.getFullYear(), yPrev = yNow - 1;
+      var perClient = {};
+      var caNow = 0, caPrev = 0;
+      dashCaRows.forEach(function(r){
+        var d = r.dateRef ? new Date(r.dateRef) : null;
+        var y = d ? d.getFullYear() : null;
+        var ca = Number(r.ca) || 0;
+        if (y === yNow) caNow += ca;
+        if (y === yPrev) caPrev += ca;
+        var k = r.client || '—';
+        if (!perClient[k]) perClient[k] = { n:0, p:0, last:null };
+        if (y === yNow) perClient[k].n += ca;
+        if (y === yPrev) perClient[k].p += ca;
+        if (d && (!perClient[k].last || d > perClient[k].last)) perClient[k].last = d;
+      });
+      L.push('CA ' + yNow + ' : ' + Math.round(caNow) + ' EUR HT');
+      L.push('CA ' + yPrev + ' : ' + Math.round(caPrev) + ' EUR HT');
+
+      var arr = Object.keys(perClient).map(function(k){
+        var o = perClient[k];
+        return { nom:k, caN:o.n, caP:o.p, last:o.last };
+      });
+
+      var top = arr.slice().sort(function(a,b){ return b.caN - a.caN; }).slice(0, 15);
+      L.push('');
+      L.push('TOP 15 CLIENTS (CA ' + yNow + ' | CA ' + yPrev + ' | dernière commande) :');
+      top.forEach(function(c){
+        L.push('- ' + c.nom + ' : ' + Math.round(c.caN) + ' | ' + Math.round(c.caP) + ' | ' +
+          (c.last ? c.last.toLocaleDateString('fr-FR') : 'aucune'));
+      });
+
+      // clients inactifs (>90 j) ayant déjà commandé
+      var lim = new Date(); lim.setDate(lim.getDate() - 90);
+      var inactifs = arr.filter(function(c){ return c.last && c.last < lim && (c.caN + c.caP) > 0; })
+                        .sort(function(a,b){ return (b.caN + b.caP) - (a.caN + a.caP); }).slice(0, 15);
+      if (inactifs.length) {
+        L.push('');
+        L.push('CLIENTS SANS COMMANDE DEPUIS PLUS DE 90 JOURS (CA cumulé | dernière commande) :');
+        inactifs.forEach(function(c){
+          L.push('- ' + c.nom + ' : ' + Math.round(c.caN + c.caP) + ' | ' + c.last.toLocaleDateString('fr-FR'));
+        });
+      }
+
+      // baisses marquées
+      var baisse = arr.filter(function(c){ return c.caP > 500 && c.caN < c.caP * 0.7; })
+                      .sort(function(a,b){ return (b.caP - b.caN) - (a.caP - a.caN); }).slice(0, 10);
+      if (baisse.length) {
+        L.push('');
+        L.push('CLIENTS EN BAISSE vs ' + yPrev + ' (CA ' + yNow + ' | CA ' + yPrev + ') :');
+        baisse.forEach(function(c){ L.push('- ' + c.nom + ' : ' + Math.round(c.caN) + ' | ' + Math.round(c.caP)); });
+      }
+    } else {
+      L.push('(Aucune donnée de CA chargée — importez le fichier de CA dans le Dashboard.)');
+    }
+  } catch(e){ console.warn('[BOT] contexte CA', e); }
+
+  // Top produits (depuis le module Top 100 s'il a été ouvert)
+  try {
+    if (typeof top100Rows !== 'undefined' && top100Rows.length) {
+      L.push('');
+      L.push('TOP 15 PRODUITS (colis | CA HT) :');
+      top100Rows.slice(0, 15).forEach(function(r, i){
+        L.push('- ' + (i+1) + '. ' + (r.libelle || r.code) + ' : ' + r.qte + ' colis | ' + Math.round(r.ca) + ' EUR');
+      });
+    }
+  } catch(e){}
+
+  // Base clients
+  try {
+    if (typeof cdbContacts !== 'undefined' && cdbContacts.length) {
+      L.push('');
+      L.push('BASE CLIENTS : ' + cdbContacts.length + ' contacts enregistrés.');
+    }
+  } catch(e){}
+
+  return L.join('\n');
+}
+
+var BOT_SYS = 'Tu es l\'assistant du CRM d\'un commercial terrain dans l\'alimentaire bio (France, clients = magasins bio et revendeurs, prix HT). ' +
+  'Tu réponds en français, de façon brève et concrète, comme un collègue qui connaît le terrain. ' +
+  'IMPORTANT : appuie-toi UNIQUEMENT sur les données CRM fournies ci-dessous. ' +
+  'Si une information n\'y figure pas, dis-le franchement au lieu d\'inventer un chiffre ou un nom de client. ' +
+  'Cite les chiffres réels quand ils existent. Propose une action commerciale concrète quand c\'est pertinent. ' +
+  'Pas de listes interminables : va à l\'essentiel (5 points max).';
+
+function botAsk(q){
+  var t = document.getElementById('bot-text');
+  if (t) t.value = q;
+  botSend();
+}
+
+function botSend(){
+  if (botBusy) return;
+  var t = document.getElementById('bot-text');
+  var q = (t.value || '').trim();
+  if (!q) return;
+
+  if (!mlAiGetKey()) {
+    botPush('err', 'Aucune clé API enregistrée. Allez dans Mailing → 🔑 Clé API pour en saisir une (Gemini est gratuit).');
+    return;
+  }
+
+  t.value = '';
+  botPush('user', q);
+  botHistory.push({ role:'user', text:q });
+  botBusy = true;
+  document.getElementById('bot-send').disabled = true;
+
+  var box = document.getElementById('bot-msgs');
+  var typing = document.createElement('div');
+  typing.className = 'bot-typing';
+  typing.textContent = 'Analyse de vos données…';
+  box.appendChild(typing);
+  box.scrollTop = box.scrollHeight;
+
+  // Le contexte CRM est recalculé à chaque question (données à jour)
+  var prompt = 'DONNÉES CRM ACTUELLES :\n' + botBuildContext() + '\n\n';
+  // rappel des 6 derniers échanges pour garder le fil
+  var hist = botHistory.slice(-7, -1);
+  if (hist.length) {
+    prompt += 'CONVERSATION PRÉCÉDENTE :\n';
+    hist.forEach(function(m){ prompt += (m.role === 'user' ? 'Commercial : ' : 'Assistant : ') + m.text + '\n'; });
+    prompt += '\n';
+  }
+  prompt += 'QUESTION DU COMMERCIAL : ' + q;
+
+  botCall(BOT_SYS, prompt).then(function(txt){
+    typing.remove();
+    botPush('ai', txt);
+    botHistory.push({ role:'model', text:txt });
+  }).catch(function(e){
+    typing.remove();
+    console.error('[BOT] Erreur :', e);
+    botPush('err', 'Erreur : ' + e.message);
+  }).then(function(){
+    botBusy = false;
+    var b = document.getElementById('bot-send'); if (b) b.disabled = false;
+  });
+}
+
+// Appel IA en texte libre (contrairement au mailing, pas de JSON imposé ici)
+function botCall(systemPrompt, userPrompt){
+  var key = mlAiGetKey();
+  var provider = mlAiGetProvider();
+  if (!key) return Promise.reject(new Error('Aucune clé API'));
+
+  if (provider === 'gemini') {
+    var payload = {
+      contents: [{ role:'user', parts:[{ text: userPrompt }] }],
+      systemInstruction: { parts:[{ text: systemPrompt }] },
+      generationConfig: { temperature:0.4, maxOutputTokens:2048, thinkingConfig:{ thinkingBudget:0 } }
+    };
+    var doCall = function(model, noThink){
+      var body = JSON.parse(JSON.stringify(payload));
+      if (noThink) delete body.generationConfig.thinkingConfig;
+      return fetch('https://generativelanguage.googleapis.com/v1beta/models/' + model + ':generateContent', {
+        method:'POST',
+        headers:{ 'Content-Type':'application/json', 'x-goog-api-key':key },
+        body: JSON.stringify(body)
+      }).then(function(r){
+        if (!r.ok) return r.json().catch(function(){return {};}).then(function(j){
+          var m = (j && j.error && j.error.message) ? j.error.message : ('Erreur HTTP ' + r.status);
+          var e = new Error(m); e.status = r.status; throw e;
+        });
+        return r.json();
+      }).then(function(data){
+        var c = data && data.candidates && data.candidates[0];
+        var parts = (c && c.content && c.content.parts) ? c.content.parts : [];
+        var txt = parts.map(function(p){ return (p && p.text) ? p.text : ''; }).join('').trim();
+        if (!txt) throw new Error('Réponse vide — reformulez votre question.');
+        return txt;
+      }).catch(function(e){
+        var m = String(e.message || '');
+        if (!noThink && e.status === 400 && /thinking|unknown name|invalid.*argument/i.test(m)) return doCall(model, true);
+        throw e;
+      });
+    };
+    var cached = mlAiGetGeminiModel();
+    var start = cached ? Promise.resolve(cached) : mlAiDetectGeminiModel(key);
+    return start.then(doCall).catch(function(e){
+      var m = String(e.message || '');
+      if (e.status === 404 || /no longer available|is not found|not supported/i.test(m)) {
+        mlAiSetGeminiModel('');
+        return mlAiDetectGeminiModel(key).then(doCall);
+      }
+      if (e.status === 429) throw new Error('Quota gratuit atteint. Réessayez dans quelques minutes.');
+      throw e;
+    });
+  }
+
+  // Claude
+  return fetch('https://api.anthropic.com/v1/messages', {
+    method:'POST',
+    headers:{ 'Content-Type':'application/json', 'x-api-key':key,
+      'anthropic-version':'2023-06-01', 'anthropic-dangerous-direct-browser-access':'true' },
+    body: JSON.stringify({
+      model: (typeof ML_AI_MODEL_CLAUDE !== 'undefined' ? ML_AI_MODEL_CLAUDE : 'claude-sonnet-4-5-20250929'),
+      max_tokens: 2048, system: systemPrompt,
+      messages: [{ role:'user', content: userPrompt }]
+    })
+  }).then(function(r){
+    if (!r.ok) return r.json().catch(function(){return {};}).then(function(j){
+      throw new Error((j && j.error && j.error.message) ? j.error.message : ('Erreur HTTP ' + r.status));
+    });
+    return r.json();
+  }).then(function(data){
+    var txt = (data.content || []).filter(function(b){ return b.type === 'text'; })
+      .map(function(b){ return b.text; }).join('\n').trim();
+    if (!txt) throw new Error('Réponse vide');
+    return txt;
+  });
 }
 
 function mlSetTemplate(key) {
