@@ -1050,6 +1050,8 @@ textarea { resize:vertical; min-height:80px; }
         <div class="avatar-menu-item" style="font-size:.72rem;color:var(--s500);cursor:default;" id="menu-email">—</div>
         <div class="avatar-menu-item" id="menu-role-lbl">Commercial</div>
         <div class="avatar-menu-sep"></div>
+        <div class="avatar-menu-item" onclick="openProfilModal()">⚙️ Mon profil</div>
+        <div class="avatar-menu-sep"></div>
         <div class="avatar-menu-item danger" onclick="doLogout()">Se déconnecter</div>
       </div>
     </div>
@@ -2497,6 +2499,38 @@ textarea { resize:vertical; min-height:80px; }
 
 <div class="mmenu-backdrop" id="mmenu-backdrop" onclick="closeMobileMenu()"></div>
 
+<!-- ══ MON PROFIL — changer nom / email SANS perdre ses données ══ -->
+<div id="profil-modal" style="display:none;position:fixed;inset:0;background:rgba(4,20,40,.55);z-index:600;align-items:center;justify-content:center;padding:16px;">
+  <div style="background:var(--surface);border-radius:14px;width:100%;max-width:440px;box-shadow:0 20px 60px rgba(0,0,0,.3);overflow:hidden;">
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 18px;background:var(--blue-p900);color:#fff;">
+      <span style="font-weight:700;font-size:.95rem;">⚙️ Mon profil</span>
+      <button onclick="closeProfilModal()" style="background:rgba(255,255,255,.15);border:none;color:#fff;width:26px;height:26px;border-radius:7px;cursor:pointer;">✕</button>
+    </div>
+
+    <div style="padding:18px;">
+      <div style="font-size:.72rem;color:var(--g500);margin-bottom:14px;padding:.6rem .8rem;background:var(--blue-p50);border-radius:7px;">
+        Vos données sont liées à ce compte. Modifier l'email <strong>ici</strong> conserve tout votre historique — ne créez surtout pas un nouveau compte.
+      </div>
+
+      <label class="lb" style="display:block;margin-bottom:.3rem;">Nom affiché</label>
+      <input type="text" id="profil-nom" placeholder="Christophe Spoto" style="width:100%;margin-bottom:14px;"/>
+
+      <label class="lb" style="display:block;margin-bottom:.3rem;">Email de connexion</label>
+      <input type="email" id="profil-email" placeholder="nouveau@email.fr" style="width:100%;margin-bottom:14px;"/>
+
+      <label class="lb" style="display:block;margin-bottom:.3rem;">Mot de passe actuel <span style="font-weight:400;color:var(--g500);">(requis pour changer l'email)</span></label>
+      <input type="password" id="profil-pwd" placeholder="••••••••" style="width:100%;margin-bottom:6px;"/>
+
+      <div id="profil-status" style="display:none;font-size:.76rem;padding:.55rem .7rem;border-radius:6px;margin:8px 0;"></div>
+
+      <div style="display:flex;gap:8px;margin-top:14px;">
+        <button class="btn btn-ghost" onclick="closeProfilModal()" style="flex:1;">Annuler</button>
+        <button class="btn btn-primary" id="profil-save" onclick="saveProfil()" style="flex:1;">Enregistrer</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- ══ BOT IA — assistant flottant, disponible sur toutes les sections ══ -->
 <button id="bot-fab" onclick="botToggle()" title="Assistant IA" aria-label="Assistant IA">
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
@@ -3440,9 +3474,21 @@ function accordsGetHtml(accordId) {
 }
 
 // ─── Gestion des comptes (admin uniquement) ───────────────────────────────
-var ADMIN_EMAIL = 'loacdev@outlook.fr';
+// ⚠️ Emails administrateurs. En cas de changement d'adresse de connexion,
+// ajoutez simplement la nouvelle ici (l'ancienne peut rester, sans effet).
+var ADMIN_EMAILS = ['loacdev@outlook.fr'];
+var ADMIN_EMAIL = ADMIN_EMAILS[0];   // conservé pour compatibilité
+// Repli : l'uid de l'admin est mémorisé au 1er accès, ce qui préserve les
+// droits même si l'email change (l'uid, lui, ne change jamais).
 function isAdminUser() {
-  return !!(currentUser && currentUser.email && currentUser.email.toLowerCase() === ADMIN_EMAIL);
+  if (!currentUser) return false;
+  var mail = (currentUser.email || '').toLowerCase();
+  var byMail = ADMIN_EMAILS.some(function(e){ return e.toLowerCase() === mail; });
+  if (byMail) {
+    try { localStorage.setItem('mdm_admin_uid', currentUser.uid); } catch(e){}
+    return true;
+  }
+  try { return localStorage.getItem('mdm_admin_uid') === currentUser.uid; } catch(e){ return false; }
 }
 function initAdminAccountsUI() {
   if (!isAdminUser()) return;
@@ -4570,6 +4616,91 @@ function toggleMobileMenu() {
   if (s && s.classList.contains('open')) closeMobileMenu(); else openMobileMenu();
 }
 function mnavGo(name) { closeMobileMenu(); showSection(name, null, null); }
+
+// ═══════════════════════════════════════════════
+//  MON PROFIL — changer nom et email sans perdre ses données
+//  On modifie le compte EXISTANT : l'uid reste identique, donc toutes les
+//  collections Firestore (scopées par uid dans bcol()) restent accessibles.
+// ═══════════════════════════════════════════════
+function openProfilModal(){
+  var m = document.getElementById('profil-modal'); if (!m) return;
+  document.getElementById('avatar-menu').classList.remove('open');
+  document.getElementById('profil-nom').value = (currentUser && currentUser.displayName) || '';
+  document.getElementById('profil-email').value = (currentUser && currentUser.email) || '';
+  document.getElementById('profil-pwd').value = '';
+  profilStatus('', null);
+  m.style.display = 'flex';
+}
+function closeProfilModal(){
+  var m = document.getElementById('profil-modal'); if (m) m.style.display = 'none';
+}
+function profilStatus(msg, kind){
+  var el = document.getElementById('profil-status'); if (!el) return;
+  if (!msg) { el.style.display = 'none'; return; }
+  el.style.display = 'block';
+  el.textContent = msg;
+  if (kind === 'err') { el.style.background = '#fee2e2'; el.style.color = '#991b1b'; }
+  else if (kind === 'ok') { el.style.background = '#d1fae5'; el.style.color = '#065f46'; }
+  else { el.style.background = 'var(--blue-p50)'; el.style.color = 'var(--blue-p700)'; }
+}
+
+function saveProfil(){
+  if (!currentUser) { profilStatus('Non connecté.', 'err'); return; }
+  var nom     = (document.getElementById('profil-nom').value || '').trim();
+  var email   = (document.getElementById('profil-email').value || '').trim();
+  var pwd     = (document.getElementById('profil-pwd').value || '');
+  var oldMail = (currentUser.email || '');
+  var btn = document.getElementById('profil-save');
+  var mailChanged = email && email.toLowerCase() !== oldMail.toLowerCase();
+
+  if (mailChanged && !pwd) { profilStatus('Saisissez votre mot de passe actuel pour changer l\'email.', 'err'); return; }
+  if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { profilStatus('Email invalide.', 'err'); return; }
+
+  btn.disabled = true; btn.textContent = 'Enregistrement…';
+  profilStatus('Enregistrement…', 'info');
+
+  var chain = Promise.resolve();
+
+  // 1) Nom affiché
+  if (nom && nom !== (currentUser.displayName || '')) {
+    chain = chain.then(function(){ return currentUser.updateProfile({ displayName: nom }); });
+  }
+
+  // 2) Email : nécessite une ré-authentification récente
+  if (mailChanged) {
+    chain = chain.then(function(){
+      var cred = firebase.auth.EmailAuthProvider.credential(oldMail, pwd);
+      return currentUser.reauthenticateWithCredential(cred);
+    }).then(function(){
+      // Firebase exige souvent une vérification du nouvel email
+      if (typeof currentUser.verifyBeforeUpdateEmail === 'function') {
+        return currentUser.verifyBeforeUpdateEmail(email).then(function(){ return 'verify'; });
+      }
+      return currentUser.updateEmail(email).then(function(){ return 'direct'; });
+    });
+  }
+
+  chain.then(function(res){
+    if (res === 'verify') {
+      profilStatus('✅ Un email de confirmation a été envoyé à ' + email +
+        '. Ouvrez-le et cliquez sur le lien : votre adresse de connexion changera à ce moment-là. ' +
+        'Vos données restent intactes (même compte).', 'ok');
+    } else {
+      profilStatus('✅ Profil mis à jour.', 'ok');
+      setTimeout(function(){ closeProfilModal(); location.reload(); }, 1400);
+    }
+    if (typeof refreshUserUI === 'function') refreshUserUI();
+  }).catch(function(e){
+    var m = e.message || String(e);
+    if (/wrong-password|invalid-credential/i.test(e.code || '')) m = 'Mot de passe incorrect.';
+    if (/requires-recent-login/i.test(e.code || '')) m = 'Reconnectez-vous puis réessayez.';
+    if (/email-already-in-use/i.test(e.code || '')) m = 'Cet email est déjà utilisé par un autre compte.';
+    console.error('[Profil]', e);
+    profilStatus('Erreur : ' + m, 'err');
+  }).then(function(){
+    btn.disabled = false; btn.textContent = 'Enregistrer';
+  });
+}
 
 function toggleAvatarMenu() { document.getElementById('avatar-menu').classList.toggle('open'); }
 document.addEventListener('click', e => { if(!e.target.closest('#avatar-btn')) document.getElementById('avatar-menu')?.classList.remove('open'); });
