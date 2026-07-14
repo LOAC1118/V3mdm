@@ -2105,6 +2105,8 @@ textarea { resize:vertical; min-height:80px; }
         <div style="font-size:.75rem;color:var(--g500);margin-top:2px;">Produits commandés par client, mois par mois</div>
       </div>
       <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+        <label for="cad-import-file" class="btn btn-primary" style="font-size:.75rem;cursor:pointer;margin:0;">📥 Importer un cadencier</label>
+        <input type="file" id="cad-import-file" accept=".xlsx,.xls" onchange="cadImportFile(this.files[0])" style="display:none;"/>
         <button class="btn btn-ghost" onclick="cadReload()" style="font-size:.75rem;">🔄 Actualiser</button>
         <button class="btn btn-ghost" onclick="cadExportPDF()" style="font-size:.75rem;">📕 PDF</button>
         <button class="btn btn-ghost" onclick="cadExportXLS()" style="font-size:.75rem;">📊 Excel</button>
@@ -2498,6 +2500,31 @@ textarea { resize:vertical; min-height:80px; }
 </div>
 
 <div class="mmenu-backdrop" id="mmenu-backdrop" onclick="closeMobileMenu()"></div>
+
+<!-- ══ IMPORT CADENCIER MOBILOGIC ══ -->
+<div id="cadimp-modal" style="display:none;position:fixed;inset:0;background:rgba(4,20,40,.55);z-index:600;align-items:center;justify-content:center;padding:16px;">
+  <div style="background:var(--surface);border-radius:14px;width:100%;max-width:480px;box-shadow:0 20px 60px rgba(0,0,0,.3);overflow:hidden;">
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 18px;background:var(--blue-p900);color:#fff;">
+      <span style="font-weight:700;font-size:.95rem;">📥 Importer un cadencier Mobilogic</span>
+      <button onclick="cadImpClose()" style="background:rgba(255,255,255,.15);border:none;color:#fff;width:26px;height:26px;border-radius:7px;cursor:pointer;">✕</button>
+    </div>
+    <div style="padding:18px;">
+      <div id="cadimp-summary" style="font-size:.78rem;color:var(--g700);background:var(--blue-p50);padding:.7rem .9rem;border-radius:7px;margin-bottom:14px;"></div>
+
+      <label class="lb" style="display:block;margin-bottom:.3rem;">Rattacher à quel client ?</label>
+      <input type="text" id="cadimp-client" list="cadimp-clients" placeholder="Nom du client" style="width:100%;margin-bottom:6px;"/>
+      <datalist id="cadimp-clients"></datalist>
+      <div style="font-size:.68rem;color:var(--g500);margin-bottom:14px;">Le nom doit être identique à celui de votre base clients pour que les données se recoupent.</div>
+
+      <div id="cadimp-status" style="display:none;font-size:.76rem;padding:.55rem .7rem;border-radius:6px;margin-bottom:10px;"></div>
+
+      <div style="display:flex;gap:8px;">
+        <button class="btn btn-ghost" onclick="cadImpClose()" style="flex:1;">Annuler</button>
+        <button class="btn btn-primary" id="cadimp-save" onclick="cadImpSave()" style="flex:1;">Importer</button>
+      </div>
+    </div>
+  </div>
+</div>
 
 <!-- ══ MON PROFIL — changer nom / email SANS perdre ses données ══ -->
 <div id="profil-modal" style="display:none;position:fixed;inset:0;background:rgba(4,20,40,.55);z-index:600;align-items:center;justify-content:center;padding:16px;">
@@ -3113,7 +3140,7 @@ let db = null, auth = null, currentUser = null, fbFunctions = null;
 // Les collections listées ici sont dupliquées par marque ET par commercial
 // (suffixe _<marque>_<uid>). 'profils' reste commun et global (compte Firebase
 // Auth, indépendant de la marque et déjà identifié par son propre uid).
-var BRAND_SCOPED_COLLECTIONS = ['clients','contacts','prospects','commandes','commandes_meta','commandes_stats','frais','notes_frais','activite','objectifs_ca','config'];
+var BRAND_SCOPED_COLLECTIONS = ['clients','contacts','prospects','commandes','commandes_meta','commandes_stats','frais','notes_frais','activite','objectifs_ca','config','cadenciers'];
 function bcol(name) {
   if (BRAND_SCOPED_COLLECTIONS.indexOf(name) !== -1) {
     var uidSuffix = (currentUser && currentUser.uid) ? ('_' + currentUser.uid) : '';
@@ -4158,9 +4185,195 @@ function cadEsc(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/<
 function cadDate(c){ var t=c.createdAt; if(!t) return null; try { return new Date(t.seconds? t.seconds*1000 : t); } catch(e){ return null; } }
 function cadKeyOf(c){ return (c.clientNom || c.numClient || '—'); }
 
+// ── IMPORT CADENCIER MOBILOGIC ──────────────────────────────────────────
+// Format attendu : une ligne par produit ET par commande.
+// Colonnes : Code | Libellé | Date de commande | Qté commandée | Livré le |
+//            Qté Livrée | Dernière commande | UC | EAN13
+// Ce fichier ne contient AUCUN prix : le CA affiché est donc estimé à partir
+// du catalogue (pu_ht), et clairement signalé comme tel.
+var cadImpParsed = null;
+var cadImported = {};   // client -> { rows:[...], importedAt }
+
+function cadImpStatus(msg, kind){
+  var el = document.getElementById('cadimp-status'); if(!el) return;
+  if (!msg) { el.style.display='none'; return; }
+  el.style.display='block'; el.textContent=msg;
+  if (kind==='err'){ el.style.background='#fee2e2'; el.style.color='#991b1b'; }
+  else if (kind==='ok'){ el.style.background='#d1fae5'; el.style.color='#065f46'; }
+  else { el.style.background='var(--blue-p50)'; el.style.color='var(--blue-p700)'; }
+}
+function cadImpClose(){
+  var m=document.getElementById('cadimp-modal'); if(m) m.style.display='none';
+  var f=document.getElementById('cad-import-file'); if(f) f.value='';
+  cadImpParsed=null;
+}
+
+function cadImpNorm(s){ return String(s==null?'':s).toLowerCase().replace(/[éèê]/g,'e').replace(/[^a-z0-9]/g,''); }
+
+function cadImportFile(file){
+  if (!file) return;
+  withXLSX(function(){
+    var reader = new FileReader();
+    reader.onload = function(e){
+      try {
+        var wb = XLSX.read(new Uint8Array(e.target.result), { type:'array', cellDates:true });
+        var ws = wb.Sheets[wb.SheetNames[0]];
+        var rows = XLSX.utils.sheet_to_json(ws, { defval:null, raw:false });
+        if (!rows.length) { toast('Fichier vide','err'); return; }
+
+        // détection souple des colonnes
+        var keys = Object.keys(rows[0]);
+        var find = function(cands){
+          for (var i=0;i<keys.length;i++){
+            var n = cadImpNorm(keys[i]);
+            for (var j=0;j<cands.length;j++) if (n.indexOf(cands[j]) >= 0) return keys[i];
+          }
+          return null;
+        };
+        var kCode = find(['code']);
+        var kLib  = find(['libelle','designation']);
+        var kDate = find(['datedecommande','datecommande']);
+        var kQte  = find(['qtecommandee','qtecmd','quantitecommandee']);
+        var kQteL = find(['qtelivree','quantitelivree']);
+        var kLast = find(['dernierecommande']);
+        var kUC   = find(['uc','unite']);
+        var kEan  = find(['ean']);
+
+        if (!kCode || !kDate || !kQte) {
+          console.warn('[Cadencier] Colonnes trouvées :', keys);
+          toast('Colonnes non reconnues (Code / Date de commande / Qté commandée)','err');
+          return;
+        }
+
+        var parseD = function(v){
+          if (!v) return null;
+          if (v instanceof Date) return v;
+          var n = Number(v);
+          if (!isNaN(n) && n > 20000 && n < 60000) {   // série Excel
+            return new Date(Date.UTC(1899,11,30) + n*86400000);
+          }
+          var m = String(v).match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+          if (m) return new Date(+m[3], +m[2]-1, +m[1]);
+          var d = new Date(v);
+          return isNaN(d) ? null : d;
+        };
+
+        var out = [];
+        rows.forEach(function(r){
+          var code = r[kCode]; if (!code) return;
+          var qte = parseFloat(String(r[kQte]||'0').replace(',','.')) || 0;
+          var d = parseD(r[kDate]);
+          if (!d || qte <= 0) return;   // on ne garde que les vraies commandes
+          out.push({
+            code: String(code).trim(),
+            libelle: kLib ? String(r[kLib]||'').trim() : '',
+            date: d.toISOString().slice(0,10),
+            qty: qte,
+            qtyLiv: kQteL ? (parseFloat(String(r[kQteL]||'0').replace(',','.')) || 0) : 0,
+            last: kLast ? (function(){ var x=parseD(r[kLast]); return x?x.toISOString().slice(0,10):null; })() : null,
+            uc: kUC ? String(r[kUC]||'').trim() : '',
+            ean: kEan ? String(r[kEan]||'').trim() : ''
+          });
+        });
+
+        if (!out.length) { toast('Aucune ligne de commande exploitable','err'); return; }
+
+        cadImpParsed = out;
+
+        var dates = out.map(function(o){ return o.date; }).sort();
+        var codes = {}; out.forEach(function(o){ codes[o.code]=1; });
+        document.getElementById('cadimp-summary').innerHTML =
+          '<strong>' + out.length + ' lignes</strong> · ' + Object.keys(codes).length + ' références · ' +
+          dates.length + ' commandes<br>Période : ' +
+          new Date(dates[0]).toLocaleDateString('fr-FR') + ' → ' + new Date(dates[dates.length-1]).toLocaleDateString('fr-FR') +
+          '<br><span style="color:var(--g500);font-size:.72rem;">Ce format ne contient pas de prix : le CA sera estimé depuis le catalogue.</span>';
+
+        // liste des clients connus + pré-remplissage depuis le nom de fichier
+        var dl = document.getElementById('cadimp-clients');
+        if (dl && typeof cdbContacts !== 'undefined') {
+          dl.innerHTML = cdbContacts.map(function(c){
+            var n = c.raisonSociale || c.nom || c.client || '';
+            return n ? '<option value="'+String(n).replace(/"/g,'&quot;')+'">' : '';
+          }).join('');
+        }
+        var guess = file.name.replace(/\.(xlsx|xls)$/i,'').replace(/^cadencier[_\s-]*/i,'').replace(/[_-]/g,' ').trim();
+        document.getElementById('cadimp-client').value = guess;
+        cadImpStatus('', null);
+        document.getElementById('cadimp-modal').style.display = 'flex';
+
+      } catch(err){
+        console.error('[Cadencier import]', err);
+        toast('Lecture impossible : ' + err.message, 'err');
+      }
+    };
+    reader.readAsArrayBuffer(file);
+  });
+}
+
+function cadImpSave(){
+  var client = (document.getElementById('cadimp-client').value || '').trim();
+  if (!client) { cadImpStatus('Indiquez le client.','err'); return; }
+  if (!cadImpParsed || !cadImpParsed.length) { cadImpStatus('Rien à importer.','err'); return; }
+  if (!db || !currentUser) { cadImpStatus('Non connecté.','err'); return; }
+
+  var btn = document.getElementById('cadimp-save');
+  btn.disabled = true; btn.textContent = 'Import…';
+  cadImpStatus('Enregistrement…','info');
+
+  var id = client.toLowerCase().replace(/[^a-z0-9]+/g,'_').replace(/^_+|_+$/g,'').slice(0,120) || 'client';
+  bcol('cadenciers').doc(id).set({
+    client: client,
+    rows: cadImpParsed,
+    importedAt: new Date().toISOString(),
+    source: 'mobilogic'
+  }).then(function(){
+    cadImpStatus('✅ Importé.','ok');
+    toast(cadImpParsed.length + ' lignes importées pour ' + client, 'ok');
+    setTimeout(function(){
+      cadImpClose();
+      cadLoadImported().then(function(){
+        cadFillClients();
+        var sel = document.getElementById('cad-client');
+        if (sel) { sel.value = client; cadState.client = client; }
+        cadRender();
+      });
+    }, 700);
+  }).catch(function(e){
+    console.error('[Cadencier import]', e);
+    cadImpStatus('Erreur : ' + e.message, 'err');
+  }).then(function(){
+    btn.disabled = false; btn.textContent = 'Importer';
+  });
+}
+
+function cadLoadImported(){
+  if (!db || !currentUser) return Promise.resolve();
+  return bcol('cadenciers').get().then(function(snap){
+    cadImported = {};
+    snap.forEach(function(doc){
+      var d = doc.data();
+      if (d && d.client && d.rows) cadImported[d.client] = d;
+    });
+    console.log('[Cadencier] ' + Object.keys(cadImported).length + ' cadencier(s) importé(s)');
+  }).catch(function(e){ console.warn('[Cadencier] import load', e); });
+}
+
+function cadSupprImport(){
+  var client = cadState.client; if (!client) return;
+  if (!cadImported[client]) { toast('Aucun import pour ce client','err'); return; }
+  if (!confirm('Supprimer le cadencier importé de ' + client + ' ?')) return;
+  var id = client.toLowerCase().replace(/[^a-z0-9]+/g,'_').replace(/^_+|_+$/g,'').slice(0,120);
+  bcol('cadenciers').doc(id).delete().then(function(){
+    delete cadImported[client];
+    toast('Import supprimé','ok');
+    cadFillClients(); cadRender();
+  });
+}
+
 function cadInit(){
-  if (cadCmds === null || cadCmdsBrand !== CURRENT_BRAND) cadLoad();
-  else { cadFillClients(); cadRender(); }
+  if (cadCmds === null || cadCmdsBrand !== CURRENT_BRAND) {
+    cadLoadImported().then(cadLoad);
+  } else { cadFillClients(); cadRender(); }
 }
 function cadReload(){ cadCmds = null; cadInit(); }
 
@@ -4190,12 +4403,18 @@ function cadFillClients(){
     var d = cadDate(c);
     if (d && (!seen[k].last || d > seen[k].last)) seen[k].last = d;
   });
+  // clients issus des cadenciers importés (Mobilogic)
+  Object.keys(cadImported || {}).forEach(function(k){
+    if (!seen[k]) seen[k] = { n:0, last:null, imp:true };
+    else seen[k].imp = true;
+  });
   var names = Object.keys(seen).sort(function(a,b){ return a.localeCompare(b,'fr'); });
   var cur = cadState.client;
   sel.innerHTML = '<option value="">— Sélectionnez un client (' + names.length + ') —</option>' +
     names.map(function(n){
       var o = seen[n];
-      return '<option value="' + cadEsc(n) + '">' + cadEsc(n) + ' (' + o.n + ' cmd.)</option>';
+      var tag = o.imp ? ' 📥' : '';
+      return '<option value="' + cadEsc(n) + '">' + cadEsc(n) + ' (' + o.n + ' cmd.)' + tag + '</option>';
     }).join('');
   if (cur && names.indexOf(cur) >= 0) sel.value = cur;
 }
@@ -4219,30 +4438,54 @@ function cadBuild(){
   var mIdx = {}; months.forEach(function(m,i){ mIdx[m.key] = i; });
 
   var prods = {}, nbCmd = 0, lastDate = null, totalCA = 0;
-  (cadCmds||[]).forEach(function(c){
-    if (cadKeyOf(c) !== client) return;
-    var d = cadDate(c); if (!d) return;
+  var estimated = false;
+
+  // Fonction d'ajout commune (CRM ou import)
+  function addLine(d, code, libelle, qte, ca, ean, isEstim){
     if (!lastDate || d > lastDate) lastDate = d;
     var key = d.getFullYear() + '-' + ('0'+(d.getMonth()+1)).slice(-2);
     var col = mIdx[key];
+    if (!prods[code]) {
+      var p = (typeof PRODUCTS !== 'undefined') ? PRODUCTS.find(function(x){ return String(x.code)===String(code); }) : null;
+      prods[code] = { code:code, libelle: libelle || (p?p.libelle:''), ean: ean || (p?p.ean:''),
+                      cells: new Array(months.length).fill(0), caCells: new Array(months.length).fill(0),
+                      totQ:0, totCA:0, nb:0, last:null };
+    }
+    var P = prods[code];
+    if (col !== undefined) { P.cells[col] += qte; P.caCells[col] += ca; }
+    P.totQ += qte; P.totCA += ca; P.nb++;
+    totalCA += ca;
+    if (isEstim) estimated = true;
+    if (!P.last || d > P.last) P.last = d;
+  }
+
+  // 1) Commandes saisies dans le CRM
+  (cadCmds||[]).forEach(function(c){
+    if (cadKeyOf(c) !== client) return;
+    var d = cadDate(c); if (!d) return;
     nbCmd++;
     (c.lignes||[]).forEach(function(l){
-      var code = l.code || '(sans code)';
       var qte = Number(l.qty || l.qt || 0) || 0;
       var ca  = Number(l.total_ht || l.total || (Number(l.pu_ht||0)*qte)) || 0;
-      totalCA += ca;
-      if (!prods[code]) {
-        var p = (typeof PRODUCTS !== 'undefined') ? PRODUCTS.find(function(x){ return String(x.code)===String(code); }) : null;
-        prods[code] = { code:code, libelle: l.libelle || (p?p.libelle:''), ean: p?p.ean:'',
-                        cells: new Array(months.length).fill(0), caCells: new Array(months.length).fill(0),
-                        totQ:0, totCA:0, nb:0, last:null };
-      }
-      var P = prods[code];
-      if (col !== undefined) { P.cells[col] += qte; P.caCells[col] += ca; }
-      P.totQ += qte; P.totCA += ca; P.nb++;
-      if (!P.last || d > P.last) P.last = d;
+      addLine(d, l.code || '(sans code)', l.libelle || '', qte, ca, '', false);
     });
   });
+
+  // 2) Cadencier importé de Mobilogic (quantités réelles, pas de prix)
+  var imp = cadImported && cadImported[client];
+  if (imp && imp.rows && imp.rows.length) {
+    var cmdDates = {};
+    imp.rows.forEach(function(r){
+      var d = new Date(r.date); if (isNaN(d)) return;
+      cmdDates[r.date] = 1;
+      var qte = Number(r.qty) || 0;
+      // pas de prix dans l'export -> CA estimé depuis le catalogue
+      var p = (typeof PRODUCTS !== 'undefined') ? PRODUCTS.find(function(x){ return String(x.code)===String(r.code); }) : null;
+      var pu = p ? (Number(p.pu_ht) || 0) : 0;
+      addLine(d, r.code, r.libelle, qte, pu * qte, r.ean, pu > 0);
+    });
+    nbCmd += Object.keys(cmdDates).length;
+  }
 
   var rows = Object.keys(prods).map(function(k){ return prods[k]; })
     .sort(function(a,b){ return b.totQ - a.totQ; });
@@ -4253,7 +4496,7 @@ function cadBuild(){
     r.cells.forEach(function(v,i){ totals[i] += (cadState.unit === 'ca') ? r.caCells[i] : v; });
   });
 
-  return { months:months, rows:rows, totals:totals, nbCmd:nbCmd, lastDate:lastDate, totalCA:totalCA };
+  return { months:months, rows:rows, totals:totals, nbCmd:nbCmd, lastDate:lastDate, totalCA:totalCA, estimated:estimated, imported: !!imp };
 }
 
 function cadRender(){
@@ -4286,7 +4529,9 @@ function cadRender(){
   if (stats) {
     stats.style.display = 'grid';
     document.getElementById('cad-stat-refs').textContent = cadInt(M.rows.length);
-    document.getElementById('cad-stat-ca').textContent = cadEur(M.totalCA);
+    document.getElementById('cad-stat-ca').textContent = cadEur(M.totalCA) + (M.estimated ? ' *' : '');
+    var caLbl = document.getElementById('cad-stat-ca').previousElementSibling;
+    if (caLbl) caLbl.textContent = M.estimated ? 'CA HT estimé *' : 'CA HT cumulé';
     document.getElementById('cad-stat-cmds').textContent = cadInt(M.nbCmd);
     document.getElementById('cad-stat-last').textContent = M.lastDate ? M.lastDate.toLocaleDateString('fr-FR') : '—';
   }
@@ -4314,6 +4559,21 @@ function cadRender(){
         }).join('') + '</div>';
     } else { alert.style.display = 'none'; }
   }
+
+  // bandeau origine des données
+  var srcEl = document.getElementById('cad-source');
+  if (!srcEl) {
+    srcEl = document.createElement('div');
+    srcEl.id = 'cad-source';
+    var st = document.getElementById('cad-stats');
+    if (st && st.parentNode) st.parentNode.insertBefore(srcEl, st);
+  }
+  srcEl.style.cssText = 'font-size:.72rem;padding:.5rem .8rem;border-radius:7px;margin-bottom:1rem;' +
+    (M.imported ? 'background:#d1fae5;color:#065f46;' : 'background:var(--blue-p50);color:var(--blue-p700);');
+  srcEl.innerHTML = M.imported
+    ? '📥 Données issues du cadencier Mobilogic importé' + (M.estimated ? ' — <strong>le CA affiché est estimé</strong> à partir des tarifs catalogue (l\'export ne contient pas de prix). Votre CA réel reste celui du Dashboard.' : '.') +
+      ' <a href="#" onclick="cadSupprImport();return false;" style="color:#991b1b;">Supprimer cet import</a>'
+    : 'ℹ️ Données issues des bons de commande saisis dans le CRM. Importez le cadencier Mobilogic de ce client pour un historique complet.';
 
   // en-tête
   thead.innerHTML = '<tr style="background:var(--blue-p50);border-bottom:2px solid var(--border-med);">' +
