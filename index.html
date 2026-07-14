@@ -12277,6 +12277,14 @@ function mlAiScoreGeminiModel(id){
   return score;
 }
 
+function mlAiModelsKey(){ return 'mdm_ai_gemini_models' + mlAiUid(); }
+function mlAiGetGeminiModels(){
+  try { return JSON.parse(localStorage.getItem(mlAiModelsKey()) || '[]'); } catch(e){ return []; }
+}
+function mlAiSetGeminiModels(list){
+  try { localStorage.setItem(mlAiModelsKey(), JSON.stringify(list || [])); } catch(e){}
+}
+
 function mlAiDetectGeminiModel(key){
   return fetch('https://generativelanguage.googleapis.com/v1beta/models?pageSize=200', {
     headers: { 'x-goog-api-key': key }
@@ -12285,19 +12293,74 @@ function mlAiDetectGeminiModel(key){
     return r.json();
   }).then(function(data){
     var list = (data && data.models) || [];
-    var best = null, bestScore = -1;
+    var scored = [];
     list.forEach(function(mo){
       var methods = mo.supportedGenerationMethods || [];
       if (methods.indexOf('generateContent') < 0) return;
       var id = String(mo.name || '').replace(/^models\//, '');
       var sc = mlAiScoreGeminiModel(id);
-      if (sc > bestScore) { bestScore = sc; best = id; }
+      if (sc > 0) scored.push({ id:id, sc:sc });
     });
-    if (!best) throw new Error('Aucun modèle Gemini compatible sur ce compte');
-    mlAiSetGeminiModel(best);
-    console.log('[IA] Modèle Gemini détecté :', best);
+    if (!scored.length) throw new Error('Aucun modèle Gemini compatible sur ce compte');
+    scored.sort(function(a,b){ return b.sc - a.sc; });
+    var ids = scored.map(function(x){ return x.id; });
+    mlAiSetGeminiModels(ids);       // liste de repli en cas de saturation (503)
+    mlAiSetGeminiModel(ids[0]);
+    console.log('[IA] Modèles Gemini disponibles :', ids.slice(0,5).join(', '));
     if (typeof mlAiSyncToCloud === 'function') mlAiSyncToCloud();
-    return best;
+    return ids[0];
+  });
+}
+
+// Exécute un appel Gemini avec repli automatique :
+//  - 503 (surcharge) : on réessaie, puis on bascule sur le modèle suivant
+//  - modèle périmé   : on redétecte
+function mlAiRunGemini(key, doCall){
+  var models = mlAiGetGeminiModels();
+  var cur = mlAiGetGeminiModel();
+  if (cur && models.indexOf(cur) < 0) models.unshift(cur);
+
+  var startP = models.length ? Promise.resolve(models)
+    : mlAiDetectGeminiModel(key).then(function(){ return mlAiGetGeminiModels(); });
+
+  return startP.then(function(list){
+    if (!list.length) throw new Error('Aucun modèle disponible');
+    var idx = Math.max(0, list.indexOf(mlAiGetGeminiModel()));
+    var tries = 0;
+
+    function attempt(){
+      var model = list[idx];
+      return doCall(model).then(function(res){
+        if (mlAiGetGeminiModel() !== model) mlAiSetGeminiModel(model);  // mémorise celui qui marche
+        return res;
+      }).catch(function(e){
+        var msg = String(e.message || '');
+        var overloaded = (e.status === 503) || /high demand|overloaded|unavailable/i.test(msg);
+        var stale = (e.status === 404) || /no longer available|is not found|not supported/i.test(msg);
+
+        if (overloaded) {
+          tries++;
+          if (tries === 1) {                       // 1re fois : simple nouvelle tentative
+            return new Promise(function(r){ setTimeout(r, 1200); }).then(attempt);
+          }
+          if (idx + 1 < list.length) {             // ensuite : modèle suivant
+            idx++; tries = 0;
+            console.warn('[IA] Modèle saturé, bascule sur : ' + list[idx]);
+            return attempt();
+          }
+          throw new Error('Les serveurs Gemini sont saturés sur tous les modèles disponibles. Réessayez dans quelques minutes (ou passez sur Claude).');
+        }
+
+        if (stale) {
+          mlAiSetGeminiModel(''); mlAiSetGeminiModels([]);
+          return mlAiDetectGeminiModel(key).then(doCall);
+        }
+        if (e.status === 429) throw new Error('Quota gratuit atteint. Réessayez plus tard.');
+        if (e.status === 400 && /API key/i.test(msg)) throw new Error('Clé Gemini invalide.');
+        throw e;
+      });
+    }
+    return attempt();
   });
 }
 
@@ -12484,22 +12547,7 @@ function mlAiCall(systemPrompt, userPrompt, schema, pdf){
       });
     };
 
-    var cached = mlAiGetGeminiModel();
-    var start = cached ? Promise.resolve(cached) : mlAiDetectGeminiModel(key);
-
-    return start.then(doCall).catch(function(e){
-      // Modèle périmé / retiré / indisponible -> on redétecte une fois et on réessaie
-      var msg = String(e.message || '');
-      var stale = (e.status === 404) || /no longer available|is not found|not supported/i.test(msg);
-      if (stale) {
-        mlAiSetGeminiModel('');
-        mlAiStatus('Modèle indisponible — détection d\'un modèle à jour…', 'info');
-        return mlAiDetectGeminiModel(key).then(doCall);
-      }
-      if (e.status === 429) throw new Error('Quota gratuit atteint. Réessayez dans quelques minutes.');
-      if (e.status === 400 && /API key/i.test(msg)) throw new Error('Clé Gemini invalide.');
-      throw e;
-    });
+    return mlAiRunGemini(key, doCall);
   }
 
   // Anthropic Claude
@@ -13010,17 +13058,7 @@ function botCall(systemPrompt, userPrompt){
         throw e;
       });
     };
-    var cached = mlAiGetGeminiModel();
-    var start = cached ? Promise.resolve(cached) : mlAiDetectGeminiModel(key);
-    return start.then(doCall).catch(function(e){
-      var m = String(e.message || '');
-      if (e.status === 404 || /no longer available|is not found|not supported/i.test(m)) {
-        mlAiSetGeminiModel('');
-        return mlAiDetectGeminiModel(key).then(doCall);
-      }
-      if (e.status === 429) throw new Error('Quota gratuit atteint. Réessayez dans quelques minutes.');
-      throw e;
-    });
+    return mlAiRunGemini(key, doCall);
   }
 
   // Claude
