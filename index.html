@@ -2263,6 +2263,18 @@ textarea { resize:vertical; min-height:80px; }
             <label class="lb" style="display:block;margin-bottom:.4rem;">Que voulez-vous dire à vos clients ?</label>
             <textarea id="ml-ai-brief" placeholder="Ex : promo -15% sur la gamme petit-épeautre jusqu'au 31 juillet, insister sur la nouvelle récolte et le stock limité" style="min-height:70px;font-size:.85rem;"></textarea>
 
+            <!-- Source PDF : l'IA lit le document pour rédiger -->
+            <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:.6rem;padding:.55rem .7rem;background:var(--blue-p50);border-radius:7px;">
+              <span style="font-size:.74rem;color:var(--g600);font-weight:600;">📄 Source :</span>
+              <span id="ml-ai-pdf-name" style="font-size:.75rem;color:var(--g700);flex:1;min-width:120px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">Aucun document</span>
+              <label for="ml-ai-pdf-file" class="btn btn-ghost" style="font-size:.7rem;padding:.28rem .6rem;cursor:pointer;margin:0;">Choisir un PDF</label>
+              <input type="file" id="ml-ai-pdf-file" accept=".pdf" onchange="mlAiSetPdf(this.files[0])" style="display:none;"/>
+              <button class="btn btn-ghost" id="ml-ai-pdf-clear" onclick="mlAiClearPdf()" style="font-size:.7rem;padding:.28rem .6rem;color:#dc2626;display:none;">Retirer</button>
+            </div>
+            <div style="font-size:.67rem;color:var(--g500);margin-top:.3rem;">
+              L'IA lira le PDF (tarif, promo, catalogue…) pour rédiger. Si une pièce jointe est déjà présente sur le mail, elle est utilisée automatiquement.
+            </div>
+
             <div style="display:flex;gap:14px;align-items:center;flex-wrap:wrap;margin-top:.6rem;">
               <div style="display:flex;align-items:center;gap:6px;">
                 <span style="font-size:.74rem;color:var(--g600);">Type :</span>
@@ -11619,7 +11631,8 @@ function mlAiStatus(msg, kind){
 
 // Appel IA — aiguille vers Gemini (gratuit) ou Claude selon le fournisseur choisi.
 // `schema` (optionnel) force Gemini à renvoyer exactement les champs attendus.
-function mlAiCall(systemPrompt, userPrompt, schema){
+// `pdf` (optionnel) { name, base64 } : document lu par le modèle.
+function mlAiCall(systemPrompt, userPrompt, schema, pdf){
   var key = mlAiGetKey();
   var provider = mlAiGetProvider();
   if (!key) {
@@ -11634,8 +11647,14 @@ function mlAiCall(systemPrompt, userPrompt, schema){
     var usr = (userPrompt   == null) ? '' : String(userPrompt).trim();
     if (!usr) return Promise.reject(new Error('Message vide'));
 
+    var uParts = [];
+    if (pdf && pdf.base64) {
+      uParts.push({ inlineData: { mimeType: 'application/pdf', data: pdf.base64 } });
+    }
+    uParts.push({ text: usr });
+
     var payload = {
-      contents: [{ role: 'user', parts: [{ text: usr }] }],
+      contents: [{ role: 'user', parts: uParts }],
       generationConfig: {
         temperature: 0.7,
         maxOutputTokens: 8192,
@@ -11704,6 +11723,15 @@ function mlAiCall(systemPrompt, userPrompt, schema){
   }
 
   // Anthropic Claude
+  var cContent;
+  if (pdf && pdf.base64) {
+    cContent = [
+      { type:'document', source:{ type:'base64', media_type:'application/pdf', data: pdf.base64 } },
+      { type:'text', text: userPrompt }
+    ];
+  } else {
+    cContent = userPrompt;
+  }
   return fetch('https://api.anthropic.com/v1/messages', {
     method: 'POST',
     headers: {
@@ -11716,7 +11744,7 @@ function mlAiCall(systemPrompt, userPrompt, schema){
       model: (typeof ML_AI_MODEL_CLAUDE !== 'undefined' && ML_AI_MODEL_CLAUDE) ? ML_AI_MODEL_CLAUDE : 'claude-sonnet-4-5-20250929',
       max_tokens: 1500,
       system: systemPrompt,
-      messages: [{ role: 'user', content: userPrompt }]
+      messages: [{ role: 'user', content: cContent }]
     })
   }).then(function(r){
     if (!r.ok) {
@@ -11798,9 +11826,49 @@ function mlAiReveal(){
   }
 }
 
+// ── PDF source pour l'IA (lu par le modèle, en plus du brief) ──
+var mlAiPDF = null;   // { name, base64 }
+
+function mlAiSetPdf(file){
+  if (!file) return;
+  if (file.type !== 'application/pdf' && !file.name.toLowerCase().endsWith('.pdf')) {
+    toast('PDF uniquement', 'err'); return;
+  }
+  if (file.size > 5 * 1024 * 1024) { toast('PDF trop volumineux : max 5 Mo', 'err'); return; }
+  var reader = new FileReader();
+  reader.onload = function(e){
+    mlAiPDF = { name: file.name, base64: e.target.result.split(',')[1] };
+    mlAiRefreshPdf();
+    toast('PDF chargé — l\'IA le lira', 'ok');
+  };
+  reader.readAsDataURL(file);
+}
+function mlAiClearPdf(){
+  mlAiPDF = null;
+  var f = document.getElementById('ml-ai-pdf-file'); if (f) f.value = '';
+  mlAiRefreshPdf();
+}
+// Source effective : le PDF choisi pour l'IA, sinon la pièce jointe du mail
+function mlAiPdfSource(){
+  if (mlAiPDF) return mlAiPDF;
+  if (typeof mlPJ !== 'undefined' && mlPJ && mlPJ.base64) return { name: mlPJ.name, base64: mlPJ.base64, fromPJ: true };
+  return null;
+}
+function mlAiRefreshPdf(){
+  var src = mlAiPdfSource();
+  var nm = document.getElementById('ml-ai-pdf-name');
+  var cl = document.getElementById('ml-ai-pdf-clear');
+  if (nm) {
+    if (!src) { nm.textContent = 'Aucun document'; nm.style.color = 'var(--g500)'; }
+    else { nm.textContent = src.name + (src.fromPJ ? ' (pièce jointe du mail)' : ''); nm.style.color = '#059669'; }
+  }
+  if (cl) cl.style.display = mlAiPDF ? 'inline-block' : 'none';
+}
+
 function mlAiGenerate(){
   var brief = (document.getElementById('ml-ai-brief').value || '').trim();
-  if (!brief) { mlAiStatus('Décrivez d\'abord ce que vous voulez dire à vos clients.', 'err'); return; }
+  var pdf = mlAiPdfSource();
+  if (!brief && !pdf) { mlAiStatus('Décrivez ce que vous voulez dire, ou chargez un PDF source.', 'err'); return; }
   var type = document.getElementById('ml-ai-type').value;
   var tone = document.getElementById('ml-ai-tone').value;
   var btn = document.getElementById('ml-ai-btn'), prev = btn.textContent;
@@ -11815,9 +11883,13 @@ function mlAiGenerate(){
   var user = mlAiBrandCtx() + '\n\n' +
     'Objectif de l\'email : ' + typeLabel + '.\n' +
     'Ton souhaité : ' + toneLabel + '.\n' +
-    'Brief du commercial : ' + brief;
+    (pdf ? ('Un document PDF est joint (' + pdf.name + '). Appuie-toi sur son contenu réel ' +
+            '(produits, prix, remises, dates) — ne cite AUCUN chiffre qui n\'y figure pas.\n') : '') +
+    'Brief du commercial : ' + (brief || '(pas de brief : rédige à partir du PDF)');
 
-  mlAiCall(ML_AI_SYS, user, ML_AI_SCHEMA_EMAIL).then(function(txt){
+  if (pdf) mlAiStatus('Lecture du PDF et rédaction…', 'info');
+
+  mlAiCall(ML_AI_SYS, user, ML_AI_SCHEMA_EMAIL, pdf).then(function(txt){
     console.log('[IA] Réponse brute :', txt);
     var out = mlAiParseJson(txt);
     var subject = mlAiPick(out, ['subject','objet','sujet','title','titre']);
@@ -11830,7 +11902,7 @@ function mlAiGenerate(){
       var sysB = 'Tu rédiges le CORPS d\'un email commercial B2B en français pour le secteur bio. ' +
         'Concret et bref (150-220 mots), bénéfice revendeur, appel à l\'action simple. ' +
         'Réponds UNIQUEMENT en JSON : {"body_html":"..."} avec du HTML simple (<p>, <strong>, <ul>, <li>, <br>).';
-      return mlAiCall(sysB, user + '\n\nObjet retenu : ' + (subject || ''), ML_AI_SCHEMA_BODY)
+      return mlAiCall(sysB, user + '\n\nObjet retenu : ' + (subject || ''), ML_AI_SCHEMA_BODY, pdf)
         .then(function(t2){
           console.log('[IA] Réponse brute (corps) :', t2);
           var o2 = mlAiParseJson(t2);
@@ -12219,6 +12291,7 @@ function mlSetPJ(file) {
     document.getElementById('ml-pj-drop').style.display = 'none';
     document.getElementById('ml-pj-status').textContent = file.name;
     document.getElementById('ml-pj-status').style.color = '#059669';
+    if (typeof mlAiRefreshPdf === 'function') mlAiRefreshPdf();
   };
   reader.readAsDataURL(file);
 }
@@ -12230,6 +12303,7 @@ function mlRemovePJ() {
   document.getElementById('ml-pj-drop').style.display = 'block';
   document.getElementById('ml-pj-status').textContent = 'Aucune';
   document.getElementById('ml-pj-status').style.color = 'var(--g500)';
+  if (typeof mlAiRefreshPdf === 'function') mlAiRefreshPdf();
 }
 
 function mlUpdateSendBtn() {
