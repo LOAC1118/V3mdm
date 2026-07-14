@@ -4575,7 +4575,9 @@ function toggleAvatarMenu() { document.getElementById('avatar-menu').classList.t
 document.addEventListener('click', e => { if(!e.target.closest('#avatar-btn')) document.getElementById('avatar-menu')?.classList.remove('open'); });
 document.addEventListener('click', function(e) {
   if (e.target.closest('[id^="box-search-"]') || e.target.closest('[id^="box-suggest-"]')) return;
-  for (var i = 0; i < BOX_NB_ETAGES; i++) {
+  // BOX_NB_ETAGES n'existe pas : le nombre de lignes est dynamique (boxLines)
+  var n = (typeof boxLines !== 'undefined' && boxLines) ? boxLines.length : 0;
+  for (var i = 0; i < n; i++) {
     var el = document.getElementById('box-suggest-' + i);
     if (el) el.classList.add('hidden');
   }
@@ -11731,15 +11733,23 @@ function cdbExportCsv() {
   }
 
   // 2. Sync Firestore : attendre que l'utilisateur soit connecté
+  // IMPORTANT : firebase.auth() lève une exception tant que initializeApp()
+  // n'a pas été appelé. Non capturée, elle interrompait l'exécution du script
+  // et laissait toutes les variables déclarées ensuite à undefined.
   function waitForAuth() {
-    if (typeof firebase !== 'undefined' && firebase.auth) {
-      firebase.auth().onAuthStateChanged(function(user) {
-        if (user) {
-          // currentUser sera dispo dans la milliseconde suivante
-          setTimeout(cdbInit, 800);
-        }
-      });
-    } else {
+    try {
+      if (typeof firebase !== 'undefined' && firebase.apps && firebase.apps.length && firebase.auth) {
+        firebase.auth().onAuthStateChanged(function(user) {
+          if (user) {
+            // currentUser sera dispo dans la milliseconde suivante
+            setTimeout(cdbInit, 800);
+          }
+        });
+      } else {
+        setTimeout(waitForAuth, 300);
+      }
+    } catch(e) {
+      // Firebase pas encore prêt : on réessaie, sans casser le reste du script
       setTimeout(waitForAuth, 300);
     }
   }
@@ -12342,6 +12352,13 @@ function mlAiRewrite(action){
 var botHistory = [];      // [{role:'user'|'model', text:''}]
 var botBusy = false;
 
+// Filet : garantit que l'état existe même si une exception a interrompu
+// l'exécution du script avant les affectations ci-dessus.
+function botState(){
+  if (!Array.isArray(botHistory)) botHistory = [];
+  return botHistory;
+}
+
 function botToggle(){
   var p = document.getElementById('bot-panel'), f = document.getElementById('bot-fab');
   if (!p) return;
@@ -12352,7 +12369,7 @@ function botToggle(){
     var sub = document.getElementById('bot-sub');
     if (sub) sub.textContent = (mlAiGetProvider() === 'gemini' ? 'Gemini' : 'Claude') +
       ' · ' + (CURRENT_BRAND === 'naturaline' ? 'NATURALINE' : 'MDM');
-    if (!botHistory.length) botPush('ai', 'Bonjour Christophe 👋\nJe peux répondre sur vos clients, vos ventes et vos produits. Posez votre question, ou utilisez un raccourci ci-dessous.');
+    if (!botState().length) botPush('ai', 'Bonjour Christophe 👋\nJe peux répondre sur vos clients, vos ventes et vos produits. Posez votre question, ou utilisez un raccourci ci-dessous.');
     setTimeout(function(){ var t = document.getElementById('bot-text'); if (t) t.focus(); }, 120);
   }
 }
@@ -12487,7 +12504,7 @@ function botSend(){
 
   t.value = '';
   botPush('user', q);
-  botHistory.push({ role:'user', text:q });
+  botState().push({ role:'user', text:q });
   botBusy = true;
   document.getElementById('bot-send').disabled = true;
 
@@ -12501,7 +12518,7 @@ function botSend(){
   // Le contexte CRM est recalculé à chaque question (données à jour)
   var prompt = 'DONNÉES CRM ACTUELLES :\n' + botBuildContext() + '\n\n';
   // rappel des 6 derniers échanges pour garder le fil
-  var hist = botHistory.slice(-7, -1);
+  var hist = botState().slice(-7, -1);
   if (hist.length) {
     prompt += 'CONVERSATION PRÉCÉDENTE :\n';
     hist.forEach(function(m){ prompt += (m.role === 'user' ? 'Commercial : ' : 'Assistant : ') + m.text + '\n'; });
@@ -12517,7 +12534,7 @@ function botSend(){
   botCall(sysPrompt, prompt).then(function(txt){
     typing.remove();
     botPush('ai', txt);
-    botHistory.push({ role:'model', text:txt });
+    botState().push({ role:'model', text:txt });
   }).catch(function(e){
     typing.remove();
     console.error('[BOT] Erreur :', e);
