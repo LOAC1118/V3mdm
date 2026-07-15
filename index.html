@@ -768,8 +768,22 @@ textarea { resize:vertical; min-height:80px; }
    tableaux, modales et zones tactiles. Le desktop n'est pas
    affecté (tout est dans cette media query).
 ══════════════════════════════════════════════════════════ */
-/* ══ BULLE IA FLOTTANTE ══ */
-#bot-fab {
+/* ══ BASCULE MARQUE FLOTTANTE (mobile uniquement) ══ */
+#brand-fab { display:none; }
+@media (max-width: 768px) {
+  #brand-fab {
+    display:flex; align-items:center; gap:7px;
+    position:fixed; left:14px; bottom:74px; z-index:449;
+    background:linear-gradient(135deg, var(--blue-p600), var(--blue-p900)); color:#fff;
+    border:none; border-radius:99px; padding:10px 15px; cursor:pointer;
+    font-family:var(--fd); font-weight:700; font-size:.82rem;
+    box-shadow:0 6px 20px rgba(4,44,83,.32);
+  }
+  #brand-fab #brand-fab-ico { font-size:1.05rem; line-height:1; }
+  #brand-fab:active { transform:scale(.96); }
+}
+
+/* ══ BULLE IA FLOTTANTE ══ */#bot-fab {
   position:fixed; right:22px; bottom:22px; width:54px; height:54px; border-radius:50%;
   background:linear-gradient(135deg, var(--blue-p600), var(--blue-p900)); color:#fff; border:none; cursor:pointer;
   box-shadow:0 6px 20px rgba(4,44,83,.35); z-index:450;
@@ -2670,6 +2684,13 @@ textarea { resize:vertical; min-height:80px; }
   </div>
 </div>
 
+<!-- ══ BASCULE MARQUE MOBILE — bouton flottant, zone du pouce ══ -->
+<button id="brand-fab" onclick="brandFabToggle()" aria-label="Changer de marque">
+  <span id="brand-fab-ico">🌾</span>
+  <span id="brand-fab-label">MDM</span>
+  <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" style="width:13px;height:13px;opacity:.8;"><path d="M5 6l3-3 3 3M5 10l3 3 3-3"/></svg>
+</button>
+
 <!-- ══ BULLE IA — accès rapide depuis n'importe quelle section ══ -->
 <button id="bot-fab" onclick="botPanelToggle()" title="Assistant IA" aria-label="Assistant IA">
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
@@ -3275,6 +3296,21 @@ function setCurrentBrand(brand) {
 function applyBrandTheme() {
   // Bascule toute la palette CSS (fond, topbar, sidebar, boutons, graphiques…)
   document.body.classList.toggle('brand-naturaline', CURRENT_BRAND === 'naturaline');
+  // Le bouton flottant montre la marque ACTIVE et propose l'autre au tap
+  var isNat = (CURRENT_BRAND === 'naturaline');
+  var fi = document.getElementById('brand-fab-ico');
+  var fl = document.getElementById('brand-fab-label');
+  if (fi) fi.textContent = isNat ? '🌿' : '🌾';
+  if (fl) fl.textContent = isNat ? 'NATURALINE' : 'MDM';
+}
+
+// Tap sur le bouton flottant : bascule vers l'autre marque
+function brandFabToggle() {
+  var target = (CURRENT_BRAND === 'naturaline') ? 'mdm' : 'naturaline';
+  var name = (target === 'naturaline') ? 'NATURALINE' : 'MDM';
+  if (confirm('Basculer sur ' + name + ' ?')) {
+    setCurrentBrand(target);
+  }
 }
 
 function initBrandSwitcherUI() {
