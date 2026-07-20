@@ -768,6 +768,12 @@ textarea { resize:vertical; min-height:80px; }
    tableaux, modales et zones tactiles. Le desktop n'est pas
    affecté (tout est dans cette media query).
 ══════════════════════════════════════════════════════════ */
+/* ══ TRI DES TABLEAUX ══ */
+thead th { cursor:pointer; user-select:none; -webkit-user-select:none; }
+thead th:hover { filter:brightness(1.08); }
+thead th.ts-active { text-decoration:underline; text-underline-offset:3px; }
+.ts-arrow { font-size:.75em; opacity:.85; letter-spacing:0; }
+
 /* ══ BASCULE MARQUE FLOTTANTE (mobile uniquement) ══ */
 #brand-fab { display:none; }
 @media (max-width: 768px) {
@@ -1556,7 +1562,7 @@ textarea { resize:vertical; min-height:80px; }
         <span id="bdc-recap-chevron" style="margin-left:.6rem;color:#93c5fd;font-size:.7rem;flex-shrink:0;">▾ Voir / modifier</span>
       </div>
       <div id="bdc-recap-detail" class="hidden" style="background:var(--surface);border-top:1px solid rgba(255,255,255,.08);max-height:38vh;overflow-y:auto;">
-        <table style="width:100%;border-collapse:collapse;font-size:.76rem;">
+        <table data-nosort style="width:100%;border-collapse:collapse;font-size:.76rem;">
           <thead style="position:sticky;top:0;z-index:1;background:var(--blue-p900);">
             <tr>
               <th style="padding:.4rem .6rem;text-align:left;font-weight:600;color:#bfdbfe;">Produit</th>
@@ -5121,6 +5127,170 @@ function saveProfil(){
     btn.disabled = false; btn.textContent = 'Enregistrer';
   });
 }
+
+// ═══════════════════════════════════════════════
+//  TRI GÉNÉRIQUE DES TABLEAUX
+//  S'applique automatiquement à TOUS les tableaux du CRM (présents et futurs)
+//  sans modifier les modules : on trie le DOM déjà rendu.
+//  - détection auto du type de colonne : date FR, montant/nombre, texte
+//  - les lignes de total et les lignes "vides" restent en place
+//  - clic 1 = croissant, clic 2 = décroissant, clic 3 = ordre d'origine
+//  Pour exclure un tableau : <table data-nosort>
+//  Pour forcer une valeur de tri : <td data-sort="valeur">
+// ═══════════════════════════════════════════════
+
+// "1 234,56 €" -> 1234.56 ; "12 %" -> 12 ; "" -> NaN
+function tsNum(txt){
+  var s = String(txt == null ? '' : txt).replace(/\u00a0/g, ' ').trim();
+  if (!s) return NaN;
+  // ne garder que chiffres, séparateurs et signe
+  s = s.replace(/[^\d,.\-]/g, '');
+  if (!s || s === '-' || s === '.' || s === ',') return NaN;
+  if (s.indexOf(',') >= 0) {
+    // format français : la virgule est le séparateur décimal, le point les milliers
+    s = s.replace(/\./g, '').replace(',', '.');
+  }
+  var n = parseFloat(s);
+  return isNaN(n) ? NaN : n;
+}
+
+// "12/03/2026" ou "2026-03-12" -> timestamp
+function tsDate(txt){
+  var s = String(txt || '').trim();
+  var m = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/);
+  if (m) return new Date(+m[3], +m[2]-1, +m[1]).getTime();
+  m = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (m) return new Date(+m[1], +m[2]-1, +m[3]).getTime();
+  return NaN;
+}
+
+function tsCellValue(row, idx){
+  var cells = row.cells;
+  if (!cells || idx >= cells.length) return '';
+  var td = cells[idx];
+  var forced = td.getAttribute('data-sort');
+  return (forced !== null) ? forced : (td.innerText || td.textContent || '').trim();
+}
+
+// Une ligne est "figée" (jamais triée) : totaux, messages vides, sous-titres
+function tsIsFrozen(row){
+  if (row.hasAttribute('data-nosort')) return true;
+  var cells = row.cells;
+  if (!cells || cells.length <= 1) return true;              // ligne "Aucune donnée"
+  if (cells[0] && cells[0].hasAttribute('colspan') && cells.length < 3) return true;
+  var t = (row.innerText || '').trim().toUpperCase();
+  if (/^TOTAL/.test(t) || /^TOTAUX/.test(t)) return true;
+  return false;
+}
+
+function tsDetectType(rows, idx){
+  var nDate = 0, nNum = 0, nSeen = 0;
+  for (var i = 0; i < rows.length && nSeen < 25; i++){
+    var v = tsCellValue(rows[i], idx);
+    if (!v || v === '—' || v === '·' || v === '-') continue;
+    nSeen++;
+    if (!isNaN(tsDate(v))) nDate++;
+    else if (!isNaN(tsNum(v))) nNum++;
+  }
+  if (!nSeen) return 'text';
+  if (nDate / nSeen > 0.6) return 'date';
+  if (nNum  / nSeen > 0.6) return 'num';
+  return 'text';
+}
+
+function tsSortTable(table, idx, dir){
+  var tbody = table.tBodies && table.tBodies[0];
+  if (!tbody) return;
+
+  var all = Array.prototype.slice.call(tbody.rows);
+  var movable = all.filter(function(r){ return !tsIsFrozen(r); });
+  var frozen  = all.filter(tsIsFrozen);
+  if (movable.length < 2) return;
+
+  // mémorise l'ordre d'origine pour pouvoir y revenir
+  if (!tbody.hasAttribute('data-ts-init')) {
+    movable.forEach(function(r, i){ r.setAttribute('data-ts-idx', i); });
+    tbody.setAttribute('data-ts-init', '1');
+  }
+
+  if (dir === 0) {
+    movable.sort(function(a,b){
+      return (+a.getAttribute('data-ts-idx') || 0) - (+b.getAttribute('data-ts-idx') || 0);
+    });
+  } else {
+    var type = tsDetectType(movable, idx);
+    movable.sort(function(a,b){
+      var va = tsCellValue(a, idx), vb = tsCellValue(b, idx);
+      var r;
+      if (type === 'date') {
+        var da = tsDate(va), db = tsDate(vb);
+        if (isNaN(da) && isNaN(db)) r = 0;
+        else if (isNaN(da)) r = 1;          // vides toujours en bas
+        else if (isNaN(db)) r = -1;
+        else r = da - db;
+      } else if (type === 'num') {
+        var na = tsNum(va), nb = tsNum(vb);
+        if (isNaN(na) && isNaN(nb)) r = 0;
+        else if (isNaN(na)) r = 1;
+        else if (isNaN(nb)) r = -1;
+        else r = na - nb;
+      } else {
+        if (!va && !vb) r = 0;
+        else if (!va) r = 1;
+        else if (!vb) r = -1;
+        else r = va.localeCompare(vb, 'fr', { numeric:true, sensitivity:'base' });
+      }
+      return dir > 0 ? r : -r;
+    });
+  }
+
+  var frag = document.createDocumentFragment();
+  movable.forEach(function(r){ frag.appendChild(r); });
+  frozen.forEach(function(r){ frag.appendChild(r); });   // totaux à la fin
+  tbody.appendChild(frag);
+}
+
+function tsMarkHeaders(table, idx, dir){
+  var ths = table.querySelectorAll('thead th');
+  Array.prototype.forEach.call(ths, function(th, i){
+    th.classList.add('ts-th');
+    var ind = th.querySelector('.ts-arrow');
+    if (!ind) {
+      ind = document.createElement('span');
+      ind.className = 'ts-arrow';
+      th.appendChild(ind);
+    }
+    ind.textContent = (i === idx && dir !== 0) ? (dir > 0 ? ' ▲' : ' ▼') : '';
+    th.classList.toggle('ts-active', i === idx && dir !== 0);
+  });
+}
+
+// Délégation : fonctionne même quand un module re-génère son tableau
+document.addEventListener('click', function(e){
+  // ne pas trier si on clique un contrôle placé dans l'en-tête (case "tout cocher", bouton…)
+  if (e.target.closest && e.target.closest('thead input, thead button, thead select, thead label, thead a')) return;
+  var th = e.target.closest ? e.target.closest('th') : null;
+  if (!th) return;
+  var table = th.closest('table');
+  if (!table || table.hasAttribute('data-nosort')) return;
+  var thead = th.closest('thead');
+  if (!thead) return;
+  // en-têtes sur plusieurs lignes : on ne prend que la dernière
+  var rows = thead.rows;
+  if (rows.length > 1 && th.parentNode !== rows[rows.length-1]) return;
+
+  var idx = Array.prototype.indexOf.call(th.parentNode.cells, th);
+  if (idx < 0) return;
+
+  var prevIdx = +(table.getAttribute('data-ts-col'));
+  var prevDir = +(table.getAttribute('data-ts-dir') || 0);
+  var dir = (prevIdx === idx) ? (prevDir === 1 ? -1 : (prevDir === -1 ? 0 : 1)) : 1;
+
+  table.setAttribute('data-ts-col', idx);
+  table.setAttribute('data-ts-dir', dir);
+  tsSortTable(table, idx, dir);
+  tsMarkHeaders(table, idx, dir);
+}, false);
 
 function toggleAvatarMenu() { document.getElementById('avatar-menu').classList.toggle('open'); }
 document.addEventListener('click', e => { if(!e.target.closest('#avatar-btn')) document.getElementById('avatar-menu')?.classList.remove('open'); });
