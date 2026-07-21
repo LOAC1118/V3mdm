@@ -258,6 +258,35 @@ body::before {
   font-weight: 600;
 }
 
+
+/* ── Menus déroulants de la barre du haut ── */
+.topbar-center { align-items:center; }
+.t-menu { position:relative; }
+.t-trig { display:inline-flex; align-items:center; gap:6px; }
+.t-caret { width:9px; height:9px; opacity:.75; transition:transform .18s; }
+.t-menu.open .t-trig { background:rgba(255,255,255,.15); color:#fff; }
+.t-menu.open .t-caret { transform:rotate(180deg); }
+.t-drop {
+  position:absolute; top:calc(100% + 9px); left:0; min-width:215px;
+  background:var(--blue-p900);
+  border:1px solid rgba(255,255,255,.13); border-radius:12px;
+  padding:5px; z-index:300;
+  box-shadow:0 14px 38px rgba(4,44,83,.45);
+  opacity:0; visibility:hidden; transform:translateY(-6px);
+  transition:opacity .16s ease, transform .16s ease, visibility .16s;
+}
+.t-menu.open .t-drop { opacity:1; visibility:visible; transform:translateY(0); }
+.t-item {
+  display:flex; align-items:center; gap:9px; width:100%; text-align:left;
+  padding:.5rem .7rem; border:none; background:transparent;
+  color:var(--blue-p300); font-family:var(--fd); font-size:.8rem; font-weight:500;
+  border-radius:8px; cursor:pointer; white-space:nowrap; transition:background .14s, color .14s;
+}
+.t-item:hover { background:rgba(255,255,255,.1); color:#fff; }
+.t-item.active { background:rgba(255,255,255,.15); color:#fff; font-weight:600; }
+.t-item-ico { width:17px; text-align:center; font-size:.86rem; opacity:.92; }
+.t-sep { height:1px; background:rgba(255,255,255,.1); margin:4px 6px; }
+
 .topbar-right { display:flex; align-items:center; gap:10px; }
 .sync-indicator { display:flex; align-items:center; gap:5px; font-size:.72rem; color:var(--blue-p300); }
 .sync-dot { width:7px; height:7px; border-radius:50%; background:var(--blue-p500); }
@@ -1114,21 +1143,37 @@ thead th.ts-active { text-decoration:underline; text-underline-offset:3px; }
     </div>
   </div>
   <div class="topbar-center">
-    <button class="t-tab active" onclick="showSection('dashboard',this)">Dashboard</button>
-    <button class="t-tab" onclick="showSection('radar',this)">Radar</button>
-    <button class="t-tab" onclick="showSection('tournees',this)">Tournées</button>
-    <button class="t-tab" onclick="showSection('visites',this)">Visites</button>
-    <button class="t-tab" onclick="showSection('bdc',this)">Bon de Commande</button>
-    <button class="t-tab" onclick="showSection('frais',this)">Frais</button>
-    <button class="t-tab" onclick="showSection('commissions',this)">Commissions</button>
-    <button class="t-tab" onclick="showSection('contacts-db',this)">Clients</button>
-    <button class="t-tab" onclick="showSection('cadencier',this)">Cadencier</button>
-    <button class="t-tab" onclick="showSection('accords',this)">Accords</button>
-    <button class="t-tab hidden" id="t-tab-comptes" onclick="showSection('comptes',this)">Comptes</button>
-    <button class="t-tab" onclick="showSection('mailing',this)">Mailing</button>
-    <button class="t-tab" onclick="showSection('promos',this)">Promos PDF</button>
-    <button class="t-tab" onclick="showSection('top100',this)">Top 100</button>
-    <button class="t-tab" onclick="showSection('ia',this)">Assistant IA</button>
+    <button class="t-tab" data-sec="dashboard" onclick="tnavGo('dashboard')">Dashboard</button>
+    <button class="t-tab" data-sec="radar" onclick="tnavGo('radar')">Radar</button>
+    <button class="t-tab" data-sec="bdc" onclick="tnavGo('bdc')">Bon de commande</button>
+    <button class="t-tab" data-sec="contacts-db" onclick="tnavGo('contacts-db')">Clients</button>
+    <div class="t-menu" id="tmenu-terrain">
+      <button class="t-tab t-trig" onclick="tnavMenu('terrain',event)">Terrain<svg class="t-caret" viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M2 4l3 3 3-3"/></svg></button>
+      <div class="t-drop">
+      <button class="t-item" data-sec="tournees" onclick="tnavGo('tournees')"><span class="t-item-ico">🗺️</span>Tournées</button>
+      <button class="t-item" data-sec="visites" onclick="tnavGo('visites')"><span class="t-item-ico">📝</span>Visites</button>
+      <button class="t-item" data-sec="cadencier" onclick="tnavGo('cadencier')"><span class="t-item-ico">🗓️</span>Cadencier</button>
+      <button class="t-item" data-sec="accords" onclick="tnavGo('accords')"><span class="t-item-ico">🤝</span>Accords commerciaux</button>
+      </div>
+    </div>
+    <div class="t-menu" id="tmenu-analyse">
+      <button class="t-tab t-trig" onclick="tnavMenu('analyse',event)">Analyse<svg class="t-caret" viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M2 4l3 3 3-3"/></svg></button>
+      <div class="t-drop">
+      <button class="t-item" data-sec="top100" onclick="tnavGo('top100')"><span class="t-item-ico">🏆</span>Top 100 produits</button>
+      <button class="t-item" data-sec="commissions" onclick="tnavGo('commissions')"><span class="t-item-ico">💶</span>Commissions</button>
+      <button class="t-item" data-sec="frais" onclick="tnavGo('frais')"><span class="t-item-ico">🧾</span>Notes de frais</button>
+      </div>
+    </div>
+    <div class="t-menu" id="tmenu-outils">
+      <button class="t-tab t-trig" onclick="tnavMenu('outils',event)">Outils<svg class="t-caret" viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M2 4l3 3 3-3"/></svg></button>
+      <div class="t-drop">
+      <button class="t-item" data-sec="mailing" onclick="tnavGo('mailing')"><span class="t-item-ico">✉️</span>Mailing</button>
+      <button class="t-item" data-sec="promos" onclick="tnavGo('promos')"><span class="t-item-ico">📄</span>Promos PDF</button>
+      <button class="t-item" data-sec="ia" onclick="tnavGo('ia')"><span class="t-item-ico">🤖</span>Assistant IA</button>
+      <div class="t-sep"></div>
+      <button class="t-item hidden" id="t-tab-comptes" data-sec="comptes" onclick="tnavGo('comptes')"><span class="t-item-ico">🔑</span>Comptes</button>
+      </div>
+    </div>
   </div>
   <div class="topbar-right">
     <div class="sync-indicator"><div class="sync-dot" id="sync-dot"></div><span id="sync-label">Connecté</span></div>
@@ -4174,6 +4219,44 @@ if (typeof cdbPageSize  === 'undefined') window.cdbPageSize  = 50;
 //  NAVIGATION
 // ═══════════════════════════════════════════════
 const SECTIONS = ['dashboard','radar','tournees','visites','bdc','frais','contacts-db','commissions','comptes','mailing','accords','promos','top100','cadencier','ia'];
+// ═══════════════════════════════════════════════
+//  MENUS DEROULANTS DE LA BARRE DU HAUT
+// ═══════════════════════════════════════════════
+function tnavCloseAll() {
+  document.querySelectorAll('.t-menu.open').forEach(function(m){ m.classList.remove('open'); });
+}
+function tnavMenu(id, ev) {
+  if (ev) ev.stopPropagation();
+  var m = document.getElementById('tmenu-' + id);
+  if (!m) return;
+  var etaitOuvert = m.classList.contains('open');
+  tnavCloseAll();
+  if (!etaitOuvert) m.classList.add('open');
+}
+function tnavGo(name) {
+  tnavCloseAll();
+  showSection(name, null, null);
+}
+// Met en surbrillance l'onglet (ou le menu parent) correspondant a la section active
+function tnavSync(name) {
+  document.querySelectorAll('.topbar-center .t-tab, .topbar-center .t-item')
+    .forEach(function(el){ el.classList.remove('active'); });
+  var el = document.querySelector('.topbar-center [data-sec="' + name + '"]');
+  if (!el) return;
+  el.classList.add('active');
+  var parent = el.closest ? el.closest('.t-menu') : null;
+  if (parent) {
+    var trig = parent.querySelector('.t-trig');
+    if (trig) trig.classList.add('active');
+  }
+}
+document.addEventListener('click', function(e) {
+  if (!e.target || !e.target.closest || !e.target.closest('.t-menu')) tnavCloseAll();
+});
+document.addEventListener('keydown', function(e) {
+  if (e.key === 'Escape') tnavCloseAll();
+});
+
 function showSection(name, tabEl, sideEl) {
   if (name === 'comptes' && !isAdminUser()) {
     toast('Accès réservé.', 'err');
@@ -4188,6 +4271,7 @@ function showSection(name, tabEl, sideEl) {
   if (sideEl) sideEl.classList.add('active');
   document.querySelectorAll('.mmenu-item[data-sec="'+name+'"]').forEach(t=>t.classList.add('active'));
   updateMobileNav(name);
+  tnavSync(name);
   if (name==='dashboard') { refreshDashboard(); if (typeof dashRenderInactiveClients === 'function') dashRenderInactiveClients(); }
   if (name==='radar') { setTimeout(function(){ if (typeof RadarClients !== 'undefined') RadarClients.mount(); }, 80); }
   if (name==='tournees') { setTimeout(function(){ if (typeof Tournees !== 'undefined') Tournees.mount(); }, 80); }
