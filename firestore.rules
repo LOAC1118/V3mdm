@@ -1,0 +1,150 @@
+rules_version = '2';
+
+// ═══════════════════════════════════════════════════════════════════════
+//  MDM V3 — Règles Firestore
+//  Compatibles avec le schéma actuel (collections suffixées par l'uid).
+//  Voir en bas de fichier la cible multi-client.
+// ═══════════════════════════════════════════════════════════════════════
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    /* ─────────── Identité ─────────── */
+
+    function adminEmails() {
+      return [
+        'loacdev@outlook.fr'
+        // , 'nouvelle.adresse@exemple.fr'  ← ajouter AVANT de changer d'email
+      ];
+    }
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isAdmin() {
+      return isSignedIn()
+        && request.auth.token.email_verified == true
+        && request.auth.token.email in adminEmails();
+    }
+
+    // Le compte ne doit pas avoir été désactivé par un administrateur.
+    // ⚠️ Sémantique alignée sur le code : SEUL un actif == false explicite
+    //    bloque. Un profil sans champ actif reste autorisé — c'est ce que
+    //    ton application écrit aujourd'hui (profils créés sans ce champ).
+    // ⚠️ Coût : 1 lecture de document facturée par évaluation de règle.
+    //    Pour l'éviter, remplace isActif() par isSignedIn() partout — mais
+    //    tu perds la révocation immédiate d'un compte côté serveur.
+    function isActif() {
+      return isSignedIn() && (
+        isAdmin() ||
+        !exists(/databases/$(database)/documents/profils/$(request.auth.uid)) ||
+        get(/databases/$(database)/documents/profils/$(request.auth.uid)).data.get('actif', true) != false
+      );
+    }
+
+    function isOwnScopedCollection(collectionName) {
+      return isSignedIn()
+        && collectionName.matches('.*_' + request.auth.uid);
+    }
+
+    // Garde-fou anti-abus : un document ne doit pas dépasser ~900 Ko.
+    // (limite Firestore : 1 Mo ; on garde de la marge pour les photos)
+    function tailleRaisonnable() {
+      return request.resource.size() < 900000;
+    }
+
+
+    /* ─────────── profils ───────────
+       Un utilisateur peut créer et lire SON profil, mais ne peut ni
+       s'attribuer un rôle, ni s'auto-activer. Seul un admin le fait.   */
+
+    match /profils/{uid} {
+      allow read: if isAdmin() || (isSignedIn() && request.auth.uid == uid);
+
+      // À la création, le rôle est imposé : personne ne s'auto-nomme admin.
+      // Le champ actif n'est pas exigé (ton code ne l'écrit pas) mais il
+      // ne peut pas valoir true à l'inscription.
+      allow create: if isAdmin() || (
+        isSignedIn()
+        && request.auth.uid == uid
+        && request.resource.data.role == 'commercial'
+        && request.resource.data.get('actif', false) != true
+      );
+
+      // L'utilisateur peut modifier son profil SANS toucher role ni actif.
+      // .get(champ, defaut) évite l'erreur d'évaluation quand le champ
+      // est absent — le cas de tes profils existants, créés sans actif.
+      allow update: if isAdmin() || (
+        isSignedIn()
+        && request.auth.uid == uid
+        && request.resource.data.get('role', 'commercial') == resource.data.get('role', 'commercial')
+        && request.resource.data.get('actif', true) == resource.data.get('actif', true)
+      );
+
+      allow delete: if isAdmin();
+    }
+
+
+    /* ─────────── Référentiels partagés ───────────
+       Lecture pour tout compte actif, écriture réservée à l'admin.
+       C'est ce qui corrige l'accès de ton collègue aux accords
+       commerciaux et à la config des commissions.                      */
+
+    match /accords_global/{docId} {
+      allow read:  if isActif();
+      allow write: if isAdmin() && tailleRaisonnable();
+    }
+
+    match /config_mdm/{docId} {
+      allow read:  if isActif();
+      allow write: if isAdmin() && tailleRaisonnable();
+    }
+
+    match /config_naturaline/{docId} {
+      allow read:  if isActif();
+      allow write: if isAdmin() && tailleRaisonnable();
+    }
+
+
+    /* ─────────── Collections scopées par marque + commercial ───────────
+       contacts_mdm_<uid>, visites_naturaline_<uid>, etc.
+       Le suffixe est vérifié CÔTÉ SERVEUR : un utilisateur ne peut pas
+       lire l'espace d'un autre, même en tapant dans la console.        */
+
+    match /{collectionName}/{docId} {
+      allow read: if isAdmin() || (isActif() && isOwnScopedCollection(collectionName));
+      allow write: if tailleRaisonnable() && (
+        isAdmin() || (isActif() && isOwnScopedCollection(collectionName))
+      );
+    }
+
+    // Tout le reste est refusé par défaut.
+  }
+}
+
+
+// ═══════════════════════════════════════════════════════════════════════
+//  CIBLE MULTI-CLIENT — à mettre en place avant le 2e client
+//  ─────────────────────────────────────────────────────────────────────
+//  Schéma :  /orgs/{orgId}/contacts/{docId}
+//            /orgs/{orgId}/visites/{docId}
+//            /orgs/{orgId}/membres/{uid}   → { role: 'admin'|'manager'|'commercial' }
+//
+//  L'orgId et le rôle sont portés par des CUSTOM CLAIMS Firebase,
+//  posés par une Cloud Function. Le client ne peut pas les forger,
+//  contrairement à un champ localStorage ou à un document Firestore.
+//
+//  match /orgs/{orgId}/{doc=**} {
+//    allow read, write: if request.auth.token.orgId == orgId;
+//  }
+//
+//  Et pour permettre à un responsable de voir ses commerciaux
+//  (ce que le schéma actuel ne sait pas exprimer) :
+//
+//  match /orgs/{orgId}/visites/{docId} {
+//    allow read: if request.auth.token.orgId == orgId
+//                && (request.auth.token.role in ['admin','manager']
+//                    || resource.data.createdBy == request.auth.uid);
+//  }
+// ═══════════════════════════════════════════════════════════════════════

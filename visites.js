@@ -641,6 +641,8 @@
           ' oninput="Visites.champ(\'compteRendu\',this.value)">' + esc(e.compteRendu || '') + '</textarea>' +
         '</label>' +
         '<button class="vis-btn vis-dictee" onclick="Visites.dictee()">🎤 Dicter</button>' +
+        '<div class="vis-rgpd">Ces notes concernent des personnes identifiables et leur sont ' +
+          'communicables sur simple demande. Tiens-t\'en à des éléments factuels et professionnels.</div>' +
 
         '<div class="vis-lbl">Étiquettes</div>' +
         '<div id="vis-tags" class="vis-tagbox">' + tagsHtml() + '</div>' +
@@ -741,6 +743,7 @@
     '%S% .vis-form input,%S% .vis-form select,%S% .vis-form textarea{border:1px solid var(--border-med);border-radius:9px;padding:.5rem .7rem;font-size:.85rem;background:var(--surface);color:var(--g900);font-family:inherit;font-weight:400}',
     '%S% .vis-form textarea{resize:vertical;line-height:1.5}',
     '%S% .vis-dictee{margin-bottom:1rem}',
+    '%S% .vis-rgpd{font-size:.71rem;color:var(--g500);line-height:1.45;background:var(--surface2);border-left:3px solid var(--border-med);padding:.45rem .65rem;border-radius:0 7px 7px 0;margin:0 0 1rem}',
     '%S% .vis-lbl{font-size:.72rem;font-weight:700;color:var(--g600);margin:.4rem 0 .4rem;text-transform:uppercase;letter-spacing:.03em}',
     '%S% .vis-mute{color:var(--g500);font-weight:400;text-transform:none;letter-spacing:0}',
     '%S% .vis-tagbox{display:flex;flex-wrap:wrap;gap:.3rem;margin-bottom:1rem}',
