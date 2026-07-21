@@ -11,6 +11,7 @@
 (function (global) {
   'use strict';
 
+  var VERSION = 'tournees 2026-07-21 #4';
   var BAN_CSV = 'https://api-adresse.data.gouv.fr/search/csv/';
   var BAN_ONE = 'https://api-adresse.data.gouv.fr/search/';
   var LOT = 500;          // lignes par requête CSV
@@ -450,8 +451,19 @@
   }
 
   /* ═══ Carte Leaflet ═══════════════════════════════════════════════ */
+  // Un rendu déclenché pendant le chargement de Leaflet ajoutait un second
+  // script : on met les rappels en file plutôt que de recharger la librairie.
+  var leafletEtat = 'absent';   // absent | chargement | pret | echec
+  var leafletFile = [];
+
   function chargerLeaflet(cb) {
-    if (global.L) { cb(); return; }
+    if (global.L) { leafletEtat = 'pret'; cb(); return; }
+    if (leafletEtat === 'echec') { messageCarteIndispo(); return; }
+
+    leafletFile.push(cb);
+    if (leafletEtat === 'chargement') return;
+    leafletEtat = 'chargement';
+
     if (!document.getElementById('trn-leaflet-css')) {
       var l = document.createElement('link');
       l.id = 'trn-leaflet-css'; l.rel = 'stylesheet'; l.href = LEAFLET_CSS;
@@ -459,15 +471,76 @@
     }
     var s = document.createElement('script');
     s.src = LEAFLET_JS;
-    s.onload = cb;
+    s.onload = function () {
+      leafletEtat = 'pret';
+      var file = leafletFile; leafletFile = [];
+      file.forEach(function (f) { try { f(); } catch (e) { console.error('[Tournees]', e); } });
+    };
     s.onerror = function () {
-      var el = document.getElementById('trn-map');
-      if (el) el.innerHTML = '<div class="trn-map-err">Carte indisponible (réseau). La liste reste utilisable.</div>';
+      leafletEtat = 'echec';
+      leafletFile = [];
+      messageCarteIndispo();
     };
     document.head.appendChild(s);
   }
 
+  function messageCarteIndispo() {
+    var el = document.getElementById('trn-map');
+    if (el) el.innerHTML = '<div class="trn-map-err">Carte indisponible (réseau bloqué). ' +
+      'La liste et les itinéraires restent utilisables.</div>';
+  }
+
+  function reinitCarte() {
+    if (map) { try { map.remove(); } catch (e) {} }
+    map = null; layer = null; derniereVue = null;
+    var el = document.getElementById('trn-map');
+    if (el) { try { delete el._leaflet_id; } catch (e) { el._leaflet_id = undefined; } el.innerHTML = ''; }
+    render();
+  }
+
+  // Diagnostic : à appeler depuis la console → Tournees.diag()
+  function diag() {
+    var el = document.getElementById('trn-map');
+    var info = {
+      version: VERSION,
+      leaflet: typeof global.L !== 'undefined' ? (global.L.version || 'chargé') : 'ABSENT',
+      etatChargement: leafletEtat,
+      instanceCarte: !!map,
+      conteneurTrouve: !!el,
+      conteneurDansDocument: el ? document.body.contains(el) : false,
+      hauteurConteneur: el ? el.offsetHeight : null,
+      largeurConteneur: el ? el.offsetWidth : null,
+      marqueLeafletSurConteneur: el ? (el._leaflet_id || null) : null,
+      conteneurEstCeluiDeLaCarte: (map && el) ? (function () {
+        try { return map.getContainer() === el; } catch (e) { return 'erreur'; }
+      })() : null,
+      pointDeDepart: state.pos || null,
+      clientsAffiches: liste().length
+    };
+    console.table ? console.table(info) : console.log(info);
+    return info;
+  }
+
+  // Enveloppe : une exception ici laissait la liste affichée et la carte
+  // vide, sans le moindre message. On rend désormais l'erreur lisible.
   function dessinerCarte(items) {
+    try {
+      dessinerCarteInterne(items);
+    } catch (e) {
+      console.error('[Tournees] échec du dessin de la carte', e);
+      var el = document.getElementById('trn-map');
+      if (el) {
+        el.innerHTML =
+          '<div class="trn-map-err">' +
+            '<strong>Carte indisponible</strong><br>' +
+            esc(e && e.message ? e.message : String(e)) + '<br>' +
+            '<button class="trn-btn" onclick="Tournees.reinitCarte()">Réinitialiser la carte</button>' +
+          '</div>';
+      }
+    }
+  }
+
+  function dessinerCarteInterne(items) {
     var el = document.getElementById('trn-map');
     if (!el || !global.L) return;
 
@@ -486,11 +559,19 @@
     }
 
     if (!map) {
+      // Leaflet refuse d'initialiser un conteneur qu'il croit déjà occupé
+      // (« Map container is already initialized ») et lève une exception.
+      // On efface la marque laissée sur le nœud avant de repartir.
+      if (el._leaflet_id) {
+        try { delete el._leaflet_id; } catch (e) { el._leaflet_id = undefined; }
+        el.innerHTML = '';
+      }
       map = L.map(el, { scrollWheelZoom: false });
       L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
         maxZoom: 18,
         attribution: '© OpenStreetMap'
       }).addTo(map);
+      derniereVue = null;
     }
     if (layer) map.removeLayer(layer);
     layer = L.layerGroup().addTo(map);
@@ -757,7 +838,8 @@
     '#sec-tournees .trn-filtres select{border:1px solid var(--border-med);border-radius:8px;padding:.35rem .5rem;font-size:.8rem;background:var(--surface);color:var(--g900);font-family:inherit}',
     '#sec-tournees .trn-check{flex-direction:row!important;align-items:center;gap:.35rem!important;font-size:.78rem!important;color:var(--g700)!important}',
     '#sec-tournees .trn-map{height:320px;border-radius:14px;border:1px solid var(--border);overflow:hidden;margin-bottom:.75rem;background:var(--g100)}',
-    '#sec-tournees .trn-map-err{display:flex;align-items:center;justify-content:center;height:100%;font-size:.82rem;color:var(--g500);padding:1rem;text-align:center}',
+    '#sec-tournees .trn-map-err{display:flex;flex-direction:column;gap:.5rem;align-items:center;justify-content:center;height:100%;font-size:.82rem;color:var(--g600);padding:1rem;text-align:center;line-height:1.5}',
+    '#sec-tournees .trn-map-err strong{color:var(--red)}',
     '#sec-tournees .trn-itin{background:var(--surface);border:1px solid var(--blue-p300);border-radius:14px;padding:1rem;margin-bottom:.75rem}',
     '#sec-tournees .trn-itin-h{display:flex;justify-content:space-between;align-items:baseline;flex-wrap:wrap;gap:.4rem;margin-bottom:.6rem}',
     '#sec-tournees .trn-itin-h strong{color:var(--g900);font-size:.92rem}',
@@ -807,7 +889,10 @@
 
   /* ═══ API publique ════════════════════════════════════════════════ */
   var API = {
-    mount: function () { injectCSS(); chargerAnalyses(); render(); },
+    mount: function () {
+      console.log('[Tournees] ' + VERSION);
+      injectCSS(); chargerAnalyses(); render();
+    },
     unmount: function () {
       if (map) { try { map.remove(); } catch (e) {} map = null; layer = null; }
       derniereVue = null;
@@ -830,6 +915,9 @@
       render();
     },
     viderSelection: function () { state.selection = {}; render(); },
+    reinitCarte: reinitCarte,
+    diag: diag,
+    version: VERSION,
     itineraire: itineraire,
     visite: function (id) {
       if (typeof Visites !== 'undefined') Visites.nouvelle(id);
