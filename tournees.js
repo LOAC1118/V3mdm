@@ -27,6 +27,7 @@
     geoEnCours: false
   };
   var map = null, layer = null, analyses = null;
+  var derniereVue = null;   // signature du dernier recadrage de la carte
 
   /* ═══ Utilitaires ═════════════════════════════════════════════════ */
   function esc(s) {
@@ -470,6 +471,20 @@
     var el = document.getElementById('trn-map');
     if (!el || !global.L) return;
 
+    // render() reconstruit tout le innerHTML : le conteneur de la carte est
+    // remplacé par un neuf, tandis que l'instance Leaflet reste accrochée à
+    // l'ancien nœud, désormais hors du document. Sans ce contrôle, la carte
+    // cesse simplement de s'afficher après le moindre re-rendu.
+    if (map) {
+      var ancien = null;
+      try { ancien = map.getContainer(); } catch (e) {}
+      if (!ancien || ancien !== el || !document.body.contains(ancien)) {
+        try { map.remove(); } catch (e) {}
+        map = null;
+        layer = null;
+      }
+    }
+
     if (!map) {
       map = L.map(el, { scrollWheelZoom: false });
       L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
@@ -506,9 +521,17 @@
       pts.push([x.c.lat, x.c.lng]);
     });
 
-    if (pts.length) map.fitBounds(pts, { padding: [30, 30], maxZoom: 13 });
-    else map.setView([46.6, 2.3], 5);
-    setTimeout(function () { map.invalidateSize(); }, 150);
+    // Ne recadrer que si l'ensemble affiché a changé : sinon cocher un client
+    // ou changer un tri réinitialiserait le zoom et le déplacement manuel.
+    var signature = (state.pos ? state.pos.lat.toFixed(4) + ',' + state.pos.lng.toFixed(4) : '-') +
+                    '|' + items.map(function (x) { return x.c.id; }).join(',');
+
+    if (signature !== derniereVue) {
+      derniereVue = signature;
+      if (pts.length) map.fitBounds(pts, { padding: [30, 30], maxZoom: 13 });
+      else map.setView([46.6, 2.3], 5);
+    }
+    setTimeout(function () { try { map.invalidateSize(); } catch (e) {} }, 150);
   }
 
   /* ═══ Rendu ═══════════════════════════════════════════════════════ */
@@ -633,12 +656,33 @@
       ? items.map(carte).join('')
       : '<div class="trn-none">Aucun client dans ce rayon. Élargis le rayon ou change de point de départ.</div>';
 
+    // La carte est coûteuse à reconstruire (tuiles rechargées, zoom perdu).
+    // On extrait son nœud du document avant d'écraser le innerHTML, puis on
+    // le réinsère à la place du conteneur vide : l'instance Leaflet survit.
+    var carteVivante = null;
+    if (map) {
+      try {
+        var cont = map.getContainer();
+        if (cont && document.body.contains(cont) && cont.parentNode) {
+          cont.parentNode.removeChild(cont);
+          carteVivante = cont;
+        }
+      } catch (e) { carteVivante = null; }
+    }
+
     root.innerHTML =
       geo + barre +
       '<div id="trn-map" class="trn-map"></div>' +
       '<div id="trn-itin" class="trn-itin" style="display:none"></div>' +
       actions +
       '<div class="trn-list">' + lignes + '</div>';
+
+    if (carteVivante) {
+      var emplacement = document.getElementById('trn-map');
+      if (emplacement && emplacement.parentNode) {
+        emplacement.parentNode.replaceChild(carteVivante, emplacement);
+      }
+    }
 
     chargerLeaflet(function () { dessinerCarte(items); });
   }
@@ -764,7 +808,10 @@
   /* ═══ API publique ════════════════════════════════════════════════ */
   var API = {
     mount: function () { injectCSS(); chargerAnalyses(); render(); },
-    unmount: function () { if (map) { map.remove(); map = null; layer = null; } },
+    unmount: function () {
+      if (map) { try { map.remove(); } catch (e) {} map = null; layer = null; }
+      derniereVue = null;
+    },
     refresh: function () { chargerAnalyses(); render(); },
     geocoder: geocoder,
     geocoderUn: geocoderUn,
