@@ -1115,6 +1115,7 @@ thead th.ts-active { text-decoration:underline; text-underline-offset:3px; }
   </div>
   <div class="topbar-center">
     <button class="t-tab active" onclick="showSection('dashboard',this)">Dashboard</button>
+    <button class="t-tab" onclick="showSection('radar',this)">Radar</button>
     <button class="t-tab" onclick="showSection('bdc',this)">Bon de Commande</button>
     <button class="t-tab" onclick="showSection('frais',this)">Frais</button>
     <button class="t-tab" onclick="showSection('commissions',this)">Commissions</button>
@@ -1152,6 +1153,10 @@ thead th.ts-active { text-decoration:underline; text-underline-offset:3px; }
     <div class="nav-item active" onclick="showSection('dashboard',null,this)">
       <svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="1" y="1" width="6" height="6" rx="1.5"/><rect x="9" y="1" width="6" height="6" rx="1.5"/><rect x="1" y="9" width="6" height="6" rx="1.5"/><rect x="9" y="9" width="6" height="6" rx="1.5"/></svg>
       Dashboard
+    </div>
+    <div class="nav-item" onclick="showSection('radar',null,this)">
+      <svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="8" cy="8" r="6.5"/><circle cx="8" cy="8" r="2.8"/><path d="M8 8 13 3.5"/></svg>
+      Radar
     </div>
     <div class="nav-item" onclick="showSection('bdc',null,this)">
       <svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 2h12l-1 8H3z"/><circle cx="6" cy="14" r="1"/><circle cx="11" cy="14" r="1"/></svg>
@@ -1538,6 +1543,15 @@ thead th.ts-active { text-decoration:underline; text-underline-offset:3px; }
 
       </div>
     </div>
+  </div>
+
+  <!-- RADAR CLIENTS -->
+  <div id="sec-radar" class="hidden" style="padding:1.75rem 2rem;overflow-y:auto;flex:1;background:var(--bg);box-sizing:border-box;">
+    <div style="margin-bottom:1.25rem;">
+      <h2 style="margin:0;font-family:var(--fdisp);font-size:1.35rem;color:var(--g900);">Radar clients</h2>
+      <p style="margin:.2rem 0 0;font-size:.82rem;color:var(--g600);">Qui relancer aujourd'hui, et pourquoi. Calculé sur le rythme d'achat propre à chaque client.</p>
+    </div>
+    <div id="rdr-root"></div>
   </div>
 
   <!-- BON DE COMMANDE BDC -->
@@ -2742,6 +2756,10 @@ thead th.ts-active { text-decoration:underline; text-underline-offset:3px; }
   <button class="mmenu-item active" role="menuitem" data-sec="dashboard" onclick="mnavGo('dashboard')">
     <span class="mmenu-ico"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="1" y="1" width="6" height="6" rx="1.5"/><rect x="9" y="1" width="6" height="6" rx="1.5"/><rect x="1" y="9" width="6" height="6" rx="1.5"/><rect x="9" y="9" width="6" height="6" rx="1.5"/></svg></span>
     <span class="mmenu-label">Dashboard</span>
+  </button>
+  <button class="mmenu-item" role="menuitem" data-sec="radar" onclick="mnavGo('radar')">
+    <span class="mmenu-ico"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="8" cy="8" r="6.5"/><circle cx="8" cy="8" r="2.8"/><path d="M8 8 13 3.5"/></svg></span>
+    <span class="mmenu-label">Radar</span>
   </button>
   <button class="mmenu-item" role="menuitem" data-sec="bdc" onclick="mnavGo('bdc')">
     <span class="mmenu-ico"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 2h12l-1 8H3z"/><circle cx="6" cy="14" r="1"/><circle cx="11" cy="14" r="1"/></svg></span>
@@ -4112,7 +4130,7 @@ if (typeof cdbPageSize  === 'undefined') window.cdbPageSize  = 50;
 // ═══════════════════════════════════════════════
 //  NAVIGATION
 // ═══════════════════════════════════════════════
-const SECTIONS = ['dashboard','bdc','frais','contacts-db','commissions','comptes','mailing','accords','promos','top100','cadencier','ia'];
+const SECTIONS = ['dashboard','radar','bdc','frais','contacts-db','commissions','comptes','mailing','accords','promos','top100','cadencier','ia'];
 function showSection(name, tabEl, sideEl) {
   if (name === 'comptes' && !isAdminUser()) {
     toast('Accès réservé.', 'err');
@@ -4128,6 +4146,7 @@ function showSection(name, tabEl, sideEl) {
   document.querySelectorAll('.mmenu-item[data-sec="'+name+'"]').forEach(t=>t.classList.add('active'));
   updateMobileNav(name);
   if (name==='dashboard') { refreshDashboard(); if (typeof dashRenderInactiveClients === 'function') dashRenderInactiveClients(); }
+  if (name==='radar') { setTimeout(function(){ if (typeof RadarClients !== 'undefined') RadarClients.mount(); }, 80); }
   if (name==='frais') { if (typeof refreshFraisStats === 'function') { try{refreshFraisStats();}catch(e){} } if (typeof nfdRender === 'function') nfdRender(); }
   if (name==='bdc') { if (!bdcInitDone) { buildTable(); bdcInitDone=true; } }
   if (name==='commissions') { setTimeout(function(){ if (typeof commInit === 'function') commInit(); }, 80); }
@@ -13938,5 +13957,8 @@ if ('serviceWorker' in navigator) {
     </div>
   </div>
 </div>
+
+<!-- RADAR CLIENTS — module d'alertes commerciales -->
+<script src="radar.js?v=1"></script>
 </body>
 </html>
