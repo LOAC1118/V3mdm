@@ -369,6 +369,9 @@
     if (mail) actions += '<a class="rdr-act" href="mailto:' + esc(mail) + '">✉️ Écrire</a>';
     if (ct)   actions += '<button class="rdr-act rdr-act-p" onclick="RadarClients.commande(\'' + esc(ct.id) + '\')">🛒 Commande</button>';
     if (ct)   actions += '<button class="rdr-act" onclick="RadarClients.fiche(\'' + esc(ct.id) + '\')">👤 Fiche</button>';
+    if (ct && typeof Visites !== 'undefined') {
+      actions += '<button class="rdr-act" onclick="RadarClients.visite(\'' + esc(ct.id) + '\')">📝 CR</button>';
+    }
     actions += '<button class="rdr-act rdr-act-mute" onclick="RadarClients.reporter(\'' + esc(c.key) + '\')">⏱ Reporter 14 j</button>';
     actions += '</div>';
 
@@ -516,6 +519,9 @@
     commande: function (id) {
       if (typeof cdbNewOrder === 'function') cdbNewOrder(id);
       else if (typeof toast === 'function') toast('Module commande indisponible', 'err');
+    },
+    visite: function (id) {
+      if (typeof Visites !== 'undefined') Visites.nouvelle(id);
     },
     fiche: function (id) {
       if (typeof showSection === 'function') showSection('contacts-db', null, null);

@@ -549,6 +549,8 @@
           c.lat + ',' + c.lng + '&travelmode=driving" target="_blank" rel="noopener">🧭 Y aller</a>' +
         '<button class="trn-act" onclick="Tournees.depart(\'' + esc(c.id) + '\')">Partir d\'ici</button>' +
         '<button class="trn-act" onclick="Tournees.commande(\'' + esc(c.id) + '\')">🛒</button>' +
+        (typeof Visites !== 'undefined'
+          ? '<button class="trn-act" onclick="Tournees.visite(\'' + esc(c.id) + '\')">📝 CR</button>' : '') +
         (douteux ? '<button class="trn-act" onclick="Tournees.geocoderUn(\'' + esc(c.id) + '\')">Corriger</button>' : '') +
       '</div>' +
       '</article>';
@@ -639,6 +641,9 @@
     },
     viderSelection: function () { state.selection = {}; render(); },
     itineraire: itineraire,
+    visite: function (id) {
+      if (typeof Visites !== 'undefined') Visites.nouvelle(id);
+    },
     commande: function (id) {
       if (typeof cdbNewOrder === 'function') cdbNewOrder(id);
       else toast('Module commande indisponible', 'err');
