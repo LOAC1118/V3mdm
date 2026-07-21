@@ -1983,6 +1983,10 @@ thead th.ts-active { text-decoration:underline; text-underline-offset:3px; }
           style="padding:.55rem 1rem;border:none;background:none;cursor:pointer;font-size:.78rem;font-weight:600;color:var(--g500);border-bottom:2px solid transparent;margin-bottom:-1px;">
           📊 CA & Commandes
         </button>
+        <button type="button" class="cdb-tab" data-tab="visites" onclick="cdbSwitchTab('visites')"
+          style="padding:.55rem 1rem;border:none;background:none;cursor:pointer;font-size:.78rem;font-weight:600;color:var(--g500);border-bottom:2px solid transparent;margin-bottom:-1px;">
+          📝 Visites
+        </button>
       </div>
 
       <!-- Tab Infos -->
@@ -2003,6 +2007,9 @@ thead th.ts-active { text-decoration:underline; text-underline-offset:3px; }
         <!-- Encart accord commercial -->
         <div id="cdb-accord-encart" style="display:none;padding:0 1.25rem .5rem;"></div>
       </div>
+
+      <!-- Tab Visites -->
+      <div id="cdb-tab-visites" style="display:none;padding:1.25rem;"></div>
 
       <!-- Tab CA -->
       <div id="cdb-tab-ca" style="display:none;padding:1.25rem;">
@@ -11863,6 +11870,15 @@ function cdbImportApply() {
 function cdbSwitchTab(tab) {
   document.getElementById('cdb-tab-infos').style.display = tab === 'infos' ? '' : 'none';
   document.getElementById('cdb-tab-ca').style.display    = tab === 'ca'    ? '' : 'none';
+  // Onglet Visites (module visites.js)
+  var cdbTabVis = document.getElementById('cdb-tab-visites');
+  if (cdbTabVis) {
+    cdbTabVis.style.display = tab === 'visites' ? '' : 'none';
+    if (tab === 'visites' && typeof Visites !== 'undefined') {
+      var vid = document.getElementById('cdb-edit-id');
+      Visites.tabFiche(vid ? vid.value : '', 'cdb-tab-visites');
+    }
+  }
   document.querySelectorAll('.cdb-tab').forEach(function(btn) {
     var active = btn.getAttribute('data-tab') === tab;
     btn.style.color        = active ? 'var(--blue-p700)' : 'var(--g500)';
@@ -12205,6 +12221,8 @@ function cdbShowMenu(anchor, id) {
     { icon: '🛒', label: 'Nouveau BDC',        fn: function(){ if(c) cdbNewOrderFromClient(c); } },
     { icon: '📄', label: 'Importer commande PDF', fn: function(){ showSection('bdc',null); setTimeout(function(){ openPdfImport(); }, 200); } },
     { icon: '📊', label: 'CA & commandes',     fn: function(){ cdbOpenEdit(id); setTimeout(function(){ cdbSwitchTab('ca'); }, 50); } },
+    { icon: '📝', label: 'Nouveau compte rendu', fn: function(){ if (typeof Visites !== 'undefined') Visites.nouvelle(id); else toast('Module visites indisponible','err'); } },
+    { icon: '🗂', label: 'Historique des visites', fn: function(){ cdbOpenEdit(id); setTimeout(function(){ cdbSwitchTab('visites'); }, 50); } },
     { icon: '📋', label: 'Copier l\'email',    fn: function(){
         if (c && c.email) { navigator.clipboard.writeText(c.email).then(function(){ toast('Email copié', 'ok'); }); }
         else toast('Pas d\'email renseigné', 'err');

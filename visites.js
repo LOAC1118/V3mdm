@@ -428,6 +428,89 @@
     toast('✅ PDF généré', 'ok');
   }
 
+  /* ═══════════════════════════════════════════════════════════════════
+     ONGLET « VISITES » DANS LA FICHE CLIENT
+     Appelé par cdbSwitchTab('visites') — voir index.html
+     ═══════════════════════════════════════════════════════════════════ */
+  function fermerModale() {
+    var m = document.getElementById('cdb-modal-edit');
+    if (m) m.classList.add('hidden');
+  }
+
+  function tabFiche(clientId, elId) {
+    injectCSS();
+    var el = document.getElementById(elId || 'cdb-tab-visites');
+    if (!el) return;
+
+    if (!clientId) {
+      el.innerHTML = '<div class="vis-fiche-vide">Enregistre d\'abord la fiche client, ' +
+        'puis reviens ici pour y attacher des comptes rendus.</div>';
+      return;
+    }
+
+    function dessiner() {
+      var c = contacts().find(function (x) { return x.id === clientId; });
+      var nom = c ? c.nom : '';
+      var lot = state.visites.filter(function (v) { return v.clientId === clientId; });
+
+      var entete =
+        '<div class="vis-fiche-h">' +
+          '<span class="vis-fiche-n">' +
+            (lot.length ? lot.length + ' compte' + (lot.length > 1 ? 's' : '') + ' rendu' + (lot.length > 1 ? 's' : '') +
+                          ' · dernier le ' + jour(lot[0].date)
+                        : 'Aucun compte rendu') +
+          '</span>' +
+          '<span style="display:flex;gap:.4rem;flex-wrap:wrap">' +
+            '<button class="vis-btn vis-btn-p" onclick="Visites.depuisFiche(\'' + esc(clientId) + '\')">+ Compte rendu</button>' +
+            (lot.length
+              ? '<button class="vis-btn" onclick="Visites.exporterDossier(\'' +
+                esc(nom).replace(/'/g, "\\'") + '\')">📄 Dossier PDF</button>'
+              : '') +
+          '</span>' +
+        '</div>';
+
+      if (!lot.length) {
+        el.innerHTML = entete +
+          '<div class="vis-fiche-vide">Rien n\'a encore été noté pour ce client.<br>' +
+          'Après ta prochaine visite, note ce qui s\'est dit et prends une photo du linéaire.</div>';
+        return;
+      }
+
+      el.innerHTML = entete + '<div class="vis-list">' + lot.map(ligneFiche).join('') + '</div>';
+    }
+
+    if (!state.charge) {
+      el.innerHTML = '<div class="vis-none">Chargement des comptes rendus…</div>';
+      charger(dessiner);
+    } else {
+      dessiner();
+    }
+  }
+
+  // Carte compacte, sans le nom du client (on est déjà sur sa fiche)
+  function ligneFiche(v) {
+    var tags = (v.tags || []).slice(0, 3).map(function (t) {
+      return '<span class="vis-tag">' + esc(t) + '</span>';
+    }).join('');
+    var extrait = String(v.compteRendu || '').slice(0, 200);
+    return '<article class="vis-card">' +
+      '<header class="vis-card-h">' +
+        '<div>' +
+          '<strong>' + esc(v.objet || v.type || 'Visite') + '</strong>' +
+          '<div class="vis-card-s">' + jour(v.date) + ' · ' + esc(v.type || 'Visite') +
+            (v.nbPhotos ? ' · 📷 ' + v.nbPhotos : '') + '</div>' +
+        '</div>' +
+        (v.relanceLe ? '<span class="vis-relance">Relance ' + jour(new Date(v.relanceLe + 'T12:00:00').getTime()) + '</span>' : '') +
+      '</header>' +
+      (extrait ? '<p class="vis-extrait">' + esc(extrait) + (v.compteRendu.length > 200 ? '…' : '') + '</p>' : '') +
+      (tags ? '<div class="vis-tags">' + tags + '</div>' : '') +
+      '<div class="vis-acts">' +
+        '<button class="vis-act" onclick="Visites.ouvrirDepuisFiche(\'' + esc(v.id) + '\')">Ouvrir</button>' +
+        '<button class="vis-act" onclick="Visites.exporterPdf(\'' + esc(v.id) + '\')">📄 PDF</button>' +
+      '</div>' +
+      '</article>';
+  }
+
   /* ═══ Rendu ═══════════════════════════════════════════════════════ */
   function ouvrirSection() {
     if (typeof showSection === 'function') showSection('visites', null, null);
@@ -629,52 +712,68 @@
     toast('🎤 Parle — reclique pour arrêter', 'ok');
   }
 
-  /* ═══ Styles ══════════════════════════════════════════════════════ */
-  var CSS = [
-    '#sec-visites .vis-bar{display:flex;gap:.5rem;flex-wrap:wrap;margin-bottom:1rem}',
-    '#sec-visites .vis-btn{border:1px solid var(--border-med);background:var(--surface);color:var(--g700);border-radius:9px;padding:.45rem .8rem;font-size:.8rem;font-weight:600;cursor:pointer;font-family:inherit}',
-    '#sec-visites .vis-btn-p{background:var(--blue-p700);border-color:var(--blue-p700);color:#fff}',
-    '#sec-visites .vis-btn-d{color:var(--red);border-color:var(--red)}',
-    '#sec-visites .vis-input{border:1px solid var(--border-med);border-radius:9px;padding:.45rem .7rem;font-size:.82rem;background:var(--surface);color:var(--g900);font-family:inherit}',
-    '#sec-visites .vis-list{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:.8rem}',
-    '#sec-visites .vis-card{background:var(--surface);border:1px solid var(--border);border-radius:13px;padding:.9rem;box-shadow:var(--shadow-xs);display:flex;flex-direction:column;gap:.5rem}',
-    '#sec-visites .vis-card-h{display:flex;justify-content:space-between;gap:.5rem;align-items:flex-start}',
-    '#sec-visites .vis-card-h strong{font-size:.92rem;color:var(--g900)}',
-    '#sec-visites .vis-card-s{font-size:.7rem;color:var(--g500);margin-top:.1rem}',
-    '#sec-visites .vis-relance{flex-shrink:0;font-size:.66rem;font-weight:700;background:var(--amber-bg);color:var(--amber);padding:.15rem .4rem;border-radius:6px}',
-    '#sec-visites .vis-objet{font-size:.82rem;font-weight:600;color:var(--g800)}',
-    '#sec-visites .vis-extrait{margin:0;font-size:.78rem;color:var(--g600);line-height:1.45}',
-    '#sec-visites .vis-tags{display:flex;flex-wrap:wrap;gap:.25rem}',
-    '#sec-visites .vis-tag{font-size:.66rem;font-weight:600;background:var(--blue-p50);color:var(--blue-p700);border:1px solid var(--blue-p300);padding:.1rem .4rem;border-radius:999px}',
-    '#sec-visites .vis-acts{display:flex;gap:.3rem;flex-wrap:wrap;border-top:1px solid var(--border);padding-top:.5rem}',
-    '#sec-visites .vis-act{border:1px solid var(--border-med);background:var(--surface2);color:var(--g700);border-radius:7px;padding:.3rem .55rem;font-size:.72rem;font-weight:600;cursor:pointer;font-family:inherit}',
-    '#sec-visites .vis-form{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:1.1rem;box-shadow:var(--shadow-sm);max-width:820px}',
-    '#sec-visites .vis-form-h{display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem}',
-    '#sec-visites .vis-form-h h3{margin:0;font-size:1rem;color:var(--g900)}',
-    '#sec-visites .vis-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:.7rem;margin-bottom:.7rem}',
-    '#sec-visites .vis-form label,#sec-visites .vis-full{display:flex;flex-direction:column;gap:.2rem;font-size:.72rem;font-weight:600;color:var(--g600);margin-bottom:.7rem}',
-    '#sec-visites .vis-form input,#sec-visites .vis-form select,#sec-visites .vis-form textarea{border:1px solid var(--border-med);border-radius:9px;padding:.5rem .7rem;font-size:.85rem;background:var(--surface);color:var(--g900);font-family:inherit;font-weight:400}',
-    '#sec-visites .vis-form textarea{resize:vertical;line-height:1.5}',
-    '#sec-visites .vis-dictee{margin-bottom:1rem}',
-    '#sec-visites .vis-lbl{font-size:.72rem;font-weight:700;color:var(--g600);margin:.4rem 0 .4rem;text-transform:uppercase;letter-spacing:.03em}',
-    '#sec-visites .vis-mute{color:var(--g500);font-weight:400;text-transform:none;letter-spacing:0}',
-    '#sec-visites .vis-tagbox{display:flex;flex-wrap:wrap;gap:.3rem;margin-bottom:1rem}',
-    '#sec-visites .vis-tagbtn{border:1px solid var(--border-med);background:var(--surface);color:var(--g600);border-radius:999px;padding:.3rem .65rem;font-size:.73rem;font-weight:600;cursor:pointer;font-family:inherit}',
-    '#sec-visites .vis-tagbtn.on{background:var(--blue-p700);border-color:var(--blue-p700);color:#fff}',
-    '#sec-visites .vis-photos{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:.6rem;margin:.6rem 0 1rem}',
-    '#sec-visites .vis-nophoto{grid-column:1/-1;font-size:.8rem;padding:.5rem 0}',
-    '#sec-visites .vis-photo{position:relative;margin:0;background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:.4rem;display:flex;flex-direction:column;gap:.3rem}',
-    '#sec-visites .vis-photo img{width:100%;height:110px;object-fit:cover;border-radius:7px;display:block}',
-    '#sec-visites .vis-photo input{font-size:.72rem!important;padding:.3rem .45rem!important}',
-    '#sec-visites .vis-photo figcaption{font-size:.62rem;color:var(--g500);text-align:right}',
-    '#sec-visites .vis-photo-x{position:absolute;top:.6rem;right:.6rem;border:none;background:rgba(0,0,0,.55);color:#fff;width:22px;height:22px;border-radius:50%;font-size:.72rem;cursor:pointer;line-height:1}',
-    '#sec-visites .vis-form-a{display:flex;gap:.5rem;flex-wrap:wrap;border-top:1px solid var(--border);padding-top:.9rem}',
-    '#sec-visites .vis-none,#sec-visites .vis-empty{text-align:center;padding:2.5rem 1rem;color:var(--g600)}',
-    '#sec-visites .vis-empty-ico{font-size:2.5rem}',
-    '#sec-visites .vis-empty h3{margin:.5rem 0 .25rem;color:var(--g900);font-size:1rem}',
-    '#sec-visites .vis-empty p{font-size:.85rem;max-width:440px;margin:0 auto;line-height:1.5}',
-    '@media(max-width:640px){#sec-visites .vis-list{grid-template-columns:1fr}#sec-visites .vis-bar .vis-input{flex:1;min-width:130px}}'
+  /* ═══ Styles ══════════════════════════════════════════════════════
+     %S% est remplacé par chaque portée : la section autonome ET
+     l'onglet « Visites » de la modale fiche client.                  */
+  var CSS_TPL = [
+    '%S% .vis-bar{display:flex;gap:.5rem;flex-wrap:wrap;margin-bottom:1rem}',
+    '%S% .vis-btn{border:1px solid var(--border-med);background:var(--surface);color:var(--g700);border-radius:9px;padding:.45rem .8rem;font-size:.8rem;font-weight:600;cursor:pointer;font-family:inherit}',
+    '%S% .vis-btn-p{background:var(--blue-p700);border-color:var(--blue-p700);color:#fff}',
+    '%S% .vis-btn-d{color:var(--red);border-color:var(--red)}',
+    '%S% .vis-input{border:1px solid var(--border-med);border-radius:9px;padding:.45rem .7rem;font-size:.82rem;background:var(--surface);color:var(--g900);font-family:inherit}',
+    '%S% .vis-list{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:.8rem}',
+    '%S% .vis-card{background:var(--surface);border:1px solid var(--border);border-radius:13px;padding:.9rem;box-shadow:var(--shadow-xs);display:flex;flex-direction:column;gap:.5rem}',
+    '%S% .vis-card-h{display:flex;justify-content:space-between;gap:.5rem;align-items:flex-start}',
+    '%S% .vis-card-h strong{font-size:.92rem;color:var(--g900)}',
+    '%S% .vis-card-s{font-size:.7rem;color:var(--g500);margin-top:.1rem}',
+    '%S% .vis-relance{flex-shrink:0;font-size:.66rem;font-weight:700;background:var(--amber-bg);color:var(--amber);padding:.15rem .4rem;border-radius:6px}',
+    '%S% .vis-objet{font-size:.82rem;font-weight:600;color:var(--g800)}',
+    '%S% .vis-extrait{margin:0;font-size:.78rem;color:var(--g600);line-height:1.45}',
+    '%S% .vis-tags{display:flex;flex-wrap:wrap;gap:.25rem}',
+    '%S% .vis-tag{font-size:.66rem;font-weight:600;background:var(--blue-p50);color:var(--blue-p700);border:1px solid var(--blue-p300);padding:.1rem .4rem;border-radius:999px}',
+    '%S% .vis-acts{display:flex;gap:.3rem;flex-wrap:wrap;border-top:1px solid var(--border);padding-top:.5rem}',
+    '%S% .vis-act{border:1px solid var(--border-med);background:var(--surface2);color:var(--g700);border-radius:7px;padding:.3rem .55rem;font-size:.72rem;font-weight:600;cursor:pointer;font-family:inherit}',
+    '%S% .vis-form{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:1.1rem;box-shadow:var(--shadow-sm);max-width:820px}',
+    '%S% .vis-form-h{display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem}',
+    '%S% .vis-form-h h3{margin:0;font-size:1rem;color:var(--g900)}',
+    '%S% .vis-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:.7rem;margin-bottom:.7rem}',
+    '%S% .vis-form label,%S% .vis-full{display:flex;flex-direction:column;gap:.2rem;font-size:.72rem;font-weight:600;color:var(--g600);margin-bottom:.7rem}',
+    '%S% .vis-form input,%S% .vis-form select,%S% .vis-form textarea{border:1px solid var(--border-med);border-radius:9px;padding:.5rem .7rem;font-size:.85rem;background:var(--surface);color:var(--g900);font-family:inherit;font-weight:400}',
+    '%S% .vis-form textarea{resize:vertical;line-height:1.5}',
+    '%S% .vis-dictee{margin-bottom:1rem}',
+    '%S% .vis-lbl{font-size:.72rem;font-weight:700;color:var(--g600);margin:.4rem 0 .4rem;text-transform:uppercase;letter-spacing:.03em}',
+    '%S% .vis-mute{color:var(--g500);font-weight:400;text-transform:none;letter-spacing:0}',
+    '%S% .vis-tagbox{display:flex;flex-wrap:wrap;gap:.3rem;margin-bottom:1rem}',
+    '%S% .vis-tagbtn{border:1px solid var(--border-med);background:var(--surface);color:var(--g600);border-radius:999px;padding:.3rem .65rem;font-size:.73rem;font-weight:600;cursor:pointer;font-family:inherit}',
+    '%S% .vis-tagbtn.on{background:var(--blue-p700);border-color:var(--blue-p700);color:#fff}',
+    '%S% .vis-photos{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:.6rem;margin:.6rem 0 1rem}',
+    '%S% .vis-nophoto{grid-column:1/-1;font-size:.8rem;padding:.5rem 0}',
+    '%S% .vis-photo{position:relative;margin:0;background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:.4rem;display:flex;flex-direction:column;gap:.3rem}',
+    '%S% .vis-photo img{width:100%;height:110px;object-fit:cover;border-radius:7px;display:block}',
+    '%S% .vis-photo input{font-size:.72rem!important;padding:.3rem .45rem!important}',
+    '%S% .vis-photo figcaption{font-size:.62rem;color:var(--g500);text-align:right}',
+    '%S% .vis-photo-x{position:absolute;top:.6rem;right:.6rem;border:none;background:rgba(0,0,0,.55);color:#fff;width:22px;height:22px;border-radius:50%;font-size:.72rem;cursor:pointer;line-height:1}',
+    '%S% .vis-form-a{display:flex;gap:.5rem;flex-wrap:wrap;border-top:1px solid var(--border);padding-top:.9rem}',
+    '%S% .vis-none,%S% .vis-empty{text-align:center;padding:2.5rem 1rem;color:var(--g600)}',
+    '%S% .vis-empty-ico{font-size:2.5rem}',
+    '%S% .vis-empty h3{margin:.5rem 0 .25rem;color:var(--g900);font-size:1rem}',
+    '%S% .vis-empty p{font-size:.85rem;max-width:440px;margin:0 auto;line-height:1.5}'
   ].join('');
+
+  /* Styles propres à l'onglet de la fiche client (espace plus contraint) */
+  var CSS_FICHE = [
+    '#cdb-tab-visites .vis-list{grid-template-columns:1fr;gap:.6rem}',
+    '#cdb-tab-visites .vis-card{padding:.75rem;border-radius:11px}',
+    '#cdb-tab-visites .vis-fiche-h{display:flex;gap:.5rem;flex-wrap:wrap;align-items:center;justify-content:space-between;margin-bottom:.85rem}',
+    '#cdb-tab-visites .vis-fiche-n{font-size:.78rem;color:var(--g600)}',
+    '#cdb-tab-visites .vis-fiche-vide{text-align:center;padding:1.75rem 1rem;color:var(--g500);font-size:.83rem;line-height:1.5}',
+    '#cdb-tab-visites .vis-empty,#cdb-tab-visites .vis-none{padding:1.5rem 1rem}'
+  ].join('');
+
+  var CSS = CSS_TPL.split('%S%').join('#sec-visites') + '\n' +
+            CSS_TPL.split('%S%').join('#cdb-tab-visites') + '\n' +
+            CSS_FICHE + '\n' +
+            '@media(max-width:640px){#sec-visites .vis-list{grid-template-columns:1fr}#sec-visites .vis-bar .vis-input{flex:1;min-width:130px}}';
 
   function injectCSS() {
     if (document.getElementById('vis-styles')) return;
@@ -692,6 +791,17 @@
     refresh: function () { state.charge = false; charger(); },
     nouvelle: nouvelle,
     ouvrir: ouvrir,
+    tabFiche: tabFiche,
+    // Depuis la modale fiche client : on ferme la modale puis on bascule
+    depuisFiche: function (clientId) {
+      fermerModale();
+      nouvelle(clientId);
+    },
+    ouvrirDepuisFiche: function (id) {
+      fermerModale();
+      if (typeof showSection === 'function') showSection('visites', null, null);
+      setTimeout(function () { injectCSS(); ouvrir(id); }, 120);
+    },
     annuler: annuler,
     champ: champ,
     setClient2: function (id) {
