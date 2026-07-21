@@ -237,8 +237,7 @@
   /* ═══ Position de départ ══════════════════════════════════════════ */
   function maPosition() {
     if (!navigator.geolocation) { toast('Géolocalisation indisponible', 'err'); return; }
-    var el = document.getElementById('trn-pos-label');
-    if (el) el.textContent = 'Localisation en cours…';
+    toast('📍 Localisation en cours…', 'ok');
     navigator.geolocation.getCurrentPosition(function (p) {
       state.pos = { lat: p.coords.latitude, lng: p.coords.longitude, label: 'Ma position' };
       render();
@@ -253,6 +252,99 @@
     var c = contacts().find(function (x) { return x.id === id; });
     if (!c || !estGeocode(c)) return;
     state.pos = { lat: c.lat, lng: c.lng, label: c.nom };
+    render();
+  }
+
+  /* ═══════════════════════════════════════════════════════════════════
+     POINT DE DÉPART SAISI À LA MAIN
+     Permet de préparer une tournée sans être sur place : on tape une
+     adresse, l'autocomplétion BAN propose, on choisit.
+     ═══════════════════════════════════════════════════════════════════ */
+  var DEP_CLE = 'trn_departs';
+  var suggTimer = null;
+
+  function departsEnregistres() {
+    try { return JSON.parse(localStorage.getItem(DEP_CLE) || '[]'); }
+    catch (e) { return []; }
+  }
+  function sauverDeparts(liste) {
+    try { localStorage.setItem(DEP_CLE, JSON.stringify(liste.slice(0, 8))); } catch (e) {}
+  }
+
+  function chercherAdresse(q) {
+    var box = document.getElementById('trn-sugg');
+    if (!box) return;
+    if (suggTimer) clearTimeout(suggTimer);
+
+    q = String(q || '').trim();
+    if (q.length < 4) { box.innerHTML = ''; box.style.display = 'none'; return; }
+
+    suggTimer = setTimeout(function () {
+      fetch(BAN_ONE + '?q=' + encodeURIComponent(q) + '&limit=5&autocomplete=1')
+        .then(function (r) { return r.json(); })
+        .then(function (j) {
+          state.suggestions = (j.features || []).map(function (f) {
+            return {
+              label: f.properties.label || '',
+              contexte: f.properties.context || '',
+              lat: f.geometry.coordinates[1],
+              lng: f.geometry.coordinates[0]
+            };
+          });
+          if (!state.suggestions.length) {
+            box.innerHTML = '<div class="trn-sugg-vide">Aucune adresse trouvée</div>';
+            box.style.display = 'block';
+            return;
+          }
+          box.innerHTML = state.suggestions.map(function (s, i) {
+            return '<button class="trn-sugg-i" onclick="Tournees.choisirAdresse(' + i + ')">' +
+              '<strong>' + esc(s.label) + '</strong>' +
+              '<span>' + esc(s.contexte) + '</span></button>';
+          }).join('');
+          box.style.display = 'block';
+        })
+        .catch(function () {
+          box.innerHTML = '<div class="trn-sugg-vide">Recherche indisponible (réseau)</div>';
+          box.style.display = 'block';
+        });
+    }, 300);
+  }
+
+  function choisirAdresse(i) {
+    var s = state.suggestions && state.suggestions[i];
+    if (!s) return;
+    state.pos = { lat: s.lat, lng: s.lng, label: s.label };
+    state.suggestions = null;
+    render();
+  }
+
+  function enregistrerDepart() {
+    if (!state.pos) return;
+    var nom = prompt('Nom de ce point de départ (ex : Domicile, Dépôt, Hôtel Lyon) :',
+                     state.pos.label.split(',')[0]);
+    if (!nom || !nom.trim()) return;
+    var liste = departsEnregistres().filter(function (d) {
+      return normName(d.nom) !== normName(nom);
+    });
+    liste.unshift({ nom: nom.trim(), lat: state.pos.lat, lng: state.pos.lng, adresse: state.pos.label });
+    sauverDeparts(liste);
+    toast('✅ Départ « ' + nom.trim() + ' » enregistré', 'ok');
+    render();
+  }
+
+  function utiliserDepart(i) {
+    var d = departsEnregistres()[i];
+    if (!d) return;
+    state.pos = { lat: d.lat, lng: d.lng, label: d.nom };
+    render();
+  }
+
+  function oublierDepart(i) {
+    var liste = departsEnregistres();
+    if (!liste[i]) return;
+    if (!confirm('Retirer « ' + liste[i].nom + ' » des départs enregistrés ?')) return;
+    liste.splice(i, 1);
+    sauverDeparts(liste);
     render();
   }
 
@@ -473,13 +565,39 @@
       return;
     }
 
-    /* Barre de départ + filtres */
+    /* Bloc « point de départ » : GPS, adresse saisie, ou départ enregistré */
+    var favoris = departsEnregistres();
+    var dejaEnregistre = state.pos && favoris.some(function (d) {
+      return Math.abs(d.lat - state.pos.lat) < 0.0002 && Math.abs(d.lng - state.pos.lng) < 0.0002;
+    });
+
     var barre =
-      '<div class="trn-bar">' +
-        '<button class="trn-btn trn-btn-p" onclick="Tournees.maPosition()">📍 Ma position</button>' +
-        '<span id="trn-pos-label" class="trn-pos">' +
-          (state.pos ? 'Départ : ' + esc(state.pos.label) : 'Aucun point de départ') +
-        '</span>' +
+      '<div class="trn-depart">' +
+        '<div class="trn-depart-t">Point de départ</div>' +
+        '<div class="trn-bar">' +
+          '<button class="trn-btn trn-btn-p" onclick="Tournees.maPosition()">📍 Ma position</button>' +
+          '<div class="trn-adr">' +
+            '<input id="trn-dep-input" class="trn-adr-in" type="search" autocomplete="off"' +
+            ' placeholder="ou saisis une adresse de départ…"' +
+            ' oninput="Tournees.chercherAdresse(this.value)">' +
+            '<div id="trn-sugg" class="trn-sugg" style="display:none"></div>' +
+          '</div>' +
+        '</div>' +
+        (favoris.length
+          ? '<div class="trn-favs">' + favoris.map(function (d, i) {
+              return '<span class="trn-fav">' +
+                '<button onclick="Tournees.utiliserDepart(' + i + ')" title="' + esc(d.adresse || '') + '">' +
+                  esc(d.nom) + '</button>' +
+                '<button class="trn-fav-x" onclick="Tournees.oublierDepart(' + i + ')" title="Retirer">✕</button>' +
+              '</span>';
+            }).join('') + '</div>'
+          : '') +
+        '<div class="trn-pos-l">' +
+          (state.pos
+            ? '<span class="trn-pos-ok">Départ : <strong>' + esc(state.pos.label) + '</strong></span>' +
+              (dejaEnregistre ? '' : '<button class="trn-btn trn-btn-s" onclick="Tournees.enregistrerDepart()">☆ Enregistrer ce départ</button>')
+            : '<span class="trn-pos">Aucun point de départ — les distances ne sont pas calculées</span>') +
+        '</div>' +
       '</div>' +
       '<div class="trn-filtres">' +
         '<label>Rayon' +
@@ -568,8 +686,28 @@
     '#sec-tournees .trn-prog-t{font-size:.78rem;color:var(--g600);margin-bottom:.35rem}',
     '#sec-tournees .trn-prog-b{height:6px;background:var(--g200);border-radius:999px;overflow:hidden}',
     '#sec-tournees .trn-prog-f{height:100%;background:var(--blue-p600);border-radius:999px;transition:width .3s}',
-    '#sec-tournees .trn-bar{display:flex;gap:.6rem;align-items:center;flex-wrap:wrap;margin-bottom:.6rem}',
-    '#sec-tournees .trn-pos{font-size:.8rem;color:var(--g600)}',
+    '#sec-tournees .trn-depart{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:.8rem 1rem;margin-bottom:.75rem;box-shadow:var(--shadow-xs)}',
+    '#sec-tournees .trn-depart-t{font-size:.68rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--g500);margin-bottom:.5rem}',
+    '#sec-tournees .trn-bar{display:flex;gap:.5rem;align-items:flex-start;flex-wrap:wrap}',
+    '#sec-tournees .trn-adr{position:relative;flex:1;min-width:230px}',
+    '#sec-tournees .trn-adr-in{width:100%;box-sizing:border-box;border:1px solid var(--border-med);border-radius:9px;padding:.45rem .7rem;font-size:.82rem;font-family:inherit;background:var(--surface);color:var(--g900)}',
+    '#sec-tournees .trn-sugg{position:absolute;top:calc(100% + 4px);left:0;right:0;background:var(--surface);border:1px solid var(--border-med);border-radius:10px;box-shadow:0 10px 28px rgba(30,45,78,.16);z-index:50;overflow:hidden}',
+    '#sec-tournees .trn-sugg-i{display:flex;flex-direction:column;align-items:flex-start;gap:.05rem;width:100%;text-align:left;border:none;background:none;padding:.5rem .7rem;cursor:pointer;font-family:inherit;border-bottom:1px solid var(--border)}',
+    '#sec-tournees .trn-sugg-i:last-child{border-bottom:none}',
+    '#sec-tournees .trn-sugg-i:hover{background:var(--blue-p50)}',
+    '#sec-tournees .trn-sugg-i strong{font-size:.81rem;color:var(--g900);font-weight:600}',
+    '#sec-tournees .trn-sugg-i span{font-size:.69rem;color:var(--g500)}',
+    '#sec-tournees .trn-sugg-vide{padding:.6rem .7rem;font-size:.78rem;color:var(--g500)}',
+    '#sec-tournees .trn-favs{display:flex;gap:.35rem;flex-wrap:wrap;margin-top:.6rem}',
+    '#sec-tournees .trn-fav{display:inline-flex;align-items:stretch;border:1px solid var(--border-med);border-radius:999px;overflow:hidden;background:var(--surface2)}',
+    '#sec-tournees .trn-fav button{border:none;background:none;font-family:inherit;font-size:.73rem;font-weight:600;color:var(--g700);padding:.28rem .6rem;cursor:pointer}',
+    '#sec-tournees .trn-fav button:hover{background:var(--blue-p50);color:var(--blue-p700)}',
+    '#sec-tournees .trn-fav-x{color:var(--g400)!important;padding:.28rem .5rem .28rem .3rem!important;border-left:1px solid var(--border)!important}',
+    '#sec-tournees .trn-pos-l{display:flex;gap:.5rem;align-items:center;flex-wrap:wrap;margin-top:.6rem;padding-top:.6rem;border-top:1px solid var(--border)}',
+    '#sec-tournees .trn-pos-ok{font-size:.79rem;color:var(--g700)}',
+    '#sec-tournees .trn-pos-ok strong{color:var(--blue-p700)}',
+    '#sec-tournees .trn-btn-s{padding:.28rem .6rem;font-size:.72rem}',
+    '#sec-tournees .trn-pos{font-size:.79rem;color:var(--g500)}',
     '#sec-tournees .trn-filtres{display:flex;gap:.75rem;flex-wrap:wrap;align-items:center;margin-bottom:.75rem}',
     '#sec-tournees .trn-filtres label{font-size:.72rem;color:var(--g600);display:flex;flex-direction:column;gap:.15rem}',
     '#sec-tournees .trn-filtres select{border:1px solid var(--border-med);border-radius:8px;padding:.35rem .5rem;font-size:.8rem;background:var(--surface);color:var(--g900);font-family:inherit}',
@@ -631,6 +769,11 @@
     geocoder: geocoder,
     geocoderUn: geocoderUn,
     maPosition: maPosition,
+    chercherAdresse: chercherAdresse,
+    choisirAdresse: choisirAdresse,
+    enregistrerDepart: enregistrerDepart,
+    utiliserDepart: utiliserDepart,
+    oublierDepart: oublierDepart,
     depart: departDepuisClient,
     setRayon: function (v) { state.rayon = Number(v); render(); },
     setTri: function (v) { state.tri = v; render(); },
