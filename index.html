@@ -252,12 +252,12 @@ body::before {
    TOPBAR
 ══════════════════════════════════ */
 .topbar {
-  background: var(--blue-p800);
-  border-bottom: 1px solid rgba(255,255,255,.08);
+  background: var(--surface);
+  border-bottom: 1px solid var(--line, var(--border));
   padding: 0 1.5rem; height: 56px;
   display: flex; align-items:center; justify-content:space-between;
   position: sticky; top:0; z-index:200;
-  box-shadow: 0 2px 12px rgba(4,44,83,.25);
+  box-shadow: 0 1px 3px rgba(26,28,26,.05);
   flex-shrink: 0;
 }
 
@@ -269,38 +269,34 @@ body::before {
   font-size: 17px; flex-shrink:0;
   box-shadow: 0 3px 10px rgba(37,99,176,.15);
 }
-/* Pastille claire portant le logo de marque, sur la barre foncée */
+/* Logo de marque, posé directement sur la barre claire (plus de pastille) */
 .brand-plate {
-  height: 40px; display: flex; align-items: center;
-  background: #fff; border-radius: 9px; padding: 3px 12px;
-  box-shadow: 0 1px 3px rgba(0,0,0,.18); flex-shrink: 0;
+  height: 42px; display: flex; align-items: center; flex-shrink: 0;
 }
-.brand-plate svg { height: 34px; width: auto; display: block; }
+.brand-plate svg { height: 40px; width: auto; display: block; }
 .brand-plate .bl-nat { display: none; }
 body.brand-naturaline .brand-plate .bl-mdm { display: none; }
 body.brand-naturaline .brand-plate .bl-nat { display: block; }
 
-/* ── Ajustements typographiques « carnet de terrain » ──
-   Fraunces est plus fine que Lora : on remonte le poids des titres.
-   Les chiffres de données passent en chasse fixe pour l'alignement. */
+/* ── Ajustements typographiques ── */
 .page-title, .modal-title, .brand-name,
 h1[style*="--fdisp"], h2[style*="--fdisp"] { font-weight: 550 !important; letter-spacing: -.01em; }
 .num, .mono, .kpi-value, .stat-value,
 [data-num] { font-family: var(--fmono); font-feature-settings: "tnum"; }
-.brand-name { font-family:var(--fdisp); font-size:1rem; color:#fff; line-height:1.2; font-weight:600; }
-.brand-sub { font-size:.58rem; color:var(--blue-p300); letter-spacing:.09em; text-transform:uppercase; }
+.brand-name { font-family:var(--fdisp); font-size:1rem; color:var(--g900); line-height:1.2; font-weight:600; }
+.brand-sub { font-size:.58rem; color:var(--g500); letter-spacing:.09em; text-transform:uppercase; }
 
 .topbar-center { display:flex; gap:2px; }
 .t-tab {
   padding:.38rem 1rem; border-radius:8px; border:none;
-  background:transparent; color:var(--blue-p300);
+  background:transparent; color:var(--g600);
   font-family:var(--fd); font-size:.82rem; font-weight:500;
   cursor:pointer; transition:all .18s; letter-spacing:.01em;
 }
-.t-tab:hover { background:rgba(255,255,255,.1); color:#fff; }
+.t-tab:hover { background:var(--bg2); color:var(--g900); }
 .t-tab.active {
-  background: rgba(255,255,255,.15);
-  color: #fff;
+  background: var(--blue-p50);
+  color: var(--blue-p700);
   font-weight: 600;
 }
 
@@ -310,14 +306,14 @@ h1[style*="--fdisp"], h2[style*="--fdisp"] { font-weight: 550 !important; letter
 .t-menu { position:relative; }
 .t-trig { display:inline-flex; align-items:center; gap:6px; }
 .t-caret { width:9px; height:9px; opacity:.75; transition:transform .18s; }
-.t-menu.open .t-trig { background:rgba(255,255,255,.15); color:#fff; }
+.t-menu.open .t-trig { background:var(--blue-p50); color:var(--blue-p700); }
 .t-menu.open .t-caret { transform:rotate(180deg); }
 .t-drop {
   position:absolute; top:calc(100% + 9px); left:0; min-width:215px;
-  background:var(--blue-p900);
-  border:1px solid rgba(255,255,255,.13); border-radius:12px;
+  background:var(--surface);
+  border:1px solid var(--border-med); border-radius:12px;
   padding:5px; z-index:300;
-  box-shadow:0 14px 38px rgba(4,44,83,.45);
+  box-shadow:0 14px 38px rgba(26,28,26,.14);
   opacity:0; visibility:hidden; transform:translateY(-6px);
   transition:opacity .16s ease, transform .16s ease, visibility .16s;
 }
@@ -325,16 +321,16 @@ h1[style*="--fdisp"], h2[style*="--fdisp"] { font-weight: 550 !important; letter
 .t-item {
   display:flex; align-items:center; gap:9px; width:100%; text-align:left;
   padding:.5rem .7rem; border:none; background:transparent;
-  color:var(--blue-p300); font-family:var(--fd); font-size:.8rem; font-weight:500;
+  color:var(--g700); font-family:var(--fd); font-size:.8rem; font-weight:500;
   border-radius:8px; cursor:pointer; white-space:nowrap; transition:background .14s, color .14s;
 }
-.t-item:hover { background:rgba(255,255,255,.1); color:#fff; }
-.t-item.active { background:rgba(255,255,255,.15); color:#fff; font-weight:600; }
+.t-item:hover { background:var(--bg2); color:var(--g900); }
+.t-item.active { background:var(--blue-p50); color:var(--blue-p700); font-weight:600; }
 .t-item-ico { width:17px; text-align:center; font-size:.86rem; opacity:.92; }
-.t-sep { height:1px; background:rgba(255,255,255,.1); margin:4px 6px; }
+.t-sep { height:1px; background:var(--border); margin:4px 6px; }
 
 .topbar-right { display:flex; align-items:center; gap:10px; }
-.sync-indicator { display:flex; align-items:center; gap:5px; font-size:.72rem; color:var(--blue-p300); }
+.sync-indicator { display:flex; align-items:center; gap:5px; font-size:.72rem; color:var(--g500); }
 .sync-dot { width:7px; height:7px; border-radius:50%; background:var(--blue-p500); }
 .sync-dot.loading { background:var(--amber); animation:pulse 1s infinite; }
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
@@ -1209,9 +1205,9 @@ thead th.ts-active { text-decoration:underline; text-underline-offset:3px; }
         <text x="66" y="48" font-family="var(--fd)" font-size="9.5" font-weight="600" font-style="italic" letter-spacing=".2" fill="#5f8c6e">c'est mon côté BIO !</text>
       </svg>
     </div>
-    <div id="brand-switcher" style="display:flex;align-items:center;background:rgba(255,255,255,.10);border-radius:10px;padding:3px;margin-left:12px;">
-      <button id="brand-btn-mdm" onclick="setCurrentBrand('mdm')" style="border:none;background:rgba(255,255,255,.20);color:#fff;font-size:.72rem;font-weight:600;padding:6px 10px;border-radius:7px;cursor:pointer;transition:background .15s;white-space:nowrap;">MDM</button>
-      <button id="brand-btn-naturaline" onclick="setCurrentBrand('naturaline')" style="border:none;background:transparent;color:#fff;opacity:.6;font-size:.72rem;font-weight:600;padding:6px 10px;border-radius:7px;cursor:pointer;transition:background .15s;white-space:nowrap;">NATURALINE</button>
+    <div id="brand-switcher" style="display:flex;align-items:center;background:var(--bg2);border-radius:10px;padding:3px;margin-left:12px;">
+      <button id="brand-btn-mdm" onclick="setCurrentBrand('mdm')" style="border:none;background:var(--surface);color:var(--blue-p700);font-size:.72rem;font-weight:600;padding:6px 10px;border-radius:7px;cursor:pointer;transition:background .15s;white-space:nowrap;box-shadow:0 1px 2px rgba(26,28,26,.08);">MDM</button>
+      <button id="brand-btn-naturaline" onclick="setCurrentBrand('naturaline')" style="border:none;background:transparent;color:var(--g500);font-size:.72rem;font-weight:600;padding:6px 10px;border-radius:7px;cursor:pointer;transition:background .15s;white-space:nowrap;">NATURALINE</button>
     </div>
   </div>
   <div class="topbar-center">
@@ -3520,8 +3516,8 @@ function initBrandSwitcherUI() {
   applyBrandTheme();
   var btnMdm = document.getElementById('brand-btn-mdm');
   var btnNat = document.getElementById('brand-btn-naturaline');
-  if (btnMdm) { btnMdm.style.background = isNat ? 'transparent' : 'rgba(255,255,255,.20)'; btnMdm.style.opacity = isNat ? '.6' : '1'; }
-  if (btnNat) { btnNat.style.background = isNat ? 'rgba(255,255,255,.20)' : 'transparent'; btnNat.style.opacity = isNat ? '1' : '.6'; }
+  if (btnMdm) { btnMdm.style.background = isNat ? 'transparent' : 'var(--surface)'; btnMdm.style.color = isNat ? 'var(--g500)' : 'var(--blue-p700)'; btnMdm.style.boxShadow = isNat ? 'none' : '0 1px 2px rgba(26,28,26,.08)'; }
+  if (btnNat) { btnNat.style.background = isNat ? 'var(--surface)' : 'transparent'; btnNat.style.color = isNat ? 'var(--blue-p700)' : 'var(--g500)'; btnNat.style.boxShadow = isNat ? '0 1px 2px rgba(26,28,26,.08)' : 'none'; }
   // Le logo (blason + nom) est un SVG piloté par la classe body.brand-naturaline ; rien à faire ici.
 }
 
