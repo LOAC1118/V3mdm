@@ -186,7 +186,7 @@ body::before {
 ══════════════════════════════════ */
 #login-screen {
   position:fixed; inset:0;
-  background: linear-gradient(145deg, #0c447c 0%, #042c53 100%);
+  background: linear-gradient(150deg, var(--blue-p600) 0%, var(--blue-p900) 100%);
   z-index:900; display:none;
   align-items:center; justify-content:center; padding:1rem;
 }
@@ -469,31 +469,70 @@ h1[style*="--fdisp"], h2[style*="--fdisp"] { font-weight: 550 !important; letter
 /* ══════════════════════════════════
    STAT CARDS
 ══════════════════════════════════ */
-.stats-row { display:grid; grid-template-columns:repeat(4,1fr); gap:12px; margin-bottom:1.5rem; }
-.stats-row-5 { display:grid; grid-template-columns:repeat(5,1fr); gap:12px; margin-bottom:1.5rem; }
+.stats-row { display:grid; grid-template-columns:repeat(4,1fr); gap:14px; margin-bottom:1.5rem; }
+.stats-row-5 { display:grid; grid-template-columns:repeat(5,1fr); gap:14px; margin-bottom:1.5rem; }
 
 .stat-card {
   background: var(--surface);
   border: 1px solid var(--border);
-  border-radius: 14px;
-  padding: 1.2rem 1.3rem;
+  border-radius: 12px;
+  padding: 1.05rem 1.15rem;
   box-shadow: var(--shadow-sm);
   transition: box-shadow .2s, transform .2s;
   position:relative; overflow:hidden;
 }
-.stat-card::after {
-  content:'';
-  position:absolute; bottom:0; left:0; right:0; height:3px;
-  background: linear-gradient(90deg, var(--blue-p500), var(--blue-p400), transparent);
-  opacity:.4;
-}
-.stat-card:hover { box-shadow:var(--shadow-md); transform:translateY(-2px); }
+.stat-card:hover { box-shadow:var(--shadow-md); transform:translateY(-1px); }
 .stat-label {
-  font-size:.68rem; color:var(--g500); font-weight:600;
-  letter-spacing:.07em; text-transform:uppercase; margin-bottom:.5rem;
+  font-size:.72rem; color:var(--g600); font-weight:500;
+  letter-spacing:.01em; text-transform:none; margin-bottom:.55rem;
 }
-.stat-val { font-size:1.75rem; font-weight:700; color:var(--g900); letter-spacing:-.03em; }
-.stat-delta { font-size:.72rem; margin-top:4px; color:var(--g500); }
+.stat-val {
+  font-family: var(--fmono); font-size:1.55rem; font-weight:500;
+  color:var(--g900); letter-spacing:-.02em; font-feature-settings:"tnum"; line-height:1;
+}
+.stat-delta { font-size:.72rem; margin-top:.6rem; color:var(--g500); }
+
+/* ═══ Signature dashboard : rythme d'achat + priorités ═══ */
+.dash-sig-grid { display:grid; grid-template-columns:1.55fr 1fr; gap:14px; margin-bottom:1.5rem; }
+.dash-panel { background:var(--surface); border:1px solid var(--border); border-radius:12px; box-shadow:var(--shadow-sm); overflow:hidden; }
+.dash-panel-h { display:flex; align-items:center; justify-content:space-between; padding:15px 18px 12px; border-bottom:1px solid var(--border); }
+.dash-panel-h h2 { margin:0; font-family:var(--fdisp); font-size:1rem; font-weight:550; letter-spacing:-.01em; color:var(--g900); }
+.dash-panel-h a { font-size:.76rem; color:var(--blue-p700); text-decoration:none; font-weight:500; cursor:pointer; }
+.dash-panel-h a:hover { text-decoration:underline; }
+.dash-rhythm { padding:2px 0; }
+.dash-rrow { display:grid; grid-template-columns:150px 1fr auto; align-items:center; gap:14px; padding:11px 18px; border-bottom:1px solid var(--border); }
+.dash-rrow:last-child { border-bottom:none; }
+.dash-rcli { min-width:0; }
+.dash-rcli b { font-size:.83rem; font-weight:550; color:var(--g900); display:block; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.dash-rcli span { font-size:.71rem; color:var(--g500); }
+.dash-rtrack { position:relative; height:28px; }
+.dash-rbase { position:absolute; top:50%; left:0; right:0; height:1px; background:var(--g200); }
+.dash-rtick { position:absolute; top:50%; width:7px; height:7px; border-radius:50%; transform:translate(-50%,-50%); background:var(--blue-p700); }
+.dash-rtick.pale { background:var(--g400); }
+.dash-rgap { position:absolute; top:50%; height:2px; transform:translateY(-50%); border-radius:2px; }
+.dash-rgap.over { background:repeating-linear-gradient(90deg,var(--red) 0 4px,transparent 4px 8px); }
+.dash-rnow { position:absolute; top:50%; width:2px; height:14px; transform:translate(-50%,-50%); background:var(--g900); border-radius:2px; }
+.dash-rstate { font-size:.72rem; font-weight:550; font-family:var(--fmono); white-space:nowrap; padding:3px 8px; border-radius:5px; }
+.dash-rstate.ok { color:var(--blue-p700); background:var(--blue-p50); }
+.dash-rstate.late { color:var(--red); background:var(--red-bg); }
+.dash-rstate.soon { color:var(--amber); background:var(--amber-bg); }
+.dash-legend { display:flex; gap:16px; padding:12px 18px; font-size:.71rem; color:var(--g500); border-top:1px solid var(--border); background:var(--surface2); flex-wrap:wrap; }
+.dash-legend span { display:inline-flex; align-items:center; gap:6px; }
+.dash-legend i { width:8px; height:8px; border-radius:50%; display:inline-block; }
+.dash-alerts { padding:2px 0; }
+.dash-al { display:flex; gap:12px; padding:11px 18px; border-bottom:1px solid var(--border); cursor:pointer; }
+.dash-al:last-child { border-bottom:none; }
+.dash-al:hover { background:var(--surface2); }
+.dash-al-dot { width:8px; height:8px; border-radius:50%; margin-top:6px; flex-shrink:0; }
+.dash-al-dot.r { background:var(--red); }
+.dash-al-dot.a { background:var(--amber); }
+.dash-al-dot.g { background:var(--blue-p700); }
+.dash-al-b { min-width:0; flex:1; }
+.dash-al-b b { font-size:.82rem; font-weight:550; color:var(--g900); display:block; }
+.dash-al-b p { font-size:.75rem; color:var(--g600); margin-top:1px; line-height:1.35; }
+.dash-al-v { font-family:var(--fmono); font-size:.78rem; color:var(--g700); font-weight:500; white-space:nowrap; }
+.dash-empty-mini { padding:1.75rem 1rem; text-align:center; color:var(--g500); font-size:.82rem; line-height:1.5; }
+@media(max-width:900px){ .dash-sig-grid{ grid-template-columns:1fr; } }
 
 /* ══════════════════════════════════
    CARDS
@@ -914,7 +953,7 @@ thead th.ts-active { text-decoration:underline; text-underline-offset:3px; }
   border-top:1px solid var(--border); background:var(--surface); }
 #bot-sugg button { flex-shrink:0; background:var(--blue-p50); border:1px solid var(--border);
   color:var(--blue-p700); font-size:.72rem; font-weight:600; padding:.34rem .7rem; border-radius:99px; cursor:pointer; white-space:nowrap; }
-#bot-sugg button:hover { background:#dbeafe; }
+#bot-sugg button:hover { background:#e2ede2; }
 
 .bot-input { display:flex; gap:8px; padding:11px 14px; border-top:1px solid var(--border); background:var(--surface); flex-shrink:0; }
 .bot-input textarea { flex:1; resize:none; max-height:110px; font-family:inherit; font-size:.86rem;
@@ -958,16 +997,16 @@ thead th.ts-active { text-decoration:underline; text-underline-offset:3px; }
     display: flex;
     position: fixed; left:0; right:0; bottom:0;
     height: 60px;
-    background: var(--blue-p900);
-    border-top: 1px solid rgba(255,255,255,.08);
-    box-shadow: 0 -4px 16px rgba(4,44,83,.18);
+    background: var(--surface);
+    border-top: 1px solid var(--border-med);
+    box-shadow: 0 -2px 12px rgba(26,28,26,.08);
     z-index: 400;
     padding: 8px 12px calc(8px + env(safe-area-inset-bottom, 0px));
   }
   .mnav-trigger {
     flex:1; display:flex; align-items:center; justify-content:space-between; gap:10px;
-    background:rgba(255,255,255,.08); border:1px solid rgba(255,255,255,.12);
-    border-radius:12px; color:#fff; font-family:var(--fd); font-weight:600;
+    background:var(--bg2); border:1px solid var(--border-med);
+    border-radius:12px; color:var(--g900); font-family:var(--fd); font-weight:600;
     font-size:.9rem; padding:0 14px; cursor:pointer; min-height:44px;
   }
   .mnav-cur { display:flex; align-items:center; gap:10px; min-width:0; }
@@ -987,27 +1026,27 @@ thead th.ts-active { text-decoration:underline; text-underline-offset:3px; }
   /* ── FEUILLE DÉROULANTE (slide-up) : liste des sections ── */
   .mmenu-sheet {
     display:block; position:fixed; left:0; right:0; bottom:0;
-    background:var(--blue-p900); z-index:420;
+    background:var(--surface); z-index:420;
     border-radius:18px 18px 0 0;
     padding:10px 12px calc(14px + env(safe-area-inset-bottom, 0px));
-    box-shadow:0 -10px 30px rgba(4,44,83,.35);
+    box-shadow:0 -10px 30px rgba(26,28,26,.18);
     transform:translateY(105%); transition:transform .26s cubic-bezier(.22,.61,.36,1);
     max-height:78vh; overflow-y:auto; -webkit-overflow-scrolling:touch;
   }
   .mmenu-sheet.open { transform:translateY(0); }
-  .mmenu-handle { width:40px; height:4px; border-radius:99px; background:rgba(255,255,255,.25); margin:2px auto 10px; }
-  .mmenu-title { font-family:var(--fd); font-size:.68rem; text-transform:uppercase; letter-spacing:.1em; color:var(--blue-p300); font-weight:700; padding:0 8px 8px; }
+  .mmenu-handle { width:40px; height:4px; border-radius:99px; background:var(--g300); margin:2px auto 10px; }
+  .mmenu-title { font-family:var(--fd); font-size:.68rem; text-transform:uppercase; letter-spacing:.1em; color:var(--g500); font-weight:700; padding:0 8px 8px; }
   .mmenu-item {
     display:flex; align-items:center; gap:14px; width:100%;
     background:none; border:none; border-radius:12px;
-    color:var(--blue-p300); font-family:var(--fd); font-size:.98rem; font-weight:600;
+    color:var(--g700); font-family:var(--fd); font-size:.98rem; font-weight:600;
     padding:13px 12px; cursor:pointer; text-align:left; min-height:50px;
   }
-  .mmenu-item:active { background:rgba(255,255,255,.06); }
+  .mmenu-item:active { background:var(--bg2); }
   .mmenu-item .mmenu-ico { display:flex; flex-shrink:0; }
-  .mmenu-item .mmenu-ico svg { width:22px; height:22px; opacity:.8; }
-  .mmenu-item.active { color:#fff; background:rgba(255,255,255,.10); }
-  .mmenu-item.active .mmenu-ico svg { opacity:1; filter:brightness(1.3); }
+  .mmenu-item .mmenu-ico svg { width:22px; height:22px; opacity:.7; }
+  .mmenu-item.active { color:var(--blue-p700); background:var(--blue-p50); }
+  .mmenu-item.active .mmenu-ico svg { opacity:1; }
 
   /* ── ZONES TACTILES : on agrandit ce qui se clique ── */
   .btn, button, select, .nav-item, .t-tab { min-height: 40px; }
@@ -1384,9 +1423,32 @@ thead th.ts-active { text-decoration:underline; text-underline-offset:3px; }
       <div class="stat-card"><div class="stat-label">BDC saisis</div><div class="stat-val" id="stat-commandes">—</div><div class="stat-delta">bons de commande</div></div>
       <div class="stat-card"><div class="stat-label">Frais du mois</div><div class="stat-val" id="ro-count" style="font-size:1.1rem;">—</div><div class="stat-delta">note de frais</div></div>
       <div class="stat-card" id="dash-comm-card" style="cursor:pointer;" onclick="showSection('commissions',null,null)" title="Voir le détail dans Commissions">
-        <div class="stat-label">💶 Commission en cours</div>
-        <div class="stat-val" id="dash-comm-val" style="color:#6a6f64;font-size:1.1rem;">—</div>
+        <div class="stat-label">Commission en cours</div>
+        <div class="stat-val" id="dash-comm-val" style="color:var(--g600);font-size:1.1rem;">—</div>
         <div class="stat-delta" id="dash-comm-sub">sur CA facturé du mois</div>
+      </div>
+    </div>
+
+    <!-- ═══ RYTHME D'ACHAT + PRIORITÉS (signature maquette) ═══ -->
+    <div id="dash-signature" class="dash-sig-grid">
+      <div class="dash-panel">
+        <div class="dash-panel-h">
+          <h2>Rythme d'achat</h2>
+          <a onclick="showSection('radar',null,null)">Tout le radar →</a>
+        </div>
+        <div id="dash-rhythm" class="dash-rhythm"></div>
+        <div class="dash-legend">
+          <span><i style="background:var(--blue-p700)"></i> commande</span>
+          <span><i style="width:2px;height:11px;border-radius:2px;background:var(--g900)"></i> aujourd'hui</span>
+          <span><i style="background:var(--red)"></i> retard sur la cadence</span>
+        </div>
+      </div>
+      <div class="dash-panel">
+        <div class="dash-panel-h">
+          <h2>Priorités du jour</h2>
+          <a onclick="showSection('radar',null,null)">Radar →</a>
+        </div>
+        <div id="dash-priorites" class="dash-alerts"></div>
       </div>
     </div>
 
@@ -1396,7 +1458,7 @@ thead th.ts-active { text-decoration:underline; text-underline-offset:3px; }
         <span class="card-title">📊 Analyse CA mensuelle <span id="dash-ca-subtitle" style="font-size:.7rem;font-weight:400;color:var(--g500);margin-left:8px;">regroupé par date de facture</span></span>
         <div style="display:flex;gap:8px;align-items:center;">
           <span id="dash-ca-status" style="font-size:.72rem;color:var(--g500);"></span>
-          <span id="dash-ca-lastimport" style="font-size:.7rem;color:var(--g600);background:var(--blue-p50);padding:.25rem .55rem;border-radius:6px;border:1px solid var(--blue-p200,#dbeafe);"></span>
+          <span id="dash-ca-lastimport" style="font-size:.7rem;color:var(--g600);background:var(--blue-p50);padding:.25rem .55rem;border-radius:6px;border:1px solid var(--blue-p200,#e2ede2);"></span>
           <button class="btn btn-ghost" id="dash-ca-reload" onclick="dashCaReset()" style="display:none;font-size:.72rem;padding:.3rem .7rem;">↺ Nouveau fichier</button>
         </div>
       </div>
@@ -1725,10 +1787,10 @@ thead th.ts-active { text-decoration:underline; text-underline-offset:3px; }
     <!-- Bandeau articles saisis (sticky) — cliquable pour ouvrir le détail éditable -->
     <div id="bdc-recap-bar" style="display:none;background:var(--blue-p800);border-bottom:2px solid var(--blue-p600);flex-shrink:0;">
       <div onclick="bdcToggleRecapDetail()" style="cursor:pointer;padding:.4rem .8rem;overflow-x:auto;white-space:nowrap;display:flex;align-items:center;">
-        <span style="font-size:.65rem;font-weight:700;color:#93c5fd;text-transform:uppercase;letter-spacing:.08em;margin-right:.6rem;flex-shrink:0;">📋 Ma commande :</span>
+        <span style="font-size:.65rem;font-weight:700;color:#7fb47f;text-transform:uppercase;letter-spacing:.08em;margin-right:.6rem;flex-shrink:0;">📋 Ma commande :</span>
         <span id="bdc-recap-items" style="font-size:.72rem;color:#e2e8f0;"></span>
         <span id="bdc-recap-total" style="font-size:.75rem;font-weight:700;color:#4ade80;margin-left:1rem;flex-shrink:0;"></span>
-        <span id="bdc-recap-chevron" style="margin-left:.6rem;color:#93c5fd;font-size:.7rem;flex-shrink:0;">▾ Voir / modifier</span>
+        <span id="bdc-recap-chevron" style="margin-left:.6rem;color:#7fb47f;font-size:.7rem;flex-shrink:0;">▾ Voir / modifier</span>
       </div>
       <div id="bdc-recap-detail" class="hidden" style="background:var(--surface);border-top:1px solid rgba(255,255,255,.08);max-height:38vh;overflow-y:auto;">
         <table data-nosort style="width:100%;border-collapse:collapse;font-size:.76rem;">
@@ -6168,13 +6230,13 @@ function nfdRender() {
     var restant  = PLAFOND_HD - totalHD;
     var pct      = Math.min(100, Math.round(totalHD / PLAFOND_HD * 100));
     var couleur  = pct >= 100 ? '#b0402f' : pct >= 85 ? '#b07d1a' : '#16a34a';
-    var barColor = pct >= 100 ? '#b0402f' : pct >= 85 ? '#b07d1a' : '#2070c8';
+    var barColor = pct >= 100 ? '#b0402f' : pct >= 85 ? '#b07d1a' : '#2f7530';
 
     var hdRow = '<tr style="border-top:2px dashed var(--blue-p300);background:#f0f6fc;">' +
       '<td style="padding:.5rem .75rem;">' +
         '<div style="font-weight:700;color:var(--blue-p800);font-size:.82rem;">🏨 Hôtel + Déjeuner</div>' +
         '<div style="font-size:.65rem;color:var(--g500);margin-top:2px;">Plafond mensuel : ' + nfdFmt(PLAFOND_HD) + ' HT</div>' +
-        '<div style="background:#e5edf8;border-radius:4px;height:5px;margin-top:5px;overflow:hidden;">' +
+        '<div style="background:#e6efe6;border-radius:4px;height:5px;margin-top:5px;overflow:hidden;">' +
           '<div style="background:' + barColor + ';height:5px;width:' + pct + '%;border-radius:4px;transition:width .4s;"></div>' +
         '</div>' +
       '</td>' +
@@ -6804,6 +6866,89 @@ function refreshDashboard() {
     : '—';
   var bdcNbEl = document.getElementById('dash-bdc-nb');
   if (bdcNbEl) bdcNbEl.textContent = no + ' BDC';
+
+  dashRenderSignature();
+}
+
+// ═══ Signature dashboard : rythme d'achat + priorités du jour ═══
+function dashRenderSignature() {
+  var rEl = document.getElementById('dash-rhythm');
+  var pEl = document.getElementById('dash-priorites');
+  if (!rEl && !pEl) return;
+  if (typeof RadarClients === 'undefined') return;
+
+  var analyse;
+  try { analyse = RadarClients.analyse(); } catch (e) { return; }
+  if (!analyse || !analyse.length) {
+    if (rEl) rEl.innerHTML = '<div class="dash-empty-mini">Importe ton fichier CA (ci-dessous) pour voir le rythme d\'achat de tes clients.</div>';
+    if (pEl) pEl.innerHTML = '<div class="dash-empty-mini">Aucune priorité pour l\'instant.</div>';
+    return;
+  }
+
+  var esc = function (s) { return String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); };
+
+  // ── Rythme d'achat : les clients à rythme connu, priorité aux signaux ──
+  var avecRythme = analyse.filter(function (a) { return a.rythme && a.derniere; });
+  avecRythme.sort(function (a, b) { return b.score - a.score; });
+  var top = avecRythme.slice(0, 5);
+
+  if (rEl) {
+    if (!top.length) {
+      rEl.innerHTML = '<div class="dash-empty-mini">Pas encore assez d\'historique pour établir un rythme.</div>';
+    } else {
+      rEl.innerHTML = top.map(function (a) {
+        var etat, cls;
+        if (a.tags.decrochage || a.tags.dormant) { etat = '+' + Math.max(0, a.joursDepuis - a.rythme) + ' j'; cls = 'late'; }
+        else if (a.tags.bientot) { etat = 'à prévoir'; cls = 'soon'; }
+        else { etat = 'à jour'; cls = 'ok'; }
+
+        // Frise : les 5 dernières commandes réparties sur l'axe temps, + aujourd'hui
+        var dates = (a.dates || []).slice(-5);
+        var ticks = '';
+        var base = a.rythme * 5;  // fenêtre = 5 cycles
+        var now = Date.now(), MS = 86400000;
+        dates.forEach(function (t, i) {
+          var jAvant = Math.floor((now - t) / MS);
+          var pos = Math.max(2, Math.min(84, 84 - (jAvant / base) * 84));
+          ticks += '<div class="dash-rtick' + (i < dates.length - 1 ? ' pale' : '') + '" style="left:' + pos + '%"></div>';
+        });
+        // écart depuis la dernière commande jusqu'à aujourd'hui
+        var posDer = dates.length ? Math.max(2, Math.min(84, 84 - (a.joursDepuis / base) * 84)) : 84;
+        var gapCls = (a.tags.decrochage || a.tags.dormant) ? ' over' : '';
+        var gapCol = gapCls ? '' : 'background:var(--g200)';
+        var gap = '<div class="dash-rgap' + gapCls + '" style="left:' + posDer + '%;width:' + Math.max(0, 88 - posDer) + '%;' + gapCol + '"></div>';
+
+        return '<div class="dash-rrow">' +
+          '<div class="dash-rcli"><b>' + esc(a.nom) + '</b><span>~' + a.rythme + ' j entre cmd.</span></div>' +
+          '<div class="dash-rtrack"><div class="dash-rbase"></div>' + ticks + gap + '<div class="dash-rnow" style="left:88%"></div></div>' +
+          '<div class="dash-rstate ' + cls + '">' + etat + '</div>' +
+        '</div>';
+      }).join('');
+    }
+  }
+
+  // ── Priorités du jour : les motifs les plus urgents ──
+  if (pEl) {
+    var prio = analyse.filter(function (a) { return a.motifs && a.motifs.length && a.score > 0; });
+    prio.sort(function (a, b) { return b.score - a.score; });
+    prio = prio.slice(0, 6);
+
+    if (!prio.length) {
+      pEl.innerHTML = '<div class="dash-empty-mini">Rien d\'urgent aujourd\'hui. Belle journée !</div>';
+    } else {
+      pEl.innerHTML = prio.map(function (a) {
+        var m = a.motifs[0];
+        var dot = (m.ton === 'red') ? 'r' : (m.ton === 'amber' || m.ton === 'blue') ? 'a' : 'g';
+        var val = a.ca12 ? Math.round(a.ca12).toLocaleString('fr-FR') + ' €' : '—';
+        var id = a.contact && a.contact.id ? a.contact.id : '';
+        return '<div class="dash-al"' + (id ? ' onclick="cdbOpenEdit(\'' + esc(id) + '\')"' : '') + '>' +
+          '<div class="dash-al-dot ' + dot + '"></div>' +
+          '<div class="dash-al-b"><b>' + esc(a.nom) + '</b><p>' + esc(m.txt) + '</p></div>' +
+          '<div class="dash-al-v">' + val + '</div>' +
+        '</div>';
+      }).join('');
+    }
+  }
 }
 
 async function logActivite(texte, couleur='em') {
@@ -8014,8 +8159,8 @@ function bdcStockBadgeHtml(p, light) {
       : '<span'+titleAttr+' style="display:inline-block;padding:2px 6px;border-radius:10px;font-size:.65rem;font-weight:600;background:#052e16;color:#86efac;border:1px solid #1c4d1e;">🟢 '+label+'</span>';
   }
   return light
-    ? '<span'+titleAttr+' style="display:inline-block;padding:2px 6px;border-radius:10px;font-size:.65rem;font-weight:600;background:#dbeafe;color:#1e40af;border:1px solid #93c5fd;">✅ '+label+'</span>'
-    : '<span'+titleAttr+' style="display:inline-block;padding:2px 6px;border-radius:10px;font-size:.65rem;font-weight:600;background:#042c53;color:#93c5fd;border:1px solid #1e40af;">✅ '+label+'</span>';
+    ? '<span'+titleAttr+' style="display:inline-block;padding:2px 6px;border-radius:10px;font-size:.65rem;font-weight:600;background:#e2ede2;color:#1c4d1e;border:1px solid #7fb47f;">✅ '+label+'</span>'
+    : '<span'+titleAttr+' style="display:inline-block;padding:2px 6px;border-radius:10px;font-size:.65rem;font-weight:600;background:#17351a;color:#7fb47f;border:1px solid #1c4d1e;">✅ '+label+'</span>';
 }
 
 function buildTable() {
@@ -8196,12 +8341,12 @@ function bdcBuildHtml() {
     tB += p.pu_ht*q*pcb; tN += tot; nbC += q; nbR++;
     rowsHtml +=
       '<tr>' +
-        '<td style="padding:8px 10px;border-bottom:1px solid #e5edf8;font-family:Consolas,monospace;font-size:12px;color:#0c447c;white-space:nowrap;">'+p.code+'</td>' +
-        '<td style="padding:8px 10px;border-bottom:1px solid #e5edf8;font-size:13px;color:#1e293b;">'+p.libelle+'</td>' +
-        '<td style="padding:8px 10px;border-bottom:1px solid #e5edf8;text-align:center;font-weight:bold;color:#0c447c;">'+q+' col.</td>' +
-        '<td style="padding:8px 10px;border-bottom:1px solid #e5edf8;text-align:center;font-size:12px;color:#64748b;">'+(q*pcb)+' UVC</td>' +
-        '<td style="padding:8px 10px;border-bottom:1px solid #e5edf8;text-align:right;color:#374151;">'+bdcFmt(pN)+'</td>' +
-        '<td style="padding:8px 10px;border-bottom:1px solid #e5edf8;text-align:right;font-weight:bold;color:#0c447c;">'+bdcFmt(tot)+'</td>' +
+        '<td style="padding:8px 10px;border-bottom:1px solid #e6efe6;font-family:Consolas,monospace;font-size:12px;color:#266327;white-space:nowrap;">'+p.code+'</td>' +
+        '<td style="padding:8px 10px;border-bottom:1px solid #e6efe6;font-size:13px;color:#1e293b;">'+p.libelle+'</td>' +
+        '<td style="padding:8px 10px;border-bottom:1px solid #e6efe6;text-align:center;font-weight:bold;color:#266327;">'+q+' col.</td>' +
+        '<td style="padding:8px 10px;border-bottom:1px solid #e6efe6;text-align:center;font-size:12px;color:#64748b;">'+(q*pcb)+' UVC</td>' +
+        '<td style="padding:8px 10px;border-bottom:1px solid #e6efe6;text-align:right;color:#374151;">'+bdcFmt(pN)+'</td>' +
+        '<td style="padding:8px 10px;border-bottom:1px solid #e6efe6;text-align:right;font-weight:bold;color:#266327;">'+bdcFmt(tot)+'</td>' +
       '</tr>';
   });
 
@@ -8215,7 +8360,7 @@ function bdcBuildHtml() {
   if (tel) infoItems += '<tr><td style="padding:4px 12px;font-size:12px;color:#64748b;">T\u00e9l\u00e9phone</td><td style="padding:4px 12px;font-size:13px;color:#1e293b;">'+tel+'</td></tr>';
   infoItems += '<tr><td style="padding:4px 12px;font-size:12px;color:#64748b;">Email</td><td style="padding:4px 12px;font-size:13px;color:#1e293b;">'+mail+'</td></tr>';
   infoItems += '<tr><td style="padding:4px 12px;font-size:12px;color:#64748b;">Date commande</td><td style="padding:4px 12px;font-size:13px;color:#1e293b;font-weight:bold;">'+today+'</td></tr>';
-  if (dl) infoItems += '<tr><td style="padding:4px 12px;font-size:12px;color:#64748b;">Livraison souhait\u00e9e</td><td style="padding:4px 12px;font-size:13px;color:#0c447c;font-weight:bold;">'+livDate+'</td></tr>';
+  if (dl) infoItems += '<tr><td style="padding:4px 12px;font-size:12px;color:#64748b;">Livraison souhait\u00e9e</td><td style="padding:4px 12px;font-size:13px;color:#266327;font-weight:bold;">'+livDate+'</td></tr>';
   if (com) infoItems += '<tr><td style="padding:4px 12px;font-size:12px;color:#64748b;">Commentaire</td><td style="padding:4px 12px;font-size:13px;color:#1e293b;font-style:italic;">'+com+'</td></tr>';
 
   // ── Version "Outlook-safe" : pas de linear-gradient, box-shadow ni border-radius
@@ -8224,10 +8369,10 @@ function bdcBuildHtml() {
   return '<!DOCTYPE html><html><head><meta charset="UTF-8"></head><body style="margin:0;padding:0;background-color:#f0f6fb;font-family:Arial,Helvetica,sans-serif;">' +
     '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:#f0f6fb;">' +
     '<tr><td align="center" style="padding:24px 12px;">' +
-    '<table role="presentation" width="620" cellpadding="0" cellspacing="0" border="0" style="background-color:#ffffff;border:1px solid #e5edf8;">' +
+    '<table role="presentation" width="620" cellpadding="0" cellspacing="0" border="0" style="background-color:#ffffff;border:1px solid #e6efe6;">' +
 
     // Header (couleur pleine, pas de degrade)
-    '<tr><td bgcolor="#0c447c" style="background-color:#0c447c;padding:24px 28px;">' +
+    '<tr><td bgcolor="#266327" style="background-color:#266327;padding:24px 28px;">' +
       '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"><tr>' +
         '<td valign="middle"><div style="font-size:20px;font-weight:bold;color:#ffffff;">Moulin des Moines</div>' +
         '<div style="font-size:13px;color:#bfdbfe;margin-top:4px;">Bon de Commande 2026</div></td>' +
@@ -8242,15 +8387,15 @@ function bdcBuildHtml() {
 
     // Infos commande
     '<tr><td style="padding:20px 28px 0;">' +
-      '<div style="font-size:11px;font-weight:bold;color:#0c447c;text-transform:uppercase;letter-spacing:1px;margin-bottom:10px;">Informations commande</div>' +
+      '<div style="font-size:11px;font-weight:bold;color:#266327;text-transform:uppercase;letter-spacing:1px;margin-bottom:10px;">Informations commande</div>' +
       '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#f6f9fd" style="background-color:#f6f9fd;">'+infoItems+'</table>' +
     '</td></tr>' +
 
     // Tableau articles
     '<tr><td style="padding:20px 28px 0;">' +
-      '<div style="font-size:11px;font-weight:bold;color:#0c447c;text-transform:uppercase;letter-spacing:1px;margin-bottom:10px;">Articles command\u00e9s</div>' +
-      '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border:1px solid #e5edf8;">' +
-        '<tr bgcolor="#0c447c" style="background-color:#0c447c;">' +
+      '<div style="font-size:11px;font-weight:bold;color:#266327;text-transform:uppercase;letter-spacing:1px;margin-bottom:10px;">Articles command\u00e9s</div>' +
+      '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border:1px solid #e6efe6;">' +
+        '<tr bgcolor="#266327" style="background-color:#266327;">' +
           '<th style="padding:9px 10px;font-size:11px;font-weight:bold;color:#bfdbfe;text-align:left;">Code</th>' +
           '<th style="padding:9px 10px;font-size:11px;font-weight:bold;color:#bfdbfe;text-align:left;">D\u00e9signation</th>' +
           '<th style="padding:9px 10px;font-size:11px;font-weight:bold;color:#bfdbfe;text-align:center;">Colis</th>' +
@@ -8261,18 +8406,18 @@ function bdcBuildHtml() {
         rowsHtml +
         remiseLigne +
         '<tr bgcolor="#eef6fd" style="background-color:#eef6fd;">' +
-          '<td colspan="4" style="padding:10px;font-size:12px;color:#0c447c;">'+nbR+' r\u00e9f\u00e9rence(s) \u00b7 '+nbC+' colis au total</td>' +
-          '<td style="padding:10px;text-align:right;font-size:12px;color:#0c447c;font-weight:bold;">TOTAL HT NET</td>' +
-          '<td style="padding:10px;text-align:right;font-size:16px;font-weight:bold;color:#0c447c;">'+bdcFmt(tN)+'</td>' +
+          '<td colspan="4" style="padding:10px;font-size:12px;color:#266327;">'+nbR+' r\u00e9f\u00e9rence(s) \u00b7 '+nbC+' colis au total</td>' +
+          '<td style="padding:10px;text-align:right;font-size:12px;color:#266327;font-weight:bold;">TOTAL HT NET</td>' +
+          '<td style="padding:10px;text-align:right;font-size:16px;font-weight:bold;color:#266327;">'+bdcFmt(tN)+'</td>' +
         '</tr>' +
       '</table>' +
     '</td></tr>' +
 
     // Footer
     '<tr><td style="padding:20px 28px 28px;text-align:center;">' +
-      '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border-top:1px solid #e5edf8;"><tr><td style="padding-top:16px;text-align:center;">' +
+      '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border-top:1px solid #e6efe6;"><tr><td style="padding-top:16px;text-align:center;">' +
       '<div style="font-size:11px;color:#94a3b8;">' +
-        'Ce bon de commande a \u00e9t\u00e9 transmis via MDM CRM 2026 \u00b7 R\u00e9alis\u00e9 par <strong style="color:#0c447c;">LOAC DEV Solutions</strong>' +
+        'Ce bon de commande a \u00e9t\u00e9 transmis via MDM CRM 2026 \u00b7 R\u00e9alis\u00e9 par <strong style="color:#266327;">LOAC DEV Solutions</strong>' +
       '</div>' +
       '</td></tr></table>' +
     '</td></tr>' +
@@ -9140,8 +9285,8 @@ function applyStockImport() {
     </div>
 
     <div style="margin-top:.8rem;font-size:.72rem;color:var(--s600);background:rgba(30,41,59,.5);border-radius:6px;padding:.7rem .9rem;line-height:1.7;">
-      <strong style="color:#93c5fd;">Extraction automatique depuis le PDF :</strong><br>
-      Le système recherche les codes MDM (ex: <code style="background:rgba(59,130,246,.12);padding:1px 4px;border-radius:3px;color:#93c5fd;">QUINOA500</code>) et les quantités associées.<br>
+      <strong style="color:#7fb47f;">Extraction automatique depuis le PDF :</strong><br>
+      Le système recherche les codes MDM (ex: <code style="background:rgba(59,130,246,.12);padding:1px 4px;border-radius:3px;color:#7fb47f;">QUINOA500</code>) et les quantités associées.<br>
       Fonctionne avec les PDFs de bons de commande textuels (non scanné).
     </div>
   </div>
@@ -9424,7 +9569,7 @@ function parsePdfText(text) {
 
   document.getElementById('pdf-import-summary').innerHTML =
     '<div style="flex:1;background:rgba(30,41,59,.7);border-radius:6px;padding:.5rem;text-align:center;">' +
-      '<div style="font-size:1.1rem;font-weight:600;color:#93c5fd;">' + ok + '</div>' +
+      '<div style="font-size:1.1rem;font-weight:600;color:#7fb47f;">' + ok + '</div>' +
       '<div style="font-size:.6rem;color:var(--s600);text-transform:uppercase;">Articles trouvés</div></div>' +
     '<div style="flex:2;background:rgba(30,41,59,.7);border-radius:6px;padding:.5rem;text-align:center;">' +
       (qtyIsUvc
@@ -9439,7 +9584,7 @@ function parsePdfText(text) {
           ? '<span style="font-size:.65rem;color:#b07d1a;margin-left:4px;">' + r.qtyOrig + ' UVC ÷ ' + r.pcb + ' = ' + r.qty + ' colis</span>'
           : '';
         return '<div style="display:flex;align-items:center;gap:8px;padding:.35rem .6rem;border-bottom:1px solid rgba(255,255,255,.05);">' +
-          '<span style="font-family:monospace;font-size:.72rem;color:#93c5fd;min-width:100px;">' + r.code + '</span>' +
+          '<span style="font-family:monospace;font-size:.72rem;color:#7fb47f;min-width:100px;">' + r.code + '</span>' +
           '<span style="flex:1;font-size:.76rem;color:var(--s300);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + r.libelle + '</span>' +
           '<span style="font-size:.8rem;font-weight:600;color:#e2e8f0;min-width:30px;text-align:right;">' + r.qty + '</span>' +
           label + '</div>';
@@ -10543,7 +10688,7 @@ function dashOpenObjectifs(forceYear) {
   fixedYears.forEach(function(y) {
     var active = (y === year);
     navHtml += '<button onclick="dashOpenObjectifs(' + y + ')" style="padding:4px 14px;border-radius:20px;border:1.5px solid ' +
-      (active ? '#2563b0' : '#d1d5db') + ';background:' + (active ? '#dbeafe' : '#fff') + ';color:' +
+      (active ? '#2563b0' : '#d1d5db') + ';background:' + (active ? '#e2ede2' : '#fff') + ';color:' +
       (active ? '#1d4ed8' : '#374151') + ';font-size:.78rem;font-weight:' + (active ? '700' : '500') +
       ';cursor:pointer;">' + y + '</button>';
   });
@@ -10755,7 +10900,7 @@ function dashRenderRecentOrders(filtered) {
     } else if (r.statut === 'livre') {
       statutBadge = '<span style="display:inline-block;padding:2px 7px;border-radius:10px;font-size:.65rem;font-weight:600;background:#fef9c3;color:#854d0e;">📦 Livré</span>';
     } else {
-      statutBadge = '<span style="display:inline-block;padding:2px 7px;border-radius:10px;font-size:.65rem;font-weight:600;background:#dbeafe;color:#1e40af;">⏳ En cours</span>';
+      statutBadge = '<span style="display:inline-block;padding:2px 7px;border-radius:10px;font-size:.65rem;font-weight:600;background:#e2ede2;color:#1c4d1e;">⏳ En cours</span>';
     }
 
     var numFac = r.numFac ? r.numFac : '—';
@@ -10772,6 +10917,7 @@ function dashRenderRecentOrders(filtered) {
       '<td style="padding:.45rem .75rem;text-align:right;font-weight:700;color:'+caColor+';">' + fmtCA(r.ca) + '</td>' +
     '</tr>';
   }).join('');
+  if (typeof dashRenderSignature === 'function') { try { dashRenderSignature(); } catch(e){} }
 }
 
 
@@ -14184,7 +14330,7 @@ if ('serviceWorker' in navigator) {
 </div>
 
 <!-- RADAR CLIENTS — module d'alertes commerciales -->
-<script src="radar.js?v=1"></script>
+<script src="radar.js?v=2"></script>
 <script src="tournees.js?v=4"></script>
 <script src="visites.js?v=2"></script>
 <script src="rgpd.js?v=1"></script>

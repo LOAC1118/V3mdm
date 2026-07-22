@@ -234,6 +234,7 @@
         nbCmds: c.nbCmds, caTotal: c.caTotal, ca12: c.ca12, caPrec12: c.caPrec12,
         panier: panier, evo: evo,
         derniere: derniere, joursDepuis: joursDepuis,
+        dates: c.dates.slice(),
         rythme: rythme, retard: retard,
         motifs: motifs, tags: tags,
         score: score
