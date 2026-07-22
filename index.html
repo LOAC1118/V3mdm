@@ -31,58 +31,69 @@
 <meta name="description" content="CRM Moulin des Moines — Bons de commande, base clients, analyse CA">
 <meta name="robots" content="noindex, nofollow">
 
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Lora:ital,wght@0,500;0,600;1,400&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Inter:wght@400;450;500;600;700&family=IBM+Plex+Mono:wght@400;500&family=Pacifico&display=swap" rel="stylesheet">
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Lora:ital,wght@0,500;0,600;1,400&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Inter:wght@400;450;500;600;700&family=IBM+Plex+Mono:wght@400;500&family=Pacifico&display=swap');
 
 :root {
+  /* ── Polices ── */
   --fd:    'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-  --fdisp: 'Lora', Georgia, serif;
+  --fdisp: 'Fraunces', Georgia, serif;
+  --fmono: 'IBM Plex Mono', 'SFMono-Regular', Menlo, monospace;
 
-  /* Bleu Ocean */
-  --bg:       #eef4fb;
-  --bg2:      #e4edf8;
+  /* ═══════════════════════════════════════════════════════════
+     THÈME MOULIN DES MOINES — blanc & vert (maquette validée).
+     Fond clair chaud, accent vert sapin du logo, gris chauds.
+     Noms de variables conservés (--blue-p700, --g900…) : seules
+     les VALEURS changent, pour ne pas toucher les 14 000 lignes.
+     ═══════════════════════════════════════════════════════════ */
+  --bg:       #fbfbf9;
+  --bg2:      #f4f3ee;
   --surface:  #ffffff;
-  --surface2: #f6f9fd;
+  --surface2: #f7f6f1;
 
-  --g900: #042c53;
-  --g800: #0d3a6e;
-  --g700: #305070;
-  --g600: #5080a0;
-  --g500: #7da8c0;
-  --g400: #a8c8dc;
-  --g300: #cce0f0;
-  --g200: #deedfb;
-  --g100: #eef6fd;
+  --g900: #1a1c1a;
+  --g800: #2c2e2b;
+  --g700: #4a4d49;
+  --g600: #74776f;
+  --g500: #8f918a;
+  --g400: #a4a69d;
+  --g300: #c4c5bd;
+  --g200: #dcdbd3;
+  --g100: #efeee9;
 
-  --blue-p900: #042c53;
-  --blue-p800: #0c447c;
-  --blue-p700: #185fa5;
-  --blue-p600: #2070c8;
-  --blue-p500: #378add;
-  --blue-p400: #85b7eb;
-  --blue-p300: #b5d4f4;
-  --blue-p100: #deedfb;
-  --blue-p50:  #eef6fd;
+  /* Accent MDM : vert sapin du logo (#266327). --blue-p700 = accent */
+  --blue-p900: #17351a;
+  --blue-p800: #1c4d1e;
+  --blue-p700: #266327;
+  --blue-p600: #2f7530;
+  --blue-p500: #3d8b3e;
+  --blue-p400: #7fb47f;
+  --blue-p300: #b3d1b3;
+  --blue-p100: #e2ede2;
+  --blue-p50:  #eef3ee;
 
-  --amber:     #c97c1a;
-  --amber-bg:  #fdf3e3;
-  --red:       #c0392b;
-  --red-bg:    #fdf2f0;
-  --blue:      #2070c8;
-  --blue-bg:   #deedfb;
-  --violet:    #7c3aed;
-  --violet-bg: #f4f0ff;
-  --green:     #059669;
-  --green-bg:  #ecfdf5;
+  --amber:     #b07d1a;
+  --amber-bg:  #f8f1e0;
+  --red:       #b0402f;
+  --red-bg:    #f8ede9;
+  --blue:      #266327;
+  --blue-bg:   #eef3ee;
+  --violet:    #6a6f64;
+  --violet-bg: #f0efe9;
+  --green:     #266327;
+  --green-bg:  #eef3ee;
 
-  --border:     rgba(8,50,110,.10);
-  --border-med: rgba(8,50,110,.15);
-  --shadow-xs:  0 1px 3px rgba(8,50,110,.06);
-  --shadow-sm:  0 2px 8px rgba(8,50,110,.08);
-  --shadow-md:  0 4px 16px rgba(8,50,110,.10);
-  --shadow-lg:  0 8px 28px rgba(8,50,110,.12);
-  --shadow-xl:  0 16px 50px rgba(8,50,110,.15);
+  --grain: #ffc700;
+  --edge:  #f27c00;
+
+  --border:     rgba(26,28,26,.10);
+  --border-med: rgba(26,28,26,.16);
+  --shadow-xs:  0 1px 2px rgba(26,28,26,.05);
+  --shadow-sm:  0 1px 3px rgba(26,28,26,.06), 0 1px 2px rgba(26,28,26,.04);
+  --shadow-md:  0 2px 8px rgba(26,28,26,.07);
+  --shadow-lg:  0 6px 20px rgba(26,28,26,.09);
+  --shadow-xl:  0 14px 40px rgba(26,28,26,.12);
 }
 
 /* ═══════════════════════════════════════════════════════════
@@ -92,41 +103,58 @@
    Objectif : voir d'un coup d'œil sur quelle marque on travaille.
    ═══════════════════════════════════════════════════════════ */
 body.brand-naturaline {
-  --bg:       #f0f6ef;
-  --bg2:      #e6f0e4;
+  /* ═══ THÈME NATURALINE — accent vert vif du logo (#034b25 / #0f7a3d) ═══
+     Mêmes gris neutres que MDM : seul l'accent et les couleurs de marque
+     changent, pour que la bascule se lise d'un coup d'œil. */
+
+  --bg:       #fbfbf9;
+  --bg2:      #f3f4ef;
   --surface:  #ffffff;
-  --surface2: #f6faf5;
+  --surface2: #f6f8f4;
 
-  --g900: #16351f;
-  --g800: #1e4a2b;
-  --g700: #3a6349;
-  --g600: #5f8c6e;
-  --g500: #89ae96;
-  --g400: #b2cbbb;
-  --g300: #d2e4d8;
-  --g200: #e3efe7;
-  --g100: #f1f7f2;
+  --g900: #1a1c1a;
+  --g800: #2c2e2b;
+  --g700: #4a4d49;
+  --g600: #74776f;
+  --g500: #8f918a;
+  --g400: #a4a69d;
+  --g300: #c4c5bd;
+  --g200: #dcdbd3;
+  --g100: #efeee9;
 
-  --blue-p900: #16351f;
-  --blue-p800: #1f4b2c;
-  --blue-p700: #2d6b41;
-  --blue-p600: #388450;
-  --blue-p500: #4ea369;
-  --blue-p400: #8dc7a2;
-  --blue-p300: #badcc7;
-  --blue-p100: #e3efe7;
-  --blue-p50:  #f1f7f2;
+  /* Accent Naturaline : vert plus lumineux que MDM */
+  --blue-p900: #034b25;
+  --blue-p800: #0a5e30;
+  --blue-p700: #0f7a3d;
+  --blue-p600: #148c47;
+  --blue-p500: #1ea256;
+  --blue-p400: #74c191;
+  --blue-p300: #aedcc0;
+  --blue-p100: #e0f0e6;
+  --blue-p50:  #ecf5ef;
 
-  --blue:      #388450;
-  --blue-bg:   #e3efe7;
+  --amber:     #b07d1a;
+  --amber-bg:  #f8f1e0;
+  --red:       #b0402f;
+  --red-bg:    #f8ede9;
+  --blue:      #0f7a3d;
+  --blue-bg:   #ecf5ef;
+  --violet:    #6a6f64;
+  --violet-bg: #f0efe9;
+  --green:     #0f7a3d;
+  --green-bg:  #ecf5ef;
 
-  --border:     rgba(22,53,31,.12);
-  --border-med: rgba(22,53,31,.18);
-  --shadow-xs:  0 1px 3px rgba(22,53,31,.06);
-  --shadow-sm:  0 2px 8px rgba(22,53,31,.08);
-  --shadow-md:  0 4px 16px rgba(22,53,31,.10);
-  --shadow-lg:  0 8px 28px rgba(22,53,31,.12);
-  --shadow-xl:  0 16px 50px rgba(22,53,31,.15);
+  /* Marque Naturaline */
+  --grain: #fcbf0c;   /* jaune vif */
+  --edge:  #e01119;   /* pomme rouge */
+
+  --border:     rgba(26,28,26,.10);
+  --border-med: rgba(26,28,26,.16);
+  --shadow-xs:  0 1px 2px rgba(26,28,26,.05);
+  --shadow-sm:  0 1px 3px rgba(26,28,26,.06), 0 1px 2px rgba(26,28,26,.04);
+  --shadow-md:  0 2px 8px rgba(26,28,26,.07);
+  --shadow-lg:  0 6px 20px rgba(26,28,26,.09);
+  --shadow-xl:  0 14px 40px rgba(26,28,26,.12);
 }
 
 /* ── RESET ── */
@@ -241,6 +269,24 @@ body::before {
   font-size: 17px; flex-shrink:0;
   box-shadow: 0 3px 10px rgba(37,99,176,.15);
 }
+/* Pastille claire portant le logo de marque, sur la barre foncée */
+.brand-plate {
+  height: 40px; display: flex; align-items: center;
+  background: #fff; border-radius: 9px; padding: 3px 12px;
+  box-shadow: 0 1px 3px rgba(0,0,0,.18); flex-shrink: 0;
+}
+.brand-plate svg { height: 34px; width: auto; display: block; }
+.brand-plate .bl-nat { display: none; }
+body.brand-naturaline .brand-plate .bl-mdm { display: none; }
+body.brand-naturaline .brand-plate .bl-nat { display: block; }
+
+/* ── Ajustements typographiques « carnet de terrain » ──
+   Fraunces est plus fine que Lora : on remonte le poids des titres.
+   Les chiffres de données passent en chasse fixe pour l'alignement. */
+.page-title, .modal-title, .brand-name,
+h1[style*="--fdisp"], h2[style*="--fdisp"] { font-weight: 550 !important; letter-spacing: -.01em; }
+.num, .mono, .kpi-value, .stat-value,
+[data-num] { font-family: var(--fmono); font-feature-settings: "tnum"; }
 .brand-name { font-family:var(--fdisp); font-size:1rem; color:#fff; line-height:1.2; font-weight:600; }
 .brand-sub { font-size:.58rem; color:var(--blue-p300); letter-spacing:.09em; text-transform:uppercase; }
 
@@ -864,7 +910,7 @@ thead th.ts-active { text-decoration:underline; text-underline-offset:3px; }
 .bot-msg { max-width:82%; padding:.65rem .85rem; border-radius:12px; font-size:.86rem; line-height:1.55; white-space:pre-wrap; word-wrap:break-word; }
 .bot-msg.user { align-self:flex-end; background:var(--blue-p700); color:#fff; border-bottom-right-radius:4px; }
 .bot-msg.ai   { align-self:flex-start; background:var(--surface); color:var(--g800); border:1px solid var(--border); border-bottom-left-radius:4px; }
-.bot-msg.err  { align-self:flex-start; background:#fee2e2; color:#991b1b; border:1px solid #fca5a5; }
+.bot-msg.err  { align-self:flex-start; background:#f8ede9; color:#8f3325; border:1px solid #e3b8b0; }
 .bot-msg.ai strong { color:var(--blue-p700); }
 .bot-typing { align-self:flex-start; color:var(--g500); font-size:.82rem; font-style:italic; padding:.3rem .5rem; }
 
@@ -899,6 +945,12 @@ thead th.ts-active { text-decoration:underline; text-underline-offset:3px; }
   .brand-sub { display: none; }
   .badge-count { display: none; }
   .sync-indicator span#sync-label { display: none; }
+
+  /* Logo : pastille un peu plus compacte, reste lisible */
+  .brand-plate { height: 36px; padding: 2px 9px; }
+  .brand-plate svg { height: 30px; }
+  #brand-switcher { margin-left: 8px !important; }
+  #brand-switcher button { padding: 5px 8px !important; font-size: .68rem !important; }
 
   /* ── SIDEBAR DESKTOP masquée, layout app en colonne plein écran ── */
   .app { height: calc(100vh - 52px); }
@@ -1135,11 +1187,31 @@ thead th.ts-active { text-decoration:underline; text-underline-offset:3px; }
 
 <div class="topbar">
   <div class="brand">
-    <div class="brand-ico" id="brand-ico">🌾</div>
-    <div><div class="brand-name" id="brand-name-label">Moulin des Moines</div><div class="brand-sub">CRM 2026</div></div>
-    <div id="brand-switcher" style="display:flex;align-items:center;background:rgba(255,255,255,.08);border-radius:10px;padding:3px;margin-left:12px;">
-      <button id="brand-btn-mdm" onclick="setCurrentBrand('mdm')" style="border:none;background:rgba(255,255,255,.18);color:#fff;font-size:.72rem;font-weight:600;padding:6px 10px;border-radius:7px;cursor:pointer;transition:background .15s;white-space:nowrap;">🌾 MDM</button>
-      <button id="brand-btn-naturaline" onclick="setCurrentBrand('naturaline')" style="border:none;background:transparent;color:#fff;opacity:.6;font-size:.72rem;font-weight:600;padding:6px 10px;border-radius:7px;cursor:pointer;transition:background .15s;white-space:nowrap;">🌿 NATURALINE</button>
+    <div class="brand-plate" id="brand-logo" aria-label="Marque active">
+      <!-- MOULIN DES MOINES — logo complet, sur pastille claire -->
+      <svg class="bl-mdm" viewBox="0 0 200 52" fill="none" xmlns="http://www.w3.org/2000/svg" aria-label="Moulin des Moines">
+        <path d="M6 15 V7 a2 2 0 0 1 2-2 H19" stroke="var(--edge)" stroke-width="2.4" stroke-linecap="round"/>
+        <path d="M6 34 V42 a2 2 0 0 0 2 2 H17" stroke="var(--edge)" stroke-width="2.4" stroke-linecap="round"/>
+        <path d="M40 15 V7 a2 2 0 0 0-2-2 H27" stroke="var(--edge)" stroke-width="2.4" stroke-linecap="round"/>
+        <path d="M40 34 V42 a2 2 0 0 1-2 2 H29" stroke="var(--edge)" stroke-width="2.4" stroke-linecap="round"/>
+        <path d="M13 39 V21 l11-8 v26 z" fill="var(--grain)"/>
+        <path d="M24 39 V16 l6 4 v19 z" fill="var(--grain)" opacity=".8"/>
+        <path d="M19 33 V18 M19 21 l-3-2 M19 21 l3-2 M19 26 l-3-2 M19 26 l3-2 M19 31 l-3-2 M19 31 l3-2" stroke="var(--blue-p700)" stroke-width="1.5" stroke-linecap="round"/>
+        <text x="52" y="27" font-family="var(--fdisp)" font-size="20" font-style="italic" font-weight="600" fill="var(--blue-p700)">Moulin</text>
+        <text x="54" y="42" font-family="var(--fd)" font-size="11.5" font-weight="600" letter-spacing="1.4" fill="#4a4d49">DES MOINES</text>
+      </svg>
+      <!-- NATURALINE — lettrage cursif + pomme -->
+      <svg class="bl-nat" viewBox="0 0 205 54" fill="none" xmlns="http://www.w3.org/2000/svg" aria-label="Naturaline, c'est mon côté bio">
+        <text x="4" y="33" font-family="'Pacifico',cursive" font-size="27" fill="var(--blue-p800)">naturaline</text>
+        <circle cx="173" cy="14" r="8" fill="var(--edge)"/>
+        <path d="M173 6 q3-5 7-3 q-2 3-5 3.3 z" fill="var(--blue-p700)"/>
+        <ellipse cx="170" cy="11" rx="2.2" ry="3.2" fill="#fff" opacity=".35" transform="rotate(-25 170 11)"/>
+        <text x="66" y="48" font-family="var(--fd)" font-size="9.5" font-weight="600" font-style="italic" letter-spacing=".2" fill="#5f8c6e">c'est mon côté BIO !</text>
+      </svg>
+    </div>
+    <div id="brand-switcher" style="display:flex;align-items:center;background:rgba(255,255,255,.10);border-radius:10px;padding:3px;margin-left:12px;">
+      <button id="brand-btn-mdm" onclick="setCurrentBrand('mdm')" style="border:none;background:rgba(255,255,255,.20);color:#fff;font-size:.72rem;font-weight:600;padding:6px 10px;border-radius:7px;cursor:pointer;transition:background .15s;white-space:nowrap;">MDM</button>
+      <button id="brand-btn-naturaline" onclick="setCurrentBrand('naturaline')" style="border:none;background:transparent;color:#fff;opacity:.6;font-size:.72rem;font-weight:600;padding:6px 10px;border-radius:7px;cursor:pointer;transition:background .15s;white-space:nowrap;">NATURALINE</button>
     </div>
   </div>
   <div class="topbar-center">
@@ -1276,8 +1348,8 @@ thead th.ts-active { text-decoration:underline; text-underline-offset:3px; }
       <svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="8" cy="6" r="3"/><path d="M2 14c0-3 2.7-5 6-5s6 2 6 5"/><path d="M12 3v4M10 5h4"/></svg>
       Nouveau contact
     </div>
-    <div class="nav-item" onclick="openSyncModal()" style="color:#fcd34d;margin-top:2px;">
-      <svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" style="color:#fcd34d;opacity:1;"><path d="M2 8A6 6 0 0 1 13 5"/><path d="M14 8A6 6 0 0 1 3 11"/><polyline points="11,3 14,5 11,7"/><polyline points="5,9 2,11 5,13"/></svg>
+    <div class="nav-item" onclick="openSyncModal()" style="color:#e8c98a;margin-top:2px;">
+      <svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" style="color:#e8c98a;opacity:1;"><path d="M2 8A6 6 0 0 1 13 5"/><path d="M14 8A6 6 0 0 1 3 11"/><polyline points="11,3 14,5 11,7"/><polyline points="5,9 2,11 5,13"/></svg>
       Synchroniser données
     </div>
   </div>
@@ -1310,14 +1382,14 @@ thead th.ts-active { text-decoration:underline; text-underline-offset:3px; }
       <div class="stat-card"><div class="stat-label">Contacts</div><div class="stat-val" id="stat-clients">—</div><div class="stat-delta">base clients</div></div>
       <div class="stat-card" id="dash-actifs-card" style="cursor:pointer;" onclick="showSection('contacts-db',null,null)" title="Voir la base clients">
         <div class="stat-label">✅ Clients actifs</div>
-        <div style="display:flex;align-items:baseline;gap:6px;"><div class="stat-val" id="stat-actifs" style="color:#059669;">—</div><div style="font-size:.7rem;color:#dc2626;font-weight:600;" id="stat-inactifs-badge"></div></div>
+        <div style="display:flex;align-items:baseline;gap:6px;"><div class="stat-val" id="stat-actifs" style="color:#266327;">—</div><div style="font-size:.7rem;color:#b0402f;font-weight:600;" id="stat-inactifs-badge"></div></div>
         <div class="stat-delta" id="stat-actifs-delta">cmd dans les 3 derniers mois</div>
       </div>
       <div class="stat-card"><div class="stat-label">BDC saisis</div><div class="stat-val" id="stat-commandes">—</div><div class="stat-delta">bons de commande</div></div>
       <div class="stat-card"><div class="stat-label">Frais du mois</div><div class="stat-val" id="ro-count" style="font-size:1.1rem;">—</div><div class="stat-delta">note de frais</div></div>
       <div class="stat-card" id="dash-comm-card" style="cursor:pointer;" onclick="showSection('commissions',null,null)" title="Voir le détail dans Commissions">
         <div class="stat-label">💶 Commission en cours</div>
-        <div class="stat-val" id="dash-comm-val" style="color:#7c3aed;font-size:1.1rem;">—</div>
+        <div class="stat-val" id="dash-comm-val" style="color:#6a6f64;font-size:1.1rem;">—</div>
         <div class="stat-delta" id="dash-comm-sub">sur CA facturé du mois</div>
       </div>
     </div>
@@ -1366,7 +1438,7 @@ thead th.ts-active { text-decoration:underline; text-underline-offset:3px; }
             <input type="checkbox" id="dash-ca-only-fac" onchange="dashCaRender()" style="accent-color:var(--blue-p700);cursor:pointer;"/>
             Facturées uniquement
           </label>
-          <button onclick="dashOpenObjectifs()" style="padding:4px 12px;border:1px solid #f59e0b;border-radius:6px;background:#fffbeb;color:#b45309;font-size:.74rem;font-weight:600;cursor:pointer;white-space:nowrap;">🎯 Objectifs</button>
+          <button onclick="dashOpenObjectifs()" style="padding:4px 12px;border:1px solid #b07d1a;border-radius:6px;background:#f8f1e0;color:#8f6415;font-size:.74rem;font-weight:600;cursor:pointer;white-space:nowrap;">🎯 Objectifs</button>
         </div>
 
         <!-- ── 4 KPIs PRINCIPAUX (fichier importé) ─────────────── -->
@@ -1379,19 +1451,19 @@ thead th.ts-active { text-decoration:underline; text-underline-offset:3px; }
             <div style="font-size:1.6rem;font-weight:800;color:var(--blue-p700);line-height:1;" id="dashk-cours">—</div>
             <div style="font-size:.7rem;color:var(--g500);margin-top:5px;" id="dashk-nb-sub">— commandes</div>
           </div>
-          <div style="background:#fff;border-radius:12px;padding:1.1rem 1.2rem;border:1px solid var(--border);border-top:4px solid #059669;box-shadow:var(--shadow-sm);">
+          <div style="background:#fff;border-radius:12px;padding:1.1rem 1.2rem;border:1px solid var(--border);border-top:4px solid #266327;box-shadow:var(--shadow-sm);">
             <div style="font-size:.65rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--g500);margin-bottom:6px;">CA Facturé</div>
-            <div style="font-size:1.6rem;font-weight:800;color:#059669;line-height:1;" id="dashk-fac">—</div>
+            <div style="font-size:1.6rem;font-weight:800;color:#266327;line-height:1;" id="dashk-fac">—</div>
             <div style="font-size:.7rem;color:var(--g500);margin-top:5px;">N° facture émis</div>
           </div>
-          <div style="background:#fff;border-radius:12px;padding:1.1rem 1.2rem;border:1px solid var(--border);border-top:4px solid #f59e0b;box-shadow:var(--shadow-sm);">
+          <div style="background:#fff;border-radius:12px;padding:1.1rem 1.2rem;border:1px solid var(--border);border-top:4px solid #b07d1a;box-shadow:var(--shadow-sm);">
             <div style="font-size:.65rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--g500);margin-bottom:6px;">Reste à facturer</div>
-            <div style="font-size:1.6rem;font-weight:800;color:#b45309;line-height:1;" id="dashk-livre">—</div>
+            <div style="font-size:1.6rem;font-weight:800;color:#8f6415;line-height:1;" id="dashk-livre">—</div>
             <div style="font-size:.7rem;color:var(--g500);margin-top:5px;">En cours sans facture</div>
           </div>
-          <div style="background:#fff;border-radius:12px;padding:1.1rem 1.2rem;border:1px solid var(--border);border-top:4px solid #dc2626;box-shadow:var(--shadow-sm);">
+          <div style="background:#fff;border-radius:12px;padding:1.1rem 1.2rem;border:1px solid var(--border);border-top:4px solid #b0402f;box-shadow:var(--shadow-sm);">
             <div style="font-size:.65rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--g500);margin-bottom:6px;">Avoirs</div>
-            <div style="font-size:1.6rem;font-weight:800;color:#dc2626;line-height:1;" id="dashk-avoirs">—</div>
+            <div style="font-size:1.6rem;font-weight:800;color:#b0402f;line-height:1;" id="dashk-avoirs">—</div>
             <div style="font-size:.7rem;color:var(--g500);margin-top:5px;" id="dashk-avoirs-sub">—</div>
           </div>
         </div>
@@ -1399,23 +1471,23 @@ thead th.ts-active { text-decoration:underline; text-underline-offset:3px; }
         <!-- ── STATS COMPLÉMENTAIRES : N-1 + Panier moyen + Clients actifs ─── -->
         <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:1.25rem;">
           <!-- Évolution vs N-1 -->
-          <div style="background:#fff;border-radius:10px;padding:.9rem 1rem;border:1px solid var(--border);border-left:4px solid #7c3aed;">
+          <div style="background:#fff;border-radius:10px;padding:.9rem 1rem;border:1px solid var(--border);border-left:4px solid #6a6f64;">
             <div style="font-size:.62rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--g400);margin-bottom:4px;">📈 vs Même mois N-1</div>
             <div style="font-size:1.35rem;font-weight:800;line-height:1;" id="dash-n1-delta">—</div>
             <div style="font-size:.7rem;color:var(--g500);margin-top:4px;" id="dash-n1-detail">Chargez un fichier multi-années</div>
           </div>
           <!-- Panier moyen -->
-          <div style="background:#fff;border-radius:10px;padding:.9rem 1rem;border:1px solid var(--border);border-left:4px solid #f59e0b;">
+          <div style="background:#fff;border-radius:10px;padding:.9rem 1rem;border:1px solid var(--border);border-left:4px solid #b07d1a;">
             <div style="font-size:.62rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--g400);margin-bottom:4px;">🛒 Panier moyen / client</div>
-            <div style="font-size:1.35rem;font-weight:800;color:#b45309;line-height:1;" id="dash-panier-moy">—</div>
+            <div style="font-size:1.35rem;font-weight:800;color:#8f6415;line-height:1;" id="dash-panier-moy">—</div>
             <div style="font-size:.7rem;color:var(--g500);margin-top:4px;" id="dash-panier-detail">—</div>
           </div>
           <!-- Clients actifs / inactifs -->
-          <div style="background:#fff;border-radius:10px;padding:.9rem 1rem;border:1px solid var(--border);border-left:4px solid #059669;cursor:pointer;" onclick="dashShowInactifs()" title="Cliquez pour voir les clients inactifs">
+          <div style="background:#fff;border-radius:10px;padding:.9rem 1rem;border:1px solid var(--border);border-left:4px solid #266327;cursor:pointer;" onclick="dashShowInactifs()" title="Cliquez pour voir les clients inactifs">
             <div style="font-size:.62rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--g400);margin-bottom:4px;">👥 Clients actifs du mois</div>
             <div style="display:flex;align-items:baseline;gap:8px;">
-              <div style="font-size:1.35rem;font-weight:800;color:#059669;line-height:1;" id="dash-actifs-mois">—</div>
-              <div style="font-size:.82rem;font-weight:600;color:#dc2626;" id="dash-inactifs-mois"></div>
+              <div style="font-size:1.35rem;font-weight:800;color:#266327;line-height:1;" id="dash-actifs-mois">—</div>
+              <div style="font-size:.82rem;font-weight:600;color:#b0402f;" id="dash-inactifs-mois"></div>
             </div>
             <div style="font-size:.7rem;color:var(--g500);margin-top:4px;" id="dash-actifs-detail">ayant commandé ce mois</div>
           </div>
@@ -1439,7 +1511,7 @@ thead th.ts-active { text-decoration:underline; text-underline-offset:3px; }
               </div>
               <div style="background:#fff;border-radius:8px;padding:.55rem .7rem;border:1px solid var(--border);">
                 <div style="font-size:.58rem;font-weight:700;text-transform:uppercase;color:var(--g400);margin-bottom:2px;">Ticket moy.</div>
-                <div style="font-size:1rem;font-weight:700;color:#b45309;" id="cur-ticket">—</div>
+                <div style="font-size:1rem;font-weight:700;color:#8f6415;" id="cur-ticket">—</div>
                 <div style="font-size:.6rem;color:var(--g400);" id="cur-ticket-vs"></div>
               </div>
               <div style="background:#fff;border-radius:8px;padding:.55rem .7rem;border:1px solid var(--blue-p200);grid-column:1/-1;">
@@ -1448,13 +1520,13 @@ thead th.ts-active { text-decoration:underline; text-underline-offset:3px; }
                 <div style="font-size:.6rem;color:var(--g400);" id="cur-fac-vs"></div>
               </div>
               <div style="background:#fff8f0;border-radius:8px;padding:.55rem .7rem;border:1px solid #fde68a;">
-                <div style="font-size:.58rem;font-weight:700;text-transform:uppercase;color:#b45309;margin-bottom:2px;">En cours</div>
-                <div style="font-size:.95rem;font-weight:700;color:#b45309;" id="cur-cours">—</div>
+                <div style="font-size:.58rem;font-weight:700;text-transform:uppercase;color:#8f6415;margin-bottom:2px;">En cours</div>
+                <div style="font-size:.95rem;font-weight:700;color:#8f6415;" id="cur-cours">—</div>
                 <div style="font-size:.6rem;color:var(--g400);" id="cur-cours-vs"></div>
               </div>
               <div style="background:#fff8f0;border-radius:8px;padding:.55rem .7rem;border:1px solid #fde68a;">
-                <div style="font-size:.58rem;font-weight:700;text-transform:uppercase;color:#b45309;margin-bottom:2px;">Reste à fact.</div>
-                <div style="font-size:.95rem;font-weight:700;color:#b45309;" id="cur-livre">—</div>
+                <div style="font-size:.58rem;font-weight:700;text-transform:uppercase;color:#8f6415;margin-bottom:2px;">Reste à fact.</div>
+                <div style="font-size:.95rem;font-weight:700;color:#8f6415;" id="cur-livre">—</div>
                 <div style="font-size:.6rem;color:var(--g400);" id="cur-livre-vs"></div>
               </div>
             </div>
@@ -1506,11 +1578,11 @@ thead th.ts-active { text-decoration:underline; text-underline-offset:3px; }
                 <div style="font-size:.62rem;color:var(--g500);">commandes</div>
               </div>
               <div style="text-align:center;">
-                <div id="dash-recent-ca-fac" style="font-size:1.1rem;font-weight:700;color:#059669;">—</div>
+                <div id="dash-recent-ca-fac" style="font-size:1.1rem;font-weight:700;color:#266327;">—</div>
                 <div style="font-size:.62rem;color:var(--g500);">facturé</div>
               </div>
               <div style="text-align:center;">
-                <div id="dash-recent-ca-cours" style="font-size:1.1rem;font-weight:700;color:#f59e0b;">—</div>
+                <div id="dash-recent-ca-cours" style="font-size:1.1rem;font-weight:700;color:#b07d1a;">—</div>
                 <div style="font-size:.62rem;color:var(--g500);">en cours</div>
               </div>
             </div>
@@ -1547,11 +1619,11 @@ thead th.ts-active { text-decoration:underline; text-underline-offset:3px; }
                   <th>Mois</th>
                   <th style="text-align:right;">Nb cmds</th>
                   <th style="text-align:right;">Ticket moy.</th>
-                  <th style="text-align:right;color:#059669;">CA Total</th>
-                  <th style="text-align:right;color:#b45309;">En cours</th>
+                  <th style="text-align:right;color:#266327;">CA Total</th>
+                  <th style="text-align:right;color:#8f6415;">En cours</th>
                   <th style="text-align:right;color:var(--blue-p700);">Facturé</th>
-                  <th style="text-align:right;color:#dc2626;">Avoirs</th>
-                  <th style="text-align:right;color:#f59e0b;">🎯 Objectif</th>
+                  <th style="text-align:right;color:#b0402f;">Avoirs</th>
+                  <th style="text-align:right;color:#b07d1a;">🎯 Objectif</th>
                   <th style="text-align:right;">Atteinte</th>
                 </tr>
               </thead>
@@ -1581,12 +1653,12 @@ thead th.ts-active { text-decoration:underline; text-underline-offset:3px; }
             <table style="width:100%;border-collapse:collapse;font-size:.78rem;">
               <thead style="position:sticky;top:0;z-index:1;">
                 <tr style="background:#9a3412;">
-                  <th style="padding:.5rem .75rem;text-align:left;font-weight:600;color:#fed7aa;">Client</th>
-                  <th style="padding:.5rem .75rem;text-align:left;font-weight:600;color:#fed7aa;white-space:nowrap;">Ville</th>
-                  <th style="padding:.5rem .75rem;text-align:right;font-weight:600;color:#fed7aa;white-space:nowrap;">Dernière cmd</th>
-                  <th style="padding:.5rem .75rem;text-align:center;font-weight:600;color:#fed7aa;white-space:nowrap;">Sans cmd depuis</th>
-                  <th style="padding:.5rem .75rem;text-align:right;font-weight:600;color:#fed7aa;white-space:nowrap;">CA habituel</th>
-                  <th style="padding:.5rem .75rem;text-align:center;font-weight:600;color:#fed7aa;white-space:nowrap;">Relancer</th>
+                  <th style="padding:.5rem .75rem;text-align:left;font-weight:600;color:#ecd9b8;">Client</th>
+                  <th style="padding:.5rem .75rem;text-align:left;font-weight:600;color:#ecd9b8;white-space:nowrap;">Ville</th>
+                  <th style="padding:.5rem .75rem;text-align:right;font-weight:600;color:#ecd9b8;white-space:nowrap;">Dernière cmd</th>
+                  <th style="padding:.5rem .75rem;text-align:center;font-weight:600;color:#ecd9b8;white-space:nowrap;">Sans cmd depuis</th>
+                  <th style="padding:.5rem .75rem;text-align:right;font-weight:600;color:#ecd9b8;white-space:nowrap;">CA habituel</th>
+                  <th style="padding:.5rem .75rem;text-align:center;font-weight:600;color:#ecd9b8;white-space:nowrap;">Relancer</th>
                 </tr>
               </thead>
               <tbody id="dash-inactive-tbody">
@@ -1647,7 +1719,7 @@ thead th.ts-active { text-decoration:underline; text-underline-offset:3px; }
       <div style="font-family:var(--fdisp);font-size:.9rem;color:var(--g900);flex:1;min-width:140px;">🌾 Bon de Commande MDM 2026</div>
       <button class="btn btn-ghost" style="font-size:.72rem;padding:.3rem .7rem;" onclick="openBdcImport()">📄 Importer commande</button>
       <button class="btn btn-ghost" style="font-size:.72rem;padding:.3rem .7rem;color:#a78bfa;border-color:rgba(167,139,250,.3);" onclick="boxOpen()">📦 Création BOX</button>
-      <button class="btn btn-ghost" style="font-size:.72rem;padding:.3rem .7rem;color:#fcd34d;border-color:rgba(245,158,11,.3);" onclick="openStockImport()">📦 Mettre à jour stocks</button>
+      <button class="btn btn-ghost" style="font-size:.72rem;padding:.3rem .7rem;color:#e8c98a;border-color:rgba(245,158,11,.3);" onclick="openStockImport()">📦 Mettre à jour stocks</button>
       <button class="btn btn-ghost" style="font-size:.72rem;padding:.3rem .7rem;" onclick="resetBDC()">🗑 Effacer</button>
       <div style="display:flex;gap:5px;">
         <button class="btn btn-primary" style="font-size:.72rem;padding:.3rem .7rem;" onclick="bdcSendOrder()">📤 Envoyer à MDM</button>
@@ -1739,7 +1811,7 @@ thead th.ts-active { text-decoration:underline; text-underline-offset:3px; }
             <button class="bdc-mode-btn" data-mode="ean" onclick="bdcSetMode(this)">EAN</button>
           </div>
           <span id="bdc-search-count" style="font-size:.68rem;color:var(--g500);"></span>
-          <button onclick="bdcClearSearch()" style="padding:.22rem .55rem;border-radius:4px;border:1px solid rgba(239,68,68,.2);background:transparent;color:#fca5a5;font-family:var(--fd);font-size:.68rem;cursor:pointer;">✕</button>
+          <button onclick="bdcClearSearch()" style="padding:.22rem .55rem;border-radius:4px;border:1px solid rgba(239,68,68,.2);background:transparent;color:#e3b8b0;font-family:var(--fd);font-size:.68rem;cursor:pointer;">✕</button>
         </div>
         <div style="flex:1;overflow:auto;">
           <table id="bdc-table" style="width:100%;border-collapse:collapse;font-size:.73rem;">
@@ -1780,13 +1852,13 @@ thead th.ts-active { text-decoration:underline; text-underline-offset:3px; }
   <div id="sec-frais" class="hidden">
     <div class="page-header">
       <div>
-        <div class="page-title">Note de frais <span id="nfd-save-status" style="font-size:.65rem;font-weight:400;background:#dcfce7;color:#15803d;padding:2px 8px;border-radius:10px;margin-left:8px;display:none;">✓ sauvegardé</span></div>
+        <div class="page-title">Note de frais <span id="nfd-save-status" style="font-size:.65rem;font-weight:400;background:#eef3ee;color:#266327;padding:2px 8px;border-radius:10px;margin-left:8px;display:none;">✓ sauvegardé</span></div>
         <div class="page-sub">Saisie ligne par ligne · sauvegarde automatique · génération PDF mensuel</div>
         <div id="nfd-period-label" style="font-size:.72rem;color:var(--blue-p700);font-weight:600;margin-top:2px;"></div>
       </div>
       <div style="display:flex;gap:8px;">
         <button class="btn btn-ghost" onclick="nfdExportCSV()" style="font-size:.78rem;">↓ Export CSV</button>
-        <button class="btn btn-primary" onclick="nfdGeneratePDF()" style="font-size:.78rem;background:#dc2626;border-color:#dc2626;">📄 Générer PDF</button>
+        <button class="btn btn-primary" onclick="nfdGeneratePDF()" style="font-size:.78rem;background:#b0402f;border-color:#b0402f;">📄 Générer PDF</button>
       </div>
     </div>
 
@@ -1823,8 +1895,8 @@ thead th.ts-active { text-decoration:underline; text-underline-offset:3px; }
     <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:1rem;">
       <div class="stat-card" style="border-top:3px solid var(--g700)!important;"><div class="stat-label">Nb dépenses</div><div class="stat-val" id="nfd-kpi-nb">0</div></div>
       <div class="stat-card" style="border-top:3px solid #2563b0!important;"><div class="stat-label">Total HT</div><div class="stat-val" id="nfd-kpi-ht" style="color:#2563b0;">0,00 €</div></div>
-      <div class="stat-card" style="border-top:3px solid #b45309!important;"><div class="stat-label">Total TVA</div><div class="stat-val" id="nfd-kpi-tva" style="color:#b45309;">0,00 €</div></div>
-      <div class="stat-card" style="border-top:3px solid #059669!important;"><div class="stat-label">Total TTC</div><div class="stat-val" id="nfd-kpi-ttc" style="color:#059669;">0,00 €</div></div>
+      <div class="stat-card" style="border-top:3px solid #8f6415!important;"><div class="stat-label">Total TVA</div><div class="stat-val" id="nfd-kpi-tva" style="color:#8f6415;">0,00 €</div></div>
+      <div class="stat-card" style="border-top:3px solid #266327!important;"><div class="stat-label">Total TTC</div><div class="stat-val" id="nfd-kpi-ttc" style="color:#266327;">0,00 €</div></div>
     </div>
 
     <!-- Saisie nouvelle ligne / édition -->
@@ -1851,7 +1923,7 @@ thead th.ts-active { text-decoration:underline; text-underline-offset:3px; }
         <div><label class="lb">Description</label><input type="text" id="nfd-new-desc" placeholder="Ex: Total Bourges → Lyon"/></div>
         <div style="display:flex;gap:6px;">
           <button class="btn btn-ghost" onclick="nfdOpenScanner()" title="Scanner le ticket avec la caméra" style="white-space:nowrap;position:relative;">
-            📷<span id="nfd-photo-badge" class="hidden" style="position:absolute;top:-5px;right:-5px;width:14px;height:14px;border-radius:50%;background:var(--em600,#059669);"></span>
+            📷<span id="nfd-photo-badge" class="hidden" style="position:absolute;top:-5px;right:-5px;width:14px;height:14px;border-radius:50%;background:var(--em600,#266327);"></span>
           </button>
           <button class="btn btn-ghost hidden" id="nfd-cancel-edit-btn" onclick="nfdCancelEdit()" style="white-space:nowrap;">✕ Annuler</button>
           <button class="btn btn-primary" id="nfd-submit-btn" onclick="nfdAddLine()" style="white-space:nowrap;">➕ Ajouter</button>
@@ -1924,7 +1996,7 @@ thead th.ts-active { text-decoration:underline; text-underline-offset:3px; }
         <option value="with-orders">Avec commandes (dans fichier)</option>
         <option value="orphan">Sans commande (orphelins) ⚠</option>
       </select>
-      <button onclick="cdbShowInactifPanel()" style="padding:4px 10px;border:1px solid #f59e0b;border-radius:6px;background:#fffbeb;color:#b45309;font-size:.74rem;font-weight:600;cursor:pointer;white-space:nowrap;">⚠️ Inactifs</button>
+      <button onclick="cdbShowInactifPanel()" style="padding:4px 10px;border:1px solid #b07d1a;border-radius:6px;background:#f8f1e0;color:#8f6415;font-size:.74rem;font-weight:600;cursor:pointer;white-space:nowrap;">⚠️ Inactifs</button>
       <span style="font-size:.72rem;color:var(--g600);" id="cdb-count-filtered">—</span>
       <button class="btn btn-ghost" onclick="cdbClearFilters()" style="font-size:.72rem;padding:.3rem .7rem;">✕ Filtres</button>
       <button class="btn btn-primary" onclick="cdbSendToMailing()" style="font-size:.78rem;padding:.38rem .9rem;margin-left:auto;">📧 Envoyer au Mailing</button>
@@ -1976,8 +2048,8 @@ thead th.ts-active { text-decoration:underline; text-underline-offset:3px; }
 
         <!-- Mode rapide : import sans mapping -->
         <div style="background:#f0fdf4;border:1px solid #86efac;border-radius:7px;padding:.7rem .9rem;margin-bottom:.8rem;">
-          <div style="font-size:.78rem;font-weight:600;color:#15803d;margin-bottom:.4rem;">🚀 Import rapide (recommandé)</div>
-          <div style="font-size:.72rem;color:#166534;margin-bottom:.5rem;">Le système détecte automatiquement les colonnes Code, Nom, Email, Tél, Adresse, etc.</div>
+          <div style="font-size:.78rem;font-weight:600;color:#266327;margin-bottom:.4rem;">🚀 Import rapide (recommandé)</div>
+          <div style="font-size:.72rem;color:#1c4d1e;margin-bottom:.5rem;">Le système détecte automatiquement les colonnes Code, Nom, Email, Tél, Adresse, etc.</div>
           <button class="btn btn-primary" onclick="cdbImportApplyAuto()" style="font-size:.8rem;padding:.4rem .9rem;background:#16a34a;border-color:#16a34a;">⚡ Importer automatiquement</button>
         </div>
 
@@ -2081,7 +2153,7 @@ thead th.ts-active { text-decoration:underline; text-underline-offset:3px; }
 
     </div>
     <div class="modal-foot">
-      <button class="btn btn-ghost" id="cdb-edit-delete" onclick="cdbDelete()" style="margin-right:auto;color:#dc2626;">🗑 Supprimer</button>
+      <button class="btn btn-ghost" id="cdb-edit-delete" onclick="cdbDelete()" style="margin-right:auto;color:#b0402f;">🗑 Supprimer</button>
 
       <button class="btn btn-ghost" onclick="document.getElementById('cdb-modal-edit').classList.add('hidden')">Annuler</button>
       <button class="btn btn-primary" onclick="cdbSave()">💾 Enregistrer</button>
@@ -2323,7 +2395,7 @@ thead th.ts-active { text-decoration:underline; text-underline-offset:3px; }
       <div style="display:flex;gap:8px;max-width:560px;flex-wrap:wrap;">
         <input type="password" id="ml-ai-key" placeholder="Collez votre clé…" style="flex:1;min-width:200px;font-family:ui-monospace,monospace;font-size:.8rem;"/>
         <button class="btn btn-primary" onclick="mlAiSaveKey()" style="font-size:.75rem;padding:.4rem .9rem;">Enregistrer</button>
-        <button class="btn btn-ghost" onclick="mlAiClearKey()" style="font-size:.75rem;padding:.4rem .9rem;color:#dc2626;">Effacer</button>
+        <button class="btn btn-ghost" onclick="mlAiClearKey()" style="font-size:.75rem;padding:.4rem .9rem;color:#b0402f;">Effacer</button>
       </div>
       <div style="font-size:.7rem;color:var(--g500);margin-top:.5rem;">
         <span id="ml-ai-key-where"></span> — enregistrée sur votre compte : utilisable sur PC, iPhone et Android sans ressaisie.
@@ -2403,7 +2475,7 @@ thead th.ts-active { text-decoration:underline; text-underline-offset:3px; }
       </div>
       <div class="card" style="padding:1rem;">
         <div style="font-size:.72rem;color:var(--g500);text-transform:uppercase;letter-spacing:.04em;font-weight:600;">CA HT cumulé</div>
-        <div class="stat-val" id="cad-stat-ca" style="font-size:1.5rem;color:var(--em600,#059669);margin-top:4px;">—</div>
+        <div class="stat-val" id="cad-stat-ca" style="font-size:1.5rem;color:var(--em600,#266327);margin-top:4px;">—</div>
       </div>
       <div class="card" style="padding:1rem;">
         <div style="font-size:.72rem;color:var(--g500);text-transform:uppercase;letter-spacing:.04em;font-weight:600;">Commandes</div>
@@ -2489,7 +2561,7 @@ thead th.ts-active { text-decoration:underline; text-underline-offset:3px; }
       </div>
       <div class="card" style="padding:1rem;">
         <div style="font-size:.72rem;color:var(--g500);text-transform:uppercase;letter-spacing:.04em;font-weight:600;">CA HT cumulé</div>
-        <div class="stat-val" id="top100-stat-ca" style="font-size:1.5rem;color:var(--em600,#059669);margin-top:4px;">—</div>
+        <div class="stat-val" id="top100-stat-ca" style="font-size:1.5rem;color:var(--em600,#266327);margin-top:4px;">—</div>
       </div>
       <div class="card" style="padding:1rem;">
         <div style="font-size:.72rem;color:var(--g500);text-transform:uppercase;letter-spacing:.04em;font-weight:600;">Colis vendus</div>
@@ -2562,7 +2634,7 @@ thead th.ts-active { text-decoration:underline; text-underline-offset:3px; }
               <button class="btn btn-ghost" onclick="mlPickFromContacts()" style="font-size:.74rem;padding:.35rem .7rem;">👥 Base clients</button>
               <button class="btn btn-ghost" onclick="mlDedup()" style="font-size:.74rem;padding:.35rem .7rem;">🧹 Dédupliquer</button>
               <button class="btn btn-ghost" onclick="mlClearRecipients()" style="font-size:.74rem;padding:.35rem .7rem;">🗑 Effacer</button>
-              <span id="ml-recipients-invalid" style="font-size:.7rem;color:#dc2626;margin-left:auto;"></span>
+              <span id="ml-recipients-invalid" style="font-size:.7rem;color:#b0402f;margin-left:auto;"></span>
             </div>
           </div>
         </div>
@@ -2593,7 +2665,7 @@ thead th.ts-active { text-decoration:underline; text-underline-offset:3px; }
               <span id="ml-ai-pdf-name" style="font-size:.75rem;color:var(--g700);flex:1;min-width:120px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">Aucun document</span>
               <label for="ml-ai-pdf-file" class="btn btn-ghost" style="font-size:.7rem;padding:.28rem .6rem;cursor:pointer;margin:0;">Choisir un PDF</label>
               <input type="file" id="ml-ai-pdf-file" accept=".pdf" onchange="mlAiSetPdf(this.files[0])" style="display:none;"/>
-              <button class="btn btn-ghost" id="ml-ai-pdf-clear" onclick="mlAiClearPdf()" style="font-size:.7rem;padding:.28rem .6rem;color:#dc2626;display:none;">Retirer</button>
+              <button class="btn btn-ghost" id="ml-ai-pdf-clear" onclick="mlAiClearPdf()" style="font-size:.7rem;padding:.28rem .6rem;color:#b0402f;display:none;">Retirer</button>
             </div>
             <div style="font-size:.67rem;color:var(--g500);margin-top:.3rem;">
               L'IA lira le PDF (tarif, promo, catalogue…) pour rédiger. Si une pièce jointe est déjà présente sur le mail, elle est utilisée automatiquement.
@@ -2664,7 +2736,7 @@ thead th.ts-active { text-decoration:underline; text-underline-offset:3px; }
             <button type="button" onclick="mlInsertLink()" title="Lien">🔗 Lien</button>
             <button type="button" onclick="mlInsertImage()" title="Image">🖼 Image</button>
             <span class="ml-tbsep"></span>
-            <button type="button" onclick="mlExec('removeFormat')" title="Effacer mise en forme" style="color:#dc2626;">⨯ Format</button>
+            <button type="button" onclick="mlExec('removeFormat')" title="Effacer mise en forme" style="color:#b0402f;">⨯ Format</button>
           </div>
           <div id="ml-editor" contenteditable="true" oninput="if(typeof mlUpdateSendBtn==='function')mlUpdateSendBtn();" style="min-height:280px;max-height:500px;overflow-y:auto;padding:1rem 1.2rem;font-size:.9rem;line-height:1.55;color:var(--g800);outline:none;border-top:1px solid var(--border);"></div>
         </div>
@@ -2687,7 +2759,7 @@ thead th.ts-active { text-decoration:underline; text-underline-offset:3px; }
                   <div id="ml-pj-size" style="font-size:.7rem;color:var(--g500);"></div>
                 </div>
               </div>
-              <button class="btn btn-ghost" onclick="mlRemovePJ()" style="font-size:.72rem;padding:.3rem .6rem;color:#dc2626;">🗑</button>
+              <button class="btn btn-ghost" onclick="mlRemovePJ()" style="font-size:.72rem;padding:.3rem .6rem;color:#b0402f;">🗑</button>
             </div>
           </div>
         </div>
@@ -2958,7 +3030,7 @@ thead th.ts-active { text-decoration:underline; text-underline-offset:3px; }
       <button class="btn btn-ghost" id="nfd-scan-btn-cancel" onclick="nfdCloseScanner()" style="background:transparent;color:#cbd5e1;border-color:rgba(255,255,255,.15);">Annuler</button>
       <button class="btn btn-primary" id="nfd-scan-btn-capture" onclick="nfdCapturePhoto()" style="flex:1;">📸 Prendre la photo</button>
       <button class="btn btn-ghost hidden" id="nfd-scan-btn-retake" onclick="nfdRetakePhoto()" style="background:transparent;color:#cbd5e1;border-color:rgba(255,255,255,.15);">↺ Reprendre</button>
-      <button class="btn btn-primary hidden" id="nfd-scan-btn-confirm" onclick="nfdConfirmPhoto()" style="flex:1;background:var(--em600,#059669);border-color:var(--em600,#059669);">✓ Utiliser cette photo</button>
+      <button class="btn btn-primary hidden" id="nfd-scan-btn-confirm" onclick="nfdConfirmPhoto()" style="flex:1;background:var(--em600,#266327);border-color:var(--em600,#266327);">✓ Utiliser cette photo</button>
     </div>
   </div>
 </div>
@@ -3448,12 +3520,9 @@ function initBrandSwitcherUI() {
   applyBrandTheme();
   var btnMdm = document.getElementById('brand-btn-mdm');
   var btnNat = document.getElementById('brand-btn-naturaline');
-  var ico = document.getElementById('brand-ico');
-  var label = document.getElementById('brand-name-label');
-  if (btnMdm) { btnMdm.style.background = isNat ? 'transparent' : 'rgba(255,255,255,.18)'; btnMdm.style.opacity = isNat ? '.6' : '1'; }
-  if (btnNat) { btnNat.style.background = isNat ? 'rgba(255,255,255,.18)' : 'transparent'; btnNat.style.opacity = isNat ? '1' : '.6'; }
-  if (ico) ico.textContent = isNat ? '🌿' : '🌾';
-  if (label) label.textContent = isNat ? 'Naturaline' : 'Moulin des Moines';
+  if (btnMdm) { btnMdm.style.background = isNat ? 'transparent' : 'rgba(255,255,255,.20)'; btnMdm.style.opacity = isNat ? '.6' : '1'; }
+  if (btnNat) { btnNat.style.background = isNat ? 'rgba(255,255,255,.20)' : 'transparent'; btnNat.style.opacity = isNat ? '1' : '.6'; }
+  // Le logo (blason + nom) est un SVG piloté par la classe body.brand-naturaline ; rien à faire ici.
 }
 
 // ─── Accords commerciaux ──────────────────────────────────────────────────
@@ -3574,13 +3643,13 @@ function accordsRender() {
         (p.label || ('≥'+p.seuil+'€ → '+p.remise+'%')) + '</span>';
     }).join('');
     var promosBadges = (acc.promos||[]).map(function(p) {
-      return '<span style="display:inline-block;padding:2px 8px;background:var(--em100,#dcfce7);color:var(--em700,#15803d);border-radius:12px;font-size:.72rem;font-weight:600;margin:2px;">' +
+      return '<span style="display:inline-block;padding:2px 8px;background:var(--em100,#eef3ee);color:var(--em700,#266327);border-radius:12px;font-size:.72rem;font-weight:600;margin:2px;">' +
         p.periode + ' −' + p.remise + '%</span>';
     }).join('');
     var validite = (acc.debut && acc.fin) ? acc.debut.slice(0,7).replace('-','/') + ' → ' + acc.fin.slice(0,7).replace('-','/') : '—';
     var adminBtns = isAdminUser()
       ? '<button class="btn btn-ghost" onclick="accordsEdit(\''+acc._id+'\')" style="font-size:.72rem;padding:.25rem .5rem;">✏️</button> ' +
-        '<button class="btn btn-ghost" onclick="accordsDelete(\''+acc._id+'\')" style="font-size:.72rem;padding:.25rem .5rem;color:#dc2626;">🗑</button>'
+        '<button class="btn btn-ghost" onclick="accordsDelete(\''+acc._id+'\')" style="font-size:.72rem;padding:.25rem .5rem;color:#b0402f;">🗑</button>'
       : '';
     return '<div class="card" style="padding:1rem;">' +
       '<div style="display:flex;justify-content:space-between;align-items:flex-start;">' +
@@ -3842,8 +3911,8 @@ async function comptesRender() {
       var actif = (r.actif !== false); // par défaut actif si le champ n'existe pas encore
       var roleLabel = (r.role === 'admin') ? '👑 Admin' : '👤 Commercial';
       var statutBadge = actif
-        ? '<span style="display:inline-block;padding:2px 10px;border-radius:20px;background:var(--em100,#dcfce7);color:var(--em700,#15803d);font-size:.72rem;font-weight:600;">● Actif</span>'
-        : '<span style="display:inline-block;padding:2px 10px;border-radius:20px;background:#fee2e2;color:#b91c1c;font-size:.72rem;font-weight:600;">● Désactivé</span>';
+        ? '<span style="display:inline-block;padding:2px 10px;border-radius:20px;background:var(--em100,#eef3ee);color:var(--em700,#266327);font-size:.72rem;font-weight:600;">● Actif</span>'
+        : '<span style="display:inline-block;padding:2px 10px;border-radius:20px;background:#f8ede9;color:#b91c1c;font-size:.72rem;font-weight:600;">● Désactivé</span>';
 
       var actions = '';
       if (isMe) {
@@ -4437,14 +4506,14 @@ function top100RenderTable(){
     var rank = i+1;
     var medal = rank===1?'🥇':rank===2?'🥈':rank===3?'🥉':String(rank);
     var stock = (r.stock==null)?'—':top100Int(r.stock);
-    var stockStyle = (typeof r.stock==='number' && r.stock<0)?'color:#dc2626;font-weight:600;':'color:var(--g600);';
+    var stockStyle = (typeof r.stock==='number' && r.stock<0)?'color:#b0402f;font-weight:600;':'color:var(--g600);';
     return '<tr style="border-bottom:1px solid var(--border);">'+
       '<td style="padding:.5rem .6rem;text-align:center;font-weight:700;color:var(--g600);">'+medal+'</td>'+
       '<td style="padding:.5rem .6rem;font-weight:600;color:var(--g800);min-width:220px;">'+top100Esc(r.libelle)+'</td>'+
       '<td style="padding:.5rem .6rem;font-family:monospace;font-size:.74rem;color:var(--g500);white-space:nowrap;">'+top100Esc(r.code)+'</td>'+
       '<td style="padding:.5rem .6rem;font-family:monospace;font-size:.72rem;color:var(--g500);white-space:nowrap;">'+top100Esc(r.ean||'—')+'</td>'+
       '<td style="padding:.5rem .6rem;text-align:right;font-weight:'+(metric==='qte'?'700':'400')+';color:'+(metric==='qte'?'var(--blue-p700)':'var(--g700)')+';">'+top100Int(r.qte)+'</td>'+
-      '<td style="padding:.5rem .6rem;text-align:right;white-space:nowrap;font-weight:'+(metric==='ca'?'700':'400')+';color:'+(metric==='ca'?'var(--em600,#059669)':'var(--g700)')+';">'+top100Eur(r.ca)+'</td>'+
+      '<td style="padding:.5rem .6rem;text-align:right;white-space:nowrap;font-weight:'+(metric==='ca'?'700':'400')+';color:'+(metric==='ca'?'var(--em600,#266327)':'var(--g700)')+';">'+top100Eur(r.ca)+'</td>'+
       '<td style="padding:.5rem .6rem;text-align:center;color:var(--g600);">'+top100Int(r.nbCmd)+'</td>'+
       '<td style="padding:.5rem .6rem;text-align:center;color:var(--g600);">'+top100Int(r.nbCli)+'</td>'+
       '<td style="padding:.5rem .6rem;text-align:right;'+stockStyle+'">'+stock+'</td>'+
@@ -4531,7 +4600,7 @@ function cadImpStatus(msg, kind){
   var el = document.getElementById('cadimp-status'); if(!el) return;
   if (!msg) { el.style.display='none'; return; }
   el.style.display='block'; el.textContent=msg;
-  if (kind==='err'){ el.style.background='#fee2e2'; el.style.color='#991b1b'; }
+  if (kind==='err'){ el.style.background='#f8ede9'; el.style.color='#8f3325'; }
   else if (kind==='ok'){ el.style.background='#d1fae5'; el.style.color='#065f46'; }
   else { el.style.background='var(--blue-p50)'; el.style.color='var(--blue-p700)'; }
 }
@@ -4881,12 +4950,12 @@ function cadRender(){
     if (lapsed.length) {
       alert.style.display = 'block';
       alert.style.padding = '1rem';
-      alert.style.borderLeft = '4px solid #f59e0b';
+      alert.style.borderLeft = '4px solid #b07d1a';
       alert.style.marginBottom = '1.25rem';
       alert.innerHTML = '<div style="font-size:.82rem;font-weight:600;color:var(--g800);margin-bottom:.5rem;">⚠️ Produits habituels non repris depuis 3 mois</div>' +
         '<div style="display:flex;flex-wrap:wrap;gap:6px;">' +
         lapsed.map(function(r){
-          return '<span style="font-size:.74rem;background:#fef3c7;color:#92400e;padding:.25rem .6rem;border-radius:99px;">' +
+          return '<span style="font-size:.74rem;background:#fef3c7;color:#7a5512;padding:.25rem .6rem;border-radius:99px;">' +
             cadEsc(r.libelle || r.code) + ' <span style="opacity:.7;">· dernier : ' +
             (r.last ? r.last.toLocaleDateString('fr-FR') : '—') + '</span></span>';
         }).join('') + '</div>';
@@ -4905,7 +4974,7 @@ function cadRender(){
     (M.imported ? 'background:#d1fae5;color:#065f46;' : 'background:var(--blue-p50);color:var(--blue-p700);');
   srcEl.innerHTML = M.imported
     ? '📥 Données issues du cadencier Mobilogic importé' + (M.estimated ? ' — <strong>le CA affiché est estimé</strong> à partir des tarifs catalogue (l\'export ne contient pas de prix). Votre CA réel reste celui du Dashboard.' : '.') +
-      ' <a href="#" onclick="cadSupprImport();return false;" style="color:#991b1b;">Supprimer cet import</a>'
+      ' <a href="#" onclick="cadSupprImport();return false;" style="color:#8f3325;">Supprimer cet import</a>'
     : 'ℹ️ Données issues des bons de commande saisis dans le CRM. Importez le cadencier Mobilogic de ce client pour un historique complet.';
 
   // en-tête
@@ -5233,7 +5302,7 @@ function profilStatus(msg, kind){
   if (!msg) { el.style.display = 'none'; return; }
   el.style.display = 'block';
   el.textContent = msg;
-  if (kind === 'err') { el.style.background = '#fee2e2'; el.style.color = '#991b1b'; }
+  if (kind === 'err') { el.style.background = '#f8ede9'; el.style.color = '#8f3325'; }
   else if (kind === 'ok') { el.style.background = '#d1fae5'; el.style.color = '#065f46'; }
   else { el.style.background = 'var(--blue-p50)'; el.style.color = 'var(--blue-p700)'; }
 }
@@ -5793,7 +5862,7 @@ function nfdEditLine(id) {
   // (cf. logique dans nfdAddLine). Le badge reflète juste s'il y a déjà une photo.
   nfdPendingPhoto = null;
   var badge = document.getElementById('nfd-photo-badge');
-  if (line.photo) { badge.classList.remove('hidden'); badge.style.background = 'var(--em600,#059669)'; }
+  if (line.photo) { badge.classList.remove('hidden'); badge.style.background = 'var(--em600,#266327)'; }
   else { badge.classList.add('hidden'); }
 
   document.getElementById('nfd-form-title').textContent = '✏️ Modifier la ligne du ' + nfdFmtDate(line.date);
@@ -5830,7 +5899,7 @@ function nfdOpenScanner() {
   document.getElementById('nfd-scan-btn-retake').classList.add('hidden');
   document.getElementById('nfd-scan-btn-confirm').classList.add('hidden');
   var badge = document.getElementById('nfd-photo-badge');
-  if (badge) badge.style.background = 'var(--em600,#059669)';
+  if (badge) badge.style.background = 'var(--em600,#266327)';
   nfdSetScanStatus('Initialisation de la caméra…');
   nfdStartCamera();
 }
@@ -5937,12 +6006,12 @@ function nfdAnalyzeTicket(dataUrl) {
   var mediaType = dataUrl.substring(5, dataUrl.indexOf(';')); // ex: "image/jpeg"
 
   var statusEl = document.getElementById('nfd-photo-badge');
-  if (statusEl) { statusEl.style.background = '#f59e0b'; } // orange = analyse en cours
+  if (statusEl) { statusEl.style.background = '#b07d1a'; } // orange = analyse en cours
 
   var callAnalyse = fbFunctions.httpsCallable('analyseTicketFrais');
   callAnalyse({ imageBase64: imageBase64, mediaType: mediaType }).then(function(result) {
     var data = result.data;
-    if (statusEl) { statusEl.style.background = 'var(--em600,#059669)'; }
+    if (statusEl) { statusEl.style.background = 'var(--em600,#266327)'; }
 
     if (!data || data.lisible === false) {
       toast('🔍 Ticket analysé, mais peu lisible — vérifiez/complétez les champs manuellement', 'err');
@@ -5984,7 +6053,7 @@ function nfdAnalyzeTicket(dataUrl) {
     }
   }).catch(function(err) {
     console.warn('[NFD] Erreur analyse ticket:', err);
-    if (statusEl) { statusEl.style.background = '#dc2626'; } // rouge = erreur
+    if (statusEl) { statusEl.style.background = '#b0402f'; } // rouge = erreur
     toast('⚠️ Analyse automatique impossible (' + (err.message || 'erreur') + ') — saisissez manuellement', 'err');
   });
 }
@@ -6071,7 +6140,7 @@ function nfdRender() {
         '<td style="text-align:right;font-variant-numeric:tabular-nums;font-weight:600;">' + nfdFmt(l.ttc) + '</td>' +
         '<td style="font-size:.78rem;color:var(--g700);">' + nfdEsc(l.description) + '</td>' +
         '<td style="text-align:center;">' + (l.photo ? '<button class="btn btn-ghost" onclick="nfdViewPhoto(\'' + l.id + '\')" style="font-size:.85rem;padding:.2rem .4rem;" title="Voir le justificatif">📷</button>' : '<span style="color:var(--g400);font-size:.78rem;">—</span>') + '</td>' +
-        '<td style="white-space:nowrap;"><button class="btn btn-ghost" onclick="nfdEditLine(\'' + l.id + '\')" style="font-size:.7rem;padding:.25rem .5rem;color:var(--blue-p700);" title="Modifier cette ligne">✏️</button> <button class="btn btn-ghost" onclick="nfdDeleteLine(\'' + l.id + '\')" style="font-size:.7rem;padding:.25rem .55rem;color:#dc2626;" title="Supprimer">🗑</button></td>' +
+        '<td style="white-space:nowrap;"><button class="btn btn-ghost" onclick="nfdEditLine(\'' + l.id + '\')" style="font-size:.7rem;padding:.25rem .5rem;color:var(--blue-p700);" title="Modifier cette ligne">✏️</button> <button class="btn btn-ghost" onclick="nfdDeleteLine(\'' + l.id + '\')" style="font-size:.7rem;padding:.25rem .55rem;color:#b0402f;" title="Supprimer">🗑</button></td>' +
       '</tr>';
     }).join('');
   }
@@ -6102,8 +6171,8 @@ function nfdRender() {
     var totalHD  = htHotel + htDejeuner;
     var restant  = PLAFOND_HD - totalHD;
     var pct      = Math.min(100, Math.round(totalHD / PLAFOND_HD * 100));
-    var couleur  = pct >= 100 ? '#dc2626' : pct >= 85 ? '#f59e0b' : '#16a34a';
-    var barColor = pct >= 100 ? '#dc2626' : pct >= 85 ? '#f59e0b' : '#2070c8';
+    var couleur  = pct >= 100 ? '#b0402f' : pct >= 85 ? '#b07d1a' : '#16a34a';
+    var barColor = pct >= 100 ? '#b0402f' : pct >= 85 ? '#b07d1a' : '#2070c8';
 
     var hdRow = '<tr style="border-top:2px dashed var(--blue-p300);background:#f0f6fc;">' +
       '<td style="padding:.5rem .75rem;">' +
@@ -6119,7 +6188,7 @@ function nfdRender() {
       '</td>' +
       '<td style="text-align:right;padding:.5rem .75rem;">' +
         '<div style="font-size:.75rem;color:var(--g600);">' + (restant >= 0 ? 'Restant' : 'Dépassé') + '</div>' +
-        '<div style="font-weight:600;font-size:.82rem;color:' + (restant >= 0 ? '#16a34a' : '#dc2626') + ';">' +
+        '<div style="font-weight:600;font-size:.82rem;color:' + (restant >= 0 ? '#16a34a' : '#b0402f') + ';">' +
           (restant >= 0 ? nfdFmt(restant) : '⚠ +' + nfdFmt(Math.abs(restant))) +
         '</div>' +
       '</td>' +
@@ -7093,7 +7162,7 @@ function commRefresh() {
           : '<tr><td colspan="2" style="padding:.3rem .6rem;font-size:.8rem;color:var(--amber);">⚠️ Aucun objectif défini — à saisir dans Dashboard → Objectifs pour activer le bonus 2%</td></tr>';
 
         var depassLine = (globalObjectif > 0 && depassement > 0)
-          ? '<tr><td style="padding:.4rem .6rem;color:#15803d;font-weight:600;">📈 Dépassement</td><td style="padding:.4rem .6rem;text-align:right;font-size:1.15rem;font-weight:700;color:#15803d;">+' + commFmt(depassement) + '</td></tr>'
+          ? '<tr><td style="padding:.4rem .6rem;color:#266327;font-weight:600;">📈 Dépassement</td><td style="padding:.4rem .6rem;text-align:right;font-size:1.15rem;font-weight:700;color:#266327;">+' + commFmt(depassement) + '</td></tr>'
           : (globalObjectif > 0 ? '<tr><td style="padding:.4rem .6rem;color:var(--amber);font-weight:600;">⏳ Reste à faire</td><td style="padding:.4rem .6rem;text-align:right;font-size:1rem;color:var(--amber);">' + commFmt(globalObjectif - globalCAtotal) + '</td></tr>' : '');
 
         var commDetail = globalObjectif > 0 && depassement > 0
@@ -7105,7 +7174,7 @@ function commRefresh() {
             '<tr><td style="padding:.4rem .6rem;color:var(--blue-p700);font-weight:600;">📄 CA Facturé ' + moisLabel + '</td><td style="padding:.4rem .6rem;text-align:right;font-size:1.15rem;font-weight:700;color:var(--blue-p800);">' + commFmt(globalCAtotal) + '</td></tr>' +
             objLine +
             depassLine +
-            '<tr style="border-top:2px solid var(--blue-p300);"><td style="padding:.5rem .6rem;font-weight:700;color:var(--blue-p900);">💶 Commission totale</td><td style="padding:.5rem .6rem;text-align:right;font-size:1.4rem;font-weight:800;color:#7c3aed;">' + commFmt(globalCommTotal) + '</td></tr>' +
+            '<tr style="border-top:2px solid var(--blue-p300);"><td style="padding:.5rem .6rem;font-weight:700;color:var(--blue-p900);">💶 Commission totale</td><td style="padding:.5rem .6rem;text-align:right;font-size:1.4rem;font-weight:800;color:#6a6f64;">' + commFmt(globalCommTotal) + '</td></tr>' +
             '<tr><td colspan="2" style="padding:.3rem .6rem;font-size:.78rem;color:var(--blue-p700);border-top:1px solid var(--blue-p200);">Calcul : ' + commDetail + '</td></tr>' +
           '</table>';
       }
@@ -7256,8 +7325,8 @@ function commHistRender() {
             {
               type: 'line', label: 'Commission (€)',
               data: dataComm,
-              borderColor: '#7c3aed', backgroundColor: 'rgba(124,58,237,.12)',
-              borderWidth: 2.5, pointRadius: 4, pointBackgroundColor: '#7c3aed',
+              borderColor: '#6a6f64', backgroundColor: 'rgba(124,58,237,.12)',
+              borderWidth: 2.5, pointRadius: 4, pointBackgroundColor: '#6a6f64',
               tension: 0.3, fill: true, yAxisID: 'yComm', order: 1
             }
           ]
@@ -7322,11 +7391,11 @@ function commHistRender() {
     if (ca === 0 && obj === 0) {
       statut = '<span style="color:var(--g400);font-size:.72rem;">—</span>';
     } else if (ca >= obj && obj > 0) {
-      statut = '<span style="background:#dcfce7;color:#15803d;padding:2px 8px;border-radius:20px;font-size:.7rem;font-weight:600;">✅ Dépassé</span>';
+      statut = '<span style="background:#eef3ee;color:#266327;padding:2px 8px;border-radius:20px;font-size:.7rem;font-weight:600;">✅ Dépassé</span>';
     } else if (ca > 0) {
-      statut = '<span style="background:#fef9c3;color:#92400e;padding:2px 8px;border-radius:20px;font-size:.7rem;font-weight:600;">⏳ En cours</span>';
+      statut = '<span style="background:#fef9c3;color:#7a5512;padding:2px 8px;border-radius:20px;font-size:.7rem;font-weight:600;">⏳ En cours</span>';
     } else {
-      statut = '<span style="background:#fee2e2;color:#b91c1c;padding:2px 8px;border-radius:20px;font-size:.7rem;font-weight:600;">❌ Aucun CA</span>';
+      statut = '<span style="background:#f8ede9;color:#b91c1c;padding:2px 8px;border-radius:20px;font-size:.7rem;font-weight:600;">❌ Aucun CA</span>';
     }
 
     var rowStyle = isCur ? 'background:var(--blue-p50);font-weight:600;' : '';
@@ -7336,8 +7405,8 @@ function commHistRender() {
       '<td style="padding:.5rem .75rem;">' + label + ' ' + year + (isCur ? ' 📍' : '') + '</td>' +
       '<td style="padding:.5rem .75rem;text-align:right;color:var(--blue-p800);">' + fmt(ca) + '</td>' +
       '<td style="padding:.5rem .75rem;text-align:right;color:var(--amber);">' + fmt(obj) + '</td>' +
-      '<td style="padding:.5rem .75rem;text-align:right;color:' + (depass > 0 ? '#15803d' : 'var(--g400)') + ';">' + fmt(depass) + '</td>' +
-      '<td style="padding:.5rem .75rem;text-align:right;font-weight:700;color:#7c3aed;">' + fmt(comm) + '</td>' +
+      '<td style="padding:.5rem .75rem;text-align:right;color:' + (depass > 0 ? '#266327' : 'var(--g400)') + ';">' + fmt(depass) + '</td>' +
+      '<td style="padding:.5rem .75rem;text-align:right;font-weight:700;color:#6a6f64;">' + fmt(comm) + '</td>' +
       '<td style="padding:.5rem .75rem;text-align:center;">' + statut + '</td>' +
     '</tr>';
   }).join('');
@@ -7348,7 +7417,7 @@ function commHistRender() {
     '<td style="padding:.6rem .75rem;text-align:right;color:var(--blue-p800);">' + fmtT(totalCA) + '</td>' +
     '<td style="padding:.6rem .75rem;text-align:right;color:var(--amber);">' + fmtT(totalObj) + '</td>' +
     '<td style="padding:.6rem .75rem;text-align:right;"></td>' +
-    '<td style="padding:.6rem .75rem;text-align:right;color:#7c3aed;">' + fmtT(totalComm) + '</td>' +
+    '<td style="padding:.6rem .75rem;text-align:right;color:#6a6f64;">' + fmtT(totalComm) + '</td>' +
     '<td></td>' +
   '</tr>';
 }
@@ -7543,8 +7612,8 @@ function bdcHistRender() {
     var date = cmd.createdAt ? new Date(cmd.createdAt.seconds ? cmd.createdAt.seconds*1000 : cmd.createdAt).toLocaleDateString('fr-FR') : '—';
     var heure = cmd.createdAt ? new Date(cmd.createdAt.seconds ? cmd.createdAt.seconds*1000 : cmd.createdAt).toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'}) : '';
     var statut = cmd.statut || 'Saisie';
-    var statutColor = statut === 'Envoyée' ? '#15803d' : '#92400e';
-    var statutBg = statut === 'Envoyée' ? '#dcfce7' : '#fef9c3';
+    var statutColor = statut === 'Envoyée' ? '#266327' : '#7a5512';
+    var statutBg = statut === 'Envoyée' ? '#eef3ee' : '#fef9c3';
     var nbRefs = cmd.nbRefs || (cmd.lignes ? cmd.lignes.length : '?');
     var montant = cmd.montant ? cmd.montant.toLocaleString('fr-FR',{minimumFractionDigits:2,maximumFractionDigits:2})+'€' : '—';
     return '<div style="display:flex;align-items:center;gap:10px;padding:.6rem .75rem;border-radius:8px;border:1px solid var(--border);margin-bottom:.5rem;background:var(--surface);">' +
@@ -7561,7 +7630,7 @@ function bdcHistRender() {
         '<button class="btn btn-ghost" onclick="bdcHistResend(\''+cmd._id+'\')" title="Réenvoyer par mail" style="font-size:.72rem;padding:.3rem .5rem;">✉️</button>' +
         '<button class="btn btn-ghost" onclick="bdcHistExportPDF(\''+cmd._id+'\')" title="Télécharger en PDF" style="font-size:.72rem;padding:.3rem .5rem;">📄</button>' +
         '<button class="btn btn-ghost" onclick="bdcHistExportXLS(\''+cmd._id+'\')" title="Télécharger en Excel" style="font-size:.72rem;padding:.3rem .5rem;">📊</button>' +
-        '<button class="btn btn-ghost" onclick="bdcHistDelete(\''+cmd._id+'\')" title="Supprimer" style="font-size:.72rem;padding:.3rem .5rem;color:#dc2626;">🗑</button>' +
+        '<button class="btn btn-ghost" onclick="bdcHistDelete(\''+cmd._id+'\')" title="Supprimer" style="font-size:.72rem;padding:.3rem .5rem;color:#b0402f;">🗑</button>' +
       '</div>' +
     '</div>';
   }).join('');
@@ -7827,7 +7896,7 @@ function bdcUpdateRecapBar() {
   bar.style.display = 'block';
   items.innerHTML = lines.join('');
   totalEl.textContent = '→ ' + bdcFmt(totalNet) + ' HT (' + lines.length + ' réf.)';
-  totalEl.style.color = nbRuptures > 0 ? '#fca5a5' : '#4ade80';
+  totalEl.style.color = nbRuptures > 0 ? '#e3b8b0' : '#4ade80';
   if (nbRuptures > 0) {
     totalEl.textContent += '  ⚠️ ' + nbRuptures + ' réf. en stock insuffisant';
   }
@@ -7874,7 +7943,7 @@ function bdcRenderRecapDetail() {
     '</td>';
     rows += '<td style="padding:.3rem .5rem;text-align:center;"><input type="number" min="0" max="100" step="0.5" value="'+rl+'" placeholder="—" data-code-recap="'+dCode+'" oninput="bdcRecapOnRemise(this)" onchange="bdcRecapOnRemise(this)" style="width:55px;padding:.3rem .35rem;text-align:right;font-size:.78rem;" title="Remise % sur cette ligne"></td>';
     rows += '<td id="bdcr-t-'+dCode+'" style="padding:.4rem .6rem;text-align:right;font-weight:600;color:var(--em400);white-space:nowrap;">'+bdcFmt(total)+'</td>';
-    rows += '<td style="padding:.4rem .6rem;text-align:center;"><button onclick="bdcRecapRemoveLine(\''+dCode+'\')" title="Retirer cette ligne" style="width:24px;height:24px;border-radius:5px;border:1px solid rgba(220,38,38,.3);background:rgba(220,38,38,.08);color:#dc2626;cursor:pointer;font-size:13px;line-height:1;">✕</button></td>';
+    rows += '<td style="padding:.4rem .6rem;text-align:center;"><button onclick="bdcRecapRemoveLine(\''+dCode+'\')" title="Retirer cette ligne" style="width:24px;height:24px;border-radius:5px;border:1px solid rgba(220,38,38,.3);background:rgba(220,38,38,.08);color:#b0402f;cursor:pointer;font-size:13px;line-height:1;">✕</button></td>';
     rows += '</tr>';
   });
 
@@ -7925,8 +7994,8 @@ function bdcStockBadgeHtml(p, light) {
   }
   if (stk <= 0) {
     return light
-      ? '<span style="display:inline-block;padding:2px 6px;border-radius:10px;font-size:.65rem;font-weight:700;background:#fee2e2;color:#991b1b;border:1px solid #fca5a5;">⛔ Rupture</span>'
-      : '<span style="display:inline-block;padding:2px 6px;border-radius:10px;font-size:.65rem;font-weight:600;background:#450a0a;color:#fca5a5;border:1px solid #7f1d1d;">⛔ Rupture</span>';
+      ? '<span style="display:inline-block;padding:2px 6px;border-radius:10px;font-size:.65rem;font-weight:700;background:#f8ede9;color:#8f3325;border:1px solid #e3b8b0;">⛔ Rupture</span>'
+      : '<span style="display:inline-block;padding:2px 6px;border-radius:10px;font-size:.65rem;font-weight:600;background:#450a0a;color:#e3b8b0;border:1px solid #7f1d1d;">⛔ Rupture</span>';
   }
 
   var stkColis = Math.floor(stk / pcbStk);
@@ -7940,13 +8009,13 @@ function bdcStockBadgeHtml(p, light) {
   }
   if (stkColis <= 5) {
     return light
-      ? '<span'+titleAttr+' style="display:inline-block;padding:2px 6px;border-radius:10px;font-size:.65rem;font-weight:700;background:#fef3c7;color:#92400e;border:1px solid #fcd34d;">🟡 '+label+'</span>'
-      : '<span'+titleAttr+' style="display:inline-block;padding:2px 6px;border-radius:10px;font-size:.65rem;font-weight:700;background:#422006;color:#fcd34d;border:1px solid #92400e;">🟡 '+label+'</span>';
+      ? '<span'+titleAttr+' style="display:inline-block;padding:2px 6px;border-radius:10px;font-size:.65rem;font-weight:700;background:#fef3c7;color:#7a5512;border:1px solid #e8c98a;">🟡 '+label+'</span>'
+      : '<span'+titleAttr+' style="display:inline-block;padding:2px 6px;border-radius:10px;font-size:.65rem;font-weight:700;background:#422006;color:#e8c98a;border:1px solid #7a5512;">🟡 '+label+'</span>';
   }
   if (stkColis <= 20) {
     return light
-      ? '<span'+titleAttr+' style="display:inline-block;padding:2px 6px;border-radius:10px;font-size:.65rem;font-weight:600;background:#dcfce7;color:#166534;border:1px solid #86efac;">🟢 '+label+'</span>'
-      : '<span'+titleAttr+' style="display:inline-block;padding:2px 6px;border-radius:10px;font-size:.65rem;font-weight:600;background:#052e16;color:#86efac;border:1px solid #166534;">🟢 '+label+'</span>';
+      ? '<span'+titleAttr+' style="display:inline-block;padding:2px 6px;border-radius:10px;font-size:.65rem;font-weight:600;background:#eef3ee;color:#1c4d1e;border:1px solid #86efac;">🟢 '+label+'</span>'
+      : '<span'+titleAttr+' style="display:inline-block;padding:2px 6px;border-radius:10px;font-size:.65rem;font-weight:600;background:#052e16;color:#86efac;border:1px solid #1c4d1e;">🟢 '+label+'</span>';
   }
   return light
     ? '<span'+titleAttr+' style="display:inline-block;padding:2px 6px;border-radius:10px;font-size:.65rem;font-weight:600;background:#dbeafe;color:#1e40af;border:1px solid #93c5fd;">✅ '+label+'</span>'
@@ -8113,7 +8182,7 @@ function bdcShowAlert(msg, type) {
   el.style.display = 'block';
   el.style.background = type==='ok' ? 'rgba(5,150,105,.15)' : 'rgba(239,68,68,.1)';
   el.style.border = type==='ok' ? '1px solid rgba(5,150,105,.3)' : '1px solid rgba(239,68,68,.2)';
-  el.style.color = type==='ok' ? 'var(--em400)' : '#fca5a5';
+  el.style.color = type==='ok' ? 'var(--em400)' : '#e3b8b0';
   setTimeout(function(){el.style.display='none';}, 7000);
 }
 
@@ -8141,7 +8210,7 @@ function bdcBuildHtml() {
   });
 
   var remiseLigne = tB - tN > 0
-    ? '<tr><td colspan="5" bgcolor="#fffbeb" style="padding:6px 10px;background-color:#fffbeb;font-size:12px;color:#92400e;text-align:right;">Remise '+bdcRemise+'%</td><td bgcolor="#fffbeb" style="padding:6px 10px;background-color:#fffbeb;text-align:right;font-weight:bold;color:#92400e;">-'+bdcFmt(tB-tN)+'</td></tr>'
+    ? '<tr><td colspan="5" bgcolor="#f8f1e0" style="padding:6px 10px;background-color:#f8f1e0;font-size:12px;color:#7a5512;text-align:right;">Remise '+bdcRemise+'%</td><td bgcolor="#f8f1e0" style="padding:6px 10px;background-color:#f8f1e0;text-align:right;font-weight:bold;color:#7a5512;">-'+bdcFmt(tB-tN)+'</td></tr>'
     : '';
 
   var infoItems = '';
@@ -8508,7 +8577,7 @@ function bdcParseRows(rows) {
 
   document.getElementById('bdc-import-summary').innerHTML =
     '<div style="flex:1;background:rgba(30,41,59,.7);border-radius:6px;padding:.5rem;text-align:center;"><div style="font-size:1.1rem;font-weight:600;color:var(--em400);">'+ok+'</div><div style="font-size:.6rem;color:var(--s600);text-transform:uppercase;">Trouvés</div></div>'+
-    '<div style="flex:1;background:rgba(30,41,59,.7);border-radius:6px;padding:.5rem;text-align:center;"><div style="font-size:1.1rem;font-weight:600;color:#fca5a5;">'+nf+'</div><div style="font-size:.6rem;color:var(--s600);text-transform:uppercase;">Introuvables</div></div>'+
+    '<div style="flex:1;background:rgba(30,41,59,.7);border-radius:6px;padding:.5rem;text-align:center;"><div style="font-size:1.1rem;font-weight:600;color:#e3b8b0;">'+nf+'</div><div style="font-size:.6rem;color:var(--s600);text-transform:uppercase;">Introuvables</div></div>'+
     '<div style="flex:1;background:rgba(30,41,59,.7);border-radius:6px;padding:.5rem;text-align:center;"><div style="font-size:1.1rem;font-weight:600;color:var(--white);">'+results.length+'</div><div style="font-size:.6rem;color:var(--s600);text-transform:uppercase;">Lignes</div></div>';
 
   document.getElementById('bdc-import-rows').innerHTML = results.slice(0,80).map(function(r){
@@ -8517,7 +8586,7 @@ function bdcParseRows(rows) {
       '<span style="font-family:monospace;color:var(--s500);width:100px;flex-shrink:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+r.key+'</span>'+
       '<span style="flex:1;color:var(--s300);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+(r.libelle||'— introuvable')+badge+'</span>'+
       '<span style="font-weight:600;color:var(--s100);width:28px;text-align:right;flex-shrink:0;">'+r.qty+'</span>'+
-      '<span style="width:14px;text-align:center;color:'+(r.found?'var(--em400)':'#fca5a5')+';">'+(r.found?'✓':'✗')+'</span></div>';
+      '<span style="width:14px;text-align:center;color:'+(r.found?'var(--em400)':'#e3b8b0')+';">'+(r.found?'✓':'✗')+'</span></div>';
   }).join('');
 
   document.getElementById('bdc-import-result').style.display = 'block';
@@ -8719,7 +8788,7 @@ function boxRecalc() {
         '<td style="padding:.35rem .4rem;font-weight:700;color:var(--blue-p700);">' + (i+1) + '</td>' +
         '<td style="padding:.35rem .4rem;">' + e.code + ' — ' + e.libelle + (e.poids ? ' <span style="color:var(--g500);font-size:.7rem;">' + e.poids + '</span>' : '') + '</td>' +
         '<td style="padding:.35rem .4rem;text-align:center;">' + nbEtages + '</td>' +
-        '<td style="padding:.35rem .4rem;text-align:right;font-weight:700;color:var(--em600,#059669);">' + colis + ' col.</td>' +
+        '<td style="padding:.35rem .4rem;text-align:right;font-weight:700;color:var(--em600,#266327);">' + colis + ' col.</td>' +
         '<td style="padding:.35rem .4rem;text-align:right;">' + uvc + ' UVC</td>' +
         '<td style="padding:.35rem .4rem;text-align:right;">' + (totalLigne !== null ? totalLigne.toFixed(2).replace('.',',') + '€' : '<span style="color:var(--g400);">—</span>') + '</td>' +
       '</tr>';
@@ -8872,9 +8941,9 @@ function boxExportCSV() {
     </div>
 
     <div style="margin-top:.8rem;font-size:.73rem;color:var(--s600);background:rgba(30,41,59,.5);border-radius:6px;padding:.7rem .9rem;line-height:1.7;">
-      <strong style="color:#fcd34d;">Format attendu (export MDM) :</strong><br>
-      &bull; Colonne <code style="background:rgba(245,158,11,.12);padding:1px 4px;border-radius:3px;color:#fcd34d;">Code article</code> &mdash; code interne MDM<br>
-      &bull; Colonne <code style="background:rgba(245,158,11,.12);padding:1px 4px;border-radius:3px;color:#fcd34d;">Disponible</code> &mdash; stock net disponible<br>
+      <strong style="color:#e8c98a;">Format attendu (export MDM) :</strong><br>
+      &bull; Colonne <code style="background:rgba(245,158,11,.12);padding:1px 4px;border-radius:3px;color:#e8c98a;">Code article</code> &mdash; code interne MDM<br>
+      &bull; Colonne <code style="background:rgba(245,158,11,.12);padding:1px 4px;border-radius:3px;color:#e8c98a;">Disponible</code> &mdash; stock net disponible<br>
       Les stocks mis à jour s'affichent immédiatement dans le catalogue sans recharger la page.
     </div>
   </div>
@@ -8972,10 +9041,10 @@ function stockParseCSV(text) {
   var total = matched + unknown;
   document.getElementById('stock-import-summary').innerHTML =
     '<div style="flex:1;background:rgba(30,41,59,.7);border-radius:6px;padding:.5rem;text-align:center;">' +
-      '<div style="font-size:1.1rem;font-weight:600;color:#fcd34d;">'+matched+'</div>' +
+      '<div style="font-size:1.1rem;font-weight:600;color:#e8c98a;">'+matched+'</div>' +
       '<div style="font-size:.6rem;color:var(--s600);text-transform:uppercase;">Mis à jour</div></div>' +
     '<div style="flex:1;background:rgba(30,41,59,.7);border-radius:6px;padding:.5rem;text-align:center;">' +
-      '<div style="font-size:1.1rem;font-weight:600;color:#fca5a5;">'+rupture+'</div>' +
+      '<div style="font-size:1.1rem;font-weight:600;color:#e3b8b0;">'+rupture+'</div>' +
       '<div style="font-size:.6rem;color:var(--s600);text-transform:uppercase;">Ruptures</div></div>' +
     '<div style="flex:1;background:rgba(30,41,59,.7);border-radius:6px;padding:.5rem;text-align:center;">' +
       '<div style="font-size:1.1rem;font-weight:600;color:var(--s400);">'+unknown+'</div>' +
@@ -8986,7 +9055,7 @@ function stockParseCSV(text) {
 
   document.getElementById('stock-import-rows').innerHTML = exemples.slice(0,50).map(function(r){
     var stk = r.stock;
-    var color = stk === null ? 'var(--s600)' : stk <= 0 ? '#fca5a5' : stk <= 5 ? 'var(--amber)' : 'var(--em400)';
+    var color = stk === null ? 'var(--s600)' : stk <= 0 ? '#e3b8b0' : stk <= 5 ? 'var(--amber)' : 'var(--em400)';
     var label = stk === null ? '—' : stk <= 0 ? '⚠ Rupture ('+stk+')' : stk;
     return '<div style="display:flex;align-items:center;gap:8px;padding:.38rem .7rem;border-bottom:1px solid rgba(255,255,255,.04);font-size:.73rem;">' +
       '<span style="font-family:monospace;color:var(--s500);width:120px;flex-shrink:0;">'+r.code+'</span>' +
@@ -9019,7 +9088,7 @@ function applyStockImport() {
         if (tds[7]) {
           var stkH;
           if (stk === null) stkH = '<span style="color:var(--s700)">—</span>';
-          else if (stk <= 0) stkH = '<span style="color:#fca5a5;font-size:.68rem;">⚠ Rupture</span>';
+          else if (stk <= 0) stkH = '<span style="color:#e3b8b0;font-size:.68rem;">⚠ Rupture</span>';
           else if (stk <= 5) stkH = '<span style="color:var(--amber);font-weight:600;">'+stk+'</span>';
           else stkH = '<span style="color:var(--em400);font-weight:600;">'+stk+'</span>';
           tds[7].innerHTML = stkH;
@@ -9066,7 +9135,7 @@ function applyStockImport() {
       </div>
     </div>
 
-    <div id="pdf-import-error" style="display:none;margin-top:.8rem;background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.25);border-radius:8px;padding:.7rem .9rem;font-size:.78rem;color:#fca5a5;line-height:1.5;"></div>
+    <div id="pdf-import-error" style="display:none;margin-top:.8rem;background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.25);border-radius:8px;padding:.7rem .9rem;font-size:.78rem;color:#e3b8b0;line-height:1.5;"></div>
 
     <div id="pdf-import-result" style="display:none;margin-top:.9rem;">
       <div id="pdf-import-summary" style="display:flex;gap:8px;margin-bottom:.7rem;"></div>
@@ -9371,7 +9440,7 @@ function parsePdfText(text) {
     ? '<div style="padding:1rem;text-align:center;color:var(--s600);font-size:.8rem;">Aucun produit MDM reconnu dans ce PDF.<br><small>Vérifiez que les codes du PDF correspondent au catalogue.</small></div>'
     : results.map(function(r) {
         var label = (qtyIsUvc && r.pcb > 1)
-          ? '<span style="font-size:.65rem;color:#f59e0b;margin-left:4px;">' + r.qtyOrig + ' UVC ÷ ' + r.pcb + ' = ' + r.qty + ' colis</span>'
+          ? '<span style="font-size:.65rem;color:#b07d1a;margin-left:4px;">' + r.qtyOrig + ' UVC ÷ ' + r.pcb + ' = ' + r.qty + ' colis</span>'
           : '';
         return '<div style="display:flex;align-items:center;gap:8px;padding:.35rem .6rem;border-bottom:1px solid rgba(255,255,255,.05);">' +
           '<span style="font-family:monospace;font-size:.72rem;color:#93c5fd;min-width:100px;">' + r.code + '</span>' +
@@ -9563,10 +9632,10 @@ function suiviRender() {
     return '<tr>' +
       '<td style="font-weight:600;color:var(--g900);">' + label + '</td>' +
       '<td style="text-align:right;">' + m.nb + '</td>' +
-      td(m.livre, '#059669') +
+      td(m.livre, '#266327') +
       td(m.facture, 'var(--blue-p700)') +
-      td(m.att_fac, '#b45309') +
-      td(m.att_liv, '#7c3aed') +
+      td(m.att_fac, '#8f6415') +
+      td(m.att_liv, '#6a6f64') +
       '<td style="text-align:right;font-weight:600;">' + suiviFmt(m.total) + '</td>' +
     '</tr>';
   }).join('') + (months.length ? (
@@ -9835,7 +9904,7 @@ function dashCaProcess(rows) {
   if (!dashCaRows.length) {
     var colsList = sampleRow ? Object.keys(sampleRow).join(' · ') : '(aucune)';
     var diagHtml =
-      '<div style="padding:1rem;background:#fff7ed;border:1px solid #fed7aa;border-radius:8px;margin:1rem;">' +
+      '<div style="padding:1rem;background:#fff7ed;border:1px solid #ecd9b8;border-radius:8px;margin:1rem;">' +
         '<div style="font-weight:700;color:#9a3412;margin-bottom:.5rem;">⚠️ Aucune commande reconnue dans ce fichier</div>' +
         '<div style="font-size:.78rem;color:#7c2d12;margin-bottom:.5rem;">Colonnes trouvées dans le fichier :<br/>' +
           '<code style="font-size:.72rem;background:#fff;padding:3px 6px;border-radius:4px;display:block;margin-top:4px;word-break:break-all;">' + colsList + '</code>' +
@@ -9846,7 +9915,7 @@ function dashCaProcess(rows) {
     document.getElementById('dash-ca-content').style.display = '';
     document.getElementById('dash-ca-reload').style.display = '';
     var statusEl = document.getElementById('dash-ca-status');
-    if (statusEl) statusEl.innerHTML = '<span style="color:#dc2626;">❌ 0 commande reconnue</span>';
+    if (statusEl) statusEl.innerHTML = '<span style="color:#b0402f;">❌ 0 commande reconnue</span>';
     // Injecter le diagnostic dans la zone content
     var contentEl = document.getElementById('dash-ca-content');
     var diagEl = document.getElementById('dash-ca-diag');
@@ -10322,18 +10391,18 @@ function dashRenderInactiveClients() {
     var c = x.c;
     var months = Math.floor(x.days / 30);
     var depuisLabel = months >= 1 ? (months + ' mois') : (x.days + ' j');
-    var depuisColor = x.days >= 90 ? '#dc2626' : x.days >= 60 ? '#ea580c' : '#d97706';
+    var depuisColor = x.days >= 90 ? '#b0402f' : x.days >= 60 ? '#ea580c' : '#d97706';
     var dateLastStr = c._stats.derniereCmd ? c._stats.derniereCmd.toLocaleDateString('fr-FR') : '—';
     var initiales = (c.nom||'?').replace(/[^A-Za-z\u00C0-\u024F\s]/g,'').split(/\s+/).filter(Boolean).map(function(w){return w[0].toUpperCase();}).slice(0,2).join('') || '?';
 
     var actions = '';
     if (c.email) actions += '<a href="mailto:' + cdbEsc(c.email) + '?subject=' + encodeURIComponent('Moulin des Moines — On vous a manqué !') + '" title="Email à ' + cdbEsc(c.email) + '" style="display:inline-flex;width:26px;height:26px;align-items:center;justify-content:center;border-radius:6px;background:var(--blue-p50);color:var(--blue-p700);margin-right:4px;text-decoration:none;">✉️</a>';
-    if (c.telephone) actions += '<a href="tel:' + cdbEsc(c.telephone.replace(/\s+/g,'')) + '" title="Appeler ' + cdbEsc(c.telephone) + '" style="display:inline-flex;width:26px;height:26px;align-items:center;justify-content:center;border-radius:6px;background:#f0fdf4;color:#166534;text-decoration:none;">📞</a>';
+    if (c.telephone) actions += '<a href="tel:' + cdbEsc(c.telephone.replace(/\s+/g,'')) + '" title="Appeler ' + cdbEsc(c.telephone) + '" style="display:inline-flex;width:26px;height:26px;align-items:center;justify-content:center;border-radius:6px;background:#f0fdf4;color:#1c4d1e;text-decoration:none;">📞</a>';
     if (!actions) actions = '<span style="color:var(--g300);font-size:.68rem;">Pas de contact</span>';
 
     return '<tr style="border-top:1px solid var(--border);cursor:pointer;" onclick="cdbOpenEdit(\'' + c.id + '\')">' +
       '<td style="padding:.5rem .75rem;"><div style="display:flex;align-items:center;gap:8px;">' +
-        '<div style="width:26px;height:26px;border-radius:7px;background:#fed7aa;color:#9a3412;display:flex;align-items:center;justify-content:center;font-size:.62rem;font-weight:700;flex-shrink:0;">' + initiales + '</div>' +
+        '<div style="width:26px;height:26px;border-radius:7px;background:#ecd9b8;color:#9a3412;display:flex;align-items:center;justify-content:center;font-size:.62rem;font-weight:700;flex-shrink:0;">' + initiales + '</div>' +
         '<span style="font-weight:600;color:var(--g900);">' + cdbEsc(c.nom||'—') + '</span>' +
       '</div></td>' +
       '<td style="padding:.5rem .75rem;color:var(--g600);">' + cdbEsc(c.ville||'—') + '</td>' +
@@ -10444,8 +10513,8 @@ function dashOpenObjectifs(forceYear) {
       });
     }
     var pct = (val && caReel > 0) ? Math.min(Math.round(caReel / val * 100), 999) : 0;
-    var barColor   = pct >= 100 ? '#059669' : pct >= 75 ? '#f59e0b' : '#e5e7eb';
-    var labelColor = pct >= 100 ? '#059669' : pct >= 75 ? '#b45309' : '#6b7280';
+    var barColor   = pct >= 100 ? '#266327' : pct >= 75 ? '#b07d1a' : '#e5e7eb';
+    var labelColor = pct >= 100 ? '#266327' : pct >= 75 ? '#8f6415' : '#6b7280';
 
     html += '<div style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:10px;padding:.75rem .9rem;">';
     html += '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.4rem;">';
@@ -10572,12 +10641,12 @@ function dashCaRender() {
       return '<td style="text-align:right;font-variant-numeric:tabular-nums;'+style+'">'+dashCaFmt(val)+'</td>';
     }
     var objCell = obj
-      ? '<td style="text-align:right;color:#b45309;font-weight:600;font-variant-numeric:tabular-nums;">'+dashCaFmt(obj)+'</td>'
+      ? '<td style="text-align:right;color:#8f6415;font-weight:600;font-variant-numeric:tabular-nums;">'+dashCaFmt(obj)+'</td>'
       : '<td style="text-align:right;color:var(--g300);"><button onclick="dashOpenObjectifs()" style="font-size:.65rem;color:var(--blue-p600);border:none;background:none;cursor:pointer;padding:0;">+ Ajouter</button></td>';
     var attCell = '<td style="text-align:right;">';
     if (obj > 0 && caTotal > 0) {
       var pct = Math.round(caTotal / obj * 100);
-      var col = pct >= 100 ? '#059669' : pct >= 75 ? '#f59e0b' : '#dc2626';
+      var col = pct >= 100 ? '#266327' : pct >= 75 ? '#b07d1a' : '#b0402f';
       var icon = pct >= 100 ? '✅' : pct >= 75 ? '⚡' : '⚠️';
       attCell += '<div style="display:flex;flex-direction:column;align-items:flex-end;gap:2px;">';
       attCell += '<span style="font-size:.78rem;font-weight:700;color:'+col+';">' + icon + ' ' + pct + '%</span>';
@@ -10590,10 +10659,10 @@ function dashCaRender() {
       '<td style="font-weight:600;color:var(--g900);">' + label + '</td>' +
       '<td style="text-align:right;">' + m.nb + '</td>' +
       '<td style="text-align:right;color:var(--g700);">' + dashCaFmt(tk) + '</td>' +
-      td(caTotal, '#7c3aed') +
-      td(m.en_cours, '#b45309') +
+      td(caTotal, '#6a6f64') +
+      td(m.en_cours, '#8f6415') +
       td(m.facture, 'var(--blue-p700)') +
-      td(m.avoirs, '#dc2626') +
+      td(m.avoirs, '#b0402f') +
       objCell + attCell +
     '</tr>';
   }).join('') + (months.length ? (
@@ -10605,9 +10674,9 @@ function dashCaRender() {
       '<td style="text-align:right;">' + dashCaFmt(totCours) + '</td>' +
       '<td style="text-align:right;">' + dashCaFmt(totFac) + '</td>' +
       '<td style="text-align:right;">' + dashCaFmt(totAvoirs) + '</td>' +
-      '<td style="text-align:right;color:#b45309;">'+(totalObj ? dashCaFmt(totalObj) : '—')+'</td>' +
+      '<td style="text-align:right;color:#8f6415;">'+(totalObj ? dashCaFmt(totalObj) : '—')+'</td>' +
       '<td style="text-align:right;">' + (totalObj > 0 && (totCours+totFac) > 0 ?
-        '<span style="font-weight:700;color:'+(Math.round((totCours+totFac)/totalObj*100)>=100?'#059669':'#b45309')+';font-size:.85rem;">' +
+        '<span style="font-weight:700;color:'+(Math.round((totCours+totFac)/totalObj*100)>=100?'#266327':'#8f6415')+';font-size:.85rem;">' +
         Math.round((totCours+totFac)/totalObj*100) + '%</span>' : '—') + '</td>' +
     '</tr>'
   ) : '<tr><td colspan="9" style="text-align:center;padding:2rem;color:var(--g500);">Aucune donnée</td></tr>');
@@ -10684,9 +10753,9 @@ function dashRenderRecentOrders(filtered) {
   tbody.innerHTML = recent.map(function(r) {
     var statutBadge;
     if (r.statut === 'facturee') {
-      statutBadge = '<span style="display:inline-block;padding:2px 7px;border-radius:10px;font-size:.65rem;font-weight:600;background:#dcfce7;color:#166534;">✅ Facturée</span>';
+      statutBadge = '<span style="display:inline-block;padding:2px 7px;border-radius:10px;font-size:.65rem;font-weight:600;background:#eef3ee;color:#1c4d1e;">✅ Facturée</span>';
     } else if (r.statut === 'avoir') {
-      statutBadge = '<span style="display:inline-block;padding:2px 7px;border-radius:10px;font-size:.65rem;font-weight:600;background:#fee2e2;color:#991b1b;">↩ Avoir</span>';
+      statutBadge = '<span style="display:inline-block;padding:2px 7px;border-radius:10px;font-size:.65rem;font-weight:600;background:#f8ede9;color:#8f3325;">↩ Avoir</span>';
     } else if (r.statut === 'livre') {
       statutBadge = '<span style="display:inline-block;padding:2px 7px;border-radius:10px;font-size:.65rem;font-weight:600;background:#fef9c3;color:#854d0e;">📦 Livré</span>';
     } else {
@@ -10695,7 +10764,7 @@ function dashRenderRecentOrders(filtered) {
 
     var numFac = r.numFac ? r.numFac : '—';
     var dateD  = r.dateFac || r.dateRef;
-    var caColor = r.statut === 'avoir' ? '#dc2626' : r.statut === 'facturee' ? '#059669' : '#b45309';
+    var caColor = r.statut === 'avoir' ? '#b0402f' : r.statut === 'facturee' ? '#266327' : '#8f6415';
 
     return '<tr style="border-bottom:1px solid var(--border);transition:background .1s;" ' +
       'onmouseover="this.style.background=\'var(--blue-p50)\'" onmouseout="this.style.background=\'\'">' +
@@ -10739,7 +10808,7 @@ function dashCaRenderCurrentMonth(filtered, byMonth, months) {
     }
     var diff = val - prevVal;
     var pctDiff = (diff / Math.abs(prevVal)) * 100;
-    var color = diff > 0 ? '#059669' : (diff < 0 ? '#dc2626' : 'var(--g500)');
+    var color = diff > 0 ? '#266327' : (diff < 0 ? '#b0402f' : 'var(--g500)');
     var arrow = diff > 0 ? '▲' : (diff < 0 ? '▼' : '=');
     el.innerHTML = '<span style="color:'+color+';font-weight:600;">' + arrow + ' ' +
       (Math.abs(pctDiff) < 1 ? '<1%' : (pctDiff > 0 ? '+' : '') + pctDiff.toFixed(0) + '%') +
@@ -10814,7 +10883,7 @@ function dashCaRenderCurrentMonth(filtered, byMonth, months) {
     if (n1Data && n1Data.facture > 0 && cur.facture > 0) {
       var n1Diff = cur.facture - n1Data.facture;
       var n1Pct = n1Diff / n1Data.facture * 100;
-      var n1Color = n1Diff >= 0 ? '#059669' : '#dc2626';
+      var n1Color = n1Diff >= 0 ? '#266327' : '#b0402f';
       var n1Arrow = n1Diff >= 0 ? '▲' : '▼';
       n1El.innerHTML = '<span style="color:'+n1Color+';">'+n1Arrow+' '+(n1Pct >= 0?'+':'')+n1Pct.toFixed(1)+'%</span>';
       n1DetailEl.textContent = dashCaFmt(cur.facture) + ' vs ' + dashCaFmt(n1Data.facture) + ' en ' + (now.getFullYear()-1);
@@ -10932,9 +11001,9 @@ function dashCaDrawCharts(filtered, months, moisNames) {
       data: {
         labels: labels,
         datasets: [
-          { label:'CA Total (activité)',   data: months.map(function(m){return m.en_cours + m.facture;}), borderColor:'#7c3aed', backgroundColor:'rgba(124,58,237,.1)', tension:.3, fill:true, pointRadius:4 },
+          { label:'CA Total (activité)',   data: months.map(function(m){return m.en_cours + m.facture;}), borderColor:'#6a6f64', backgroundColor:'rgba(124,58,237,.1)', tension:.3, fill:true, pointRadius:4 },
           { label:'CA Facturé',           data: months.map(function(m){return m.facture;}), borderColor:'#2563b0', backgroundColor:'rgba(37,99,176,.1)', tension:.3, fill:true, pointRadius:3 },
-          { label:'🎯 Objectif',          data: months.map(function(m){ return (dashObjectifs && dashObjectifs[m.mois]) || null; }), borderColor:'#f59e0b', backgroundColor:'transparent', borderDash:[6,4], tension:0, fill:false, pointRadius:3, pointStyle:'crossRot', borderWidth:2.5 }
+          { label:'🎯 Objectif',          data: months.map(function(m){ return (dashObjectifs && dashObjectifs[m.mois]) || null; }), borderColor:'#b07d1a', backgroundColor:'transparent', borderDash:[6,4], tension:0, fill:false, pointRadius:3, pointStyle:'crossRot', borderWidth:2.5 }
         ]
       },
       options: {
@@ -10975,7 +11044,7 @@ function dashCaDrawCharts(filtered, months, moisNames) {
       type: 'doughnut',
       data: {
         labels:['Reste à facturer','Facturé','Avoirs'],
-        datasets:[{ data:[totCours, totFac, totAv], backgroundColor:['#7c3aed','#2563b0','#dc2626'], borderWidth:2, borderColor:'#fff' }]
+        datasets:[{ data:[totCours, totFac, totAv], backgroundColor:['#6a6f64','#2563b0','#b0402f'], borderWidth:2, borderColor:'#fff' }]
       },
       options: {
         responsive:true, maintainAspectRatio:false,
@@ -11025,7 +11094,7 @@ function dashCaDrawTops(filtered) {
       ? '<div style="display:grid;grid-template-columns:1fr 140px 130px;gap:8px;padding:.3rem 0;border-bottom:2px solid var(--border);margin-bottom:.3rem;">' +
           '<div style="font-size:.6rem;font-weight:700;text-transform:uppercase;color:var(--g400);">Client</div>' +
           '<div style="font-size:.6rem;font-weight:700;text-transform:uppercase;color:var(--blue-p600);text-align:right;">CA Fichier importé</div>' +
-          '<div style="font-size:.6rem;font-weight:700;text-transform:uppercase;color:#166534;text-align:right;">CA BDC saisis</div>' +
+          '<div style="font-size:.6rem;font-weight:700;text-transform:uppercase;color:#1c4d1e;text-align:right;">CA BDC saisis</div>' +
         '</div>'
       : '';
 
@@ -11051,7 +11120,7 @@ function dashCaDrawTops(filtered) {
       var bdcCol = hasBDC
         ? '<div style="text-align:right;">' +
             (bdc
-              ? '<span style="font-size:.82rem;font-weight:700;color:#166534;">' + dashCaFmt(bdc.ca) + '</span>' +
+              ? '<span style="font-size:.82rem;font-weight:700;color:#1c4d1e;">' + dashCaFmt(bdc.ca) + '</span>' +
                 '<div style="font-size:.58rem;color:#4ade80;">' + bdc.nb + ' BDC</div>'
               : '<span style="font-size:.7rem;color:var(--g300);">—</span>'
             ) +
@@ -11069,12 +11138,12 @@ function dashCaDrawTops(filtered) {
             '<span style="font-size:.6rem;color:var(--g400);">' + share + '%</span>' +
           '</div>' +
           '<div style="background:var(--g100);border-radius:3px;height:5px;overflow:hidden;">' +
-            '<div style="height:5px;border-radius:3px;background:linear-gradient(90deg,#059669 '+pctFac+'%,var(--blue-p400) '+pctFac+'%);width:'+pct+'%;transition:width .4s;"></div>' +
+            '<div style="height:5px;border-radius:3px;background:linear-gradient(90deg,#266327 '+pctFac+'%,var(--blue-p400) '+pctFac+'%);width:'+pct+'%;transition:width .4s;"></div>' +
           '</div>' +
           '<div style="display:flex;gap:10px;font-size:.6rem;color:var(--g500);margin-top:2px;">' +
             '<span>' + it.nb + ' cmd' + (it.nb>1?'s':'') + '</span>' +
-            '<span style="color:#059669;">✓ ' + dashCaFmt(it.fac) + '</span>' +
-            (it.cours > 0 ? '<span style="color:#b45309;">⏳ ' + dashCaFmt(it.cours) + '</span>' : '') +
+            '<span style="color:#266327;">✓ ' + dashCaFmt(it.fac) + '</span>' +
+            (it.cours > 0 ? '<span style="color:#8f6415;">⏳ ' + dashCaFmt(it.cours) + '</span>' : '') +
           '</div>' +
         '</div>' +
         '<div style="text-align:right;">' +
@@ -11381,7 +11450,7 @@ function cdbRenderPage() {
   tbody.innerHTML = page.map(function(c) {
     var checked = (cdbSelection && cdbSelection[c.id]) ? 'checked' : '';
     var groupe = c.groupe ? '<span style="display:inline-block;padding:1px 7px;background:var(--blue-p100);color:var(--blue-p800);border-radius:10px;font-size:.68rem;font-weight:500;">'+cdbEsc(c.groupe)+'</span>' : '';
-    var prospectBadge = c.prospect ? '<span style="display:inline-block;padding:1px 6px;background:#fef3c7;color:#92400e;border-radius:10px;font-size:.65rem;margin-left:4px;">Prospect</span>' : '';
+    var prospectBadge = c.prospect ? '<span style="display:inline-block;padding:1px 6px;background:#fef3c7;color:#7a5512;border-radius:10px;font-size:.65rem;margin-left:4px;">Prospect</span>' : '';
     var idAttr = cdbEsc(c.id);
     return '<tr>' +
       '<td><input type="checkbox" data-cdb-check="' + idAttr + '" ' + checked + '/></td>' +
@@ -11391,7 +11460,7 @@ function cdbRenderPage() {
       '<td>' + cdbEsc(c.ville||'') + (c.cp ? ' <span style="color:var(--g500);font-size:.72rem;">('+cdbEsc(c.cp)+')</span>' : '') + '</td>' +
       '<td><a href="mailto:' + cdbEsc(c.email||'') + '" style="font-size:.78rem;color:var(--blue-p700);">' + cdbEsc(c.email||'') + '</a></td>' +
       '<td style="font-size:.78rem;">' + cdbEsc(c.telephone||'') + '</td>' +
-      '<td style="text-align:right;font-size:.75rem;color:' + (c._stats && c._stats.orphan ? '#dc2626' : 'var(--g700)') + ';">' + (c._stats && c._stats.derniereCmd ? cdbFmtDate(c._stats.derniereCmd) : cdbFmtDate(c.dateDerniereCmd)) + (c._stats && c._stats.orphan ? ' ⚠' : '') + '</td>' +
+      '<td style="text-align:right;font-size:.75rem;color:' + (c._stats && c._stats.orphan ? '#b0402f' : 'var(--g700)') + ';">' + (c._stats && c._stats.derniereCmd ? cdbFmtDate(c._stats.derniereCmd) : cdbFmtDate(c.dateDerniereCmd)) + (c._stats && c._stats.orphan ? ' ⚠' : '') + '</td>' +
       '<td style="text-align:right;font-variant-numeric:tabular-nums;">' + (c._stats && c._stats.nbCmds > 0 ? ('<strong>' + cdbFmtCA(c._stats.caTotal) + '</strong><div style="font-size:.62rem;color:var(--g500);">' + c._stats.nbCmds + ' cmd' + (c._stats.nbCmds>1?'s':'') + '</div>') : cdbFmtCA(c.cumul2026)) + '</td>' +
       '<td style="position:relative;"><button type="button" class="btn btn-ghost cdb-menu-btn" data-cdb-id="' + idAttr + '" style="font-size:.9rem;padding:.18rem .45rem;cursor:pointer;line-height:1;" title="Actions">⋮</button></td>' +
     '</tr>';
@@ -12140,9 +12209,9 @@ function cdbBuildCATab(c) {
   var moisNoms = ['','Jan','Fév','Mar','Avr','Mai','Juin','Juil','Août','Sep','Oct','Nov','Déc'];
   var fmtCA = function(n){ return n > 0 ? n.toLocaleString('fr-FR',{minimumFractionDigits:2,maximumFractionDigits:2})+' €' : '—'; };
   var fmtPct = function(curr, prev) {
-    if (!prev || prev === 0) return curr > 0 ? '<span style="color:#059669;font-size:.65rem;font-weight:700;">NEW</span>' : '';
+    if (!prev || prev === 0) return curr > 0 ? '<span style="color:#266327;font-size:.65rem;font-weight:700;">NEW</span>' : '';
     var p = ((curr - prev) / Math.abs(prev) * 100);
-    var col = p > 0 ? '#059669' : '#dc2626';
+    var col = p > 0 ? '#266327' : '#b0402f';
     var arrow = p > 0 ? '▲' : '▼';
     return '<span style="color:'+col+';font-size:.65rem;font-weight:700;">'+arrow+' '+(p>0?'+':'')+p.toFixed(0)+'%</span>';
   };
@@ -12162,8 +12231,8 @@ function cdbBuildCATab(c) {
   html +=     '<div style="font-size:.68rem;color:var(--g500);margin-top:3px;">vs '+PREV_YEAR+' : '+fmtCA(totPrev)+' '+fmtPct(totCurr,totPrev)+'</div>';
   html +=   '</div>';
   html +=   '<div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:10px;padding:.8rem 1rem;">';
-  html +=     '<div style="font-size:.6rem;font-weight:700;text-transform:uppercase;color:#166534;margin-bottom:4px;">CA Facturé '+NOW_YEAR+'</div>';
-  html +=     '<div style="font-size:1.4rem;font-weight:800;color:#166534;">'+fmtCA(totCurrFac)+'</div>';
+  html +=     '<div style="font-size:.6rem;font-weight:700;text-transform:uppercase;color:#1c4d1e;margin-bottom:4px;">CA Facturé '+NOW_YEAR+'</div>';
+  html +=     '<div style="font-size:1.4rem;font-weight:800;color:#1c4d1e;">'+fmtCA(totCurrFac)+'</div>';
   html +=     '<div style="font-size:.68rem;color:var(--g500);margin-top:3px;">'+(totCurr>0?(totCurrFac/totCurr*100).toFixed(0)+'% facturé':'—')+'</div>';
   html +=   '</div>';
   html +=   '<div style="background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:.8rem 1rem;">';
@@ -12187,7 +12256,7 @@ function cdbBuildCATab(c) {
   html += '<thead><tr style="background:var(--surface2);">';
   html += '<th style="padding:.4rem .6rem;text-align:left;font-weight:600;color:var(--g600);">Mois</th>';
   html += '<th style="padding:.4rem .6rem;text-align:right;color:var(--blue-p700);">CA '+NOW_YEAR+'</th>';
-  html += '<th style="padding:.4rem .6rem;text-align:right;color:#059669;">Facturé</th>';
+  html += '<th style="padding:.4rem .6rem;text-align:right;color:#266327;">Facturé</th>';
   html += '<th style="padding:.4rem .6rem;text-align:right;color:var(--g500);">CA '+PREV_YEAR+'</th>';
   html += '<th style="padding:.4rem .6rem;text-align:right;">Évol.</th>';
   html += '</tr></thead><tbody>';
@@ -12221,7 +12290,7 @@ function cdbBuildCATab(c) {
       html += '<div style="background:var(--g100);border-radius:2px;height:3px;margin-top:2px;"><div style="background:var(--blue-p400);height:3px;border-radius:2px;width:'+barW+'%;"></div></div>';
     } else html += '<span style="color:var(--g300);">—</span>';
     html += '</td>';
-    html += '<td style="padding:.35rem .6rem;text-align:right;color:#059669;font-size:.72rem;">'+(cur&&cur.fac>0?fmtCA(cur.fac):'—')+'</td>';
+    html += '<td style="padding:.35rem .6rem;text-align:right;color:#266327;font-size:.72rem;">'+(cur&&cur.fac>0?fmtCA(cur.fac):'—')+'</td>';
     html += '<td style="padding:.35rem .6rem;text-align:right;color:var(--g400);font-size:.72rem;">'+(prv?fmtCA(prv.ca):'—')+'</td>';
     html += '<td style="padding:.35rem .6rem;text-align:right;">'+fmtPct(cur?cur.ca:0, prv?prv.ca:0)+'</td>';
     html += '</tr>';
@@ -12245,7 +12314,7 @@ function cdbBuildCATab(c) {
     html += '<th style="padding:.3rem .5rem;text-align:center;color:var(--g600);">Statut</th>';
     html += '</tr></thead><tbody>';
     recent.forEach(function(r) {
-      var statColor = r.statut==='facturee' ? '#059669' : r.statut==='avoir' ? '#dc2626' : '#b45309';
+      var statColor = r.statut==='facturee' ? '#266327' : r.statut==='avoir' ? '#b0402f' : '#8f6415';
       var statLabel = r.statut==='facturee' ? 'Facturé' : r.statut==='avoir' ? 'Avoir' : 'En cours';
       var dateStr = r.dateRef ? r.dateRef.toLocaleDateString('fr-FR') : '—';
       html += '<tr style="border-top:1px solid var(--border);">';
@@ -12276,7 +12345,7 @@ function cdbDrawClientChart(byYearMonth, yearsPresent, moisNoms) {
 
     var labels = moisNoms.slice(1); // Jan…Déc
     // Une couleur par année (la plus récente en avant, ordre croissant pour la légende)
-    var palette = ['#f59e0b', '#60a5e8', '#2563b0', '#7c3aed', '#059669'];
+    var palette = ['#b07d1a', '#60a5e8', '#2563b0', '#6a6f64', '#266327'];
     var datasets = yearsPresent.map(function(y, idx) {
       var data = [];
       for (var mi = 1; mi <= 12; mi++) {
@@ -12339,7 +12408,7 @@ function cdbShowMenu(anchor, id) {
   ];
 
   menu.innerHTML = actions.map(function(a, i) {
-    var col = a.danger ? '#dc2626' : 'var(--g800)';
+    var col = a.danger ? '#b0402f' : 'var(--g800)';
     return '<button type="button" data-idx="' + i + '" style="display:block;width:100%;text-align:left;padding:.55rem .8rem;border:none;background:none;cursor:pointer;font-size:.82rem;color:'+col+';border-radius:5px;">' +
       '<span style="margin-right:6px;">' + a.icon + '</span>' + a.label + '</button>';
   }).join('');
@@ -12463,7 +12532,7 @@ function cdbShowCA(id) {
         var h = maxCA > 0 ? Math.max(2, Math.abs(m.ca) / maxCA * 90) : 2;
         var parts = m.mois.split('-');
         var label = moisNames[parseInt(parts[1])-1] + " '" + parts[0].slice(2);
-        var color = m.ca < 0 ? '#dc2626' : 'var(--blue-p600)';
+        var color = m.ca < 0 ? '#b0402f' : 'var(--blue-p600)';
         return '<div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;gap:3px;min-width:0;">' +
           '<div style="font-size:.58rem;color:var(--g600);white-space:nowrap;" title="' + fmtCA(m.ca) + '">' + (Math.abs(m.ca) >= 1000 ? (Math.round(m.ca/1000)+'k') : Math.round(m.ca)) + '€</div>' +
           '<div style="background:' + color + ';width:100%;height:' + h + 'px;border-radius:3px 3px 0 0;"></div>' +
@@ -12484,7 +12553,7 @@ function cdbShowCA(id) {
       months.map(function(m) {
         var parts = m.mois.split('-');
         var label = moisNames[parseInt(parts[1])-1] + ' ' + parts[0];
-        var color = m.ca < 0 ? '#dc2626' : 'var(--g900)';
+        var color = m.ca < 0 ? '#b0402f' : 'var(--g900)';
         return '<tr>' +
           '<td style="padding:.3rem .6rem;border-top:1px solid var(--border);">' + label + '</td>' +
           '<td style="padding:.3rem .6rem;text-align:right;border-top:1px solid var(--border);">' + m.nb + '</td>' +
@@ -12526,13 +12595,13 @@ function cdbShowCA(id) {
           '<div style="font-size:.62rem;color:var(--g600);font-weight:600;text-transform:uppercase;">Cumul 2025</div>' +
           '<div style="font-size:1rem;font-weight:700;color:var(--g700);">' + fmtCA(cum25) + '</div>' +
         '</div>' +
-        '<div style="padding:.6rem .7rem;background:#f0fdf4;border-radius:7px;border-left:3px solid #059669;">' +
+        '<div style="padding:.6rem .7rem;background:#f0fdf4;border-radius:7px;border-left:3px solid #266327;">' +
           '<div style="font-size:.62rem;color:var(--g600);font-weight:600;text-transform:uppercase;">Stat 2026 Avril</div>' +
-          '<div style="font-size:1rem;font-weight:700;color:#059669;">' + fmtCA(stat26) + '</div>' +
+          '<div style="font-size:1rem;font-weight:700;color:#266327;">' + fmtCA(stat26) + '</div>' +
         '</div>' +
-        '<div style="padding:.6rem .7rem;background:#fef3c7;border-radius:7px;border-left:3px solid #b45309;">' +
+        '<div style="padding:.6rem .7rem;background:#fef3c7;border-radius:7px;border-left:3px solid #8f6415;">' +
           '<div style="font-size:.62rem;color:var(--g600);font-weight:600;text-transform:uppercase;">Stat 2025 Avril</div>' +
-          '<div style="font-size:1rem;font-weight:700;color:#b45309;">' + fmtCA(stat25) + '</div>' +
+          '<div style="font-size:1rem;font-weight:700;color:#8f6415;">' + fmtCA(stat25) + '</div>' +
         '</div>' +
       '</div>' +
       // Détail Suivi
@@ -12541,8 +12610,8 @@ function cdbShowCA(id) {
         '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:.6rem;">' +
           '<div style="padding:.5rem .7rem;background:#fff;border:1px solid var(--border);border-radius:6px;"><div style="font-size:.6rem;color:var(--g500);font-weight:600;">CA TOTAL</div><div style="font-size:.9rem;font-weight:700;">' + fmtCA(totCA) + '</div></div>' +
           '<div style="padding:.5rem .7rem;background:#fff;border:1px solid var(--border);border-radius:6px;"><div style="font-size:.6rem;color:var(--g500);font-weight:600;">FACTURÉ</div><div style="font-size:.9rem;font-weight:700;color:var(--blue-p700);">' + fmtCA(totFac) + '</div></div>' +
-          '<div style="padding:.5rem .7rem;background:#fff;border:1px solid var(--border);border-radius:6px;"><div style="font-size:.6rem;color:var(--g500);font-weight:600;">EN COURS</div><div style="font-size:.9rem;font-weight:700;color:#7c3aed;">' + fmtCA(totEnCours) + '</div></div>' +
-          '<div style="padding:.5rem .7rem;background:#fff;border:1px solid var(--border);border-radius:6px;"><div style="font-size:.6rem;color:var(--g500);font-weight:600;">AVOIRS</div><div style="font-size:.9rem;font-weight:700;color:#dc2626;">' + fmtCA(totAvoirs) + '</div></div>' +
+          '<div style="padding:.5rem .7rem;background:#fff;border:1px solid var(--border);border-radius:6px;"><div style="font-size:.6rem;color:var(--g500);font-weight:600;">EN COURS</div><div style="font-size:.9rem;font-weight:700;color:#6a6f64;">' + fmtCA(totEnCours) + '</div></div>' +
+          '<div style="padding:.5rem .7rem;background:#fff;border:1px solid var(--border);border-radius:6px;"><div style="font-size:.6rem;color:var(--g500);font-weight:600;">AVOIRS</div><div style="font-size:.9rem;font-weight:700;color:#b0402f;">' + fmtCA(totAvoirs) + '</div></div>' +
         '</div>'
       ) : '') +
       chartHtml + tableHtml +
@@ -12751,7 +12820,7 @@ var ML_TEMPLATES = {
   },
   nouveau: {
     subject: "✨ Nouveauté : découvrez notre dernière innovation bio",
-    body: '<h2 style="color:#059669;">Une nouveauté à découvrir</h2>' +
+    body: '<h2 style="color:#266327;">Une nouveauté à découvrir</h2>' +
           '<p>Bonjour,</p>' +
           '<p>Nous avons le plaisir de vous présenter un <b>nouveau produit</b> qui vient enrichir notre catalogue :</p>' +
           '<p><i>[Description du produit]</i></p>' +
@@ -12760,7 +12829,7 @@ var ML_TEMPLATES = {
   },
   relance: {
     subject: "🔔 Nous ne vous avons pas vu récemment…",
-    body: '<h2 style="color:#b45309;">Vous nous manquez !</h2>' +
+    body: '<h2 style="color:#8f6415;">Vous nous manquez !</h2>' +
           '<p>Bonjour,</p>' +
           '<p>Nous constatons que nous n\'avons pas eu le plaisir de traiter vos commandes récemment. Nous serions ravis de vous retrouver !</p>' +
           '<p>Pour l\'occasion, profitez d\'une <b>remise de 10%</b> sur votre prochaine commande avec le code <b>RETOUR10</b>.</p>' +
@@ -12955,12 +13024,12 @@ function mlAiRefreshSettings(){
   }
   var st = document.getElementById('ml-ai-key-status');
   if (st) {
-    if (!k) { st.textContent = '⚠️ Aucune clé'; st.style.color = '#dc2626'; }
+    if (!k) { st.textContent = '⚠️ Aucune clé'; st.style.color = '#b0402f'; }
     else if (p === 'gemini') {
       var gm = mlAiGetGeminiModel();
       st.textContent = gm ? ('✅ Clé OK — modèle : ' + gm) : '✅ Clé enregistrée (modèle détecté au 1er usage)';
-      st.style.color = '#059669';
-    } else { st.textContent = '✅ Clé enregistrée'; st.style.color = '#059669'; }
+      st.style.color = '#266327';
+    } else { st.textContent = '✅ Clé enregistrée'; st.style.color = '#266327'; }
   }
 }
 // La configuration vit désormais dans la section IA dédiée
@@ -12994,7 +13063,7 @@ function mlAiStatus(msg, kind){
   if (!msg) { el.style.display = 'none'; return; }
   el.style.display = 'block';
   el.textContent = msg;
-  if (kind === 'err') { el.style.background = '#fee2e2'; el.style.color = '#991b1b'; }
+  if (kind === 'err') { el.style.background = '#f8ede9'; el.style.color = '#8f3325'; }
   else if (kind === 'ok') { el.style.background = '#d1fae5'; el.style.color = '#065f46'; }
   else { el.style.background = 'var(--blue-p50)'; el.style.color = 'var(--blue-p700)'; }
 }
@@ -13213,7 +13282,7 @@ function mlAiRefreshPdf(){
   var cl = document.getElementById('ml-ai-pdf-clear');
   if (nm) {
     if (!src) { nm.textContent = 'Aucun document'; nm.style.color = 'var(--g500)'; }
-    else { nm.textContent = src.name + (src.fromPJ ? ' (pièce jointe du mail)' : ''); nm.style.color = '#059669'; }
+    else { nm.textContent = src.name + (src.fromPJ ? ' (pièce jointe du mail)' : ''); nm.style.color = '#266327'; }
   }
   if (cl) cl.style.display = mlAiPDF ? 'inline-block' : 'none';
 }
@@ -13356,7 +13425,7 @@ function iaInit(){
     lbl.textContent = key
       ? ((mlAiGetProvider() === 'gemini' ? 'Gemini' : 'Claude') + ' · ' + (CURRENT_BRAND === 'naturaline' ? 'NATURALINE' : 'MDM'))
       : 'Aucune clé configurée';
-    lbl.style.color = key ? 'var(--g500)' : '#dc2626';
+    lbl.style.color = key ? 'var(--g500)' : '#b0402f';
   }
   if (!mlAiGetKey()) { iaToggleConfig(true); }
   botLoadCloud().then(function(){
@@ -13733,7 +13802,7 @@ function mlSetPJ(file) {
     document.getElementById('ml-pj-info').style.display = 'flex';
     document.getElementById('ml-pj-drop').style.display = 'none';
     document.getElementById('ml-pj-status').textContent = file.name;
-    document.getElementById('ml-pj-status').style.color = '#059669';
+    document.getElementById('ml-pj-status').style.color = '#266327';
     if (typeof mlAiRefreshPdf === 'function') mlAiRefreshPdf();
   };
   reader.readAsDataURL(file);
@@ -14087,23 +14156,23 @@ if ('serviceWorker' in navigator) {
 
       <!-- IMPORT STOCKS (BDC) -->
       <div style="border:1px solid var(--border);border-radius:12px;overflow:hidden;">
-        <div style="background:#fffbeb;padding:.75rem 1rem;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid rgba(245,158,11,.2);">
+        <div style="background:#f8f1e0;padding:.75rem 1rem;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid rgba(245,158,11,.2);">
           <div>
-            <div style="font-size:.85rem;font-weight:700;color:#92400e;">📦 Fichier stocks (Bon de commande)</div>
+            <div style="font-size:.85rem;font-weight:700;color:#7a5512;">📦 Fichier stocks (Bon de commande)</div>
             <div style="font-size:.7rem;color:var(--g500);margin-top:1px;">Fichier Export Mobilogic · Stocks disponibles</div>
           </div>
           <div id="sync-stk-status" style="font-size:.7rem;color:var(--g500);">—</div>
         </div>
         <div style="padding:1rem;">
           <label for="sync-stk-file" id="sync-stk-drop" style="display:flex;align-items:center;gap:10px;border:2px dashed rgba(245,158,11,.4);border-radius:9px;padding:.9rem 1rem;cursor:pointer;transition:all .2s;background:var(--bg);">
-            <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" style="width:24px;height:24px;color:#f59e0b;flex-shrink:0;"><path d="M3 14v3h14v-3M10 3v9M7 6l3-3 3 3"/></svg>
+            <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" style="width:24px;height:24px;color:#b07d1a;flex-shrink:0;"><path d="M3 14v3h14v-3M10 3v9M7 6l3-3 3 3"/></svg>
             <div>
-              <div style="font-size:.82rem;font-weight:600;color:#92400e;">Glisser ou cliquer pour sélectionner</div>
+              <div style="font-size:.82rem;font-weight:600;color:#7a5512;">Glisser ou cliquer pour sélectionner</div>
               <div style="font-size:.7rem;color:var(--g500);">Excel ou CSV · Export.xlsx</div>
             </div>
           </label>
           <input type="file" id="sync-stk-file" accept=".xlsx,.xls,.csv" style="display:none;" onchange="syncLoadStk(this.files[0])"/>
-          <div id="sync-stk-result" style="display:none;margin-top:.7rem;padding:.6rem .9rem;border-radius:8px;background:#fffbeb;border:1px solid rgba(245,158,11,.3);font-size:.78rem;color:#92400e;"></div>
+          <div id="sync-stk-result" style="display:none;margin-top:.7rem;padding:.6rem .9rem;border-radius:8px;background:#f8f1e0;border:1px solid rgba(245,158,11,.3);font-size:.78rem;color:#7a5512;"></div>
           <div id="sync-stk-actions" style="display:none;margin-top:.7rem;">
             <button id="sync-stk-apply" onclick="syncApplyStk()" style="width:100%;padding:.45rem;background:#d97706;color:#fff;border:none;border-radius:7px;font-size:.78rem;font-weight:600;cursor:pointer;">✅ Appliquer au Bon de commande</button>
           </div>
