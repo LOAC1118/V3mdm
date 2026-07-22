@@ -3661,6 +3661,38 @@ var ACCORDS_DEFAUT = [
       'Magasins commandant chez MDM : Bagnols, Bollène, Carpentras, Montélimar, Morières, Orange, Perpignan, Uzes, Entrepôt.',
       'Interlocuteur : M. Clément Meckert — ordo@moulindesmoines.com — 03 90 29 11 86.'
     ].join('\n')
+  },
+  {
+    nom: 'Le Grand Panier Bio 2026',
+    debut: '2026-01-01', fin: '2026-12-31',
+    paliers: [
+      { seuil: 550, remise: 12, label: 'Différenciation tarifaire — franco 550€ → 12% (hors remises spécifiques)' },
+      { seuil: 550, remise: 25, label: 'Gamme FARINES — franco 550€ → 25%' },
+      { seuil: 0,  remise: 18, label: 'Sélection 11 réf. épeautre/apéritif → 18% (voir liste EAN dans les notes)' },
+      { seuil: 0,  remise: 18, label: 'Gamme CHOCOLATS → 18% si 20 références détenues' }
+    ],
+    promos: [],
+    franco: 550, implantation: '', anniversaire: '',
+    paiement: '',
+    notes: [
+      'Prix nets sur les références de la marque CELTIC : voir Annexe 1.',
+      'Remise différenciation tarifaire 12% : conditionnée au respect du franco de 550€, hors remises spécifiques.',
+      'Remise 18% sur sélection de 11 références :',
+      '  3347437756313 — BISCOTTE D\'EPEAUTRE',
+      '  3347430020336 — GRESSINS AU SESAME',
+      '  3347430019156 — THALER EPAUTRE AU FROMAGE',
+      '  3347430020329 — GRESSINS A L\'HUILE D\'OLIVE',
+      '  3347430020343 — GRESSINS A L\'EPEAUTRE',
+      '  3347434889625 — BRETZEL EPEAUTRE AU SESAME',
+      '  3347430022607 — BRETZELS AU QUINOA',
+      '  3347430018777 — BOUDOIRS PRINCESSE',
+      '  3347439517623 — BISCOTTE EP CHATAIGNE',
+      '  3347430000253 — BISCOTY PETIT EPEAUTRE',
+      '  3347430022453 — SPELTINE',
+      'Remise 25% sur la gamme de farines : conditionnée au respect du franco de 550€.',
+      'Remise 18% sur la gamme de chocolats : conditionnée à la détention de 20 références.',
+      'Source : section 3.1.1 Remises sur facture. Franco global / implantation / anniversaire / paiement / dates / plan promo : à compléter depuis les autres sections de l\'accord.'
+    ].join('\\n')
   }
 ];
 
@@ -3682,7 +3714,19 @@ async function accordsLoad() {
     }
     accordsRender();
     accordsPopulateSelect();
-  } catch(e) { console.warn('[Accords]', e); }
+  } catch(e) {
+    console.error('[Accords] échec du chargement :', e);
+    var listEl = document.getElementById('accords-list');
+    var emptyEl = document.getElementById('accords-empty');
+    if (emptyEl) emptyEl.classList.add('hidden');
+    if (listEl) {
+      var msg = (e && e.code === 'permission-denied')
+        ? 'Accès refusé par la base de données. Les règles Firestore n\'autorisent pas la lecture des accords pour ce compte. (Vérifie que les règles publiées autorisent la lecture de accords_global.)'
+        : 'Impossible de charger les accords : ' + (e && e.message ? e.message : e);
+      listEl.innerHTML = '<div style="padding:1.25rem;border:1px solid var(--red);background:var(--red-bg);border-radius:12px;color:var(--red);font-size:.85rem;line-height:1.5;">' +
+        '<strong>Chargement des accords impossible</strong><br>' + msg + '</div>';
+    }
+  }
 }
 
 function accordsRender() {
