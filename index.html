@@ -586,6 +586,29 @@ tr:hover td { background:var(--blue-p50); }
 .badge-commande { background:var(--blue-bg); color:var(--blue); border:1px solid rgba(37,99,235,.15); }
 .badge-envoyee { background:var(--blue-p100); color:var(--blue-p800); border:1px solid rgba(59,130,212,.2); }
 .badge-brouillon { background:var(--amber-bg); color:var(--amber); border:1px solid rgba(201,124,26,.2); }
+
+/* Bandeau : commande mise a jour depuis un autre appareil */
+#bdc-sync-banner {
+  display:none; position:fixed; z-index:600;
+  left:50%; transform:translateX(-50%); bottom:22px;
+  align-items:center; gap:12px;
+  background:var(--surface); border:1px solid var(--blue-p300);
+  border-radius:12px; padding:.7rem .9rem;
+  box-shadow:0 10px 30px rgba(26,28,26,.16);
+  max-width:calc(100vw - 24px);
+}
+#bdc-sync-banner .bsb-txt { display:flex; flex-direction:column; line-height:1.3; min-width:0; }
+#bdc-sync-banner .bsb-txt strong { font-size:.82rem; color:var(--g900); font-weight:600; }
+#bdc-sync-banner .bsb-txt span { font-size:.72rem; color:var(--g500); }
+#bdc-sync-banner button {
+  border-radius:8px; padding:.4rem .75rem; font-family:inherit;
+  font-size:.76rem; font-weight:600; cursor:pointer; white-space:nowrap;
+}
+#bdc-sync-banner .bsb-ok { background:var(--blue-p700); border:1px solid var(--blue-p700); color:#fff; }
+#bdc-sync-banner .bsb-no { background:var(--surface); border:1px solid var(--border-med); color:var(--g600); }
+@media(max-width:640px){
+  #bdc-sync-banner { bottom:76px; left:12px; right:12px; transform:none; max-width:none; }
+}
 .badge-annulee { background:var(--red-bg); color:var(--red); border:1px solid rgba(192,57,43,.15); }
 .badge-purple { background:var(--violet-bg); color:var(--violet); border:1px solid rgba(124,58,237,.15); }
 
@@ -3701,15 +3724,25 @@ async function accordsLoad() {
     var snap = await db.collection('accords_global').get();
     accordsCache = [];
     snap.forEach(function(doc){ accordsCache.push(Object.assign({ _id: doc.id }, doc.data())); });
-    // Initialiser les accords manquants parmi les 4 accords 2026 pré-chargés.
-    // On compare par nom pour éviter les doublons (même si la collection n'est pas vide).
+    // Afficher IMMÉDIATEMENT ce qui a été lu — l'affichage ne doit jamais
+    // dépendre du succès des écritures ci-dessous.
+    accordsRender();
+    accordsPopulateSelect();
+
+    // Initialiser les accords manquants parmi les accords pré-chargés.
+    // L'écriture exige les droits admin (isAdmin dans les règles) : si elle
+    // est refusée, on garde l'affichage des accords déjà lus sans planter.
     var existingNames = accordsCache.map(function(a){ return a.nom; });
     for (var i = 0; i < ACCORDS_DEFAUT.length; i++) {
       if (existingNames.indexOf(ACCORDS_DEFAUT[i].nom) === -1) {
-        var ref = await db.collection('accords_global').add(
-          Object.assign({ createdAt: firebase.firestore.FieldValue.serverTimestamp() }, ACCORDS_DEFAUT[i])
-        );
-        accordsCache.push(Object.assign({ _id: ref.id }, ACCORDS_DEFAUT[i]));
+        try {
+          var ref = await db.collection('accords_global').add(
+            Object.assign({ createdAt: firebase.firestore.FieldValue.serverTimestamp() }, ACCORDS_DEFAUT[i])
+          );
+          accordsCache.push(Object.assign({ _id: ref.id }, ACCORDS_DEFAUT[i]));
+        } catch(wErr) {
+          console.warn('[Accords] ajout impossible (droits admin requis) :', ACCORDS_DEFAUT[i].nom, wErr.code || wErr.message);
+        }
       }
     }
     accordsRender();
@@ -4332,6 +4365,7 @@ async function showApp() {
     if (typeof bdcLoadFromCloud === 'function') {
       bdcLoadFromCloud().then(function(restored) {
         if (restored) console.log('[BDC] Commande en cours restaurée (cloud/local)');
+        if (typeof bdcStartCloudWatch === 'function') bdcStartCloudWatch();
       });
     }
   } catch(e) { console.warn('[BDC] Restore err:', e); }
@@ -7637,6 +7671,45 @@ function commInit() {
 function BDC_STORAGE_KEY() { return 'mdm_bdc_encours_v1_' + CURRENT_BRAND + (currentUser && currentUser.uid ? '_' + currentUser.uid : ''); }
 
 var bdcCloudSyncTimer = null;
+var bdcPendingCloud = null;   // derniere version en attente d'envoi
+var bdcWatchUnsub  = null;    // desabonnement du listener temps reel
+var bdcSyncPending = null;    // version recue d'un autre appareil, en attente d'accord
+
+// Identifiant stable de cet appareil : permet d'ignorer l'echo de nos
+// propres ecritures dans le listener temps reel.
+function BDC_DEVICE_ID() {
+  try {
+    var k = 'mdm_device_id';
+    var v = localStorage.getItem(k);
+    if (!v) {
+      v = 'dev_' + Math.random().toString(36).slice(2, 10) + Date.now().toString(36);
+      localStorage.setItem(k, v);
+    }
+    return v;
+  } catch (e) { return 'dev_anon'; }
+}
+
+function bdcPushCloud(data) {
+  try {
+    if (typeof bcol === 'function' && db) {
+      bcol('config').doc('bdc_encours').set(data).catch(function(e) {
+        console.warn('[BDC] Sync cloud echouee (hors-ligne ?)', e);
+      });
+    }
+  } catch (e) { console.warn('[BDC] Sync cloud erreur:', e); }
+}
+
+// Envoi immediat de ce qui est en attente : appele quand l'appareil se met
+// en veille ou que l'onglet passe en arriere-plan, pour ne jamais perdre le
+// dernier scan (cas typique : on scanne puis on range le telephone).
+function bdcFlushCloud() {
+  if (!bdcPendingCloud) return;
+  clearTimeout(bdcCloudSyncTimer);
+  var d = bdcPendingCloud;
+  bdcPendingCloud = null;
+  bdcPushCloud(d);
+}
+
 function bdcSaveLocal() {
   try {
     var data = {
@@ -7650,7 +7723,8 @@ function bdcSaveLocal() {
       tel:          (document.getElementById('bdc-tel')           || {}).value || '',
       datelivraison:(document.getElementById('bdc-datelivraison') || {}).value || '',
       comment:      (document.getElementById('bdc-comment')       || {}).value || '',
-      savedAt: new Date().toISOString()
+      savedAt: new Date().toISOString(),
+      deviceId: BDC_DEVICE_ID()
     };
     localStorage.setItem(BDC_STORAGE_KEY(), JSON.stringify(data));
 
@@ -7658,16 +7732,9 @@ function bdcSaveLocal() {
     // commande en cours depuis un autre appareil (ex: scanné sur iPhone,
     // terminé sur ordinateur). On attend une courte pause de saisie avant
     // d'écrire, pour ne pas surcharger Firestore à chaque frappe/scan.
+    bdcPendingCloud = data;
     clearTimeout(bdcCloudSyncTimer);
-    bdcCloudSyncTimer = setTimeout(function() {
-      try {
-        if (typeof bcol === 'function' && db) {
-          bcol('config').doc('bdc_encours').set(data).catch(function(e) {
-            console.warn('[BDC] Sync cloud échouée (hors-ligne ?)', e);
-          });
-        }
-      } catch(e) { console.warn('[BDC] Sync cloud erreur:', e); }
-    }, 1500);
+    bdcCloudSyncTimer = setTimeout(bdcFlushCloud, 700);
   } catch(e) { console.warn('bdcSaveLocal:', e); }
 }
 
@@ -7755,6 +7822,77 @@ async function bdcLoadFromCloud() {
     return bdcLoadLocal();
   }
 }
+
+// ── Synchronisation temps reel de la commande en cours ───────────────────
+// Objectif : scanner en rayon sur le telephone et retrouver la commande sur
+// l'ordinateur sans recharger la page.
+//
+// Regle de securite : on n'ecrase JAMAIS un panier en cours de saisie. Si le
+// panier local est vide, on applique directement ; sinon on propose.
+function bdcStartCloudWatch() {
+  if (bdcWatchUnsub) return;                       // deja actif
+  if (typeof bcol !== 'function' || !db) return;
+  try {
+    bdcWatchUnsub = bcol('config').doc('bdc_encours').onSnapshot(function(doc) {
+      if (!doc.exists) { bdcHideSyncBanner(); return; }
+      if (doc.metadata && doc.metadata.hasPendingWrites) return;  // notre propre ecriture
+      var d = doc.data();
+      if (!d || !d.qtys) return;
+      if (d.deviceId && d.deviceId === BDC_DEVICE_ID()) return;   // vient de cet appareil
+
+      var nbDistant = Object.keys(d.qtys).filter(function(k){ return d.qtys[k] > 0; }).length;
+      if (!nbDistant) return;
+
+      var nbLocal = Object.keys(bdcQtys || {}).filter(function(k){ return bdcQtys[k] > 0; }).length;
+
+      if (nbLocal === 0) {
+        // Rien en cours ici : on applique directement.
+        bdcApplyData(d, 'autre appareil');
+      } else {
+        // Saisie en cours : on ne touche a rien, on propose.
+        bdcShowSyncBanner(d, nbDistant);
+      }
+    }, function(err) { console.warn('[BDC] watch:', err); });
+    console.log('[BDC] Synchronisation temps reel active');
+  } catch (e) { console.warn('[BDC] watch init:', e); }
+}
+
+function bdcShowSyncBanner(data, nb) {
+  bdcSyncPending = data;
+  var el = document.getElementById('bdc-sync-banner');
+  if (!el) {
+    el = document.createElement('div');
+    el.id = 'bdc-sync-banner';
+    document.body.appendChild(el);
+  }
+  var h = data.savedAt
+    ? new Date(data.savedAt).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })
+    : '';
+  el.innerHTML =
+    '<div class="bsb-txt"><strong>Commande mise a jour sur un autre appareil</strong>' +
+    '<span>' + nb + ' article' + (nb > 1 ? 's' : '') + (h ? ' - ' + h : '') + '</span></div>' +
+    '<button class="bsb-ok" onclick="bdcSyncAccept()">Charger</button>' +
+    '<button class="bsb-no" onclick="bdcHideSyncBanner()">Ignorer</button>';
+  el.style.display = 'flex';
+}
+
+function bdcSyncAccept() {
+  if (bdcSyncPending) bdcApplyData(bdcSyncPending, 'autre appareil');
+  bdcHideSyncBanner();
+}
+
+function bdcHideSyncBanner() {
+  bdcSyncPending = null;
+  var el = document.getElementById('bdc-sync-banner');
+  if (el) el.style.display = 'none';
+}
+
+// Ne jamais perdre le dernier scan : on pousse ce qui est en attente des que
+// l'appareil se met en veille, change d'onglet ou ferme la page.
+document.addEventListener('visibilitychange', function() {
+  if (document.visibilityState === 'hidden') bdcFlushCloud();
+});
+window.addEventListener('pagehide', bdcFlushCloud);
 
 function bdcClearLocal() {
   try { localStorage.removeItem(BDC_STORAGE_KEY()); } catch(e) {}
