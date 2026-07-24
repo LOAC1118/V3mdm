@@ -7184,7 +7184,7 @@ function stockLoadCloud(cb) {
           if (typeof buildTable === 'function' && typeof bdcInitDone !== 'undefined' && bdcInitDone) {
             try { buildTable(); } catch (e) {}
           }
-          if (typeof RechercheProduit !== 'undefined') { try { RechercheProduit.refresh(); } catch (e) {} }
+          if (typeof RechercheProduit !== 'undefined') { try { RechercheProduit.majStock(); } catch (e) {} }
         }
       }
       if (cb) cb();
@@ -9483,6 +9483,12 @@ function applyStockImport() {
       }
     });
   });
+
+  // Un seul import met a jour le bon de commande ET la recherche produit :
+  // les deux lisent bdcStockMap, il suffit de redessiner la recherche.
+  if (typeof RechercheProduit !== 'undefined') {
+    try { RechercheProduit.majStock(); } catch(e) { console.warn('[Stock] maj recherche', e); }
+  }
 
   closeStockImport();
   pendingStockMap = {};
@@ -14579,6 +14585,6 @@ if ('serviceWorker' in navigator) {
 <script src="tournees.js?v=4"></script>
 <script src="visites.js?v=2"></script>
 <script src="rgpd.js?v=1"></script>
-<script src="recherche.js?v=2"></script>
+<script src="recherche.js?v=3"></script>
 </body>
 </html>

@@ -404,6 +404,13 @@
       state.ventesChargees = false; state.dlcCharge = false;
       this.mount();
     },
+    // Rafraichissement leger : le stock vit dans bdcStockMap, il suffit de
+    // redessiner. On ne relit ni les cadenciers ni les DLC (inutile et couteux).
+    majStock: function () {
+      if (!document.getElementById('rch-root')) return;
+      injectCSS();
+      render();
+    },
     setQ: function (v) { state.q = v; state.detail = null; render(); },
     setTri: function (v) { state.tri = v; render(); },
     setRupture: function (v) { state.filtreRupture = !!v; render(); },
