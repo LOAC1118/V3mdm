@@ -2622,8 +2622,7 @@ thead th.ts-active { text-decoration:underline; text-underline-offset:3px; }
           <button id="top100-src-crm" onclick="top100SetSource('crm')" class="btn btn-primary" style="font-size:.74rem;padding:.4rem .85rem;border:none;">Mes commandes CRM</button>
           <button id="top100-src-mobi" onclick="top100SetSource('mobilogic')" class="btn btn-ghost" style="font-size:.74rem;padding:.4rem .85rem;border:none;">Ventes réelles Mobilogic</button>
         </div>
-        <button class="btn btn-ghost" onclick="topMobiPick()" style="font-size:.72rem;padding:.35rem .7rem;">Importer Mobilogic</button>
-        <input type="file" id="top100-mobi-file" accept=".xlsx,.xls,.csv" multiple style="display:none" onchange="topMobiImportFiles(this.files)">
+        <button class="btn btn-ghost" onclick="openSyncModal()" style="font-size:.72rem;padding:.35rem .7rem;">Importer Mobilogic</button>
       </div>
       <div style="display:flex;align-items:center;gap:8px;">
         <span style="font-size:.78rem;font-weight:600;color:var(--g700);">Classer par :</span>
@@ -4618,11 +4617,6 @@ function top100SyncSourceBtns(){
 }
 
 // ── Import des exports Mobilogic (un ou les deux fichiers a la fois) ──
-function topMobiPick(){
-  var el = document.getElementById('top100-mobi-file');
-  if (el) { el.value = ''; el.click(); }
-}
-
 function topMobiParse(text, acc){
   var lines = text.split(/\r?\n/).filter(function(l){ return l.trim(); });
   if (lines.length < 2) return 0;
@@ -4656,6 +4650,18 @@ function topMobiParse(text, acc){
 
 function topMobiImportFiles(files){
   if (!files || !files.length) return;
+  var list = Array.prototype.slice.call(files);
+  // SheetJS est charge a la demande : sans cette attente, XLSX est undefined
+  // au moment ou le FileReader rend la main et la lecture echoue en silence.
+  var besoinXLSX = list.some(function(f){ return f.name.split('.').pop().toLowerCase() !== 'csv'; });
+  if (besoinXLSX && typeof XLSX === 'undefined') {
+    toast('Préparation de la lecture Excel…', 'ok');
+    if (typeof withXLSX === 'function') { withXLSX(function(){ topMobiRead(list); }); return; }
+  }
+  topMobiRead(list);
+}
+
+function topMobiRead(files){
   var acc = {};
   var restant = files.length, lus = 0;
   Array.prototype.forEach.call(files, function(f){
@@ -4670,7 +4676,10 @@ function topMobiImportFiles(files){
           csv = XLSX.utils.sheet_to_csv(wb.Sheets[wb.SheetNames[0]], { FS:';' });
         }
         lus += topMobiParse(csv, acc);
-      } catch(err){ console.warn('[TopMobi] parse', err); toast('Fichier illisible : ' + f.name, 'err'); }
+      } catch(err){
+        console.error('[TopMobi] parse', err);
+        toast('Fichier illisible : ' + f.name + ' — ' + (err && err.message ? err.message : err), 'err');
+      }
       if (--restant === 0) topMobiFinish(acc, lus);
     };
     reader.onerror = function(){ if (--restant === 0) topMobiFinish(acc, lus); };
@@ -9582,18 +9591,29 @@ function stockImportDrop(e) {
 function stockImportFile(file) {
   if (!file) return;
   var ext = file.name.split('.').pop().toLowerCase();
-  var reader = new FileReader();
   if (ext === 'csv') {
-    reader.onload = function(e) { stockParseCSV(e.target.result); };
-    reader.readAsText(file, 'UTF-8');
-  } else {
+    var r = new FileReader();
+    r.onload = function(e) { stockParseCSV(e.target.result); };
+    r.readAsText(file, 'UTF-8');
+    return;
+  }
+  // SheetJS est charge a la demande : on l'attend avant de lire le classeur.
+  var lire = function() {
+    var reader = new FileReader();
     reader.onload = function(e) {
-      var wb = XLSX.read(e.target.result, {type:'binary'});
-      var ws = wb.Sheets[wb.SheetNames[0]];
-      stockParseCSV(XLSX.utils.sheet_to_csv(ws, {FS:';'}));
+      try {
+        var wb = XLSX.read(e.target.result, {type:'binary'});
+        var ws = wb.Sheets[wb.SheetNames[0]];
+        stockParseCSV(XLSX.utils.sheet_to_csv(ws, {FS:';'}));
+      } catch(err) {
+        console.error('[Stock] lecture', err);
+        toast('Fichier illisible : ' + (err && err.message ? err.message : err), 'err');
+      }
     };
     reader.readAsBinaryString(file);
-  }
+  };
+  if (typeof XLSX === 'undefined' && typeof withXLSX === 'function') withXLSX(lire);
+  else lire();
 }
 
 function stockParseCSV(text) {
@@ -14669,22 +14689,70 @@ function syncLoadStk(file) {
   status.style.color = 'var(--amber)';
 }
 
+// ── Bloc Top produits Mobilogic dans la synchronisation ──
+var syncPendingTop = null;
+
+function syncLoadTop(files) {
+  if (!files || !files.length) return;
+  syncPendingTop = Array.prototype.slice.call(files);
+  var res = document.getElementById('sync-top-result');
+  var act = document.getElementById('sync-top-actions');
+  var st  = document.getElementById('sync-top-status');
+  var noms = syncPendingTop.map(function(f){ return f.name; }).join(', ');
+  if (res) {
+    res.style.display = 'block';
+    res.textContent = '📂 ' + syncPendingTop.length + ' fichier' + (syncPendingTop.length > 1 ? 's' : '') + ' : ' + noms;
+  }
+  if (act) act.style.display = 'block';
+  if (st) { st.textContent = '⏳ En attente'; st.style.color = 'var(--amber)'; }
+  // Un seul fichier : on previent que l'autre dimension manquera.
+  if (syncPendingTop.length === 1 && res) {
+    res.innerHTML += '<br><span style="color:var(--amber);">Un seul fichier sélectionné : la donnée de l\'autre export ne sera pas mise à jour.</span>';
+  }
+}
+
+function syncApplyTop() {
+  if (!syncPendingTop || !syncPendingTop.length) return;
+  var btn = document.getElementById('sync-top-apply');
+  var st  = document.getElementById('sync-top-status');
+  if (btn) { btn.textContent = '⏳ Lecture…'; btn.disabled = true; }
+  if (typeof topMobiImportFiles !== 'function') {
+    toast('Import Top produits indisponible', 'err');
+    if (btn) { btn.textContent = '✅ Appliquer au Top produits'; btn.disabled = false; }
+    return;
+  }
+  topMobiImportFiles(syncPendingTop);
+  if (st) { st.textContent = '✅ Appliqué'; st.style.color = 'var(--green)'; }
+  var res = document.getElementById('sync-top-result');
+  if (res) res.textContent = '✅ Top produits mis à jour depuis Mobilogic';
+  if (btn) { btn.textContent = '✅ Appliqué au Top produits'; btn.disabled = false; }
+  syncPendingTop = null;
+}
+
+// Raccourci : fermer la synchro et ouvrir la section concernee
+function syncGoto(section) {
+  closeSyncModal();
+  if (typeof showSection === 'function') showSection(section, null, null);
+}
+
 function syncApplyStk() {
   if (!syncPendingStk) return;
   var btn = document.getElementById('sync-stk-apply');
   var status = document.getElementById('sync-stk-status');
-  if (btn) { btn.textContent = '⏳ Chargement...'; btn.disabled = true; }
-  // Déléguer à stockImportFile
-  if (typeof stockImportFile === 'function') {
-    stockImportFile(syncPendingStk);
-    status.textContent = '✅ Appliqué';
-    status.style.color = 'var(--green)';
-    document.getElementById('sync-stk-result').textContent = '✅ Stocks mis à jour — ' + syncPendingStk.name;
-    if (btn) { btn.textContent = '✅ Appliqué au BDC'; btn.disabled = false; }
-    syncPendingStk = null;
-  } else {
-    toast('stockImportFile non disponible', 'err');
-  }
+  if (typeof stockImportFile !== 'function') { toast('Import de stock indisponible', 'err'); return; }
+  if (btn) { btn.textContent = '⏳ Lecture…'; btn.disabled = true; }
+
+  // L'import de stock affiche un apercu (references reconnues / inconnues /
+  // ruptures) et demande confirmation DANS sa propre fenetre. Sans l'ouvrir,
+  // le fichier etait lu mais jamais applique : on ouvre donc la fenetre
+  // d'apercu et on referme celle de synchronisation.
+  var f = syncPendingStk;
+  syncPendingStk = null;
+  if (status) { status.textContent = '⏳ Aperçu'; status.style.color = 'var(--amber)'; }
+  if (btn) { btn.textContent = '✅ Appliquer au Bon de commande'; btn.disabled = false; }
+  closeSyncModal();
+  if (typeof openStockImport === 'function') openStockImport();
+  stockImportFile(f);
 }
 
 
@@ -14731,7 +14799,7 @@ if ('serviceWorker' in navigator) {
     <div style="background:var(--blue-p800);border-radius:16px 16px 0 0;padding:1.1rem 1.4rem;display:flex;align-items:center;justify-content:space-between;">
       <div>
         <div style="font-size:1rem;font-weight:700;color:#fff;">🔄 Synchronisation des données</div>
-        <div style="font-size:.72rem;color:var(--blue-p300);margin-top:2px;">Importez vos fichiers commandes et stocks en un seul endroit</div>
+        <div style="font-size:.72rem;color:var(--blue-p300);margin-top:2px;">Tous vos fichiers à importer, au même endroit</div>
       </div>
       <button onclick="closeSyncModal()" style="background:rgba(255,255,255,.15);border:none;border-radius:7px;padding:5px 9px;color:#fff;font-size:1.1rem;cursor:pointer;line-height:1;">✕</button>
     </div>
@@ -14788,6 +14856,45 @@ if ('serviceWorker' in navigator) {
         </div>
       </div>
 
+      <!-- IMPORT TOP PRODUITS (Mobilogic) -->
+      <div style="border:1px solid var(--border);border-radius:12px;overflow:hidden;">
+        <div style="background:var(--blue-p50);padding:.75rem 1rem;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--border);">
+          <div>
+            <div style="font-size:.85rem;font-weight:700;color:var(--blue-p800);">🏆 Top produits (Mobilogic)</div>
+            <div style="font-size:.7rem;color:var(--g500);margin-top:1px;">Ventes réelles · CA, quantités livrées et nombre de clients</div>
+          </div>
+          <div id="sync-top-status" style="font-size:.7rem;color:var(--g500);">—</div>
+        </div>
+        <div style="padding:1rem;">
+          <label for="sync-top-file" style="display:flex;align-items:center;gap:10px;border:2px dashed var(--blue-p300);border-radius:9px;padding:.9rem 1rem;cursor:pointer;transition:all .2s;background:var(--bg);">
+            <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" style="width:24px;height:24px;color:var(--blue-p500);flex-shrink:0;"><path d="M3 14v3h14v-3M10 3v9M7 6l3-3 3 3"/></svg>
+            <div>
+              <div style="font-size:.82rem;font-weight:600;color:var(--blue-p700);">Sélectionnez les deux fichiers ensemble</div>
+              <div style="font-size:.7rem;color:var(--g500);">Table_REQ_TOP_N.xlsx (CA / quantités) + Table_REQ_TOP_N_CLIENT.xlsx (nb clients)</div>
+            </div>
+          </label>
+          <input type="file" id="sync-top-file" accept=".xlsx,.xls,.csv" multiple style="display:none;" onchange="syncLoadTop(this.files)"/>
+          <div id="sync-top-result" style="display:none;margin-top:.7rem;padding:.6rem .9rem;border-radius:8px;background:var(--blue-p50);border:1px solid var(--blue-p300);font-size:.78rem;color:var(--blue-p800);"></div>
+          <div id="sync-top-actions" style="display:none;margin-top:.7rem;">
+            <button id="sync-top-apply" onclick="syncApplyTop()" style="width:100%;padding:.45rem;background:var(--blue-p700);color:#fff;border:none;border-radius:7px;font-size:.78rem;font-weight:600;cursor:pointer;">✅ Appliquer au Top produits</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- RACCOURCIS vers les imports qui demandent un choix -->
+      <div style="border:1px solid var(--border);border-radius:12px;padding:.9rem 1rem;background:var(--surface2);">
+        <div style="font-size:.78rem;font-weight:700;color:var(--g700);margin-bottom:.2rem;">Autres imports</div>
+        <div style="font-size:.7rem;color:var(--g500);margin-bottom:.7rem;">Ces deux-là demandent une information supplémentaire, ils s'ouvrent dans leur section.</div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;">
+          <button onclick="syncGoto('cadencier')" style="flex:1;min-width:150px;padding:.5rem .8rem;border:1px solid var(--border-med);border-radius:8px;background:var(--surface);color:var(--g700);font-size:.78rem;font-weight:600;cursor:pointer;text-align:left;">
+            🗓️ Cadencier client<br><span style="font-weight:400;font-size:.68rem;color:var(--g500);">à rattacher à un client</span>
+          </button>
+          <button onclick="syncGoto('contacts-db')" style="flex:1;min-width:150px;padding:.5rem .8rem;border:1px solid var(--border-med);border-radius:8px;background:var(--surface);color:var(--g700);font-size:.78rem;font-weight:600;cursor:pointer;text-align:left;">
+            👥 Base clients<br><span style="font-weight:400;font-size:.68rem;color:var(--g500);">avec aperçu avant application</span>
+          </button>
+        </div>
+      </div>
+
       <!-- Pied de modale -->
       <div style="display:flex;justify-content:flex-end;gap:8px;padding-top:.25rem;border-top:1px solid var(--border);">
         <button onclick="closeSyncModal()" style="padding:.5rem 1.2rem;border:1px solid var(--border-med);border-radius:8px;background:#fff;color:var(--g700);font-size:.82rem;cursor:pointer;">Fermer</button>
@@ -14801,6 +14908,6 @@ if ('serviceWorker' in navigator) {
 <script src="tournees.js?v=4"></script>
 <script src="visites.js?v=2"></script>
 <script src="rgpd.js?v=1"></script>
-<script src="recherche.js?v=3"></script>
+<script src="recherche.js?v=4"></script>
 </body>
 </html>

@@ -422,7 +422,9 @@
     // Reutilise le modal d'import de stock du bon de commande : meme fichier,
     // meme traitement, et le resultat est partage entre les appareils.
     importStock: function () {
-      if (typeof openStockImport === 'function') openStockImport();
+      // Un seul endroit pour tous les imports : la fenetre Synchroniser donnees
+      if (typeof openSyncModal === 'function') openSyncModal();
+      else if (typeof openStockImport === 'function') openStockImport();
       else toast('Import de stock indisponible', 'err');
     },
     commander: function (code) {
