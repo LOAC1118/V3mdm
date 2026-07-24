@@ -1280,6 +1280,7 @@ thead th.ts-active { text-decoration:underline; text-underline-offset:3px; }
     <div class="t-menu" id="tmenu-terrain">
       <button class="t-tab t-trig" onclick="tnavMenu('terrain',event)">Terrain<svg class="t-caret" viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M2 4l3 3 3-3"/></svg></button>
       <div class="t-drop">
+      <button class="t-item" data-sec="recherche" onclick="tnavGo('recherche')"><span class="t-item-ico">🔍</span>Recherche produit</button>
       <button class="t-item" data-sec="tournees" onclick="tnavGo('tournees')"><span class="t-item-ico">🗺️</span>Tournées</button>
       <button class="t-item" data-sec="visites" onclick="tnavGo('visites')"><span class="t-item-ico">📝</span>Visites</button>
       <button class="t-item" data-sec="cadencier" onclick="tnavGo('cadencier')"><span class="t-item-ico">🗓️</span>Cadencier</button>
@@ -1343,6 +1344,10 @@ thead th.ts-active { text-decoration:underline; text-underline-offset:3px; }
     <div class="nav-item" onclick="showSection('visites',null,this)">
       <svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 1.5h7l3 3v10H3z"/><path d="M9.5 1.5v3.5h3.5M5.5 8h5M5.5 11h5"/></svg>
       Visites
+    </div>
+    <div class="nav-item" onclick="showSection('recherche',null,this)">
+      <svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="7" cy="7" r="5"/><path d="m11 11 3.5 3.5"/></svg>
+      Recherche produit
     </div>
     <div class="nav-item" onclick="showSection('rgpd',null,this)">
       <svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M8 1.5v13M3 4.5h10M5 4.5L3 9h4zM11 4.5L9 9h4z"/></svg>
@@ -1792,6 +1797,15 @@ thead th.ts-active { text-decoration:underline; text-underline-offset:3px; }
       <p style="margin:.2rem 0 0;font-size:.82rem;color:var(--g600);">Droits des personnes, durées de conservation et registre des traitements.</p>
     </div>
     <div id="rgpd-root"></div>
+  </div>
+
+  <!-- RECHERCHE PRODUIT -->
+  <div id="sec-recherche" class="hidden" style="padding:1.75rem 2rem;overflow-y:auto;flex:1;background:var(--bg);box-sizing:border-box;">
+    <div style="margin-bottom:1.25rem;">
+      <h2 style="margin:0;font-family:var(--fdisp);font-size:1.35rem;color:var(--g900);">Recherche produit</h2>
+      <p style="margin:.2rem 0 0;font-size:.82rem;color:var(--g600);">Référence, code-barres, colisage, stock et ventes de l’année.</p>
+    </div>
+    <div id="rch-root"></div>
   </div>
 
   <!-- BON DE COMMANDE BDC -->
@@ -3015,6 +3029,10 @@ thead th.ts-active { text-decoration:underline; text-underline-offset:3px; }
   <button class="mmenu-item" role="menuitem" data-sec="visites" onclick="mnavGo('visites')">
     <span class="mmenu-ico"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 1.5h7l3 3v10H3z"/><path d="M9.5 1.5v3.5h3.5M5.5 8h5M5.5 11h5"/></svg></span>
     <span class="mmenu-label">Visites</span>
+  </button>
+  <button class="mmenu-item" role="menuitem" data-sec="recherche" onclick="mnavGo('recherche')">
+    <span class="mmenu-ico"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="7" cy="7" r="5"/><path d="m11 11 3.5 3.5"/></svg></span>
+    <span class="mmenu-label">Recherche produit</span>
   </button>
   <button class="mmenu-item" role="menuitem" data-sec="rgpd" onclick="mnavGo('rgpd')">
     <span class="mmenu-ico"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M8 1.5v13M3 4.5h10M5 4.5L3 9h4zM11 4.5L9 9h4z"/></svg></span>
@@ -4441,7 +4459,7 @@ if (typeof cdbPageSize  === 'undefined') window.cdbPageSize  = 50;
 // ═══════════════════════════════════════════════
 //  NAVIGATION
 // ═══════════════════════════════════════════════
-const SECTIONS = ['dashboard','radar','tournees','visites','rgpd','bdc','frais','contacts-db','commissions','comptes','mailing','accords','promos','top100','cadencier','ia'];
+const SECTIONS = ['dashboard','radar','tournees','visites','recherche','rgpd','bdc','frais','contacts-db','commissions','comptes','mailing','accords','promos','top100','cadencier','ia'];
 // ═══════════════════════════════════════════════
 //  MENUS DEROULANTS DE LA BARRE DU HAUT
 // ═══════════════════════════════════════════════
@@ -4500,6 +4518,7 @@ function showSection(name, tabEl, sideEl) {
   if (name==='tournees') { setTimeout(function(){ if (typeof Tournees !== 'undefined') Tournees.mount(); }, 80); }
   if (name==='visites') { setTimeout(function(){ if (typeof Visites !== 'undefined') Visites.mount(); }, 80); }
   if (name==='rgpd') { setTimeout(function(){ if (typeof RGPD !== 'undefined') RGPD.mount(); }, 80); }
+  if (name==='recherche') { setTimeout(function(){ if (typeof RechercheProduit !== 'undefined') RechercheProduit.mount(); }, 80); }
   if (name !== 'tournees' && typeof Tournees !== 'undefined') Tournees.unmount();
   if (name==='frais') { if (typeof refreshFraisStats === 'function') { try{refreshFraisStats();}catch(e){} } if (typeof nfdRender === 'function') nfdRender(); }
   if (name==='bdc') { if (!bdcInitDone) { buildTable(); bdcInitDone=true; } }
@@ -14516,5 +14535,6 @@ if ('serviceWorker' in navigator) {
 <script src="tournees.js?v=4"></script>
 <script src="visites.js?v=2"></script>
 <script src="rgpd.js?v=1"></script>
+<script src="recherche.js?v=1"></script>
 </body>
 </html>
