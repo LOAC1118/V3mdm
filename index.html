@@ -2545,7 +2545,7 @@ thead th.ts-active { text-decoration:underline; text-underline-offset:3px; }
           <option value="">— Sélectionnez un client —</option>
         </select>
       </div>
-      <div style="display:flex;align-items:center;gap:6px;">
+      <div id="top100-period-wrap" style="display:flex;align-items:center;gap:6px;">
         <span style="font-size:.75rem;color:var(--g600);">Période :</span>
         <select id="cad-months" onchange="cadSetMonths(this.value)" style="font-size:.78rem;padding:.35rem .5rem;border:1px solid var(--border-med);border-radius:6px;background:var(--surface);color:var(--g700);">
           <option value="6">6 derniers mois</option>
@@ -2615,12 +2615,22 @@ thead th.ts-active { text-decoration:underline; text-underline-offset:3px; }
     </div>
 
     <!-- Contrôles -->
-    <div class="card" style="padding:.85rem 1rem;margin-bottom:1.25rem;display:flex;align-items:center;gap:14px;flex-wrap:wrap;">
+    <div class="card" style="padding:.85rem 1rem;margin-bottom:.6rem;display:flex;align-items:center;gap:14px;flex-wrap:wrap;">
+      <div style="display:flex;align-items:center;gap:8px;">
+        <span style="font-size:.78rem;font-weight:600;color:var(--g700);">Source :</span>
+        <div style="display:flex;background:var(--bg);border-radius:9px;padding:3px;border:1px solid var(--border);">
+          <button id="top100-src-crm" onclick="top100SetSource('crm')" class="btn btn-primary" style="font-size:.74rem;padding:.4rem .85rem;border:none;">Mes commandes CRM</button>
+          <button id="top100-src-mobi" onclick="top100SetSource('mobilogic')" class="btn btn-ghost" style="font-size:.74rem;padding:.4rem .85rem;border:none;">Ventes réelles Mobilogic</button>
+        </div>
+        <button class="btn btn-ghost" onclick="topMobiPick()" style="font-size:.72rem;padding:.35rem .7rem;">Importer Mobilogic</button>
+        <input type="file" id="top100-mobi-file" accept=".xlsx,.xls,.csv" multiple style="display:none" onchange="topMobiImportFiles(this.files)">
+      </div>
       <div style="display:flex;align-items:center;gap:8px;">
         <span style="font-size:.78rem;font-weight:600;color:var(--g700);">Classer par :</span>
         <div style="display:flex;background:var(--bg);border-radius:9px;padding:3px;border:1px solid var(--border);">
           <button id="top100-metric-ca" onclick="top100SetMetric('ca')" class="btn btn-primary" style="font-size:.74rem;padding:.4rem .85rem;border:none;">💶 Chiffre d'affaires</button>
-          <button id="top100-metric-qte" onclick="top100SetMetric('qte')" class="btn btn-ghost" style="font-size:.74rem;padding:.4rem .85rem;border:none;">📦 Quantité (colis)</button>
+          <button id="top100-metric-qte" onclick="top100SetMetric('qte')" class="btn btn-ghost" style="font-size:.74rem;padding:.4rem .85rem;border:none;">📦 Quantité</button>
+          <button id="top100-metric-cli" onclick="top100SetMetric('cli')" class="btn btn-ghost" style="font-size:.74rem;padding:.4rem .85rem;border:none;">👥 Nb clients</button>
         </div>
       </div>
       <div style="display:flex;align-items:center;gap:6px;">
@@ -2647,6 +2657,9 @@ thead th.ts-active { text-decoration:underline; text-underline-offset:3px; }
       <input type="text" placeholder="🔍 Filtrer désignation, code, EAN…" oninput="top100SetSearch(this.value)"
         style="flex:1;min-width:180px;font-size:.8rem;padding:.4rem .7rem;border:1px solid var(--border-med);border-radius:7px;background:var(--surface);color:var(--g700);">
     </div>
+
+    <!-- Bandeau source Mobilogic -->
+    <div id="top100-mobi-banner" style="display:none;font-size:.76rem;line-height:1.5;color:var(--blue-p700);background:var(--blue-p50);border:1px solid var(--blue-p300);border-radius:9px;padding:.6rem .85rem;margin-bottom:1.25rem;"></div>
 
     <!-- Statistiques -->
     <div class="stats-row-5" style="display:grid;grid-template-columns:repeat(4,1fr);gap:1rem;margin-bottom:1.25rem;">
@@ -4544,7 +4557,192 @@ var top100Cmds = null;            // cache des commandes chargées
 var top100CmdsBrand = null;       // marque pour laquelle le cache a été construit
 var top100Rows = [];              // lignes agrégées après filtre/tri
 var top100Chart = null;
-var top100State = { metric:'ca', period:'all', year:null, topN:'100', search:'' };
+var top100State = { metric:'ca', period:'all', year:null, topN:'100', search:'', source:'crm' };
+
+// ═══════════════════════════════════════════════════════════════════════
+//  TOP PRODUITS — source Mobilogic (ventes reelles facturees)
+//  Le Top calcule depuis bcol('commandes') ne reflete QUE les commandes
+//  saisies dans le CRM. Les exports Mobilogic donnent les ventes reelles :
+//    · Table_REQ_TOP_N        → Code, Designation, CA HT, Qte Livree
+//    · Table_REQ_TOP_N_CLIENT → Code, Designation, Nb clients
+//  Les deux fichiers se completent et fusionnent par code article.
+// ═══════════════════════════════════════════════════════════════════════
+var top100Mobi = null;          // { rows:{CODE:{libelle,ca,qte,nbCli}}, majAt, periode }
+var top100MobiCharge = false;
+
+function top100MobiLoad(){
+  if (typeof bcol !== 'function' || !db) { top100MobiCharge = true; top100Compute(); return; }
+  bcol('config').doc('top_mobilogic').get().then(function(doc){
+    if (doc.exists) top100Mobi = doc.data();
+    top100MobiCharge = true;
+    top100Compute();
+  }).catch(function(e){
+    console.warn('[TopMobi] lecture', e.code || e.message);
+    top100MobiCharge = true; top100Compute();
+  });
+}
+
+function top100SetSource(src){
+  top100State.source = src;
+  top100SyncSourceBtns();
+  if (src === 'mobilogic' && !top100MobiCharge) top100MobiLoad();
+  else top100Compute();
+}
+
+function top100SyncSourceBtns(){
+  var m = top100State.source === 'mobilogic';
+  var a = document.getElementById('top100-src-crm');
+  var b = document.getElementById('top100-src-mobi');
+  if (a) a.className = 'btn ' + (m ? 'btn-ghost' : 'btn-primary');
+  if (b) b.className = 'btn ' + (m ? 'btn-primary' : 'btn-ghost');
+  // La periode ne s'applique pas a un export Mobilogic (instantane fige)
+  var pw = document.getElementById('top100-period-wrap');
+  if (pw) pw.style.opacity = m ? '.4' : '1';
+  if (pw) pw.style.pointerEvents = m ? 'none' : 'auto';
+  var ban = document.getElementById('top100-mobi-banner');
+  if (ban) {
+    if (m && top100Mobi) {
+      var d = top100Mobi.majAt ? new Date(top100Mobi.majAt).toLocaleDateString('fr-FR') : '—';
+      ban.style.display = 'block';
+      ban.innerHTML = '<strong>Ventes réelles Mobilogic</strong> — ' +
+        top100Esc(top100Mobi.periode || 'période non précisée') +
+        ' · ' + Object.keys(top100Mobi.rows || {}).length + ' références · importé le ' + d +
+        '. <span style="opacity:.75">Les quantités sont celles livrées par Mobilogic, pas des colis CRM.</span>';
+    } else if (m) {
+      ban.style.display = 'block';
+      ban.innerHTML = '<strong>Aucun export Mobilogic importé.</strong> Utilise le bouton « Importer Mobilogic » et sélectionne les deux fichiers de requête.';
+    } else {
+      ban.style.display = 'none';
+    }
+  }
+}
+
+// ── Import des exports Mobilogic (un ou les deux fichiers a la fois) ──
+function topMobiPick(){
+  var el = document.getElementById('top100-mobi-file');
+  if (el) { el.value = ''; el.click(); }
+}
+
+function topMobiParse(text, acc){
+  var lines = text.split(/\r?\n/).filter(function(l){ return l.trim(); });
+  if (lines.length < 2) return 0;
+  var sep = lines[0].indexOf(';') >= 0 ? ';' : ',';
+  var hdr = lines[0].split(sep).map(function(h){ return h.trim().replace(/["']/g,'').toLowerCase(); });
+
+  var iCode = hdr.findIndex(function(h){ return h === 'code' || h === 'code article'; });
+  var iLib  = hdr.findIndex(function(h){ return h.indexOf('signation') >= 0 || h === 'libelle' || h === 'libell\u00e9'; });
+  var iCA   = hdr.findIndex(function(h){ return h.indexOf('ca ht') >= 0 || h === 'ca'; });
+  var iQte  = hdr.findIndex(function(h){ return h.indexOf('livr') >= 0; });
+  var iCli  = hdr.findIndex(function(h){ return h.indexOf('client') >= 0; });
+  if (iCode < 0) return 0;
+
+  var num = function(v){ return parseFloat(String(v == null ? '0' : v).replace(/\s/g,'').replace(',','.')) || 0; };
+  var n = 0;
+  for (var i = 1; i < lines.length; i++) {
+    var c = lines[i].split(sep).map(function(x){ return x.trim().replace(/["']/g,''); });
+    var code = (c[iCode] || '').trim();
+    if (!code) continue;
+    if (/^(somme|compteur|total|totaux)$/i.test(code)) continue;   // lignes de synthese
+    var K = code.toUpperCase();
+    if (!acc[K]) acc[K] = { libelle:'', ca:0, qte:0, nbCli:0 };
+    if (iLib >= 0 && c[iLib]) acc[K].libelle = c[iLib];
+    if (iCA  >= 0) { var v1 = num(c[iCA]);  if (v1) acc[K].ca    = v1; }
+    if (iQte >= 0) { var v2 = num(c[iQte]); if (v2) acc[K].qte   = v2; }
+    if (iCli >= 0) { var v3 = num(c[iCli]); if (v3) acc[K].nbCli = v3; }
+    n++;
+  }
+  return n;
+}
+
+function topMobiImportFiles(files){
+  if (!files || !files.length) return;
+  var acc = {};
+  var restant = files.length, lus = 0;
+  Array.prototype.forEach.call(files, function(f){
+    var ext = f.name.split('.').pop().toLowerCase();
+    var reader = new FileReader();
+    reader.onload = function(e){
+      try {
+        var csv;
+        if (ext === 'csv') csv = e.target.result;
+        else {
+          var wb = XLSX.read(e.target.result, { type:'binary' });
+          csv = XLSX.utils.sheet_to_csv(wb.Sheets[wb.SheetNames[0]], { FS:';' });
+        }
+        lus += topMobiParse(csv, acc);
+      } catch(err){ console.warn('[TopMobi] parse', err); toast('Fichier illisible : ' + f.name, 'err'); }
+      if (--restant === 0) topMobiFinish(acc, lus);
+    };
+    reader.onerror = function(){ if (--restant === 0) topMobiFinish(acc, lus); };
+    if (ext === 'csv') reader.readAsText(f, 'UTF-8'); else reader.readAsBinaryString(f);
+  });
+}
+
+function topMobiFinish(acc, lus){
+  var n = Object.keys(acc).length;
+  if (!n) { toast('Aucune ligne exploitable dans ces fichiers', 'err'); return; }
+  var suggestion = (top100Mobi && top100Mobi.periode) || ('depuis le 01/01/' + new Date().getFullYear());
+  var periode = prompt('Période couverte par cet export Mobilogic :', suggestion);
+  if (periode === null) return;
+
+  top100Mobi = { rows: acc, majAt: Date.now(), periode: (periode || '').trim() };
+  top100MobiCharge = true;
+
+  if (typeof bcol === 'function' && db) {
+    bcol('config').doc('top_mobilogic').set(top100Mobi)
+      .then(function(){ toast('\u2705 ' + n + ' références importées depuis Mobilogic', 'ok'); })
+      .catch(function(e){ toast('Enregistrement impossible : ' + (e.code || e.message), 'err'); });
+  } else {
+    toast(n + ' références chargées (non enregistrées, hors ligne)', 'ok');
+  }
+
+  top100State.source = 'mobilogic';
+  top100SyncSourceBtns();
+  top100Compute();
+}
+
+// ── Calcul du Top a partir des donnees Mobilogic ──
+function top100ComputeMobi(){
+  var src = (top100Mobi && top100Mobi.rows) ? top100Mobi.rows : {};
+  var rows = Object.keys(src).map(function(code){
+    var m = src[code];
+    var prod = (typeof PRODUCTS !== 'undefined' && PRODUCTS)
+      ? PRODUCTS.find(function(p){ return String(p.code).toUpperCase() === code; }) : null;
+    var stk = null;
+    if (typeof bdcStockMap !== 'undefined' && bdcStockMap) {
+      if (bdcStockMap[code] !== undefined) stk = bdcStockMap[code];
+      else if (prod && bdcStockMap[prod.code] !== undefined) stk = bdcStockMap[prod.code];
+    }
+    return {
+      code: code,
+      libelle: m.libelle || (prod ? prod.libelle : ''),
+      ean: prod ? prod.ean : '',
+      stock: stk,
+      qte: Number(m.qte) || 0,
+      ca: Number(m.ca) || 0,
+      nbCmd: null,                      // information absente de l'export
+      nbCli: Number(m.nbCli) || 0
+    };
+  });
+
+  var q = (top100State.search || '').toLowerCase().trim();
+  if (q) rows = rows.filter(function(r){ return (r.libelle + ' ' + r.code + ' ' + (r.ean || '')).toLowerCase().indexOf(q) >= 0; });
+
+  rows.sort(function(a,b){
+    var m = top100State.metric;
+    if (m === 'qte') return b.qte - a.qte;
+    if (m === 'cli') return (b.nbCli - a.nbCli) || (b.ca - a.ca);
+    return b.ca - a.ca;
+  });
+
+  var nN = top100State.topN;
+  if (nN && nN !== 'all') rows = rows.slice(0, Number(nN));
+  top100Rows = rows;
+
+  top100RenderStats(0);
+  top100RenderTable();
+  top100RenderChart();
+}
 
 function top100Esc(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
 function top100Eur(n){return Number(n||0).toLocaleString('fr-FR',{minimumFractionDigits:2,maximumFractionDigits:2})+' €';}
@@ -4553,6 +4751,18 @@ function top100Int(n){return Number(n||0).toLocaleString('fr-FR');}
 function top100Init(){
   var lbl = document.getElementById('top100-brand-label');
   if (lbl) lbl.textContent = (CURRENT_BRAND==='naturaline'?'NATURALINE':'Moulin des Moines');
+  // Charger l'export Mobilogic en tache de fond des la premiere ouverture :
+  // le bandeau et le compteur de references sont alors justes d'emblee.
+  if (!top100MobiCharge && typeof bcol === 'function' && db) {
+    bcol('config').doc('top_mobilogic').get().then(function(doc){
+      if (doc.exists) top100Mobi = doc.data();
+      top100MobiCharge = true;
+      top100SyncSourceBtns();
+      if (top100State.source === 'mobilogic') top100Compute();
+    }).catch(function(){ top100MobiCharge = true; });
+  }
+  top100SyncSourceBtns();
+  if (top100State.source === 'mobilogic') { top100Compute(); return; }
   if (top100Cmds === null || top100CmdsBrand !== CURRENT_BRAND) { top100Load(); }
   else { top100Compute(); }
 }
@@ -4595,6 +4805,7 @@ function top100InPeriod(c){
 }
 
 function top100Compute(){
+  if (top100State.source === 'mobilogic') { top100ComputeMobi(); top100PopulateYears(); return; }
   var agg = {};      // code -> agrégat
   var totCmd = 0;
   (top100Cmds||[]).forEach(function(c, ci){
@@ -4632,7 +4843,12 @@ function top100Compute(){
   var q = (top100State.search||'').toLowerCase().trim();
   if (q) rows = rows.filter(function(r){ return (r.libelle+' '+r.code+' '+(r.ean||'')).toLowerCase().indexOf(q)>=0; });
 
-  rows.sort(function(a,b){ return top100State.metric==='qte' ? (b.qte-a.qte) : (b.ca-a.ca); });
+  rows.sort(function(a,b){
+    var m = top100State.metric;
+    if (m === 'qte') return b.qte - a.qte;
+    if (m === 'cli') return (b.nbCli - a.nbCli) || (b.ca - a.ca);
+    return b.ca - a.ca;
+  });
 
   var n = top100State.topN;
   if (n && n!=='all') rows = rows.slice(0, Number(n));
@@ -4670,7 +4886,7 @@ function top100RenderTable(){
       '<td style="padding:.5rem .6rem;font-family:monospace;font-size:.72rem;color:var(--g500);white-space:nowrap;">'+top100Esc(r.ean||'—')+'</td>'+
       '<td style="padding:.5rem .6rem;text-align:right;font-weight:'+(metric==='qte'?'700':'400')+';color:'+(metric==='qte'?'var(--blue-p700)':'var(--g700)')+';">'+top100Int(r.qte)+'</td>'+
       '<td style="padding:.5rem .6rem;text-align:right;white-space:nowrap;font-weight:'+(metric==='ca'?'700':'400')+';color:'+(metric==='ca'?'var(--em600,#266327)':'var(--g700)')+';">'+top100Eur(r.ca)+'</td>'+
-      '<td style="padding:.5rem .6rem;text-align:center;color:var(--g600);">'+top100Int(r.nbCmd)+'</td>'+
+      '<td style="padding:.5rem .6rem;text-align:center;color:var(--g600);">'+(r.nbCmd==null?'—':top100Int(r.nbCmd))+'</td>'+
       '<td style="padding:.5rem .6rem;text-align:center;color:var(--g600);">'+top100Int(r.nbCli)+'</td>'+
       '<td style="padding:.5rem .6rem;text-align:right;'+stockStyle+'">'+stock+'</td>'+
     '</tr>';
@@ -4681,11 +4897,11 @@ function top100RenderChart(){
   var canvas = document.getElementById('top100-chart'); if(!canvas) return;
   var metric = top100State.metric;
   var ml = document.getElementById('top100-chart-metric');
-  if (ml) ml.textContent = (metric==='qte'?'par quantité (colis)':"par chiffre d'affaires");
+  if (ml) ml.textContent = (metric==='qte'?'par quantité':(metric==='cli'?'par nombre de clients':"par chiffre d'affaires"));
   withChartJs(function(){
     var top = top100Rows.slice(0,15);
     var labels = top.map(function(r){ var l=r.libelle||r.code; return l.length>30?l.slice(0,28)+'…':l; });
-    var data = top.map(function(r){ return metric==='qte'?r.qte:Math.round(r.ca); });
+    var data = top.map(function(r){ return metric==='qte'?r.qte:(metric==='cli'?(r.nbCli||0):Math.round(r.ca)); });
     if (top100Chart) { top100Chart.destroy(); top100Chart=null; }
     top100Chart = new Chart(canvas.getContext('2d'), {
       type:'bar',
@@ -4716,7 +4932,7 @@ function top100PopulateYears(){
 
 function top100SetMetric(m){
   top100State.metric=m;
-  ['ca','qte'].forEach(function(k){ var b=document.getElementById('top100-metric-'+k); if(b){ b.className = (k===m)?'btn btn-primary':'btn btn-ghost'; b.style.border='none'; } });
+  ['ca','qte','cli'].forEach(function(k){ var b=document.getElementById('top100-metric-'+k); if(b){ b.className = (k===m)?'btn btn-primary':'btn btn-ghost'; b.style.border='none'; } });
   top100Compute();
 }
 function top100SetPeriod(v){
