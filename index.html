@@ -4389,6 +4389,7 @@ async function showApp() {
   } catch(e) { console.warn('[BDC] Restore err:', e); }
     try { if (typeof nfdSyncFromFirestore === 'function') nfdSyncFromFirestore(); } catch(e) { console.warn('nfdSync err:', e); }
     try { if (typeof dashCaLoadFromFirestore === 'function') dashCaLoadFromFirestore(); } catch(e) { console.warn('dashCaLoad err:', e); }
+    try { if (typeof stockLoadCloud === 'function') stockLoadCloud(); } catch(e) { console.warn('stockLoadCloud err:', e); }
   }, 500);
 }
 
@@ -7149,6 +7150,48 @@ var bdcInitDone = false;
 var bdcImportedQtys = {};
 function BDC_STOCK_KEY() { return 'mdm_stock_map_v1' + (currentUser && currentUser.uid ? '_' + currentUser.uid : ''); } // par commercial (chacun son fichier de stock), commun aux deux marques
 var bdcStockMap = {}; // code -> stock disponible
+function BDC_STOCK_DATE_KEY() { return BDC_STOCK_KEY() + '_at'; }
+
+// Le fichier de stock est importe une fois par jour, souvent depuis l'ordinateur.
+// On le partage entre les appareils du meme commercial via Firestore, sinon le
+// telephone garderait un stock perime.
+function stockPushCloud() {
+  try {
+    if (typeof bcol === 'function' && db) {
+      var t = Date.now();
+      try { localStorage.setItem(BDC_STOCK_DATE_KEY(), String(t)); } catch (e) {}
+      bcol('config').doc('stock_map').set({ map: bdcStockMap, majAt: t })
+        .catch(function (e) { console.warn('[Stock] sync cloud echouee', e.code || e.message); });
+    }
+  } catch (e) { console.warn('[Stock] sync cloud erreur', e); }
+}
+
+function stockLoadCloud(cb) {
+  if (typeof bcol !== 'function' || !db) { if (cb) cb(); return; }
+  bcol('config').doc('stock_map').get()
+    .then(function (doc) {
+      if (doc.exists) {
+        var d = doc.data() || {};
+        var localAt = 0;
+        try { localAt = parseInt(localStorage.getItem(BDC_STOCK_DATE_KEY()) || '0', 10) || 0; } catch (e) {}
+        if (d.map && (d.majAt || 0) > localAt) {
+          bdcStockMap = d.map;
+          try {
+            localStorage.setItem(BDC_STOCK_KEY(), JSON.stringify(bdcStockMap));
+            localStorage.setItem(BDC_STOCK_DATE_KEY(), String(d.majAt || Date.now()));
+          } catch (e) {}
+          console.log('[Stock] ' + Object.keys(d.map).length + ' references chargees depuis le cloud');
+          if (typeof buildTable === 'function' && typeof bdcInitDone !== 'undefined' && bdcInitDone) {
+            try { buildTable(); } catch (e) {}
+          }
+          if (typeof RechercheProduit !== 'undefined') { try { RechercheProduit.refresh(); } catch (e) {} }
+        }
+      }
+      if (cb) cb();
+    })
+    .catch(function (e) { console.warn('[Stock] lecture cloud', e.code || e.message); if (cb) cb(); });
+}
+
 function loadStockMapFromCache() {
   try {
     var savedStockMap = localStorage.getItem(BDC_STOCK_KEY());
@@ -9416,6 +9459,7 @@ function applyStockImport() {
   // Persister (clé commune aux deux marques, même fichier de stock)
   try { localStorage.setItem(BDC_STOCK_KEY(), JSON.stringify(bdcStockMap)); }
   catch(e) { console.warn('[Stock] sauvegarde cache impossible', e); }
+  stockPushCloud();
 
   // Mettre à jour le tableau en direct sans rebuild complet
   var updated = 0;
@@ -14535,6 +14579,6 @@ if ('serviceWorker' in navigator) {
 <script src="tournees.js?v=4"></script>
 <script src="visites.js?v=2"></script>
 <script src="rgpd.js?v=1"></script>
-<script src="recherche.js?v=1"></script>
+<script src="recherche.js?v=2"></script>
 </body>
 </html>

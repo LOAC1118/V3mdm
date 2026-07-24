@@ -272,6 +272,21 @@
     var stockImporte = (typeof bdcStockMap !== 'undefined' && bdcStockMap) ? Object.keys(bdcStockMap).length : 0;
     var ventesOk = state.ventes && Object.keys(state.ventes).length;
 
+    // Fraîcheur du stock : le fichier est mis à jour quotidiennement
+    var stockAge = '';
+    try {
+      if (typeof BDC_STOCK_DATE_KEY === 'function') {
+        var t = parseInt(localStorage.getItem(BDC_STOCK_DATE_KEY()) || '0', 10);
+        if (t) {
+          var jours = Math.floor((Date.now() - t) / 86400000);
+          var lib = jours === 0 ? "aujourd'hui" : jours === 1 ? 'hier' : 'il y a ' + jours + ' jours';
+          stockAge = (jours >= 2)
+            ? ' <span class="rch-warn">(importé ' + lib + ')</span>'
+            : ' <span class="rch-frais">(importé ' + lib + ')</span>';
+        }
+      }
+    } catch (e) {}
+
     var barre =
       '<div class="rch-bar">' +
         '<input id="rch-q" class="rch-input" type="search" autocomplete="off" ' +
@@ -285,10 +300,11 @@
         '</select>' +
         '<label class="rch-check"><input type="checkbox"' + (state.filtreRupture ? ' checked' : '') +
           ' onchange="RechercheProduit.setRupture(this.checked)"> Ruptures seulement</label>' +
+        '<button class="rch-btn" onclick="RechercheProduit.importStock()">Mettre à jour les stocks</button>' +
       '</div>' +
       '<div class="rch-sources">' +
         cat.length + ' références · ' +
-        (stockImporte ? stockImporte + ' stocks importés' : '<span class="rch-warn">aucun stock importé</span>') + ' · ' +
+        (stockImporte ? stockImporte + ' stocks' + stockAge : '<span class="rch-warn">aucun stock importé</span>') + ' · ' +
         (ventesOk ? ventesOk + ' références vendues cette année' : '<span class="rch-warn">aucun cadencier importé</span>') +
       '</div>';
 
@@ -325,6 +341,7 @@
     '#sec-recherche .rch-check{display:flex;align-items:center;gap:.4rem;font-size:.79rem;color:var(--g700)}',
     '#sec-recherche .rch-sources{font-size:.72rem;color:var(--g500);margin-bottom:.9rem}',
     '#sec-recherche .rch-warn{color:var(--amber);font-weight:600}',
+    '#sec-recherche .rch-frais{color:var(--blue-p700);font-weight:600}',
     '#sec-recherche .rch-count{font-size:.75rem;color:var(--g500);margin-bottom:.5rem}',
     '#sec-recherche .rch-list{display:flex;flex-direction:column;gap:.4rem}',
     '#sec-recherche .rch-row{background:var(--surface);border:1px solid var(--border);border-radius:11px;overflow:hidden;box-shadow:var(--shadow-xs)}',
@@ -395,6 +412,12 @@
       render();
     },
     dlc: saisirDlc,
+    // Reutilise le modal d'import de stock du bon de commande : meme fichier,
+    // meme traitement, et le resultat est partage entre les appareils.
+    importStock: function () {
+      if (typeof openStockImport === 'function') openStockImport();
+      else toast('Import de stock indisponible', 'err');
+    },
     commander: function (code) {
       if (typeof showSection === 'function') showSection('bdc', null, null);
       setTimeout(function () {
