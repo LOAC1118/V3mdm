@@ -1373,6 +1373,14 @@ thead th.ts-active { text-decoration:underline; text-underline-offset:3px; }
       <svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="8" cy="8" r="6"/><path d="M8 5v6M6 7h3.5a1.5 1.5 0 0 1 0 3H6"/></svg>
       Commissions
     </div>
+    <div class="nav-item" onclick="showSection('objectifs',null,this)">
+      <svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="8" cy="8" r="6.5"/><circle cx="8" cy="8" r="3.5"/><circle cx="8" cy="8" r=".6" fill="currentColor" stroke="none"/></svg>
+      Objectifs
+    </div>
+    <div class="nav-item" onclick="showSection('assortiment',null,this)">
+      <svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="1.5" y="1.5" width="5" height="5" rx="1"/><rect x="9.5" y="1.5" width="5" height="5" rx="1"/><rect x="1.5" y="9.5" width="5" height="5" rx="1"/><path d="M9.5 12h5M12 9.5v5"/></svg>
+      Assortiment
+    </div>
     <div class="nav-item hidden" id="nav-item-comptes" onclick="showSection('comptes',null,this)">
       <svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="5.5" cy="5.5" r="2.5"/><circle cx="11" cy="6" r="2"/><path d="M1 14c0-2.5 1.8-4.5 4.5-4.5S10 11.5 10 14"/><path d="M9.5 9.7c2 .2 3.5 1.8 3.5 4.3"/></svg>
       Comptes
@@ -1806,6 +1814,16 @@ thead th.ts-active { text-decoration:underline; text-underline-offset:3px; }
       <p style="margin:.2rem 0 0;font-size:.82rem;color:var(--g600);">Référence, code-barres, colisage, stock et ventes de l’année.</p>
     </div>
     <div id="rch-root"></div>
+  </div>
+
+  <!-- OBJECTIFS (module 4) -->
+  <div id="sec-objectifs" class="hidden" style="padding:1.75rem 2rem;overflow-y:auto;flex:1;background:var(--bg);box-sizing:border-box;">
+    <div id="obj-host"></div>
+  </div>
+
+  <!-- TROUS D'ASSORTIMENT (module 2) -->
+  <div id="sec-assortiment" class="hidden" style="padding:1.75rem 2rem;overflow-y:auto;flex:1;background:var(--bg);box-sizing:border-box;">
+    <div id="asr-host"></div>
   </div>
 
   <!-- BON DE COMMANDE BDC -->
@@ -3070,6 +3088,14 @@ thead th.ts-active { text-decoration:underline; text-underline-offset:3px; }
     <span class="mmenu-ico"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="8" cy="8" r="6"/><path d="M8 5v6M6 7h3.5a1.5 1.5 0 0 1 0 3H6"/></svg></span>
     <span class="mmenu-label">Commissions</span>
   </button>
+  <button class="mmenu-item" role="menuitem" data-sec="objectifs" onclick="mnavGo('objectifs')">
+    <span class="mmenu-ico"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="8" cy="8" r="6.5"/><circle cx="8" cy="8" r="3.5"/><circle cx="8" cy="8" r=".6" fill="currentColor" stroke="none"/></svg></span>
+    <span class="mmenu-label">Objectifs</span>
+  </button>
+  <button class="mmenu-item" role="menuitem" data-sec="assortiment" onclick="mnavGo('assortiment')">
+    <span class="mmenu-ico"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="1.5" y="1.5" width="5" height="5" rx="1"/><rect x="9.5" y="1.5" width="5" height="5" rx="1"/><rect x="1.5" y="9.5" width="5" height="5" rx="1"/><path d="M9.5 12h5M12 9.5v5"/></svg></span>
+    <span class="mmenu-label">Assortiment</span>
+  </button>
   <button class="mmenu-item hidden" id="mtab-comptes" role="menuitem" data-sec="comptes" onclick="mnavGo('comptes')">
     <span class="mmenu-ico"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="5.5" cy="5.5" r="2.5"/><circle cx="11" cy="6" r="2"/><path d="M1 14c0-2.5 1.8-4.5 4.5-4.5S10 11.5 10 14"/><path d="M9.5 9.7c2 .2 3.5 1.8 3.5 4.3"/></svg></span>
     <span class="mmenu-label">Comptes</span>
@@ -4257,9 +4283,14 @@ function initFirebase(cfg) {
   }
   auth = firebase.auth();
   db   = firebase.firestore();
+  // Persistance hors-ligne : cache local, l'app fonctionne sans réseau en clientèle.
+  // Doit être appelé avant toute opération Firestore -> ici, juste après firestore().
+  try {
+    db.enablePersistence({ synchronizeTabs: true })
+      .catch(function(err){ console.warn('[Offline] persistance:', err && err.code); });
+  } catch(e) { console.warn('[Offline] persistance indisponible', e); }
   // Région europe-west1 : doit correspondre à la région de déploiement de la Cloud Function
   try { fbFunctions = firebase.app().functions('europe-west1'); } catch(e) { console.warn('[Functions] indisponible', e); }
-  // Pas de enablePersistence : doit être appelé avant toute opération Firestore
 }
 
 
@@ -4472,7 +4503,7 @@ if (typeof cdbPageSize  === 'undefined') window.cdbPageSize  = 50;
 // ═══════════════════════════════════════════════
 //  NAVIGATION
 // ═══════════════════════════════════════════════
-const SECTIONS = ['dashboard','radar','tournees','visites','recherche','rgpd','bdc','frais','contacts-db','commissions','comptes','mailing','accords','promos','top100','cadencier','ia'];
+const SECTIONS = ['dashboard','radar','tournees','visites','recherche','rgpd','bdc','frais','contacts-db','commissions','comptes','mailing','accords','promos','top100','cadencier','ia','objectifs','assortiment'];
 // ═══════════════════════════════════════════════
 //  MENUS DEROULANTS DE LA BARRE DU HAUT
 // ═══════════════════════════════════════════════
@@ -4532,6 +4563,8 @@ function showSection(name, tabEl, sideEl) {
   if (name==='visites') { setTimeout(function(){ if (typeof Visites !== 'undefined') Visites.mount(); }, 80); }
   if (name==='rgpd') { setTimeout(function(){ if (typeof RGPD !== 'undefined') RGPD.mount(); }, 80); }
   if (name==='recherche') { setTimeout(function(){ if (typeof RechercheProduit !== 'undefined') RechercheProduit.mount(); }, 80); }
+  if (name==='objectifs') { setTimeout(function(){ if (typeof Objectifs !== 'undefined') Objectifs.mount('#obj-host'); }, 80); }
+  if (name==='assortiment') { setTimeout(function(){ if (typeof Assortiment !== 'undefined') Assortiment.mount('#asr-host'); }, 80); }
   if (name !== 'tournees' && typeof Tournees !== 'undefined') Tournees.unmount();
   if (name==='frais') { if (typeof refreshFraisStats === 'function') { try{refreshFraisStats();}catch(e){} } if (typeof nfdRender === 'function') nfdRender(); }
   if (name==='bdc') { if (!bdcInitDone) { buildTable(); bdcInitDone=true; } }
@@ -13018,6 +13051,7 @@ function cdbShowMenu(anchor, id) {
 
   var c = cdbContacts.find(function(x){ return x.id === id; });
   var actions = [
+    { icon: '🗂️', label: 'Préparer la visite', fn: function(){ if (typeof Fiche360 !== 'undefined') Fiche360.open(id); else toast('Module fiche 360 indisponible','err'); } },
     { icon: '✏️', label: 'Modifier la fiche',  fn: function(){ cdbOpenEdit(id); } },
     { icon: '🛒', label: 'Nouveau BDC',        fn: function(){ if(c) cdbNewOrderFromClient(c); } },
     { icon: '📄', label: 'Importer commande PDF', fn: function(){ showSection('bdc',null); setTimeout(function(){ openPdfImport(); }, 200); } },
@@ -14909,5 +14943,18 @@ if ('serviceWorker' in navigator) {
 <script src="visites.js?v=2"></script>
 <script src="rgpd.js?v=1"></script>
 <script src="recherche.js?v=4"></script>
+
+<!-- Nouveaux modules : données partagées + objectifs, assortiment, fiche 360, hors-ligne -->
+<script src="crm-data.js?v=1"></script>
+<script src="objectifs.js?v=1"></script>
+<script src="assortiment.js?v=1"></script>
+<script src="fiche360.js?v=1"></script>
+<script src="offline-status.js?v=1"></script>
+<script>
+  // Badge d'état réseau (en ligne / hors ligne / synchro) — non bloquant.
+  document.addEventListener('DOMContentLoaded', function(){
+    try { if (typeof OfflineStatus !== 'undefined') OfflineStatus.mount(); } catch(e){}
+  });
+</script>
 </body>
 </html>
