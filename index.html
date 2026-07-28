@@ -1377,6 +1377,10 @@ thead th.ts-active { text-decoration:underline; text-underline-offset:3px; }
       <svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="1.5" y="1.5" width="5" height="5" rx="1"/><rect x="9.5" y="1.5" width="5" height="5" rx="1"/><rect x="1.5" y="9.5" width="5" height="5" rx="1"/><path d="M9.5 12h5M12 9.5v5"/></svg>
       Assortiment
     </div>
+    <div class="nav-item" onclick="showSection('alertes',null,this)">
+      <svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M8 1.5 15 14H1z"/><path d="M8 6.5v3.5"/><circle cx="8" cy="11.8" r=".7" fill="currentColor" stroke="none"/></svg>
+      Alertes
+    </div>
     <div class="nav-item hidden" id="nav-item-comptes" onclick="showSection('comptes',null,this)">
       <svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="5.5" cy="5.5" r="2.5"/><circle cx="11" cy="6" r="2"/><path d="M1 14c0-2.5 1.8-4.5 4.5-4.5S10 11.5 10 14"/><path d="M9.5 9.7c2 .2 3.5 1.8 3.5 4.3"/></svg>
       Comptes
@@ -1817,11 +1821,17 @@ thead th.ts-active { text-decoration:underline; text-underline-offset:3px; }
     <div id="asr-host"></div>
   </div>
 
+  <!-- ALERTES STOCK (point 3) -->
+  <div id="sec-alertes" class="hidden" style="padding:1.75rem 2rem;overflow-y:auto;flex:1;background:var(--bg);box-sizing:border-box;">
+    <div id="alt-host"></div>
+  </div>
+
   <!-- BON DE COMMANDE BDC -->
   <div id="sec-bdc" class="hidden" style="flex-direction:column;width:100%;">
     <div style="background:var(--surface);border-bottom:1px solid var(--border);padding:.55rem 1rem;display:flex;align-items:center;gap:8px;flex-shrink:0;flex-wrap:wrap;">
       <div style="font-family:var(--fdisp);font-size:.9rem;color:var(--g900);flex:1;min-width:140px;">🌾 Bon de Commande MDM 2026</div>
       <button class="btn btn-ghost" style="font-size:.72rem;padding:.3rem .7rem;" onclick="openBdcImport()">📄 Importer commande</button>
+      <button class="btn btn-ghost" style="font-size:.72rem;padding:.3rem .7rem;color:#266327;border-color:rgba(38,99,39,.35);" onclick="if(typeof BdcSuggest!=='undefined')BdcSuggest.open();">🧠 Suggérer</button>
       <button class="btn btn-ghost" style="font-size:.72rem;padding:.3rem .7rem;color:#a78bfa;border-color:rgba(167,139,250,.3);" onclick="boxOpen()">📦 Création BOX</button>
       <button class="btn btn-ghost" style="font-size:.72rem;padding:.3rem .7rem;color:#e8c98a;border-color:rgba(245,158,11,.3);" onclick="openStockImport()">📦 Mettre à jour stocks</button>
       <button class="btn btn-ghost" style="font-size:.72rem;padding:.3rem .7rem;" onclick="resetBDC()">🗑 Effacer</button>
@@ -3082,6 +3092,10 @@ thead th.ts-active { text-decoration:underline; text-underline-offset:3px; }
   <button class="mmenu-item" role="menuitem" data-sec="assortiment" onclick="mnavGo('assortiment')">
     <span class="mmenu-ico"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="1.5" y="1.5" width="5" height="5" rx="1"/><rect x="9.5" y="1.5" width="5" height="5" rx="1"/><rect x="1.5" y="9.5" width="5" height="5" rx="1"/><path d="M9.5 12h5M12 9.5v5"/></svg></span>
     <span class="mmenu-label">Assortiment</span>
+  </button>
+  <button class="mmenu-item" role="menuitem" data-sec="alertes" onclick="mnavGo('alertes')">
+    <span class="mmenu-ico"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M8 1.5 15 14H1z"/><path d="M8 6.5v3.5"/><circle cx="8" cy="11.8" r=".7" fill="currentColor" stroke="none"/></svg></span>
+    <span class="mmenu-label">Alertes</span>
   </button>
   <button class="mmenu-item hidden" id="mtab-comptes" role="menuitem" data-sec="comptes" onclick="mnavGo('comptes')">
     <span class="mmenu-ico"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="5.5" cy="5.5" r="2.5"/><circle cx="11" cy="6" r="2"/><path d="M1 14c0-2.5 1.8-4.5 4.5-4.5S10 11.5 10 14"/><path d="M9.5 9.7c2 .2 3.5 1.8 3.5 4.3"/></svg></span>
@@ -4407,6 +4421,8 @@ async function showApp() {
     console.log('[Cloud] Démarrage sync multi-modules...');
     // cdbInit() remplacé par le listener onSnapshot dans startListeners()
     try { if (typeof dashLoadObjectifs === 'function') dashLoadObjectifs(); } catch(e) { console.warn('dashLoadObjectifs err:', e); }
+    // Préchargement de la couche données partagée (clients/commandes/catalogue) une fois connecté
+    try { if (typeof CRMData !== 'undefined') setTimeout(function(){ CRMData.preload(); }, 500); } catch(e) {}
   // Restaurer commande BDC en cours (cloud en priorité, pour reprendre depuis
   // n'importe quel appareil — ex: scanné sur iPhone, terminé sur ordinateur).
   try {
@@ -4490,7 +4506,7 @@ if (typeof cdbPageSize  === 'undefined') window.cdbPageSize  = 50;
 // ═══════════════════════════════════════════════
 //  NAVIGATION
 // ═══════════════════════════════════════════════
-const SECTIONS = ['dashboard','radar','tournees','visites','recherche','rgpd','bdc','frais','contacts-db','commissions','comptes','mailing','accords','promos','top100','cadencier','ia','assortiment'];
+const SECTIONS = ['dashboard','radar','tournees','visites','recherche','rgpd','bdc','frais','contacts-db','commissions','comptes','mailing','accords','promos','top100','cadencier','ia','assortiment','alertes'];
 // ═══════════════════════════════════════════════
 //  MENUS DEROULANTS DE LA BARRE DU HAUT
 // ═══════════════════════════════════════════════
@@ -4551,6 +4567,7 @@ function showSection(name, tabEl, sideEl) {
   if (name==='rgpd') { setTimeout(function(){ if (typeof RGPD !== 'undefined') RGPD.mount(); }, 80); }
   if (name==='recherche') { setTimeout(function(){ if (typeof RechercheProduit !== 'undefined') RechercheProduit.mount(); }, 80); }
   if (name==='assortiment') { setTimeout(function(){ if (typeof Assortiment !== 'undefined') Assortiment.mount('#asr-host'); }, 80); }
+  if (name==='alertes') { setTimeout(function(){ if (typeof Alertes !== 'undefined') Alertes.mount('#alt-host'); }, 80); }
   if (name !== 'tournees' && typeof Tournees !== 'undefined') Tournees.unmount();
   if (name==='frais') { if (typeof refreshFraisStats === 'function') { try{refreshFraisStats();}catch(e){} } if (typeof nfdRender === 'function') nfdRender(); }
   if (name==='bdc') { if (!bdcInitDone) { buildTable(); bdcInitDone=true; } }
@@ -7037,6 +7054,7 @@ async function saveCommande() {
   try {
     if (id) { await bcol('commandes').doc(id).update(row); }
     else { await bcol('commandes').add(row); await logActivite(`Commande ${row.montant.toFixed(2)}€ — ${row.clientNom}`,'blue'); }
+    try { if (typeof CRMData !== 'undefined') CRMData.invalidate('commandes'); } catch(e) {}
     closeModal('commande'); toast(id?'Commande mise à jour':'Commande créée');
   } catch(e) { toast('Erreur : '+e.message,'err'); }
   setSyncing(false);
@@ -9029,6 +9047,7 @@ function bdcSendOrder() {
       createdBy:currentUser.uid,createdAt:firebase.firestore.FieldValue.serverTimestamp()
     }).then(function(){
       logActivite('BDC envoyé — '+mag+' — '+bdcFmt(tN)+' ('+nbRefs+' réf.)','blue');
+      try { if (typeof CRMData !== 'undefined') CRMData.invalidate('commandes'); } catch(e) {}
     }).catch(function(e){ console.warn('Firebase save error',e); });
   }
 
@@ -14931,8 +14950,10 @@ if ('serviceWorker' in navigator) {
 <script src="recherche.js?v=4"></script>
 
 <!-- Nouveaux modules : données partagées + objectifs, assortiment, fiche 360, hors-ligne -->
-<script src="crm-data.js?v=1"></script>
+<script src="crm-data.js?v=2"></script>
 <script src="assortiment.js?v=1"></script>
+<script src="bdc-suggest.js?v=1"></script>
+<script src="alertes.js?v=1"></script>
 <script src="fiche360.js?v=1"></script>
 <script src="offline-status.js?v=1"></script>
 <script>
