@@ -2392,6 +2392,9 @@ thead th.ts-active { text-decoration:underline; text-underline-offset:3px; }
         </div>
       </div>
 
+      <!-- Simulateur de salaire net (paie-sim.js) -->
+      <div id="paie-sim-host" style="margin-bottom:1.25rem;"></div>
+
       <!-- Tableau par client -->
       <div class="card" id="comm-table-card">
         <div class="card-head">
@@ -4571,7 +4574,7 @@ function showSection(name, tabEl, sideEl) {
   if (name !== 'tournees' && typeof Tournees !== 'undefined') Tournees.unmount();
   if (name==='frais') { if (typeof refreshFraisStats === 'function') { try{refreshFraisStats();}catch(e){} } if (typeof nfdRender === 'function') nfdRender(); }
   if (name==='bdc') { if (!bdcInitDone) { buildTable(); bdcInitDone=true; } }
-  if (name==='commissions') { setTimeout(function(){ if (typeof commInit === 'function') commInit(); }, 80); }
+  if (name==='commissions') { setTimeout(function(){ if (typeof commInit === 'function') commInit(); if (window.PaieSim) PaieSim.mount('#paie-sim-host'); }, 80); }
   if (name==='promos') { setTimeout(function(){ if (typeof promoInit === 'function') promoInit(); }, 80); }
   if (name==='top100') { setTimeout(function(){ if (typeof top100Init === 'function') top100Init(); }, 80); }
   if (name==='cadencier') { setTimeout(function(){ if (typeof cadInit === 'function') cadInit(); }, 80); }
@@ -7773,6 +7776,8 @@ function commRefresh() {
 
   // Mise à jour de l'encart commission dans le Dashboard
   dashUpdateCommCard(totalComm, totalCA, moisLabel);
+  // Alimente le simulateur de salaire net avec la commission du mois
+  try { if (window.PaieSim) PaieSim.setCommission(totalComm, totalCA, moisLabel); } catch(e) {}
 }
 
 function dashUpdateCommCard(comm, ca, moisLabel) {
@@ -14954,6 +14959,7 @@ if ('serviceWorker' in navigator) {
 <script src="assortiment.js?v=1"></script>
 <script src="bdc-suggest.js?v=1"></script>
 <script src="alertes.js?v=1"></script>
+<script src="paie-sim.js?v=1"></script>
 <script src="fiche360.js?v=1"></script>
 <script src="offline-status.js?v=1"></script>
 <script>
