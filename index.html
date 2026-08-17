@@ -2130,7 +2130,7 @@ thead th.ts-active { text-decoration:underline; text-underline-offset:3px; }
               <th>Email</th>
               <th>Téléphone</th>
               <th style="text-align:right;">Dernière cde</th>
-              <th style="text-align:right;">CA 2026</th>
+              <th style="text-align:right;" id="cdb-th-ca">CA 2026</th>
               <th>Actions</th>
             </tr>
           </thead>
@@ -10953,10 +10953,11 @@ function cdbEnrichFromOrders(orders) {
     }
     if (c.nom) byName[normName(c.nom)] = c;
     // Reset stats
-    c._stats = { nbCmds:0, caTotal:0, caFac:0, caEnCours:0, caAvoirs:0, derniereCmd:null, orphan:false };
+    c._stats = { nbCmds:0, caTotal:0, caYear:0, caYearFac:0, caFac:0, caEnCours:0, caAvoirs:0, derniereCmd:null, orphan:false };
   });
 
   // Parcourir les commandes et matcher
+  var CUR_YEAR_CDB = new Date().getFullYear();
   var unmatched = 0, matchedByCode = 0, matchedByName = 0;
   orders.forEach(function(o) {
     if (!o) return;
@@ -10983,6 +10984,10 @@ function cdbEnrichFromOrders(orders) {
     if (o.statut === 'facturee') st.caFac += o.ca;
     else if (o.statut === 'en_cours') st.caEnCours += o.ca;
     else if (o.statut === 'avoir') st.caAvoirs += o.ca;
+
+    // Cumul de l'année en cours (pour la vignette "CA <année>")
+    var _oy = (o.annee != null) ? o.annee : (o.dateRef instanceof Date && !isNaN(o.dateRef) ? o.dateRef.getFullYear() : null);
+    if (_oy === CUR_YEAR_CDB) { st.caYear += o.ca; if (o.statut === 'facturee') st.caYearFac += o.ca; }
 
     if (o.dateRef && (!st.derniereCmd || o.dateRef > st.derniereCmd)) {
       st.derniereCmd = o.dateRef;
@@ -12105,6 +12110,7 @@ function cdbApplyFilters() {
 function cdbRenderPage() {
   var tbody = document.getElementById('cdb-tbody');
   var paginationEl = document.getElementById('cdb-pagination');
+  var thCa = document.getElementById('cdb-th-ca'); if (thCa) thCa.textContent = 'CA ' + new Date().getFullYear();
 
   if (!cdbFiltered.length) {
     tbody.innerHTML = '<tr><td colspan="10" style="text-align:center;padding:3rem;color:var(--g500);">Aucun contact. ' +
@@ -12133,7 +12139,7 @@ function cdbRenderPage() {
       '<td><a href="mailto:' + cdbEsc(c.email||'') + '" style="font-size:.78rem;color:var(--blue-p700);">' + cdbEsc(c.email||'') + '</a></td>' +
       '<td style="font-size:.78rem;">' + cdbEsc(c.telephone||'') + '</td>' +
       '<td style="text-align:right;font-size:.75rem;color:' + (c._stats && c._stats.orphan ? '#b0402f' : 'var(--g700)') + ';">' + (c._stats && c._stats.derniereCmd ? cdbFmtDate(c._stats.derniereCmd) : cdbFmtDate(c.dateDerniereCmd)) + (c._stats && c._stats.orphan ? ' ⚠' : '') + '</td>' +
-      '<td style="text-align:right;font-variant-numeric:tabular-nums;">' + (c._stats && c._stats.nbCmds > 0 ? ('<strong>' + cdbFmtCA(c._stats.caTotal) + '</strong><div style="font-size:.62rem;color:var(--g500);">' + c._stats.nbCmds + ' cmd' + (c._stats.nbCmds>1?'s':'') + '</div>') : cdbFmtCA(c.cumul2026)) + '</td>' +
+      '<td style="text-align:right;font-variant-numeric:tabular-nums;">' + (c._stats && c._stats.nbCmds > 0 ? ('<strong>' + cdbFmtCA(c._stats.caYear) + '</strong><div style="font-size:.62rem;color:var(--g500);">' + c._stats.nbCmds + ' cmd' + (c._stats.nbCmds>1?'s':'') + ' · total ' + cdbFmtCA(c._stats.caTotal) + '</div>') : cdbFmtCA(c.cumul2026)) + '</td>' +
       '<td style="position:relative;"><button type="button" class="btn btn-ghost cdb-menu-btn" data-cdb-id="' + idAttr + '" style="font-size:.9rem;padding:.18rem .45rem;cursor:pointer;line-height:1;" title="Actions">⋮</button></td>' +
     '</tr>';
   }).join('');
@@ -13030,8 +13036,27 @@ function cdbDrawClientChart(byYearMonth, yearsPresent, moisNoms) {
         data.push(entry ? Math.round(entry.ca) : 0);
       }
       var color = palette[idx % palette.length];
-      return { label: String(y), data: data, backgroundColor: color, borderRadius: 3, maxBarThickness: 26 };
+      return { label: String(y), data: data, backgroundColor: color, borderRadius: 3, maxBarThickness: 26, order: 1 };
     });
+
+    // Courbe cumulée de l'année en cours (axe de droite dédié)
+    var curYear = new Date().getFullYear();
+    var curMonth = new Date().getMonth() + 1;
+    if (byYearMonth[curYear]) {
+      var cumData = [], run = 0;
+      for (var cm = 1; cm <= 12; cm++) {
+        var cmk = curYear + '-' + String(cm).padStart(2, '0');
+        var ce = byYearMonth[curYear] && byYearMonth[curYear][cmk];
+        run += ce ? Math.round(ce.ca) : 0;
+        cumData.push(cm <= curMonth ? run : null); // la courbe s'arrête au mois en cours
+      }
+      datasets.push({
+        type: 'line', label: 'Cumulé ' + curYear, data: cumData,
+        borderColor: '#1c4d1e', backgroundColor: '#1c4d1e', borderWidth: 2,
+        pointRadius: 2, pointHoverRadius: 4, tension: .25, fill: false,
+        yAxisID: 'yCum', order: 0
+      });
+    }
 
     cdbClientChart = new Chart(canvasEl, {
       type: 'bar',
@@ -13044,6 +13069,7 @@ function cdbDrawClientChart(byYearMonth, yearsPresent, moisNoms) {
         },
         scales: {
           y: { ticks: { callback: function(v){ return (v/1000).toFixed(0)+'k €'; } } },
+          yCum: { position: 'right', grid: { drawOnChartArea: false }, ticks: { callback: function(v){ return (v/1000).toFixed(0)+'k'; } } },
           x: { ticks: { font: { size: 10 } } }
         }
       }
