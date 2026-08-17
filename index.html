@@ -12928,6 +12928,7 @@ function cdbBuildCATab(c) {
   html += '<thead><tr style="background:var(--surface2);">';
   html += '<th style="padding:.4rem .6rem;text-align:left;font-weight:600;color:var(--g600);">Mois</th>';
   html += '<th style="padding:.4rem .6rem;text-align:right;color:var(--blue-p700);">CA '+NOW_YEAR+'</th>';
+  html += '<th style="padding:.4rem .6rem;text-align:right;color:var(--blue-p800);">Cumulé '+NOW_YEAR+'</th>';
   html += '<th style="padding:.4rem .6rem;text-align:right;color:#266327;">Facturé</th>';
   html += '<th style="padding:.4rem .6rem;text-align:right;color:var(--g500);">CA '+PREV_YEAR+'</th>';
   html += '<th style="padding:.4rem .6rem;text-align:right;">Évol.</th>';
@@ -12943,12 +12944,14 @@ function cdbBuildCATab(c) {
     if (curr && curr.ca > maxCA) maxCA = curr.ca;
   }
 
+  var cumCur = 0; // CA cumulé de l'année en cours, additionné mois après mois
   for (var mi2 = 1; mi2 <= 12; mi2++) {
     var mk3 = NOW_YEAR + '-' + String(mi2).padStart(2,'0');
     var mk4 = PREV_YEAR + '-' + String(mi2).padStart(2,'0');
     var cur = (byYearMonth[NOW_YEAR] && byYearMonth[NOW_YEAR][mk3]) || null;
     var prv = (byYearMonth[PREV_YEAR] && byYearMonth[PREV_YEAR][mk4]) || null;
     if (!cur && !prv) continue;
+    cumCur += (cur ? cur.ca : 0);
 
     var barW = (cur && maxCA > 0) ? Math.round(cur.ca / maxCA * 100) : 0;
     var isCurrentMonth = mk3 === (NOW_YEAR + '-' + String(new Date().getMonth()+1).padStart(2,'0'));
@@ -12962,6 +12965,7 @@ function cdbBuildCATab(c) {
       html += '<div style="background:var(--g100);border-radius:2px;height:3px;margin-top:2px;"><div style="background:var(--blue-p400);height:3px;border-radius:2px;width:'+barW+'%;"></div></div>';
     } else html += '<span style="color:var(--g300);">—</span>';
     html += '</td>';
+    html += '<td style="padding:.35rem .6rem;text-align:right;font-weight:600;color:var(--blue-p800);font-size:.72rem;">'+(cumCur>0?fmtCA(cumCur):'—')+'</td>';
     html += '<td style="padding:.35rem .6rem;text-align:right;color:#266327;font-size:.72rem;">'+(cur&&cur.fac>0?fmtCA(cur.fac):'—')+'</td>';
     html += '<td style="padding:.35rem .6rem;text-align:right;color:var(--g400);font-size:.72rem;">'+(prv?fmtCA(prv.ca):'—')+'</td>';
     html += '<td style="padding:.35rem .6rem;text-align:right;">'+fmtPct(cur?cur.ca:0, prv?prv.ca:0)+'</td>';
