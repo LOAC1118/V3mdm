@@ -323,6 +323,27 @@
       (nbRepris ? '<button class="rdr-btn-ghost" onclick="RadarClients.clearSnooze()" title="Réafficher les clients reportés">Reportés (' + nbRepris + ')</button>' : '') +
       '</div>';
 
+    /* --- Bandeau de fraîcheur des données --------------------------------
+       Le radar ne connaît que la dernière commande présente dans le dernier
+       import. On affiche la commande la plus récente qu'il voit, et on alerte
+       si elle est ancienne (probable import à rafraîchir). */
+    var newest = null;
+    data.forEach(function (c) { if (c.derniere && (!newest || c.derniere > newest)) newest = c.derniere; });
+    var bandeau = '';
+    if (newest) {
+      var jN = Math.floor((Date.now() - newest.getTime()) / MS_DAY);
+      var dstr = newest.toLocaleDateString('fr-FR', { day: '2-digit', month: 'long', year: 'numeric' });
+      var stale = jN > 14;
+      bandeau =
+        '<div style="display:flex;align-items:center;gap:10px;margin:0 0 14px;padding:10px 14px;border-radius:10px;font-size:.8rem;line-height:1.35;' +
+        (stale ? 'background:#fff7ed;border:1px solid #fed7aa;color:#9a3412;' : 'background:#f0fdf4;border:1px solid #bbf7d0;color:#166534;') + '">' +
+        '<span style="font-size:1rem;flex:0 0 auto;">' + (stale ? '⚠️' : '✅') + '</span>' +
+        '<div style="flex:1;min-width:0;">Commande la plus récente vue par le radar : <b>' + dstr + '</b> (il y a ' + jN + ' j).' +
+        (stale ? ' Des commandes ont pu arriver depuis — <b>réimporte le fichier serveur</b> depuis le Dashboard pour rafraîchir.' : ' Données à jour.') + '</div>' +
+        (stale ? '<button class="btn btn-ghost" style="flex:0 0 auto;font-size:.72rem;padding:.3rem .6rem;" onclick="showSection(\'dashboard\',null,null)">Réimporter</button>' : '') +
+        '</div>';
+    }
+
     /* --- Cartes --- */
     var cards;
     if (!list.length) {
@@ -336,7 +357,7 @@
       }
     }
 
-    root.innerHTML = kpis + chips + tools + '<div class="rdr-list">' + cards + '</div>';
+    root.innerHTML = kpis + bandeau + chips + tools + '<div class="rdr-list">' + cards + '</div>';
   }
 
   function kpi(label, val, sub, ton) {
