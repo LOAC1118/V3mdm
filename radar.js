@@ -164,6 +164,7 @@
       // On ne garde que les 8 derniers écarts : le rythme récent prime
       if (ecarts.length > 8) ecarts = ecarts.slice(-8);
       var rythme = (c.nbCmds >= cfg.minCmds && ecarts.length) ? Math.round(mediane(ecarts)) : null;
+      var rythmeFiable = (c.nbCmds >= 3 && ecarts.length >= 2); // >= 2 intervalles = rythme fiable
       var retard = rythme ? (joursDepuis / rythme) : null;
 
       var panier = c.nbCmds ? c.caTotal / c.nbCmds : 0;
@@ -182,9 +183,10 @@
 
       if (rythme && retard > cfg.seuilRetard && joursDepuis <= cfg.horizonDormant) {
         tags.decrochage = true;
+        tags.decrochageFiable = rythmeFiable;
         motifs.push({
-          type: 'decrochage', ton: 'red',
-          txt: joursDepuis + ' j sans commande (rythme habituel : ' + rythme + ' j)'
+          type: 'decrochage', ton: rythmeFiable ? 'red' : 'amber',
+          txt: joursDepuis + ' j sans commande (rythme ' + (rythmeFiable ? 'habituel ' : 'estimé ') + rythme + ' j)'
         });
       }
       if (joursDepuis > cfg.horizonDormant) {
@@ -218,15 +220,29 @@
       }
 
       /* --- Score de priorité ---
-         importance (poids économique, échelle log) × urgence (signaux)   */
-      var importance = Math.log10(1 + Math.max(c.ca12, c.caTotal / Math.max(1, (c.dates.length ? (now - new Date(c.dates[0])) / (365 * MS_DAY) : 1))));
+         importance (poids économique récent, échelle log) × urgence (signaux) */
+      var importance = Math.log10(1 + Math.max(0, c.ca12 || c.caTotal));
       var urgence = 0;
-      if (tags.decrochage) urgence += Math.min(3, retard - cfg.seuilRetard + 1) * 2;
+      if (tags.decrochage) urgence += Math.min(3, retard - cfg.seuilRetard + 1) * (rythmeFiable ? 2 : 1);
       if (tags.baisse)     urgence += 1.5;
       if (tags.bientot)    urgence += 0.8;
       if (tags.hausse)     urgence += 0.4;
       if (tags.dormant)    urgence += 0.3;
       var score = urgence > 0 ? importance * urgence : 0;
+
+      /* --- Niveau de priorité lisible + action recommandée --- */
+      var niveau = 'ok';
+      if (tags.decrochage && rythmeFiable) niveau = 'urgent';
+      else if (tags.decrochage || tags.baisse) niveau = 'surveiller';
+      else if (tags.bientot) niveau = 'surveiller';
+      else if (tags.dormant) niveau = 'dormant';
+
+      var action = '';
+      if (tags.decrochage)   action = (rythmeFiable ? 'À relancer' : 'À vérifier') + ' — ' + joursDepuis + ' j sans commande' + (rythme ? ' (rythme ' + (rythmeFiable ? '' : 'estimé ') + rythme + ' j)' : '') + (c.ca12 ? ' · ' + eur(c.ca12) + ' sur 12 mois' : '') + '.';
+      else if (tags.baisse)  action = 'CA en baisse à comprendre — ' + eur(c.caPrec12) + ' → ' + eur(c.ca12) + '.';
+      else if (tags.bientot) action = 'Bon moment pour appeler — commande attendue sous ' + Math.max(0, rythme - joursDepuis) + ' j.';
+      else if (tags.dormant) action = 'Endormi depuis ' + fmtJours(joursDepuis) + ' — tenter une réactivation.';
+      else if (tags.hausse)  action = 'En progression — sécuriser le compte.';
 
       out.push({
         key: c.key, code: c.code, nom: c.nom,
@@ -235,8 +251,9 @@
         panier: panier, evo: evo,
         derniere: derniere, joursDepuis: joursDepuis,
         dates: c.dates.slice(),
-        rythme: rythme, retard: retard,
+        rythme: rythme, rythmeFiable: rythmeFiable, retard: retard,
         motifs: motifs, tags: tags,
+        niveau: niveau, action: action,
         score: score
       });
     });
@@ -367,6 +384,17 @@
            '<div class="rdr-kpi-s">' + esc(sub) + '</div></div>';
   }
 
+  var NIV = {
+    urgent:     { t: 'Prioritaire',  c: 'red' },
+    surveiller: { t: 'À surveiller', c: 'amber' },
+    dormant:    { t: 'Endormi',      c: 'grey' },
+    ok:         { t: 'Suivi',        c: 'green' }
+  };
+  function pill(niveau) {
+    var n = NIV[niveau] || NIV.ok;
+    return '<div class="rdr-pill rdr-pill-' + n.c + '">' + esc(n.t) + '</div>';
+  }
+
   function carte(c) {
     var ct = c.contact;
     var tel = ct && ct.telephone ? String(ct.telephone).replace(/[^\d+]/g, '') : '';
@@ -409,8 +437,9 @@
             (ct ? '' : ' · <span class="rdr-warn">non rattaché à la base clients</span>') +
           '</div>' +
         '</div>' +
-        '<div class="rdr-badge">' + Math.round(c.score * 10) + '</div>' +
+        pill(c.niveau) +
       '</header>' +
+      (c.action ? '<div class="rdr-actionline rdr-al-' + (NIV[c.niveau] ? NIV[c.niveau].c : 'green') + '">' + esc(c.action) + '</div>' : '') +
       '<div class="rdr-motifs">' + motifs + '</div>' +
       jauge +
       '<div class="rdr-stats">' +
@@ -454,7 +483,16 @@
     '#sec-radar .rdr-card-h h4{margin:0;font-size:.95rem;font-weight:700;color:var(--g900);line-height:1.25}',
     '#sec-radar .rdr-card-sub{font-size:.7rem;color:var(--g500);margin-top:.15rem}',
     '#sec-radar .rdr-warn{color:var(--amber)}',
-    '#sec-radar .rdr-badge{flex-shrink:0;background:var(--blue-p50);color:var(--blue-p700);border:1px solid var(--blue-p300);border-radius:8px;padding:.15rem .45rem;font-size:.72rem;font-weight:700}',
+    '#sec-radar .rdr-pill{flex-shrink:0;border-radius:999px;padding:.2rem .6rem;font-size:.7rem;font-weight:700;white-space:nowrap}',
+    '#sec-radar .rdr-pill-red{background:#fdecec;color:#b42318;border:1px solid #f4c7c2}',
+    '#sec-radar .rdr-pill-amber{background:#fff5e6;color:#b45309;border:1px solid #fbd7a5}',
+    '#sec-radar .rdr-pill-grey{background:#f1f3f5;color:#6b7280;border:1px solid #dde1e6}',
+    '#sec-radar .rdr-pill-green{background:#eafaf0;color:#177245;border:1px solid #bde9cd}',
+    '#sec-radar .rdr-actionline{margin:.55rem 0 .1rem;padding:.5rem .7rem;border-radius:9px;font-size:.82rem;font-weight:600;line-height:1.35;background:var(--g50,#f7f8f5);border-left:3px solid var(--g300,#cbd0c9);color:var(--g800,#333)}',
+    '#sec-radar .rdr-al-red{background:#fdf1f0;border-left-color:#e0483a;color:#8f2018}',
+    '#sec-radar .rdr-al-amber{background:#fff8ee;border-left-color:#e9982f;color:#8a4b09}',
+    '#sec-radar .rdr-al-grey{background:#f5f6f7;border-left-color:#9aa0a6;color:#4b5158}',
+    '#sec-radar .rdr-al-green{background:#f1faf4;border-left-color:#37a86a;color:#136c3f}',
     '#sec-radar .rdr-motifs{display:flex;flex-direction:column;gap:.3rem}',
     '#sec-radar .rdr-motif{font-size:.76rem;font-weight:600;padding:.35rem .55rem;border-radius:8px;line-height:1.3}',
     '#sec-radar .rdr-m-red{background:var(--red-bg);color:var(--red)}',
