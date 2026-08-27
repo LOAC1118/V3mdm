@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Restauration — BAC À SABLE (bdcmdm26-staging)</title>
+<style>
+  :root { --g:#266327; }
+  * { box-sizing:border-box; }
+  body { margin:0; font-family:-apple-system,Segoe UI,Roboto,Inter,sans-serif; background:#f4f6f3; color:#1c2b1c; }
+  .test-bar { background:#b45309; color:#fff; text-align:center; font:600 12px/1 Inter,sans-serif; padding:7px; letter-spacing:.02em; }
+  .wrap { max-width:640px; margin:0 auto; padding:24px 18px 60px; }
+  h1 { font-size:1.2rem; margin:0 0 4px; }
+  .sub { color:#6b7280; font-size:.85rem; margin:0 0 18px; }
+  .card { background:#fff; border:1px solid #e3e7e0; border-radius:14px; padding:18px; margin-bottom:16px; box-shadow:0 1px 2px rgba(0,0,0,.03); }
+  label { display:block; font-size:.78rem; font-weight:600; color:#40463c; margin:10px 0 4px; }
+  input { width:100%; padding:10px 12px; border:1px solid #d3d8ce; border-radius:9px; font-size:.95rem; }
+  input[type=file] { padding:8px; background:#fafbf9; }
+  button { appearance:none; border:0; background:var(--g); color:#fff; font-weight:600; font-size:.95rem; padding:12px 16px; border-radius:10px; cursor:pointer; width:100%; margin-top:12px; }
+  button.alt { background:#fff; color:var(--g); border:1px solid var(--g); }
+  button:disabled { opacity:.5; cursor:default; }
+  .row2 { display:flex; gap:10px; } .row2 > * { flex:1; }
+  .note { font-size:.8rem; color:#6b7280; line-height:1.5; }
+  .ok { color:#166534; } .err { color:#b42318; }
+  #log { font-family:ui-monospace,Menlo,monospace; font-size:.75rem; background:#0f1710; color:#c7e6c9; border-radius:10px; padding:12px; height:240px; overflow:auto; white-space:pre-wrap; margin-top:12px; display:none; }
+  .warn { background:#fff7ed; border:1px solid #fed7aa; border-radius:10px; padding:10px 12px; font-size:.82rem; color:#9a3412; margin-bottom:16px; }
+</style>
+</head>
+<body>
+<div class="test-bar">🧪 BAC À SABLE — cette page écrit UNIQUEMENT dans bdcmdm26-staging. Jamais dans la prod.</div>
+<div class="wrap">
+  <h1>↩️ Restauration dans le bac à sable</h1>
+  <p class="sub">Réinjecte ton fichier de sauvegarde (JSON) dans le projet de test, pour travailler la migration sur une vraie copie de tes données.</p>
+
+  <div class="warn">Écrit dans <b>bdcmdm26-staging</b> seulement. Conseil : crée le compte de test avec <b>le même e-mail admin</b> que ta prod — tu resteras manager côté app.</div>
+
+  <div class="card" id="login-card">
+    <label for="email">E-mail (compte de test)</label>
+    <input id="email" type="email" autocomplete="username" placeholder="loacdev@outlook.fr">
+    <label for="pass">Mot de passe (test)</label>
+    <input id="pass" type="password" autocomplete="current-password" placeholder="min. 6 caractères">
+    <div class="row2">
+      <button id="btn-login">Se connecter</button>
+      <button id="btn-create" class="alt">Créer le compte</button>
+    </div>
+    <p class="note" id="login-msg" style="margin-top:10px;"></p>
+  </div>
+
+  <div class="card" id="restore-card" style="display:none;">
+    <p class="note" id="who"></p>
+    <label for="file">Fichier de sauvegarde (.json)</label>
+    <input id="file" type="file" accept="application/json,.json">
+    <p class="note" id="file-info"></p>
+    <button id="btn-restore" disabled>💾 Restaurer dans le bac à sable</button>
+    <div id="log"></div>
+  </div>
+
+  <p class="note">Souci ? Copie-moi ce qui s'affiche dans la zone noire.</p>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+<script>
+  // STAGING uniquement — impossible de toucher la prod depuis cette page.
+  var STAGING = {
+    apiKey:            "AIzaSyDWaz0ZGgc9Wiz0gRbrxr1nO4jMf0nhhec",
+    authDomain:        "bdcmdm26-staging.firebaseapp.com",
+    projectId:         "bdcmdm26-staging",
+    storageBucket:     "bdcmdm26-staging.firebasestorage.app",
+    messagingSenderId: "997211002087",
+    appId:             "1:997211002087:web:c066f014e94a45090afe42"
+  };
+  firebase.initializeApp(STAGING);
+  var auth = firebase.auth();
+  var db = firebase.firestore();
+
+  var backup = null;
+  var el = function(id){ return document.getElementById(id); };
+  function log(m, c){ var d=el('log'); d.style.display='block'; d.innerHTML += (c?('<span class="'+c+'">'+m+'</span>'):m)+'\n'; d.scrollTop=d.scrollHeight; }
+
+  // Reconvertit les types encodés à la sauvegarde vers de vrais objets Firestore.
+  function unconv(v){
+    if (v === null || v === undefined) return v;
+    if (Array.isArray(v)) return v.map(unconv);
+    if (typeof v === 'object') {
+      if (v.__type === 'timestamp') return new firebase.firestore.Timestamp(v.seconds, v.nanoseconds||0);
+      if (v.__type === 'geopoint') return new firebase.firestore.GeoPoint(v.latitude, v.longitude);
+      var o={}; for (var k in v){ if(Object.prototype.hasOwnProperty.call(v,k)) o[k]=unconv(v[k]); } return o;
+    }
+    return v;
+  }
+
+  function afterAuth(user){
+    el('login-card').style.display='none';
+    el('restore-card').style.display='';
+    el('who').textContent = 'Connecté au bac à sable : ' + (user.email||user.uid) + '  (uid ' + user.uid.slice(0,8) + '…)';
+  }
+  auth.onAuthStateChanged(function(u){ if (u) afterAuth(u); });
+
+  el('btn-login').onclick = async function(){
+    var m=el('login-msg'); m.textContent='Connexion…'; m.className='note';
+    try { await auth.signInWithEmailAndPassword(el('email').value.trim(), el('pass').value); }
+    catch(e){ m.textContent='Échec : '+(e.code||e.message); m.className='note err'; }
+  };
+  el('btn-create').onclick = async function(){
+    var m=el('login-msg'); m.textContent='Création…'; m.className='note';
+    try { await auth.createUserWithEmailAndPassword(el('email').value.trim(), el('pass').value); m.textContent='Compte créé ✓'; m.className='note ok'; }
+    catch(e){ m.textContent = (e.code==='auth/email-already-in-use' ? 'Ce compte existe déjà — clique « Se connecter ».' : 'Échec : '+(e.code||e.message)); m.className='note err'; }
+  };
+
+  el('file').onchange = function(){
+    var f = this.files[0]; if (!f) return;
+    var r = new FileReader();
+    r.onload = function(){
+      try {
+        backup = JSON.parse(r.result);
+        var nCol = Object.keys(backup.collections||{}).length;
+        var nDoc = 0; Object.keys(backup.collections||{}).forEach(function(c){ nDoc += Object.keys(backup.collections[c]).length; });
+        el('file-info').innerHTML = '<span class="ok">Fichier lu : '+nCol+' collections, '+nDoc+' documents. Sauvegarde du '+((backup.meta&&backup.meta.date)||'?')+'.</span>';
+        el('btn-restore').disabled = false;
+      } catch(e){ el('file-info').innerHTML = '<span class="err">Fichier illisible : '+e.message+'</span>'; backup=null; el('btn-restore').disabled = true; }
+    };
+    r.readAsText(f);
+  };
+
+  el('btn-restore').onclick = async function(){
+    if (!backup || !auth.currentUser) return;
+    el('btn-restore').disabled = true;
+    var stagingUid = auth.currentUser.uid;
+    var prodUid = backup.meta && backup.meta.parUid;
+    log('Restauration → bac à sable (uid ' + stagingUid.slice(0,8) + '…)');
+    if (prodUid) log('Remappage de tes collections : …_' + prodUid.slice(0,8) + '… → …_' + stagingUid.slice(0,8) + '…');
+
+    function remap(name){
+      if (prodUid && name.length > prodUid.length && name.slice(-(prodUid.length+1)) === ('_'+prodUid)) {
+        return name.slice(0, name.length - prodUid.length) + stagingUid;
+      }
+      return name;
+    }
+
+    var cols = backup.collections || {};
+    var names = Object.keys(cols);
+    var batch = db.batch(), ops = 0, total = 0, done = 0;
+
+    try {
+      for (var i=0;i<names.length;i++){
+        var name = names[i];
+        var target = remap(name);
+        var docs = cols[name];
+        var ids = Object.keys(docs);
+        for (var j=0;j<ids.length;j++){
+          batch.set(db.collection(target).doc(ids[j]), unconv(docs[ids[j]]));
+          ops++; total++;
+          if (ops >= 400){ await batch.commit(); done += ops; batch = db.batch(); ops = 0; log('  … ' + done + ' documents écrits'); }
+        }
+        log('  ✓ ' + target + ' (' + ids.length + ')', 'ok');
+      }
+      if (ops > 0){ await batch.commit(); done += ops; }
+      log('\n✅ Restauration terminée — ' + total + ' documents dans le bac à sable.', 'ok');
+      log('Ouvre maintenant ton app avec ?test et connecte-toi avec ce compte.', 'ok');
+    } catch(e){
+      log('\n❌ Erreur : ' + (e.code||e.message), 'err');
+      log('Si c\'est un refus de permission, vérifie que Firestore du staging est en « mode test ».');
+      el('btn-restore').disabled = false;
+    }
+  };
+</script>
+</body>
+</html>
