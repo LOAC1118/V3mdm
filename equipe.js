@@ -13,6 +13,9 @@
 (function () {
   'use strict';
 
+  // Accès sûr à la globale currentUser (déclarée en let dans index.html : pas sur window).
+  function CU() { try { return (typeof currentUser !== 'undefined') ? currentUser : null; } catch (e) { return null; } }
+
   // Pré-remplissage depuis l'organigramme MDM fourni.
   var SEED = [
     { nom:'Christophe de SAINT PIERRE', email:'christophedesaintpierre@moulindesmoines.com', role:'manager',    region:'Direction commerciale', departements:'' },
@@ -41,7 +44,7 @@
   // Rôle du compte connecté (par e-mail). null si absent du référentiel.
   function roleForCurrent() {
     try {
-      if (!_roster || !window.currentUser) return null;
+      if (!_roster || !CU()) return null;
       var mail = (currentUser.email || '').toLowerCase();
       var m = _roster.find(function (x) { return (x.email || '').toLowerCase() === mail; });
       return m ? (m.role || 'commercial') : null;
@@ -170,7 +173,7 @@
     box.style.cssText = 'margin-top:26px;padding:14px 16px;border:1px dashed #d8a34a;border-radius:12px;background:#fffaf0';
     box.innerHTML =
       '<div style="font:600 13px/1.3 Inter,sans-serif;color:#8a5a12;margin-bottom:6px;">⚙️ Zone technique — bac à sable · Migration modèle B</div>'
-      + '<div style="font:500 12px/1.5 Inter,sans-serif;color:#9a7b3a;margin-bottom:10px;">Copie tes collections par-utilisateur (…_' + (window.currentUser?currentUser.uid.slice(0,6):'') + '…) vers des collections <b>partagées</b> et ajoute le champ <b>owner</b>. Idempotent : tu peux la relancer sans risque. À faire une fois sur le bac à sable, avant de tester la vue partagée.</div>'
+      + '<div style="font:500 12px/1.5 Inter,sans-serif;color:#9a7b3a;margin-bottom:10px;">Copie tes collections par-utilisateur (…_' + (CU()?CU().uid.slice(0,6):'') + '…) vers des collections <b>partagées</b> et ajoute le champ <b>owner</b>. Idempotent : tu peux la relancer sans risque. À faire une fois sur le bac à sable, avant de tester la vue partagée.</div>'
       + '<button class="eq-btn" id="eq-migrate">Lancer la migration (bac à sable)</button>'
       + '<div id="eq-miglog" style="display:none;font-family:ui-monospace,Menlo,monospace;font-size:11px;background:#0f1710;color:#c7e6c9;border-radius:9px;padding:10px;height:180px;overflow:auto;white-space:pre-wrap;margin-top:10px;"></div>';
     wrap.appendChild(box);
@@ -180,7 +183,7 @@
   async function migrate(logEl) {
     logEl.style.display = 'block';
     function mlog(m, c){ logEl.innerHTML += (c?('<span style="color:'+c+'">'+m+'</span>'):m)+'\n'; logEl.scrollTop = logEl.scrollHeight; }
-    if (!window.currentUser) { mlog('Connecte-toi d\'abord.', '#f88'); return; }
+    if (!CU()) { mlog('Connecte-toi d\'abord.', '#f88'); return; }
     var uid = currentUser.uid;
     var brand = (typeof CURRENT_BRAND !== 'undefined') ? CURRENT_BRAND : 'mdm';
     mlog('Migration → collections partagées, owner=' + uid.slice(0,8) + '…');
