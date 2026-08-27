@@ -156,6 +156,60 @@
     if (addBtn) addBtn.onclick = function () { addRow(listEl); };
     var saveBtn = host.querySelector('#eq-save');
     if (saveBtn) saveBtn.onclick = function () { saveAll(host); };
+
+    if (typeof __USE_TEST !== 'undefined' && __USE_TEST) appendMigration(host);
+  }
+
+  // ── Migration modèle B (bac à sable uniquement) ──────────────────────
+  var MIG_SCOPED = ['clients','contacts','prospects','commandes','commandes_meta','commandes_stats','frais','notes_frais','activite','objectifs_ca','config','cadenciers','visites','visites_photos'];
+  var MIG_BRANDS = ['mdm','naturaline'];
+
+  function appendMigration(host) {
+    var wrap = host.querySelector('.eq-wrap'); if (!wrap) return;
+    var box = document.createElement('div');
+    box.style.cssText = 'margin-top:26px;padding:14px 16px;border:1px dashed #d8a34a;border-radius:12px;background:#fffaf0';
+    box.innerHTML =
+      '<div style="font:600 13px/1.3 Inter,sans-serif;color:#8a5a12;margin-bottom:6px;">⚙️ Zone technique — bac à sable · Migration modèle B</div>'
+      + '<div style="font:500 12px/1.5 Inter,sans-serif;color:#9a7b3a;margin-bottom:10px;">Copie tes collections par-utilisateur (…_' + (window.currentUser?currentUser.uid.slice(0,6):'') + '…) vers des collections <b>partagées</b> et ajoute le champ <b>owner</b>. Idempotent : tu peux la relancer sans risque. À faire une fois sur le bac à sable, avant de tester la vue partagée.</div>'
+      + '<button class="eq-btn" id="eq-migrate">Lancer la migration (bac à sable)</button>'
+      + '<div id="eq-miglog" style="display:none;font-family:ui-monospace,Menlo,monospace;font-size:11px;background:#0f1710;color:#c7e6c9;border-radius:9px;padding:10px;height:180px;overflow:auto;white-space:pre-wrap;margin-top:10px;"></div>';
+    wrap.appendChild(box);
+    box.querySelector('#eq-migrate').onclick = function () { migrate(box.querySelector('#eq-miglog')); };
+  }
+
+  async function migrate(logEl) {
+    logEl.style.display = 'block';
+    function mlog(m, c){ logEl.innerHTML += (c?('<span style="color:'+c+'">'+m+'</span>'):m)+'\n'; logEl.scrollTop = logEl.scrollHeight; }
+    if (!window.currentUser) { mlog('Connecte-toi d\'abord.', '#f88'); return; }
+    var uid = currentUser.uid;
+    var brand = (typeof CURRENT_BRAND !== 'undefined') ? CURRENT_BRAND : 'mdm';
+    mlog('Migration → collections partagées, owner=' + uid.slice(0,8) + '…');
+    var total = 0;
+    try {
+      for (var b = 0; b < MIG_BRANDS.length; b++) {
+        for (var s = 0; s < MIG_SCOPED.length; s++) {
+          var src = MIG_SCOPED[s] + '_' + MIG_BRANDS[b] + '_' + uid;
+          var dst = MIG_SCOPED[s] + '_' + MIG_BRANDS[b];
+          var snap = await db.collection(src).get();
+          if (snap.empty) continue;
+          var batch = db.batch(), ops = 0;
+          var docs = snap.docs;
+          for (var i = 0; i < docs.length; i++) {
+            var data = docs[i].data();
+            if (data.owner === undefined) data.owner = uid;
+            batch.set(db.collection(dst).doc(docs[i].id), data, { merge: true });
+            ops++; total++;
+            if (ops >= 400) { await batch.commit(); batch = db.batch(); ops = 0; }
+          }
+          if (ops > 0) await batch.commit();
+          mlog('  ✓ ' + src + ' → ' + dst + ' (' + snap.size + ')', '#9f9');
+        }
+      }
+      mlog('\n✅ Migration terminée — ' + total + ' documents copiés vers les collections partagées.', '#9f9');
+      mlog('Recharge l\'app avec ?test : elle lit désormais les collections partagées.', '#9f9');
+    } catch (e) {
+      mlog('\n❌ Erreur : ' + (e.code || e.message), '#f88');
+    }
   }
 
   function addRow(listEl) {

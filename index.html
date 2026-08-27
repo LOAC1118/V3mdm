@@ -3637,6 +3637,12 @@ let db = null, auth = null, currentUser = null, fbFunctions = null;
 var BRAND_SCOPED_COLLECTIONS = ['clients','contacts','prospects','commandes','commandes_meta','commandes_stats','frais','notes_frais','activite','objectifs_ca','config','cadenciers','visites','visites_photos'];
 function bcol(name) {
   if (BRAND_SCOPED_COLLECTIONS.indexOf(name) !== -1) {
+    // Modèle B (migration équipe) : collections PARTAGÉES sans suffixe uid,
+    // activé UNIQUEMENT sur le bac à sable (?test). La prod reste en modèle A
+    // (collections par utilisateur) tant qu'on ne l'a pas migrée exprès.
+    if (typeof __USE_TEST !== 'undefined' && __USE_TEST) {
+      return db.collection(name + '_' + CURRENT_BRAND);
+    }
     var uidSuffix = (currentUser && currentUser.uid) ? ('_' + currentUser.uid) : '';
     return db.collection(name + '_' + CURRENT_BRAND + uidSuffix);
   }
@@ -7028,7 +7034,7 @@ async function convertirEnClient(id) {
 async function saveClient() {
   const id=g('c-edit-id'), raison=g('c-raison').trim();
   if (!raison) { toast('Raison sociale obligatoire','err'); return; }
-  const row = { raison, contact:g('c-contact'), tel:g('c-tel'), email:g('c-email'), ville:g('c-ville'), cp:g('c-cp'), profil:g('c-profil'), remise:parseFloat(g('c-remise'))||0, accord:g('c-accord')||'', siret:g('c-siret'), tva:g('c-tva'), notes:g('c-notes'), createdBy:currentUser.uid, createdAt:firebase.firestore.FieldValue.serverTimestamp() };
+  const row = { raison, contact:g('c-contact'), tel:g('c-tel'), email:g('c-email'), ville:g('c-ville'), cp:g('c-cp'), profil:g('c-profil'), remise:parseFloat(g('c-remise'))||0, accord:g('c-accord')||'', siret:g('c-siret'), tva:g('c-tva'), notes:g('c-notes'), createdBy:currentUser.uid, owner:currentUser.uid, createdAt:firebase.firestore.FieldValue.serverTimestamp() };
   setSyncing(true);
   try {
     if (id) { await bcol('clients').doc(id).update(row); }
@@ -7077,7 +7083,7 @@ async function saveCommande() {
   const id=g('o-edit-id'), clientId=g('o-client');
   if (!clientId) { toast('Sélectionnez un client','err'); return; }
   const client=cache.clients.find(x=>x.id===clientId);
-  const row = { clientId, clientNom:client?.raison||'—', statut:g('o-statut'), montant:parseFloat(g('o-montant'))||0, notes:g('o-notes'), createdBy:currentUser.uid, createdAt:firebase.firestore.FieldValue.serverTimestamp() };
+  const row = { clientId, clientNom:client?.raison||'—', statut:g('o-statut'), montant:parseFloat(g('o-montant'))||0, notes:g('o-notes'), createdBy:currentUser.uid, owner:currentUser.uid, createdAt:firebase.firestore.FieldValue.serverTimestamp() };
   setSyncing(true);
   try {
     if (id) { await bcol('commandes').doc(id).update(row); }
@@ -9100,7 +9106,7 @@ function bdcSendOrder() {
       email:mail,datelivraison:dl||'',commentaire:com||'',statut:'Envoyée',
       montant:tN,nbRefs:nbRefs,remise:bdcRemise,lignes:lignes,
       notes:'BDC envoyé par '+mail,
-      createdBy:currentUser.uid,createdAt:firebase.firestore.FieldValue.serverTimestamp()
+      createdBy:currentUser.uid,owner:currentUser.uid,createdAt:firebase.firestore.FieldValue.serverTimestamp()
     }).then(function(){
       logActivite('BDC envoyé — '+mag+' — '+bdcFmt(tN)+' ('+nbRefs+' réf.)','blue');
       try { if (typeof CRMData !== 'undefined') CRMData.invalidate('commandes'); } catch(e) {}
@@ -15043,7 +15049,7 @@ if ('serviceWorker' in navigator) {
 <script src="alertes.js?v=1"></script>
 <script src="paie-sim.js?v=1"></script>
 <script src="remises-accord.js?v=1"></script>
-<script src="equipe.js?v=1"></script>
+<script src="equipe.js?v=2"></script>
 <script src="fiche360.js?v=1"></script>
 <script src="offline-status.js?v=1"></script>
 <script>
