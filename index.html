@@ -13394,6 +13394,7 @@ function cdbSave() {
   });
   c.prospect = parseInt(document.getElementById('cdb-edit-prospect').value) || 0;
   if (!c.nom) { toast('Raison sociale requise', 'err'); return; }
+  if (!id && currentUser) c.owner = currentUser.uid; // propriétaire = créateur (modèle B)
 
   if (typeof firebase !== 'undefined' && firebase.firestore) {
     bcol('contacts').doc(c.id).set(c).then(function(){
@@ -15049,7 +15050,7 @@ if ('serviceWorker' in navigator) {
 <script src="alertes.js?v=1"></script>
 <script src="paie-sim.js?v=1"></script>
 <script src="remises-accord.js?v=1"></script>
-<script src="equipe.js?v=4"></script>
+<script src="equipe.js?v=5"></script>
 <script src="fiche360.js?v=1"></script>
 <script src="offline-status.js?v=1"></script>
 <script>

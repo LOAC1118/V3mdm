@@ -234,7 +234,7 @@
     alog((dryRun ? '— SIMULATION — ' : '— APPLICATION — ') + 'marque ' + brand);
 
     try {
-      var snap = await db.collection('clients_' + brand).get();
+      var snap = await db.collection('contacts_' + brand).get();
       var counts = {}, unmatched = [], noCp = 0, total = 0, updates = [];
       snap.forEach(function (doc) {
         total++;
