@@ -185,6 +185,7 @@
     box2.innerHTML =
       '<div style="font:600 13px/1.3 Inter,sans-serif;color:#1e4e8a;margin-bottom:6px;">🎯 Attribution des clients par secteur</div>'
       + '<div style="font:500 12px/1.5 Inter,sans-serif;color:#3a6ba3;margin-bottom:10px;">Attribue chaque client au commercial qui couvre son département (déduit du code postal), d\'après les départements saisis ci-dessus. Fais d\'abord une <b>simulation</b> pour vérifier, puis applique. Un commercial sans compte encore créé sera rattaché par e-mail (le lien se fera à sa 1re connexion).</div>'
+      + '<label style="display:flex;align-items:center;gap:7px;font:500 12px Inter,sans-serif;color:#3a6ba3;margin-bottom:10px;cursor:pointer"><input type="checkbox" id="eq-attr-onlyunowned" checked> N\'attribuer que les clients <b>sans propriétaire</b> (recommandé)</label>'
       + '<div style="display:flex;gap:8px;flex-wrap:wrap"><button class="eq-btn ghost" id="eq-attr-sim">Simulation</button><button class="eq-btn" id="eq-attr-go">Appliquer l\'attribution</button></div>'
       + '<div id="eq-attrlog" style="display:none;font-family:ui-monospace,Menlo,monospace;font-size:11px;background:#0d1424;color:#cfe0ff;border-radius:9px;padding:10px;height:200px;overflow:auto;white-space:pre-wrap;margin-top:10px;"></div>';
     wrap.appendChild(box2);
@@ -231,14 +232,16 @@
     if (!Object.keys(dm.map).length) { alog('Aucun département renseigné dans le référentiel. Remplis les départements des commerciaux puis enregistre.', '#f88'); return; }
     if (dm.conflicts.length) alog('⚠ Départements attribués à plusieurs commerciaux (le dernier gagne) : ' + dm.conflicts.join(', '), '#fd8');
     var brand = (typeof CURRENT_BRAND !== 'undefined') ? CURRENT_BRAND : 'mdm';
-    alog((dryRun ? '— SIMULATION — ' : '— APPLICATION — ') + 'marque ' + brand);
+    var onlyUnowned = !!(document.getElementById('eq-attr-onlyunowned') && document.getElementById('eq-attr-onlyunowned').checked);
+    alog((dryRun ? '— SIMULATION — ' : '— APPLICATION — ') + 'marque ' + brand + (onlyUnowned ? ' · clients sans propriétaire uniquement' : ' · TOUS les clients'));
 
     try {
       var snap = await db.collection('contacts_' + brand).get();
-      var counts = {}, unmatched = [], noCp = 0, total = 0, updates = [];
+      var counts = {}, unmatched = [], noCp = 0, total = 0, skippedOwned = 0, updates = [];
       snap.forEach(function (doc) {
         total++;
         var c = doc.data();
+        if (onlyUnowned && (c.owner || c.ownerEmail)) { skippedOwned++; return; }
         var d = deptOfCp(c.cp);
         if (!d) { noCp++; return; }
         var m = dm.map[d];
@@ -253,6 +256,7 @@
       });
 
       alog('\nClients : ' + total + ' au total');
+      if (skippedOwned) alog('  ↳ ' + skippedOwned + ' déjà attribués (ignorés)', '#9cf');
       Object.keys(counts).forEach(function (mail) {
         var m = (_roster || []).find(function (x) { return (x.email || '').toLowerCase() === mail.toLowerCase(); });
         alog('  • ' + (m ? m.nom : mail) + ' : ' + counts[mail] + (emailToUid(mail) ? '' : ' (compte pas encore créé → rattaché par e-mail)'));
