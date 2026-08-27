@@ -1832,6 +1832,7 @@ thead th.ts-active { text-decoration:underline; text-underline-offset:3px; }
       <div style="font-family:var(--fdisp);font-size:.9rem;color:var(--g900);flex:1;min-width:140px;">🌾 Bon de Commande MDM 2026</div>
       <button class="btn btn-ghost" style="font-size:.72rem;padding:.3rem .7rem;" onclick="openBdcImport()">📄 Importer commande</button>
       <button class="btn btn-ghost" style="font-size:.72rem;padding:.3rem .7rem;color:#266327;border-color:rgba(38,99,39,.35);" onclick="if(typeof BdcSuggest!=='undefined')BdcSuggest.open();">🧠 Suggérer</button>
+      <button class="btn btn-ghost" style="font-size:.72rem;padding:.3rem .7rem;color:#266327;border-color:rgba(38,99,39,.35);" onclick="if(typeof RemisesAccord!=='undefined')RemisesAccord.open();">💰 Remises</button>
       <button class="btn btn-ghost" style="font-size:.72rem;padding:.3rem .7rem;color:#a78bfa;border-color:rgba(167,139,250,.3);" onclick="boxOpen()">📦 Création BOX</button>
       <button class="btn btn-ghost" style="font-size:.72rem;padding:.3rem .7rem;color:#e8c98a;border-color:rgba(245,158,11,.3);" onclick="openStockImport()">📦 Mettre à jour stocks</button>
       <button class="btn btn-ghost" style="font-size:.72rem;padding:.3rem .7rem;" onclick="resetBDC()">🗑 Effacer</button>
@@ -12740,6 +12741,7 @@ function cdbSwitchTab(tab) {
 // Crée un nouveau BDC pré-rempli depuis une fiche client
 function cdbNewOrderFromClient(c) {
   if (!c) return;
+  try { if (typeof RemisesAccord !== 'undefined') RemisesAccord.setClient(c); } catch(e) {}
 
   // Si le BDC a déjà des quantités, demander confirmation
   if (Object.keys(bdcQtys).filter(function(k){ return bdcQtys[k] > 0; }).length > 0) {
@@ -14990,6 +14992,7 @@ if ('serviceWorker' in navigator) {
 <script src="bdc-suggest.js?v=1"></script>
 <script src="alertes.js?v=1"></script>
 <script src="paie-sim.js?v=1"></script>
+<script src="remises-accord.js?v=1"></script>
 <script src="fiche360.js?v=1"></script>
 <script src="offline-status.js?v=1"></script>
 <script>
