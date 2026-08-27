@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sauvegarde — CRM MDM (bdcmdm26)</title>
+<style>
+  :root { --g:#266327; }
+  * { box-sizing: border-box; }
+  body { margin:0; font-family:-apple-system,Segoe UI,Roboto,Inter,sans-serif; background:#f4f6f3; color:#1c2b1c; }
+  .wrap { max-width:640px; margin:0 auto; padding:28px 18px 60px; }
+  h1 { font-size:1.25rem; margin:0 0 4px; }
+  .sub { color:#6b7280; font-size:.85rem; margin:0 0 20px; }
+  .card { background:#fff; border:1px solid #e3e7e0; border-radius:14px; padding:18px; margin-bottom:16px; box-shadow:0 1px 2px rgba(0,0,0,.03); }
+  label { display:block; font-size:.78rem; font-weight:600; color:#40463c; margin:10px 0 4px; }
+  input { width:100%; padding:10px 12px; border:1px solid #d3d8ce; border-radius:9px; font-size:.95rem; }
+  button { appearance:none; border:0; background:var(--g); color:#fff; font-weight:600; font-size:.95rem; padding:12px 16px; border-radius:10px; cursor:pointer; width:100%; margin-top:14px; }
+  button:disabled { opacity:.5; cursor:default; }
+  .note { font-size:.8rem; color:#6b7280; line-height:1.5; }
+  .ok { color:#166534; } .err { color:#b42318; }
+  #log { font-family:ui-monospace,SFMono-Regular,Menlo,monospace; font-size:.75rem; background:#0f1710; color:#c7e6c9; border-radius:10px; padding:12px; height:230px; overflow:auto; white-space:pre-wrap; margin-top:12px; display:none; }
+  .banner { background:#eef5ee; border:1px solid #cfe3cf; border-radius:10px; padding:10px 12px; font-size:.82rem; color:#2f5130; margin-bottom:16px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>🛟 Sauvegarde de la base — <b>bdcmdm26</b> (PROD)</h1>
+  <p class="sub">Page autonome, <b>lecture seule</b>. Elle ne modifie rien. Elle télécharge une copie de secours de toutes tes données dans un fichier JSON, à garder avant toute migration.</p>
+
+  <div class="banner">Cette page lit ta <b>vraie base de production</b> pour la sauvegarder. Elle n'écrit jamais. Connecte-toi avec ton compte <b>administrateur</b>.</div>
+
+  <div class="card" id="login-card">
+    <label for="email">E-mail administrateur</label>
+    <input id="email" type="email" autocomplete="username" placeholder="loacdev@outlook.fr">
+    <label for="pass">Mot de passe</label>
+    <input id="pass" type="password" autocomplete="current-password" placeholder="••••••••">
+    <button id="btn-login">Se connecter</button>
+    <p class="note" id="login-msg" style="margin-top:10px;"></p>
+  </div>
+
+  <div class="card" id="backup-card" style="display:none;">
+    <p class="note" id="who"></p>
+    <button id="btn-backup">📦 Lancer la sauvegarde complète</button>
+    <div id="log"></div>
+    <button id="btn-download" style="display:none;background:#0f1710;">⬇️ Télécharger le fichier de sauvegarde</button>
+  </div>
+
+  <p class="note">En cas de souci, dis-moi ce qui s'affiche dans la zone noire et je t'aide.</p>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+<script>
+  // PROD — on sauvegarde la vraie base.
+  var FIREBASE_CONFIG = {
+    apiKey:            "AIzaSyBk9X0E5XGx8GPXzZoD7bt4AdJE4NUwEyQ",
+    authDomain:        "bdcmdm26.firebaseapp.com",
+    projectId:         "bdcmdm26",
+    storageBucket:     "bdcmdm26.firebasestorage.app",
+    messagingSenderId: "907040110034",
+    appId:             "1:907040110034:web:3c5f1d4a3c56a7efe9840b"
+  };
+  firebase.initializeApp(FIREBASE_CONFIG);
+  var auth = firebase.auth();
+  var db = firebase.firestore();
+
+  // Mêmes noms que dans l'app : collections scopées <base>_<marque>_<uid>.
+  var SCOPED = ['clients','contacts','prospects','commandes','commandes_meta','commandes_stats','frais','notes_frais','activite','objectifs_ca','config','cadenciers','visites','visites_photos'];
+  var BRANDS = ['mdm','naturaline'];
+  var NON_SCOPED = ['accords_global','profils','config_mdm'];
+
+  var _backup = null;
+  var el = function(id){ return document.getElementById(id); };
+  function log(msg, cls){ var d=el('log'); d.style.display='block'; d.innerHTML += (cls?('<span class="'+cls+'">'+msg+'</span>'):msg)+'\n'; d.scrollTop=d.scrollHeight; }
+
+  // Convertit les types Firestore (Timestamp…) en JSON lisible et ré-importable.
+  function conv(v){
+    if (v === null || v === undefined) return v;
+    if (typeof v.toDate === 'function' && typeof v.seconds === 'number') {
+      return { __type:'timestamp', seconds:v.seconds, nanoseconds:v.nanoseconds||0, iso:v.toDate().toISOString() };
+    }
+    if (v && v.latitude !== undefined && v.longitude !== undefined && typeof v.toDate !== 'function' && v.constructor && v.constructor.name==='GeoPoint') {
+      return { __type:'geopoint', latitude:v.latitude, longitude:v.longitude };
+    }
+    if (Array.isArray(v)) return v.map(conv);
+    if (typeof v === 'object') { var o={}; for (var k in v){ if(Object.prototype.hasOwnProperty.call(v,k)) o[k]=conv(v[k]); } return o; }
+    return v;
+  }
+
+  async function dump(colName){
+    try {
+      var snap = await db.collection(colName).get();
+      if (snap.empty) return 0;
+      var docs = {};
+      snap.forEach(function(d){ docs[d.id] = conv(d.data()); });
+      _backup.collections[colName] = docs;
+      log('  ✓ ' + colName + ' — ' + snap.size + ' doc(s)', 'ok');
+      return snap.size;
+    } catch(e){
+      log('  ⚠ ' + colName + ' — ignorée (' + (e.code||e.message) + ')');
+      return 0;
+    }
+  }
+
+  el('btn-login').onclick = async function(){
+    var msg = el('login-msg'); msg.textContent = 'Connexion…'; msg.className='note';
+    try {
+      await auth.signInWithEmailAndPassword(el('email').value.trim(), el('pass').value);
+    } catch(e){
+      msg.textContent = 'Échec : ' + (e.code||e.message); msg.className='note err';
+    }
+  };
+
+  auth.onAuthStateChanged(function(user){
+    if (!user) return;
+    el('login-card').style.display='none';
+    el('backup-card').style.display='';
+    el('who').textContent = 'Connecté : ' + (user.email||user.uid);
+  });
+
+  el('btn-backup').onclick = async function(){
+    el('btn-backup').disabled = true;
+    el('btn-download').style.display='none';
+    var uid = auth.currentUser.uid;
+    _backup = { meta:{ projet:'bdcmdm26', date:new Date().toISOString(), parUid:uid, format:'crm-backup-v1' }, collections:{} };
+
+    // 1) Récupérer tous les uid connus (profils) pour une sauvegarde COMPLÈTE (toute l'équipe).
+    var uids = [uid];
+    log('Recherche des utilisateurs…');
+    try {
+      var ps = await db.collection('profils').get();
+      ps.forEach(function(d){ if (uids.indexOf(d.id)<0) uids.push(d.id); });
+      log('  ' + uids.length + ' utilisateur(s) : ' + uids.join(', '), 'ok');
+    } catch(e){ log('  profils illisible, sauvegarde du compte courant seulement'); }
+
+    var total = 0;
+    log('\nCollections globales…');
+    for (var i=0;i<NON_SCOPED.length;i++) total += await dump(NON_SCOPED[i]);
+
+    for (var u=0; u<uids.length; u++){
+      log('\nUtilisateur ' + (u+1) + '/' + uids.length + ' (' + uids[u].slice(0,8) + '…)');
+      for (var b=0;b<BRANDS.length;b++){
+        for (var s=0;s<SCOPED.length;s++){
+          total += await dump(SCOPED[s] + '_' + BRANDS[b] + '_' + uids[u]);
+        }
+      }
+    }
+
+    _backup.meta.totalDocs = total;
+    log('\n✅ Terminé — ' + total + ' documents, ' + Object.keys(_backup.collections).length + ' collections.', 'ok');
+    el('btn-backup').disabled = false;
+    el('btn-download').style.display='';
+  };
+
+  el('btn-download').onclick = function(){
+    var blob = new Blob([JSON.stringify(_backup, null, 2)], { type:'application/json' });
+    var d = new Date();
+    var stamp = d.getFullYear() + String(d.getMonth()+1).padStart(2,'0') + String(d.getDate()).padStart(2,'0') + '-' + String(d.getHours()).padStart(2,'0') + String(d.getMinutes()).padStart(2,'0');
+    var a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'sauvegarde-bdcmdm26-' + stamp + '.json';
+    a.click();
+    setTimeout(function(){ URL.revokeObjectURL(a.href); }, 4000);
+  };
+</script>
+</body>
+</html>

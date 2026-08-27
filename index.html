@@ -7376,7 +7376,7 @@ function fsB(s) { if(s==='Validé'||s==='Remboursé') return 'badge-client'; if(
 //  INIT
 // ═══════════════════════════════════════════════
 document.addEventListener('keydown', e => { if(e.key==='Escape') ['prospect','client','commande','frais'].forEach(closeModal); });
-// Config Firebase MDM 2026 — intégrée
+// Config Firebase MDM 2026 — PROD (base réelle)
 const FIREBASE_CONFIG = {
   apiKey:            "AIzaSyBk9X0E5XGx8GPXzZoD7bt4AdJE4NUwEyQ",
   authDomain:        "bdcmdm26.firebaseapp.com",
@@ -7386,10 +7386,36 @@ const FIREBASE_CONFIG = {
   appId:             "1:907040110034:web:3c5f1d4a3c56a7efe9840b"
 };
 
+// Config Firebase — STAGING (bac à sable, données bidon). Utilisé UNIQUEMENT
+// si l'URL contient ?test  (ex: https://.../V3mdm/?test). Sinon = PROD.
+const FIREBASE_CONFIG_STAGING = {
+  apiKey:            "AIzaSyDWaz0ZGgc9Wiz0gRbrxr1nO4jMf0nhhec",
+  authDomain:        "bdcmdm26-staging.firebaseapp.com",
+  projectId:         "bdcmdm26-staging",
+  storageBucket:     "bdcmdm26-staging.firebasestorage.app",
+  messagingSenderId: "997211002087",
+  appId:             "1:997211002087:web:c066f014e94a45090afe42"
+};
+
+// Interrupteur prod/test : ?test dans l'URL → bac à sable. Par défaut → PROD.
+var __USE_TEST = false;
+try { __USE_TEST = new URLSearchParams(location.search).has('test'); } catch(e) {}
+const ACTIVE_FIREBASE_CONFIG = __USE_TEST ? FIREBASE_CONFIG_STAGING : FIREBASE_CONFIG;
+
 // Démarrage après chargement complet de tous les scripts CDN
 window.addEventListener('load', function() {
   try {
-    initFirebase(FIREBASE_CONFIG);
+    // Bandeau permanent en mode test : impossible de confondre avec la prod.
+    if (__USE_TEST) {
+      var b = document.createElement('div');
+      b.textContent = '🧪 MODE TEST — base bac à sable (bdcmdm26-staging) · aucune donnée réelle';
+      b.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:99999;background:#b45309;color:#fff;'
+        + 'font:600 12px/1 Inter,sans-serif;text-align:center;padding:6px 10px;letter-spacing:.02em;'
+        + 'box-shadow:0 1px 4px rgba(0,0,0,.25)';
+      document.body.appendChild(b);
+      document.body.style.borderTop = '3px solid #b45309';
+    }
+    initFirebase(ACTIVE_FIREBASE_CONFIG);
     showLoginScreen();
   } catch(err) {
     document.getElementById('boot-error').style.display = 'flex';
