@@ -178,6 +178,100 @@
       + '<div id="eq-miglog" style="display:none;font-family:ui-monospace,Menlo,monospace;font-size:11px;background:#0f1710;color:#c7e6c9;border-radius:9px;padding:10px;height:180px;overflow:auto;white-space:pre-wrap;margin-top:10px;"></div>';
     wrap.appendChild(box);
     box.querySelector('#eq-migrate').onclick = function () { migrate(box.querySelector('#eq-miglog')); };
+
+    // ── Attribution par secteur (étape 2b) ──
+    var box2 = document.createElement('div');
+    box2.style.cssText = 'margin-top:14px;padding:14px 16px;border:1px dashed #4a86d8;border-radius:12px;background:#f2f7ff';
+    box2.innerHTML =
+      '<div style="font:600 13px/1.3 Inter,sans-serif;color:#1e4e8a;margin-bottom:6px;">🎯 Attribution des clients par secteur</div>'
+      + '<div style="font:500 12px/1.5 Inter,sans-serif;color:#3a6ba3;margin-bottom:10px;">Attribue chaque client au commercial qui couvre son département (déduit du code postal), d\'après les départements saisis ci-dessus. Fais d\'abord une <b>simulation</b> pour vérifier, puis applique. Un commercial sans compte encore créé sera rattaché par e-mail (le lien se fera à sa 1re connexion).</div>'
+      + '<div style="display:flex;gap:8px;flex-wrap:wrap"><button class="eq-btn ghost" id="eq-attr-sim">Simulation</button><button class="eq-btn" id="eq-attr-go">Appliquer l\'attribution</button></div>'
+      + '<div id="eq-attrlog" style="display:none;font-family:ui-monospace,Menlo,monospace;font-size:11px;background:#0d1424;color:#cfe0ff;border-radius:9px;padding:10px;height:200px;overflow:auto;white-space:pre-wrap;margin-top:10px;"></div>';
+    wrap.appendChild(box2);
+    box2.querySelector('#eq-attr-sim').onclick = function () { attribute(true, box2.querySelector('#eq-attrlog')); };
+    box2.querySelector('#eq-attr-go').onclick = function () { attribute(false, box2.querySelector('#eq-attrlog')); };
+  }
+
+  // Département à partir du code postal (métropole = 2 chiffres, DOM = 3).
+  function deptOfCp(cp) {
+    cp = String(cp == null ? '' : cp).trim();
+    if (!cp) return null;
+    if (/^9[78]\d/.test(cp)) return cp.slice(0, 3);
+    var d = cp.slice(0, 2);
+    return /^\d{2}$/.test(d) ? d : null;
+  }
+  function parseDepts(txt) {
+    return String(txt || '').split(/[^0-9AB]+/i).map(function (s) { return s.trim().toUpperCase(); }).filter(Boolean);
+  }
+  function buildDeptMap() {
+    var map = {}, conflicts = [];
+    (_roster || []).forEach(function (m) {
+      if (m.role === 'manager' && !parseDepts(m.departements).length) return; // manager sans secteur : ignoré
+      parseDepts(m.departements).forEach(function (d) {
+        if (map[d] && map[d].email !== m.email && conflicts.indexOf(d) < 0) conflicts.push(d);
+        map[d] = m;
+      });
+    });
+    return { map: map, conflicts: conflicts };
+  }
+  function emailToUid(email) {
+    if (!email) return null;
+    var lc = email.toLowerCase();
+    if (CU() && (CU().email || '').toLowerCase() === lc) return CU().uid;
+    var m = (_roster || []).find(function (x) { return (x.email || '').toLowerCase() === lc; });
+    return (m && m.uid) ? m.uid : null;
+  }
+
+  async function attribute(dryRun, logEl) {
+    logEl.style.display = 'block'; logEl.innerHTML = '';
+    function alog(m, c) { logEl.innerHTML += (c ? ('<span style="color:' + c + '">' + m + '</span>') : m) + '\n'; logEl.scrollTop = logEl.scrollHeight; }
+    if (!CU()) { alog('Connecte-toi d\'abord.', '#f88'); return; }
+    await load(); // référentiel à jour
+    var dm = buildDeptMap();
+    if (!Object.keys(dm.map).length) { alog('Aucun département renseigné dans le référentiel. Remplis les départements des commerciaux puis enregistre.', '#f88'); return; }
+    if (dm.conflicts.length) alog('⚠ Départements attribués à plusieurs commerciaux (le dernier gagne) : ' + dm.conflicts.join(', '), '#fd8');
+    var brand = (typeof CURRENT_BRAND !== 'undefined') ? CURRENT_BRAND : 'mdm';
+    alog((dryRun ? '— SIMULATION — ' : '— APPLICATION — ') + 'marque ' + brand);
+
+    try {
+      var snap = await db.collection('clients_' + brand).get();
+      var counts = {}, unmatched = [], noCp = 0, total = 0, updates = [];
+      snap.forEach(function (doc) {
+        total++;
+        var c = doc.data();
+        var d = deptOfCp(c.cp);
+        if (!d) { noCp++; return; }
+        var m = dm.map[d];
+        if (!m) { if (unmatched.indexOf(d) < 0) unmatched.push(d); return; }
+        counts[m.email] = (counts[m.email] || 0) + 1;
+        if (!dryRun) {
+          var uid = emailToUid(m.email);
+          var upd = { ownerEmail: m.email, secteur: m.region || '' };
+          if (uid) upd.owner = uid;
+          updates.push({ ref: doc.ref, upd: upd });
+        }
+      });
+
+      alog('\nClients : ' + total + ' au total');
+      Object.keys(counts).forEach(function (mail) {
+        var m = (_roster || []).find(function (x) { return (x.email || '').toLowerCase() === mail.toLowerCase(); });
+        alog('  • ' + (m ? m.nom : mail) + ' : ' + counts[mail] + (emailToUid(mail) ? '' : ' (compte pas encore créé → rattaché par e-mail)'));
+      });
+      if (noCp) alog('  ⚠ ' + noCp + ' client(s) sans code postal exploitable', '#fd8');
+      if (unmatched.length) alog('  ⚠ départements non couverts : ' + unmatched.sort().join(', '), '#fd8');
+
+      if (dryRun) { alog('\nSimulation seule — rien n\'a été écrit. Vérifie, puis « Appliquer ».', '#9cf'); return; }
+
+      for (var i = 0; i < updates.length; i += 400) {
+        var batch = db.batch();
+        updates.slice(i, i + 400).forEach(function (u) { batch.set(u.ref, u.upd, { merge: true }); });
+        await batch.commit();
+        alog('  … ' + Math.min(i + 400, updates.length) + '/' + updates.length + ' écrits');
+      }
+      alog('\n✅ Attribution appliquée — ' + updates.length + ' clients mis à jour.', '#9f9');
+    } catch (e) {
+      alog('\n❌ Erreur : ' + (e.code || e.message), '#f88');
+    }
   }
 
   async function migrate(logEl) {
