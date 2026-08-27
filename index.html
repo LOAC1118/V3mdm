@@ -1385,6 +1385,10 @@ thead th.ts-active { text-decoration:underline; text-underline-offset:3px; }
       <svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="5.5" cy="5.5" r="2.5"/><circle cx="11" cy="6" r="2"/><path d="M1 14c0-2.5 1.8-4.5 4.5-4.5S10 11.5 10 14"/><path d="M9.5 9.7c2 .2 3.5 1.8 3.5 4.3"/></svg>
       Comptes
     </div>
+    <div class="nav-item hidden" id="nav-item-equipe" onclick="showSection('equipe',null,this)">
+      <svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="8" cy="5" r="2.4"/><path d="M2.5 14c0-3 2.4-5 5.5-5s5.5 2 5.5 5"/><path d="M13.5 6.5l1.2 1.2 2-2"/></svg>
+      Équipe
+    </div>
     <div class="nav-item" onclick="showSection('mailing',null,this)">
       <svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="1" y="3" width="14" height="10" rx="1.5"/><path d="M1 4.5l7 5 7-5"/></svg>
       Mailing
@@ -1824,6 +1828,11 @@ thead th.ts-active { text-decoration:underline; text-underline-offset:3px; }
   <!-- ALERTES STOCK (point 3) -->
   <div id="sec-alertes" class="hidden" style="padding:1.75rem 2rem;overflow-y:auto;flex:1;background:var(--bg);box-sizing:border-box;">
     <div id="alt-host"></div>
+  </div>
+
+  <!-- ÉQUIPE — rôles & secteurs (migration équipe, étape 1) -->
+  <div id="sec-equipe" class="hidden" style="padding:1.75rem 2rem;overflow-y:auto;flex:1;background:var(--bg);box-sizing:border-box;">
+    <div id="equipe-host"></div>
   </div>
 
   <!-- BON DE COMMANDE BDC -->
@@ -3105,6 +3114,10 @@ thead th.ts-active { text-decoration:underline; text-underline-offset:3px; }
     <span class="mmenu-ico"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="5.5" cy="5.5" r="2.5"/><circle cx="11" cy="6" r="2"/><path d="M1 14c0-2.5 1.8-4.5 4.5-4.5S10 11.5 10 14"/><path d="M9.5 9.7c2 .2 3.5 1.8 3.5 4.3"/></svg></span>
     <span class="mmenu-label">Comptes</span>
   </button>
+  <button class="mmenu-item hidden" id="mtab-equipe" role="menuitem" data-sec="equipe" onclick="mnavGo('equipe')">
+    <span class="mmenu-ico"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="8" cy="5" r="2.4"/><path d="M2.5 14c0-3 2.4-5 5.5-5s5.5 2 5.5 5"/><path d="M13.5 6.5l1.2 1.2 2-2"/></svg></span>
+    <span class="mmenu-label">Équipe</span>
+  </button>
   <button class="mmenu-item" role="menuitem" data-sec="mailing" onclick="mnavGo('mailing')">
     <span class="mmenu-ico"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="1" y="3" width="14" height="10" rx="1.5"/><path d="M1 4.5l7 5 7-5"/></svg></span>
     <span class="mmenu-label">Mailing</span>
@@ -4072,11 +4085,20 @@ function isAdminUser() {
 }
 function initAdminAccountsUI() {
   if (!isAdminUser()) return;
-  var ids = ['t-tab-comptes', 'nav-item-comptes', 'mtab-comptes'];
+  var ids = ['t-tab-comptes', 'nav-item-comptes', 'mtab-comptes', 'nav-item-equipe', 'mtab-equipe'];
   ids.forEach(function(id) {
     var el = document.getElementById(id);
     if (el) el.classList.remove('hidden');
   });
+}
+
+// Étape 1 migration équipe : statut manager = admin historique OU rôle 'manager'
+// dans le référentiel Équipe (additif, ne remplace pas isAdminUser()).
+function isManagerUser() {
+  try {
+    if (typeof isAdminUser === 'function' && isAdminUser()) return true;
+    return !!(window.Equipe && Equipe.roleForCurrent && Equipe.roleForCurrent() === 'manager');
+  } catch(e) { return false; }
 }
 
 function comptesFmtDate(ts) {
@@ -4415,6 +4437,7 @@ async function showApp() {
   await migrateLegacyDataToCurrentUser();
   loadStockMapFromCache();
   initAdminAccountsUI();
+  try { if (window.Equipe) Equipe.load(); } catch(e) {}
   accordsLoad();
 
   startListeners();
@@ -4510,7 +4533,7 @@ if (typeof cdbPageSize  === 'undefined') window.cdbPageSize  = 50;
 // ═══════════════════════════════════════════════
 //  NAVIGATION
 // ═══════════════════════════════════════════════
-const SECTIONS = ['dashboard','radar','tournees','visites','recherche','rgpd','bdc','frais','contacts-db','commissions','comptes','mailing','accords','promos','top100','cadencier','ia','assortiment','alertes'];
+const SECTIONS = ['dashboard','radar','tournees','visites','recherche','rgpd','bdc','frais','contacts-db','commissions','comptes','mailing','accords','promos','top100','cadencier','ia','assortiment','alertes','equipe'];
 // ═══════════════════════════════════════════════
 //  MENUS DEROULANTS DE LA BARRE DU HAUT
 // ═══════════════════════════════════════════════
@@ -4572,6 +4595,7 @@ function showSection(name, tabEl, sideEl) {
   if (name==='recherche') { setTimeout(function(){ if (typeof RechercheProduit !== 'undefined') RechercheProduit.mount(); }, 80); }
   if (name==='assortiment') { setTimeout(function(){ if (typeof Assortiment !== 'undefined') Assortiment.mount('#asr-host'); }, 80); }
   if (name==='alertes') { setTimeout(function(){ if (typeof Alertes !== 'undefined') Alertes.mount('#alt-host'); }, 80); }
+  if (name==='equipe') { setTimeout(function(){ if (window.Equipe) Equipe.mount('#equipe-host'); }, 80); }
   if (name !== 'tournees' && typeof Tournees !== 'undefined') Tournees.unmount();
   if (name==='frais') { if (typeof refreshFraisStats === 'function') { try{refreshFraisStats();}catch(e){} } if (typeof nfdRender === 'function') nfdRender(); }
   if (name==='bdc') { if (!bdcInitDone) { buildTable(); bdcInitDone=true; } }
@@ -15019,6 +15043,7 @@ if ('serviceWorker' in navigator) {
 <script src="alertes.js?v=1"></script>
 <script src="paie-sim.js?v=1"></script>
 <script src="remises-accord.js?v=1"></script>
+<script src="equipe.js?v=1"></script>
 <script src="fiche360.js?v=1"></script>
 <script src="offline-status.js?v=1"></script>
 <script>
