@@ -4107,6 +4107,29 @@ function isManagerUser() {
   } catch(e) { return false; }
 }
 
+// Étape 3a — filtrage de la base clients par rôle (modèle B / ?test uniquement).
+// Un commercial voit SES clients (owner = son uid, ou ownerEmail = son e-mail)
+// + les comptes SANS propriétaire (prospects / comptes libres = conquête).
+// Le manager (et l'admin) voient tout. En prod (modèle A), aucun filtrage.
+function roleAllowsContact(c) {
+  try {
+    if (typeof __USE_TEST === 'undefined' || !__USE_TEST) return true; // prod modèle A : silos déjà séparés
+    if (isManagerUser()) return true;
+    if (!currentUser) return true;
+    var myUid = currentUser.uid;
+    var myMail = (currentUser.email || '').toLowerCase();
+    if (c.owner && c.owner === myUid) return true;
+    if (c.ownerEmail && String(c.ownerEmail).toLowerCase() === myMail) return true;
+    if (!c.owner && !c.ownerEmail) return true; // sans propriétaire → visible (conquête)
+    return false;
+  } catch (e) { return true; }
+}
+function roleFilterContacts(list) {
+  if (!Array.isArray(list)) return list;
+  if (typeof __USE_TEST === 'undefined' || !__USE_TEST || isManagerUser()) return list;
+  return list.filter(roleAllowsContact);
+}
+
 function comptesFmtDate(ts) {
   try {
     if (!ts) return '—';
@@ -4499,7 +4522,7 @@ function startListeners() {
   // ─── CONTACTS (Base clients) — listener temps réel ───────────────────────
   // Pas de orderBy('createdAt') car les contacts importés depuis Excel n'ont pas ce champ
   const uContacts = bcol('contacts').onSnapshot(function(snap) {
-    cdbContacts = snap.docs.map(function(d){ var data = d.data(); data.id = d.id; return data; });
+    cdbContacts = roleFilterContacts(snap.docs.map(function(d){ var data = d.data(); data.id = d.id; return data; }));
     try { localStorage.setItem(CDB_CACHE_KEY(), JSON.stringify(cdbContacts)); } catch(e){}
     console.log('[CDB] onSnapshot : ' + cdbContacts.length + ' contacts (temps réel)');
     if (typeof cdbRender === 'function') cdbRender();
@@ -11985,7 +12008,7 @@ function cdbLoadCache() {
   try {
     var cached = localStorage.getItem(CDB_CACHE_KEY());
     if (cached) {
-      cdbContacts = JSON.parse(cached);
+      cdbContacts = roleFilterContacts(JSON.parse(cached));
       console.log('[CDB] Cache local : ' + cdbContacts.length + ' contacts');
       // Re-render si la page contacts est ouverte
       if (typeof cdbRender === 'function') cdbRender();
@@ -12053,7 +12076,7 @@ function cdbSyncFromFirestore() {
         loaded.push(data);
       });
       // Firestore fait autorité : écrase toujours le cache local (garantit la synchro multi-appareils)
-      cdbContacts = loaded;
+      cdbContacts = roleFilterContacts(loaded);
       try { localStorage.setItem(CDB_CACHE_KEY(), JSON.stringify(cdbContacts)); } catch(e){}
       console.log('[CDB] ' + cdbContacts.length + ' contacts chargés depuis Firestore (source de vérité)');
       if (typeof cdbRender === 'function') cdbRender();
