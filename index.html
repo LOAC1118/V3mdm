@@ -4508,7 +4508,7 @@ async function showApp() {
   await migrateLegacyDataToCurrentUser();
   loadStockMapFromCache();
   initAdminAccountsUI();
-  try { if (window.Equipe) Equipe.load(); } catch(e) {}
+  try { if (window.Equipe) { Equipe.load(); if (Equipe.reconcile) Equipe.reconcile(); } } catch(e) {}
   accordsLoad();
 
   startListeners();
@@ -15125,7 +15125,7 @@ if ('serviceWorker' in navigator) {
 <script src="alertes.js?v=1"></script>
 <script src="paie-sim.js?v=1"></script>
 <script src="remises-accord.js?v=1"></script>
-<script src="equipe.js?v=7"></script>
+<script src="equipe.js?v=8"></script>
 <script src="fiche360.js?v=1"></script>
 <script src="offline-status.js?v=1"></script>
 <script>

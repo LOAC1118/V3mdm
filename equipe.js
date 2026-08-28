@@ -367,5 +367,41 @@
     await render(host);
   }
 
-  window.Equipe = { mount: mount, load: load, roleForCurrent: roleForCurrent, SEED: SEED };
+  // ── 4c-1 : réconciliation à la connexion ──
+  // Inscrit l'uid définitif du commercial connecté sur les clients qui lui
+  // étaient rattachés par e-mail (ownerEmail) mais sans owner. Rend `owner`
+  // autoritaire → prérequis pour les lectures ciblées de la 4c-2.
+  // Bac à sable (modèle B) uniquement. Idempotent (ne retouche rien après coup).
+  async function reconcile() {
+    try {
+      if (typeof __USE_TEST === 'undefined' || !__USE_TEST) return;
+      if (!CU()) return;
+      var uid = CU().uid, mail = (CU().email || '').toLowerCase();
+      if (!mail) return;
+      var brands = ['mdm', 'naturaline'];
+      var total = 0;
+      for (var b = 0; b < brands.length; b++) {
+        var snap;
+        try { snap = await db.collection('contacts_' + brands[b]).where('ownerEmail', '==', mail).get(); }
+        catch (e) { continue; }
+        if (snap.empty) continue;
+        var batch = db.batch(), ops = 0;
+        snap.forEach(function (doc) {
+          var d = doc.data();
+          if (!d.owner) { batch.set(doc.ref, { owner: uid }, { merge: true }); ops++; total++; }
+        });
+        if (ops > 0) await batch.commit();
+      }
+      // Best-effort : poser member.uid dans le référentiel (peut échouer pour un
+      // commercial si les règles réservent l'écriture equipe au manager — sans gravité).
+      try {
+        await load();
+        var me = (_roster || []).find(function (x) { return (x.email || '').toLowerCase() === mail; });
+        if (me && !me.uid && me._id) await db.collection('equipe').doc(me._id).set({ uid: uid }, { merge: true });
+      } catch (e) {}
+      if (total) console.log('[Equipe] réconciliation : ' + total + ' client(s) rattaché(s) à ' + mail);
+    } catch (e) { console.warn('[Equipe] reconcile', e && e.message); }
+  }
+
+  window.Equipe = { mount: mount, load: load, roleForCurrent: roleForCurrent, reconcile: reconcile, SEED: SEED };
 })();
