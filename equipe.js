@@ -337,6 +337,20 @@
         }, { merge: true });
       });
       await batch.commit();
+
+      // Registre des managers pour les règles de sécurité Firestore (étape 4).
+      // On y met les e-mails des membres 'manager' + toujours l'e-mail admin
+      // (garde-fou : l'admin ne peut jamais se verrouiller dehors).
+      try {
+        var mgrEmails = members.filter(function (m) { return m.role === 'manager' && m.email; })
+                               .map(function (m) { return m.email.toLowerCase(); });
+        if (mgrEmails.indexOf('loacdev@outlook.fr') < 0) mgrEmails.push('loacdev@outlook.fr');
+        await db.collection('roles').doc('managers').set({
+          emails: mgrEmails,
+          majAt: (window.firebase && firebase.firestore) ? firebase.firestore.FieldValue.serverTimestamp() : Date.now()
+        }, { merge: true });
+      } catch (e) { console.warn('[Equipe] registre managers', e && e.message); }
+
       if (typeof toast === 'function') toast('✅ Équipe enregistrée (' + members.length + ')', 'ok');
       render(host);
     } catch (e) {
