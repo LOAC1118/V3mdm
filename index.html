@@ -4130,6 +4130,48 @@ function roleFilterContacts(list) {
   return list.filter(roleAllowsContact);
 }
 
+// Étape 3b — filtrage du CA par rôle (strict). Une ligne de CA n'est visible
+// par un commercial que si son client est rattachable à un client de SA base
+// (déjà filtrée en 3a). Réutilise la même jointure que cdbEnrichFromOrders
+// (code client avec/sans zéros de tête, puis nom normalisé). Manager/prod : tout.
+function roleFilterCaRows(rows) {
+  try {
+    if (!Array.isArray(rows)) return rows;
+    if (typeof __USE_TEST === 'undefined' || !__USE_TEST || isManagerUser()) return rows;
+    function nName(s){ return String(s||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/\s+/g,' ').trim(); }
+    function nCode(s){ var str=String(s||'').trim(); if(str.endsWith('.0')) str=str.slice(0,-2); var nz=str.replace(/^0+/,'')||str; return {full:str,noZero:nz}; }
+    var byCode={}, byNoZero={}, byName={};
+    (typeof cdbContacts!=='undefined'?cdbContacts:[]).forEach(function(c){
+      if(c.numClient){ var n=nCode(c.numClient); byCode[n.full]=c; byNoZero[n.noZero]=c; }
+      if(c.nom) byName[nName(c.nom)]=c;
+    });
+    return rows.filter(function(o){
+      if(!o) return false;
+      if(o.codeClient){ var n=nCode(o.codeClient); if(byCode[n.full]||byNoZero[n.noZero]) return true; }
+      if(o.clientNomKey && byName[nName(o.clientNomKey)]) return true;
+      return false;
+    });
+  } catch(e){ return rows; }
+}
+// Recalcule dashCaRows filtré à partir du CA complet (dashCaRowsFull),
+// à appeler quand la base clients vient de charger.
+function roleReapplyCaFilter() {
+  try { if (typeof dashCaRowsFull !== 'undefined' && Array.isArray(dashCaRowsFull)) dashCaRows = roleFilterCaRows(dashCaRowsFull); } catch(e){}
+}
+// Étape 3b — une commande est visible par un commercial si elle lui appartient
+// (owner) ou si son client est dans sa base filtrée. Manager/prod : tout.
+function roleAllowsCommande(o) {
+  try {
+    if (typeof __USE_TEST === 'undefined' || !__USE_TEST || isManagerUser()) return true;
+    if (!currentUser) return true;
+    if (o.owner && o.owner === currentUser.uid) return true;
+    function nName(s){ return String(s||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/\s+/g,' ').trim(); }
+    var key = nName(o.clientNom);
+    if (!key) return false;
+    return (typeof cdbContacts!=='undefined'?cdbContacts:[]).some(function(c){ return nName(c.nom) === key; });
+  } catch(e){ return true; }
+}
+
 function comptesFmtDate(ts) {
   try {
     if (!ts) return '—';
@@ -4526,6 +4568,7 @@ function startListeners() {
     try { localStorage.setItem(CDB_CACHE_KEY(), JSON.stringify(cdbContacts)); } catch(e){}
     console.log('[CDB] onSnapshot : ' + cdbContacts.length + ' contacts (temps réel)');
     if (typeof cdbRender === 'function') cdbRender();
+    roleReapplyCaFilter();
     if (typeof dashCaRows !== 'undefined' && dashCaRows.length && typeof cdbEnrichFromOrders === 'function') {
       cdbEnrichFromOrders(dashCaRows);
     }
@@ -7120,7 +7163,7 @@ async function saveCommande() {
 function renderCommandes() {
   if (!document.getElementById('tbody-commandes')) return; // Section supprimée
   const q=(g('search-commandes')||'').toLowerCase(), fs=g('filter-cmd-statut');
-  const list=cache.commandes.filter(o=>(!q||(o.clientNom||'').toLowerCase().includes(q))&&(!fs||o.statut===fs));
+  const list=cache.commandes.filter(o=>(!q||(o.clientNom||'').toLowerCase().includes(q))&&(!fs||o.statut===fs)&&roleAllowsCommande(o));
   const tbody=document.getElementById('tbody-commandes');
   if (!list.length) { tbody.innerHTML=`<tr><td colspan="7"><div class="empty"><div class="empty-icon">📦</div><div class="empty-title">Aucune commande</div><div class="empty-sub">Créez une commande depuis un client</div></div></td></tr>`; return; }
   tbody.innerHTML=list.map(o=>`<tr>
@@ -10404,6 +10447,7 @@ function suiviRender() {
 
 // ═══ ANALYSE CA MENSUELLE — dashboard intégré (version enrichie) ═══
 var dashCaRows = [];
+var dashCaRowsFull = [];   // CA complet non filtré (source pour le filtrage par rôle 3b)
 var dashCharts = {};
 var dashObjectifs = {};   // { '2026-01': 50000, ... } — déclaré tôt pour éviter le hoisting
 var dashObjLoaded = false;
@@ -10630,6 +10674,9 @@ function dashCaProcess(rows) {
       };
     });
 
+  dashCaRowsFull = dashCaRows;
+  dashCaRows = roleFilterCaRows(dashCaRowsFull);
+
   // Peupler filtres
   function uniq(arr){ return [...new Set(arr)].filter(Boolean).sort(); }
   var years = uniq(dashCaRows.map(function(r) {
@@ -10756,6 +10803,8 @@ function dashCaLoadCache() {
         mois: r.mois, annee: r.annee
       };
     });
+    dashCaRowsFull = dashCaRows;
+    dashCaRows = roleFilterCaRows(dashCaRowsFull);
     dashCaShowContent();
     dashCaPopulateFilters();
     dashCaRender();
@@ -10919,7 +10968,8 @@ function dashCaLoadFromFirestore() {
     if (rows.length > 0 && (rows.length >= dashCaRows.length || !dashCaRows.length)) {
       console.log('[DashCA] ' + rows.length + ' commandes chargées depuis Firestore');
       dashCaSilentLoad = true;
-      dashCaRows = rows;
+      dashCaRowsFull = rows;
+      dashCaRows = roleFilterCaRows(dashCaRowsFull);
       dashCaShowContent();
       dashCaPopulateFilters();
       dashCaRender();
@@ -12013,6 +12063,7 @@ function cdbLoadCache() {
       // Re-render si la page contacts est ouverte
       if (typeof cdbRender === 'function') cdbRender();
       // Si commandes déjà chargées, enrichir
+      roleReapplyCaFilter();
       if (typeof dashCaRows !== 'undefined' && dashCaRows.length && typeof cdbEnrichFromOrders === 'function') {
         cdbEnrichFromOrders(dashCaRows);
       }
@@ -12080,6 +12131,7 @@ function cdbSyncFromFirestore() {
       try { localStorage.setItem(CDB_CACHE_KEY(), JSON.stringify(cdbContacts)); } catch(e){}
       console.log('[CDB] ' + cdbContacts.length + ' contacts chargés depuis Firestore (source de vérité)');
       if (typeof cdbRender === 'function') cdbRender();
+      roleReapplyCaFilter();
       if (typeof dashCaRows !== 'undefined' && dashCaRows.length && typeof cdbEnrichFromOrders === 'function') {
         cdbEnrichFromOrders(dashCaRows);
       }
