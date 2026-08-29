@@ -1221,6 +1221,59 @@ thead th.ts-active { text-decoration:underline; text-underline-offset:3px; }
   .sidebar .sf-name{ color:#FFFFFF; }
   .sidebar .sf-role{ color:rgba(255,255,255,.5); }
   .sidebar .sf-avatar{ background:rgba(255,255,255,.14); color:#FFFFFF; }
+
+  /* Logo COHOR dans le fût */
+  .cohor-brand{ display:flex; align-items:center; gap:10px; padding:16px 16px 12px; }
+  .cohor-brand-ico{ width:34px; height:34px; border-radius:10px; background:#FF4D1C;
+    display:flex; align-items:center; justify-content:center; font-size:18px; flex-shrink:0;
+    box-shadow:0 6px 14px -4px rgba(245,81,30,.6); }
+  .cohor-brand-name{ font-family:'Sora',sans-serif; font-weight:700; color:#FFFFFF;
+    font-size:1.05rem; letter-spacing:-.02em; line-height:1; }
+  .cohor-brand-sub{ font-size:.58rem; letter-spacing:.12em; text-transform:uppercase;
+    color:rgba(255,255,255,.45); margin-top:4px; }
+
+  /* Sélecteur flottant Éclat / Nuit */
+  #cohor-switch{ position:fixed; right:16px; bottom:16px; z-index:1000; display:inline-flex;
+    background:#14120F; border-radius:99px; padding:3px; cursor:pointer; user-select:none;
+    font-family:'Sora',sans-serif; box-shadow:0 8px 22px rgba(0,0,0,.28); }
+  #cohor-switch .cs-opt{ padding:5px 13px; border-radius:99px; font-size:.72rem; font-weight:600;
+    color:rgba(255,255,255,.6); transition:all .15s; }
+  #cohor-switch[data-mode="eclat"] .cs-eclat{ background:#FF4D1C; color:#FFFFFF; }
+  #cohor-switch[data-mode="nuit"]  .cs-nuit{ background:#D6FF3F; color:#14120F; }
+
+  /* ═══ MODE NUIT — appliqué aux parties déjà habillées ═══ */
+  body.cohor-nuit #cohor-switch{ background:#000; }
+
+  /* Connexion — nuit */
+  body.cohor-nuit #login-screen{ background:#0B0B0D !important; }
+  body.cohor-nuit #login-screen .login-box{ background:#141416; border-color:rgba(255,255,255,.10);
+    box-shadow:0 16px 44px rgba(0,0,0,.5); }
+  body.cohor-nuit #login-screen .login-logo-ico{ background:#D6FF3F !important;
+    box-shadow:0 8px 18px -6px rgba(214,255,63,.5); }
+  body.cohor-nuit #login-screen .login-logo-name{ color:#F4F2ED; }
+  body.cohor-nuit #login-screen .login-subtitle{ color:#b7b3ab; }
+  body.cohor-nuit #login-screen .login-field label{ color:#d6d2ca; }
+  body.cohor-nuit #login-screen .login-field input{ background:#1b1b1e;
+    border-color:rgba(255,255,255,.12); color:#F4F2ED; }
+  body.cohor-nuit #login-screen .login-field input:focus{ border-color:#D6FF3F; background:#141416;
+    box-shadow:0 0 0 3px rgba(214,255,63,.18); }
+  body.cohor-nuit #login-screen .btn-primary{ background:#D6FF3F !important; color:#14120F !important;
+    box-shadow:0 12px 22px -10px rgba(214,255,63,.5); }
+  body.cohor-nuit #login-screen .btn-primary:hover{ background:#c4f02b !important; }
+  body.cohor-nuit #login-screen .login-switch a{ color:#D6FF3F; }
+
+  /* Barre du haut — nuit (logo MDM/NATURALINE forcé en blanc pour rester visible) */
+  body.cohor-nuit .topbar{ background:#141416; border-bottom-color:rgba(255,255,255,.08); }
+  body.cohor-nuit .brand-name{ color:#F4F2ED; }
+  body.cohor-nuit .brand-plate svg{ filter:brightness(0) invert(1); }
+  body.cohor-nuit .t-tab{ color:rgba(255,255,255,.6); }
+  body.cohor-nuit .t-tab:hover{ background:rgba(255,255,255,.08); color:#FFFFFF; }
+  body.cohor-nuit .t-tab.active{ background:#D6FF3F !important; color:#14120F !important; }
+
+  /* Fût — nuit (accent vert acide) */
+  body.cohor-nuit .sidebar{ background:#000000; border-right-color:rgba(255,255,255,.08); }
+  body.cohor-nuit .sidebar .nav-item.active{ background:#D6FF3F !important; color:#14120F !important; }
+  body.cohor-nuit .cohor-brand-ico{ background:#D6FF3F; box-shadow:0 6px 14px -4px rgba(214,255,63,.5); }
 </style>
 <!-- ═══ COHOR-CHROME-END ═══ -->
 </head>
@@ -1380,6 +1433,15 @@ thead th.ts-active { text-decoration:underline; text-underline-offset:3px; }
 
 <div class="app">
 <div class="sidebar">
+
+  <!-- COHOR-BRAND -->
+  <div class="cohor-brand">
+    <div class="cohor-brand-ico">🌿</div>
+    <div class="cohor-brand-txt">
+      <div class="cohor-brand-name">COHOR</div>
+      <div class="cohor-brand-sub">CRM commercial</div>
+    </div>
+  </div>
 
   <div class="nav-section">
     <div class="nav-label">Principal</div>
@@ -15267,5 +15329,28 @@ if ('serviceWorker' in navigator) {
     try { if (typeof OfflineStatus !== 'undefined') OfflineStatus.mount(); } catch(e){}
   });
 </script>
+<!-- ═══ COHOR-SWITCH-START — sélecteur Éclat / Nuit (retirer ce bloc pour revenir) ═══ -->
+<div id="cohor-switch" data-mode="eclat" title="Basculer le thème COHOR" aria-label="Basculer le thème">
+  <span class="cs-opt cs-eclat">Éclat</span><span class="cs-opt cs-nuit">Nuit</span>
+</div>
+<script>
+(function(){
+  var KEY = 'cohor_theme';
+  function apply(mode){
+    document.body.classList.toggle('cohor-nuit', mode === 'nuit');
+    var s = document.getElementById('cohor-switch');
+    if (s) s.setAttribute('data-mode', mode);
+  }
+  try { apply(localStorage.getItem(KEY) === 'nuit' ? 'nuit' : 'eclat'); } catch(e) { apply('eclat'); }
+  document.addEventListener('click', function(e){
+    var sw = e.target.closest && e.target.closest('#cohor-switch');
+    if (!sw) return;
+    var nuit = !document.body.classList.contains('cohor-nuit');
+    apply(nuit ? 'nuit' : 'eclat');
+    try { localStorage.setItem(KEY, nuit ? 'nuit' : 'eclat'); } catch(e) {}
+  });
+})();
+</script>
+<!-- ═══ COHOR-SWITCH-END ═══ -->
 </body>
 </html>
