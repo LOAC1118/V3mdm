@@ -4535,6 +4535,20 @@ async function showApp() {
       setLoginErr('Votre accès a été désactivé. Contactez votre administrateur.');
       return;
     }
+    // Désactivation via l'écran Équipe (référentiel par e-mail). Même blocage propre.
+    try {
+      if (window.Equipe && !isAdminUser()) {
+        await Equipe.load();
+        if (Equipe.isCurrentActive && !Equipe.isCurrentActive()) {
+          shell.classList.add('hidden');
+          shell.style.display = 'none';
+          await auth.signOut();
+          document.getElementById('login-screen').style.display = 'flex';
+          setLoginErr('Votre accès a été désactivé. Contactez votre administrateur.');
+          return;
+        }
+      }
+    } catch(e) {}
   } catch { s2('sb-role','Commercial'); }
 
   // Préremplir commercial dans frais
@@ -4545,21 +4559,9 @@ async function showApp() {
   loadStockMapFromCache();
   initAdminAccountsUI();
   // Non bloquant : le démarrage ne doit jamais dépendre de ces appels.
-  // La réconciliation tourne en arrière-plan ; l'abonnement owner==uid capte
-  // ses écritures en temps réel dès qu'elles arrivent.
-  try {
-    if (window.Equipe) {
-      Equipe.load().then(function() {
-        try {
-          if (Equipe.isCurrentActive && !Equipe.isCurrentActive() && !isAdminUser()) {
-            if (typeof toast === 'function') toast('Votre accès a été désactivé. Contactez votre responsable.', 'err');
-            setTimeout(function(){ try { firebase.auth().signOut(); } catch(e){} }, 1500);
-          }
-        } catch(e) {}
-      });
-      if (Equipe.reconcile) Equipe.reconcile();
-    }
-  } catch(e) {}
+  // Réconciliation en arrière-plan (non bloquant). Le blocage d'un compte
+  // désactivé est déjà géré proprement plus haut, avant le chargement.
+  try { if (window.Equipe) { Equipe.load(); if (Equipe.reconcile) Equipe.reconcile(); } } catch(e) {}
   accordsLoad();
 
   startListeners();
