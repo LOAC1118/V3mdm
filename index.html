@@ -1354,6 +1354,26 @@ thead th.ts-active { text-decoration:underline; text-underline-offset:3px; }
   #sec-contacts-db .btn-ghost:hover{ background:#F2EFE9; border-color:#E3DFD7; }
 </style>
 <!-- ═══ COHOR-CDB-END ═══ -->
+<!-- ═══ COHOR-BDC-START — habillage Bon de commande, 1re passe (retirer ce bloc pour revenir) ═══ -->
+<style id="cohor-bdc">
+  /* Boutons */
+  #sec-bdc .btn-primary{ background:#FF4D1C !important; border-color:#FF4D1C !important;
+    border-radius:99px !important; }
+  #sec-bdc .btn-primary:hover{ background:#E03A0C !important; }
+  #sec-bdc .btn-ghost{ border-radius:99px; }
+
+  /* Champs — focus orange */
+  #sec-bdc input:focus, #sec-bdc select:focus{
+    border-color:#FF4D1C !important; box-shadow:0 0 0 3px #FFE7DE !important; }
+
+  /* Bandeau « Ma commande » — passe du bleu à l'ink COHOR, filet orange */
+  #bdc-recap-bar{ background:#14120F !important; border-bottom:2px solid #FF4D1C !important; }
+  #bdc-recap-detail thead{ background:#1B1714 !important; }
+
+  /* Total HT net en accent orange */
+  #bdc-total-net{ color:#FF4D1C !important; }
+</style>
+<!-- ═══ COHOR-BDC-END ═══ -->
 </head>
 <body>
 <script>
