@@ -1169,6 +1169,35 @@ thead th.ts-active { text-decoration:underline; text-underline-offset:3px; }
 }
 </style>
 <!-- jsPDF chargé en lazy au besoin -->
+<!-- ═══ COHOR-LOGIN-START — habillage écran de connexion (retirer ce bloc pour revenir à l'ancien) ═══ -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700&family=Sora:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style id="cohor-login">
+  #login-screen{ background:#F2EFE9 !important; font-family:'Instrument Sans',system-ui,sans-serif; }
+  #login-screen .login-box{ border-radius:24px; border:1px solid #E3DFD7;
+    box-shadow:0 16px 44px rgba(20,18,15,.14); }
+  #login-screen .login-logo-ico{ background:#FF4D1C !important; border-radius:17px;
+    box-shadow:0 8px 18px -6px rgba(245,81,30,.55); }
+  #login-screen .login-logo-name{ font-family:'Sora',sans-serif; font-weight:700;
+    color:#14120F; letter-spacing:-.03em; font-size:1.55rem; }
+  #login-screen .login-logo-sub{ color:#A8A29A; }
+  #login-screen .login-subtitle{ color:#6E6963; }
+  #login-screen .login-field label{ color:#2C2F29; }
+  #login-screen .login-field input{ background:#F8F6F1; border:1px solid #E3DFD7;
+    border-radius:11px; color:#14120F; font-family:'Instrument Sans',sans-serif; }
+  #login-screen .login-field input:focus{ border-color:#FF4D1C; background:#fff;
+    box-shadow:0 0 0 3px #FFE7DE; }
+  #login-screen .login-field input::placeholder{ color:#A8A29A; }
+  #login-screen .btn-primary{ background:#FF4D1C !important; color:#fff !important;
+    border:none !important; border-radius:99px !important; font-family:'Sora',sans-serif;
+    font-weight:700; padding:.85rem; box-shadow:0 12px 22px -10px rgba(245,81,30,.6);
+    transition:transform .12s ease, background .15s ease; }
+  #login-screen .btn-primary:hover{ background:#E03A0C !important; transform:translateY(-1px); }
+  #login-screen .login-err{ border-radius:10px; }
+  #login-screen .login-switch a{ color:#E03A0C; }
+</style>
+<!-- ═══ COHOR-LOGIN-END ═══ -->
 </head>
 <body>
 <script>
@@ -1205,9 +1234,9 @@ thead th.ts-active { text-decoration:underline; text-underline-offset:3px; }
 <div id="login-screen">
   <div class="login-box">
     <div class="login-logo">
-      <div class="login-logo-ico">🌾</div>
-      <div class="login-logo-name">Moulin des Moines</div>
-      <div class="login-logo-sub">CRM 2026 — Bio Alsace</div>
+      <div class="login-logo-ico">🌿</div>
+      <div class="login-logo-name">COHOR</div>
+      <div class="login-logo-sub">Espace commercial</div>
     </div>
     <div class="login-subtitle" id="login-subtitle">Connexion à votre espace</div>
     <div class="login-err" id="login-err"></div>
@@ -1215,7 +1244,7 @@ thead th.ts-active { text-decoration:underline; text-underline-offset:3px; }
     <div id="form-login">
       <div class="login-field"><label>Email</label><input type="email" id="l-email" placeholder="vous@email.fr" onkeydown="if(event.key==='Enter')doLogin()"></div>
       <div class="login-field"><label>Mot de passe</label><input type="password" id="l-pwd" placeholder="••••••••" onkeydown="if(event.key==='Enter')doLogin()"></div>
-      <button class="btn btn-primary" style="width:100%;justify-content:center;margin-top:.5rem;" onclick="doLogin()">Se connecter</button>
+      <button class="btn btn-primary" style="width:100%;justify-content:center;margin-top:.5rem;" onclick="doLogin()">Se connecter →</button>
       <div class="login-switch">Pas encore de compte ? <a onclick="switchForm('register')">Créer un compte</a></div>
       <div class="login-switch" style="margin-top:.4rem;"><a onclick="switchForm('reset')" style="color:var(--s600);">Mot de passe oublié ?</a></div>
     </div>
