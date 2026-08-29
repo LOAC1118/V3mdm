@@ -4146,6 +4146,26 @@ function contactsQuery() {
   return col;
 }
 
+// Un commercial cloisonné (bac à sable) ? (manager/prod = false)
+function cdbScopedCommercial() {
+  try { return (typeof __USE_TEST !== 'undefined' && __USE_TEST && !!currentUser && !isManagerUser()); }
+  catch(e) { return false; }
+}
+// Union robuste : clients dont je suis propriétaire (owner==uid) OU rattachés à
+// mon e-mail (ownerEmail==email). Ne dépend pas de l'alignement préalable.
+function cdbFetchContactsScoped() {
+  var col = bcol('contacts');
+  var uid = currentUser.uid, mailLc = (currentUser.email || '').toLowerCase();
+  return Promise.all([
+    col.where('owner', '==', uid).get(),
+    col.where('ownerEmail', '==', mailLc).get()
+  ]).then(function(res) {
+    var byId = {};
+    res.forEach(function(snap){ snap.forEach(function(d){ var x = d.data(); x.id = d.id; byId[d.id] = x; }); });
+    return Object.keys(byId).map(function(id){ return byId[id]; });
+  });
+}
+
 // Étape 3b — filtrage du CA par rôle (strict). Une ligne de CA n'est visible
 // par un commercial que si son client est rattachable à un client de SA base
 // (déjà filtrée en 3a). Réutilise la même jointure que cdbEnrichFromOrders
@@ -4582,10 +4602,10 @@ function startListeners() {
 
   // ─── CONTACTS (Base clients) — listener temps réel ───────────────────────
   // Pas de orderBy('createdAt') car les contacts importés depuis Excel n'ont pas ce champ
-  const uContacts = contactsQuery().onSnapshot(function(snap) {
-    cdbContacts = roleFilterContacts(snap.docs.map(function(d){ var data = d.data(); data.id = d.id; return data; }));
+  function cdbApply(list) {
+    cdbContacts = roleFilterContacts(Array.isArray(list) ? list : []);
     try { localStorage.setItem(CDB_CACHE_KEY(), JSON.stringify(cdbContacts)); } catch(e){}
-    console.log('[CDB] onSnapshot : ' + cdbContacts.length + ' contacts (temps réel)');
+    console.log('[CDB] ' + cdbContacts.length + ' contacts (temps réel)');
     if (typeof cdbRender === 'function') cdbRender();
     roleReapplyCaFilter();
     if (typeof dashCaRows !== 'undefined' && dashCaRows.length && typeof cdbEnrichFromOrders === 'function') {
@@ -4593,11 +4613,38 @@ function startListeners() {
     }
     cdbFsLoaded = true;
     onLoad();
-  }, function(err) {
-    console.warn('[CDB] onSnapshot erreur:', err);
-    onLoad();
-  });
-  listeners.push(uContacts);
+  }
+
+  if (cdbScopedCommercial()) {
+    // Commercial cloisonné : union de deux abonnements (owner==uid ∪ ownerEmail==email).
+    var _col = bcol('contacts');
+    var _mail = (currentUser.email || '').toLowerCase();
+    var _mapOwner = {}, _mapEmail = {};
+    var _merge = function() {
+      var byId = {};
+      Object.keys(_mapOwner).forEach(function(id){ byId[id] = _mapOwner[id]; });
+      Object.keys(_mapEmail).forEach(function(id){ byId[id] = _mapEmail[id]; });
+      cdbApply(Object.keys(byId).map(function(id){ return byId[id]; }));
+    };
+    var uOwner = _col.where('owner', '==', currentUser.uid).onSnapshot(function(snap) {
+      _mapOwner = {}; snap.forEach(function(d){ var x = d.data(); x.id = d.id; _mapOwner[d.id] = x; });
+      _merge();
+    }, function(err){ console.warn('[CDB] scope owner:', err); onLoad(); });
+    var uEmail = _col.where('ownerEmail', '==', _mail).onSnapshot(function(snap) {
+      _mapEmail = {}; snap.forEach(function(d){ var x = d.data(); x.id = d.id; _mapEmail[d.id] = x; });
+      _merge();
+    }, function(err){ console.warn('[CDB] scope email:', err); onLoad(); });
+    listeners.push(uOwner); listeners.push(uEmail);
+  } else {
+    // Manager / prod : la collection entière.
+    var uContacts = bcol('contacts').onSnapshot(function(snap) {
+      cdbApply(snap.docs.map(function(d){ var data = d.data(); data.id = d.id; return data; }));
+    }, function(err) {
+      console.warn('[CDB] onSnapshot erreur:', err);
+      onLoad();
+    });
+    listeners.push(uContacts);
+  }
 
   // Activité (limitée)
   const uAct = bcol('activite').orderBy('createdAt','desc').limit(20).onSnapshot(snap => {
@@ -12137,14 +12184,13 @@ function cdbSyncFromFirestore() {
   try {
     var db = firebase.firestore();
     console.log('[CDB] Lecture Firestore en cours...');
-    contactsQuery().get().then(function(snap) {
-      console.log('[CDB] Firestore retourne', snap.size, 'documents');
-      var loaded = [];
-      snap.forEach(function(doc) {
-        var data = doc.data();
-        data.id = doc.id;
-        loaded.push(data);
-      });
+    var _fetch = cdbScopedCommercial()
+      ? cdbFetchContactsScoped()
+      : bcol('contacts').get().then(function(snap) {
+          var arr = []; snap.forEach(function(doc){ var data = doc.data(); data.id = doc.id; arr.push(data); }); return arr;
+        });
+    _fetch.then(function(loaded) {
+      console.log('[CDB] Firestore retourne', loaded.length, 'documents');
       // Firestore fait autorité : écrase toujours le cache local (garantit la synchro multi-appareils)
       cdbContacts = roleFilterContacts(loaded);
       try { localStorage.setItem(CDB_CACHE_KEY(), JSON.stringify(cdbContacts)); } catch(e){}
