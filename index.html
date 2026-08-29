@@ -4130,6 +4130,20 @@ function roleFilterContacts(list) {
   return list.filter(roleAllowsContact);
 }
 
+// Étape 4c-2 — requête de la base clients selon le rôle.
+// Commercial (bac à sable / modèle B) : ne demande à Firestore QUE ses clients
+// (owner == son uid). Manager / prod : collection entière. Prérequis : le
+// référentiel Équipe est chargé avant l'abonnement (voir await Equipe.load()).
+function contactsQuery() {
+  var col = bcol('contacts');
+  try {
+    if (typeof __USE_TEST !== 'undefined' && __USE_TEST && currentUser && !isManagerUser()) {
+      return col.where('owner', '==', currentUser.uid);
+    }
+  } catch(e) {}
+  return col;
+}
+
 // Étape 3b — filtrage du CA par rôle (strict). Une ligne de CA n'est visible
 // par un commercial que si son client est rattachable à un client de SA base
 // (déjà filtrée en 3a). Réutilise la même jointure que cdbEnrichFromOrders
@@ -4508,7 +4522,7 @@ async function showApp() {
   await migrateLegacyDataToCurrentUser();
   loadStockMapFromCache();
   initAdminAccountsUI();
-  try { if (window.Equipe) { Equipe.load(); if (Equipe.reconcile) Equipe.reconcile(); } } catch(e) {}
+  try { if (window.Equipe) { await Equipe.load(); if (Equipe.reconcile) await Equipe.reconcile(); } } catch(e) {}
   accordsLoad();
 
   startListeners();
@@ -4563,7 +4577,7 @@ function startListeners() {
 
   // ─── CONTACTS (Base clients) — listener temps réel ───────────────────────
   // Pas de orderBy('createdAt') car les contacts importés depuis Excel n'ont pas ce champ
-  const uContacts = bcol('contacts').onSnapshot(function(snap) {
+  const uContacts = contactsQuery().onSnapshot(function(snap) {
     cdbContacts = roleFilterContacts(snap.docs.map(function(d){ var data = d.data(); data.id = d.id; return data; }));
     try { localStorage.setItem(CDB_CACHE_KEY(), JSON.stringify(cdbContacts)); } catch(e){}
     console.log('[CDB] onSnapshot : ' + cdbContacts.length + ' contacts (temps réel)');
@@ -12118,7 +12132,7 @@ function cdbSyncFromFirestore() {
   try {
     var db = firebase.firestore();
     console.log('[CDB] Lecture Firestore en cours...');
-    bcol('contacts').get().then(function(snap) {
+    contactsQuery().get().then(function(snap) {
       console.log('[CDB] Firestore retourne', snap.size, 'documents');
       var loaded = [];
       snap.forEach(function(doc) {
