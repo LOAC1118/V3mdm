@@ -4133,7 +4133,9 @@ function roleFilterContacts(list) {
 // Étape 4c-2 — requête de la base clients selon le rôle.
 // Commercial (bac à sable / modèle B) : ne demande à Firestore QUE ses clients
 // (owner == son uid). Manager / prod : collection entière. Prérequis : le
-// référentiel Équipe est chargé avant l'abonnement (voir await Equipe.load()).
+// référentiel Équipe : le rôle d'un commercial (non-admin) donne owner==uid
+// même si le référentiel n'est pas encore chargé ; la réconciliation en
+// arrière-plan aligne owner et l'abonnement temps réel capte ses écritures.
 function contactsQuery() {
   var col = bcol('contacts');
   try {
@@ -4522,7 +4524,10 @@ async function showApp() {
   await migrateLegacyDataToCurrentUser();
   loadStockMapFromCache();
   initAdminAccountsUI();
-  try { if (window.Equipe) { await Equipe.load(); if (Equipe.reconcile) await Equipe.reconcile(); } } catch(e) {}
+  // Non bloquant : le démarrage ne doit jamais dépendre de ces appels.
+  // La réconciliation tourne en arrière-plan ; l'abonnement owner==uid capte
+  // ses écritures en temps réel dès qu'elles arrivent.
+  try { if (window.Equipe) { Equipe.load(); if (Equipe.reconcile) Equipe.reconcile(); } } catch(e) {}
   accordsLoad();
 
   startListeners();
@@ -15139,7 +15144,7 @@ if ('serviceWorker' in navigator) {
 <script src="alertes.js?v=1"></script>
 <script src="paie-sim.js?v=1"></script>
 <script src="remises-accord.js?v=1"></script>
-<script src="equipe.js?v=8"></script>
+<script src="equipe.js?v=9"></script>
 <script src="fiche360.js?v=1"></script>
 <script src="offline-status.js?v=1"></script>
 <script>
