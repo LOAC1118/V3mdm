@@ -1276,6 +1276,40 @@ thead th.ts-active { text-decoration:underline; text-underline-offset:3px; }
   body.cohor-nuit .cohor-brand-ico{ background:#D6FF3F; box-shadow:0 6px 14px -4px rgba(214,255,63,.5); }
 </style>
 <!-- ═══ COHOR-CHROME-END ═══ -->
+<!-- ═══ COHOR-DASH-START — habillage tableau de bord (retirer ce bloc pour revenir) ═══ -->
+<style id="cohor-dashboard">
+  /* Titre + sous-titre */
+  #sec-dashboard .page-title{ font-family:'Sora',sans-serif; font-weight:600;
+    letter-spacing:-.035em; color:#14120F; }
+  #sec-dashboard .page-sub{ color:#6E6963; }
+
+  /* Cartes de stats */
+  #sec-dashboard .stat-card{ border-radius:20px; border:1px solid #E3DFD7; background:#FFFFFF;
+    box-shadow:0 1px 2px rgba(20,18,15,.05); }
+  #sec-dashboard .stat-card:hover{ box-shadow:0 10px 22px -12px rgba(20,18,15,.2); transform:translateY(-1px); }
+  #sec-dashboard .stat-label{ color:#8A8F86; text-transform:uppercase; letter-spacing:.06em;
+    font-size:.62rem; font-weight:700; }
+  #sec-dashboard .stat-val{ font-family:'Sora',sans-serif; color:#14120F; letter-spacing:-.02em; font-weight:600; }
+  #sec-dashboard .stat-delta{ color:#A8A29A; }
+
+  /* Carte accent — Commission en cours (bloc « argent » en orange) */
+  #sec-dashboard #dash-comm-card{ background:#FF4D1C !important; border-color:#FF4D1C !important;
+    box-shadow:0 14px 28px -12px rgba(245,81,30,.6) !important; }
+  #sec-dashboard #dash-comm-card .stat-val{ color:#FFFFFF !important; }
+  #sec-dashboard #dash-comm-card .stat-label{ color:rgba(255,255,255,.88) !important; }
+  #sec-dashboard #dash-comm-card .stat-delta{ color:rgba(255,255,255,.82) !important; }
+
+  /* Panneaux (Rythme d'achat, Priorités, Analyse CA) */
+  #sec-dashboard .dash-panel{ border-radius:20px; border-color:#E3DFD7; }
+  #sec-dashboard .dash-panel-h h2{ font-family:'Sora',sans-serif; color:#14120F; }
+  #sec-dashboard .dash-panel-h a{ color:#E03A0C; }
+
+  /* Bouton primaire — pilule orange COHOR (dashboard) */
+  #sec-dashboard .btn-primary{ background:#FF4D1C !important; border-color:#FF4D1C !important;
+    border-radius:99px !important; box-shadow:0 8px 18px -8px rgba(245,81,30,.55); }
+  #sec-dashboard .btn-primary:hover{ background:#E03A0C !important; transform:translateY(-1px); }
+</style>
+<!-- ═══ COHOR-DASH-END ═══ -->
 </head>
 <body>
 <script>
