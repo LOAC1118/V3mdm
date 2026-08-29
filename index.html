@@ -1200,12 +1200,13 @@ thead th.ts-active { text-decoration:underline; text-underline-offset:3px; }
 <!-- ═══ COHOR-LOGIN-END ═══ -->
 <!-- ═══ COHOR-CHROME-START — barre du haut + fût sombre (retirer ce bloc pour revenir) ═══ -->
 <style id="cohor-chrome">
-  /* Barre du haut — claire, plus haute, filet chaud */
-  .topbar{ height:62px; background:#FFFFFF; border-bottom:1px solid #E3DFD7; box-shadow:none; }
-  .brand-name{ font-family:'Sora',sans-serif; }
-  .t-tab{ border-radius:99px; }
-  .t-tab:hover{ background:#F2EFE9; color:#14120F; }
-  .t-tab.active{ background:#14120F !important; color:#FFFFFF !important; }
+  /* Barre du haut — sombre COHOR (unité avec le fût) */
+  .topbar{ height:62px; background:#14120F; border-bottom:1px solid rgba(255,255,255,.08); box-shadow:none; }
+  .brand-name{ font-family:'Sora',sans-serif; color:#FFFFFF; }
+  .topbar .sync-indicator, .topbar #sync-label{ color:rgba(255,255,255,.72); }
+  .topbar-center .t-tab{ border-radius:99px; color:rgba(255,255,255,.62); }
+  .topbar-center .t-tab:hover{ background:rgba(255,255,255,.08); color:#FFFFFF; }
+  .topbar-center .t-tab.active{ background:#FF4D1C !important; color:#FFFFFF !important; }
 
   /* Barre latérale — fût sombre COHOR */
   .sidebar{ background:#14120F; border-right:1px solid rgba(255,255,255,.07); }
@@ -1238,7 +1239,7 @@ thead th.ts-active { text-decoration:underline; text-underline-offset:3px; }
     display:flex; align-items:center; justify-content:center; font-size:16px; flex-shrink:0;
     box-shadow:0 4px 10px -3px rgba(245,81,30,.55); }
   .cohor-topbrand-name{ font-family:'Sora',sans-serif; font-weight:700; font-size:1.15rem;
-    letter-spacing:-.02em; color:#14120F; }
+    letter-spacing:-.02em; color:#FFFFFF; }
   body.cohor-nuit .cohor-topbrand-name{ color:#F4F2ED; }
   body.cohor-nuit .cohor-topbrand-ico{ background:#D6FF3F; }
 
@@ -1491,15 +1492,6 @@ thead th.ts-active { text-decoration:underline; text-underline-offset:3px; }
 
 <div class="app">
 <div class="sidebar">
-
-  <!-- COHOR-BRAND -->
-  <div class="cohor-brand">
-    <div class="cohor-brand-ico">🌿</div>
-    <div class="cohor-brand-txt">
-      <div class="cohor-brand-name">COHOR</div>
-      <div class="cohor-brand-sub">CRM commercial</div>
-    </div>
-  </div>
 
   <div class="nav-section">
     <div class="nav-label">Principal</div>
