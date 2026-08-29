@@ -1310,6 +1310,39 @@ thead th.ts-active { text-decoration:underline; text-underline-offset:3px; }
   #sec-dashboard .btn-primary:hover{ background:#E03A0C !important; transform:translateY(-1px); }
 </style>
 <!-- ═══ COHOR-DASH-END ═══ -->
+<!-- ═══ COHOR-CDB-START — habillage Base clients (retirer ce bloc pour revenir) ═══ -->
+<style id="cohor-cdb">
+  #sec-contacts-db .page-title{ font-family:'Sora',sans-serif; font-weight:600;
+    letter-spacing:-.035em; color:#14120F; }
+  #sec-contacts-db .page-sub{ color:#6E6963; }
+
+  /* Barre de filtres */
+  #sec-contacts-db .cohor-filterbar{ background:#F8F6F1 !important; border:1px solid #E3DFD7;
+    border-radius:14px !important; }
+
+  /* Champs de recherche / filtres */
+  #sec-contacts-db input[type="text"], #sec-contacts-db select{
+    border-radius:10px !important; border:1px solid #E3DFD7 !important; background:#FFFFFF !important; }
+  #sec-contacts-db input[type="text"]:focus, #sec-contacts-db select:focus{
+    border-color:#FF4D1C !important; box-shadow:0 0 0 3px #FFE7DE !important; outline:none; }
+
+  /* Carte + tableau */
+  #sec-contacts-db .card{ border-radius:20px; border-color:#E3DFD7; }
+  #sec-contacts-db thead th{ background:#F8F6F1; color:#8A8F86; border-bottom-color:#E3DFD7; }
+  #sec-contacts-db td{ border-bottom-color:#EFEAE1; color:#40463C; }
+  #sec-contacts-db tr:hover td{ background:#FFF6F2 !important; }
+
+  /* Badges — pilules */
+  #sec-contacts-db .badge{ border-radius:99px; }
+
+  /* Boutons */
+  #sec-contacts-db .btn-primary{ background:#FF4D1C !important; border-color:#FF4D1C !important;
+    border-radius:99px !important; }
+  #sec-contacts-db .btn-primary:hover{ background:#E03A0C !important; }
+  #sec-contacts-db .btn-ghost{ border-radius:99px; }
+  #sec-contacts-db .btn-ghost:hover{ background:#F2EFE9; border-color:#E3DFD7; }
+</style>
+<!-- ═══ COHOR-CDB-END ═══ -->
 </head>
 <body>
 <script>
@@ -2254,7 +2287,7 @@ thead th.ts-active { text-decoration:underline; text-underline-offset:3px; }
     </div>
 
     <!-- Filtres -->
-    <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;padding:.7rem 1rem;background:var(--surface2);border-radius:10px;margin-bottom:1rem;">
+    <div class="cohor-filterbar" style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;padding:.7rem 1rem;background:var(--surface2);border-radius:10px;margin-bottom:1rem;">
       <input type="text" id="cdb-search" oninput="cdbRender()" placeholder="🔎 Rechercher (nom, ville, email, code…)" style="flex:1;min-width:220px;font-size:.82rem;"/>
       <select id="cdb-filter-group" onchange="cdbRender()" style="font-size:.78rem;"><option value="">Tous groupes</option></select>
       <select id="cdb-filter-dept"  onchange="cdbRender()" style="font-size:.78rem;"><option value="">Tous départements</option></select>
