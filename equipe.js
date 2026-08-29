@@ -67,7 +67,20 @@
     '.eq-btn.ghost{background:#fff;color:var(--accent,#266327)}',
     '.eq-note{font:500 12px/1.5 "Inter",sans-serif;color:#9aa096;margin:2px}',
     '.eq-lbl{font:600 10px/1 "Inter",sans-serif;text-transform:uppercase;letter-spacing:.05em;color:#9aa096;margin-bottom:4px;display:block}',
-    '.eq-empty{padding:26px;text-align:center;color:#9aa096;font:500 13px "Inter",sans-serif;background:#fff;border:1px dashed #d8dcd4;border-radius:12px}'
+    '.eq-empty{padding:26px;text-align:center;color:#9aa096;font:500 13px "Inter",sans-serif;background:#fff;border:1px dashed #d8dcd4;border-radius:12px}',
+    '.eq-acc{display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between;background:#fff;border:1px solid #e7e9e5;border-radius:12px;padding:10px 14px;margin-bottom:8px}',
+    '.eq-acc-main{min-width:180px}',
+    '.eq-acc-nom{font:600 13px "Inter",sans-serif;color:#1a1a1a}',
+    '.eq-acc-mail{font:500 12px "Inter",sans-serif;color:#9aa096}',
+    '.eq-acc-actions{display:flex;gap:6px;flex-wrap:wrap}',
+    '.eq-badge{display:inline-block;font:600 11px "Inter",sans-serif;padding:3px 8px;border-radius:20px}',
+    '.eq-badge-wait{background:#eef1ec;color:#9aa096}',
+    '.eq-badge-ok{background:#eaf5ee;color:#1f7a3d}',
+    '.eq-badge-none{background:#fff4e5;color:#9a5a12}',
+    '.eq-badge-off{background:#fdecea;color:#b42318}',
+    '.eq-mini{appearance:none;border:1px solid #d3d8ce;background:#fff;color:#40463c;border-radius:8px;padding:6px 10px;cursor:pointer;font:600 12px "Inter",sans-serif}',
+    '.eq-mini:hover{background:#f5f7f3}',
+    '.eq-mini-danger{border-color:#e7c9c2;background:#fff8f5;color:#b42318}'
   ].join('');
 
   function injectCSS() {
@@ -160,6 +173,7 @@
     var saveBtn = host.querySelector('#eq-save');
     if (saveBtn) saveBtn.onclick = function () { saveAll(host); };
 
+    renderAccounts(host);
     if (typeof __USE_TEST !== 'undefined' && __USE_TEST) appendMigration(host);
   }
 
@@ -388,7 +402,9 @@
         var batch = db.batch(), ops = 0;
         snap.forEach(function (doc) {
           var d = doc.data();
-          if (!d.owner) { batch.set(doc.ref, { owner: uid }, { merge: true }); ops++; total++; }
+          // Aligne le propriétaire sur l'e-mail de rattachement, même si un
+          // ancien owner (posé à la migration) est déjà présent.
+          if (d.owner !== uid) { batch.set(doc.ref, { owner: uid }, { merge: true }); ops++; total++; }
         });
         if (ops > 0) await batch.commit();
       }
@@ -403,5 +419,112 @@
     } catch (e) { console.warn('[Equipe] reconcile', e && e.message); }
   }
 
-  window.Equipe = { mount: mount, load: load, roleForCurrent: roleForCurrent, reconcile: reconcile, SEED: SEED };
+  // ── Comptes & accès (chemin A : gestion depuis l'app) ──
+  function renderAccounts(host) {
+    var wrap = host.querySelector('.eq-wrap'); if (!wrap) return;
+    var box = document.createElement('div');
+    box.style.cssText = 'margin-top:26px';
+    var rows = (_roster || []).map(function (m) {
+      var actif = (m.actif !== false);
+      var bid = 'acc-st-' + slugMail(m.email);
+      return '<div class="eq-acc" data-email="' + esc(m.email) + '">'
+        + '<div class="eq-acc-main"><div class="eq-acc-nom">' + esc(m.nom || m.email) + '</div>'
+        +   '<div class="eq-acc-mail">' + esc(m.email) + '</div></div>'
+        + '<div><span id="' + bid + '" class="eq-badge eq-badge-wait">vérification…</span>'
+        +   (actif ? '' : ' <span class="eq-badge eq-badge-off">désactivé</span>') + '</div>'
+        + '<div class="eq-acc-actions">'
+        +   '<button class="eq-mini" data-act="create">Créer le compte</button>'
+        +   '<button class="eq-mini" data-act="reset">Renvoyer mdp</button>'
+        +   '<button class="eq-mini" data-act="toggle">' + (actif ? 'Désactiver' : 'Réactiver') + '</button>'
+        +   '<button class="eq-mini eq-mini-danger" data-act="delete">Retirer</button>'
+        + '</div></div>';
+    }).join('');
+    box.innerHTML = '<div class="eq-h" style="margin-top:10px"><h2 style="font:600 17px/1.1 \'Fraunces\',Georgia,serif">Comptes &amp; accès</h2>'
+      + '<p>Crée les comptes de connexion, renvoie un e-mail de mot de passe, active/désactive ou retire un accès. Tu restes connecté pendant la création.</p></div>'
+      + (rows || '<div class="eq-empty">Enregistre d\'abord l\'équipe pour gérer les comptes.</div>');
+    wrap.appendChild(box);
+
+    // Statut de chaque compte (existe ou non) — API lisible côté client.
+    (_roster || []).forEach(function (m) {
+      var el = document.getElementById('acc-st-' + slugMail(m.email));
+      if (!el) return;
+      try {
+        firebase.auth().fetchSignInMethodsForEmail(m.email).then(function (methods) {
+          if (methods && methods.length) { el.className = 'eq-badge eq-badge-ok'; el.textContent = 'compte créé'; }
+          else { el.className = 'eq-badge eq-badge-none'; el.textContent = 'pas de compte'; }
+        }).catch(function () { el.className = 'eq-badge eq-badge-none'; el.textContent = 'statut inconnu'; });
+      } catch (e) { el.textContent = '—'; }
+    });
+
+    box.addEventListener('click', function (e) {
+      var btn = e.target.closest && e.target.closest('button[data-act]'); if (!btn) return;
+      var rowEl = btn.closest('.eq-acc'); if (!rowEl) return;
+      var email = rowEl.getAttribute('data-email');
+      var m = (_roster || []).find(function (x) { return (x.email || '') === email; });
+      if (!m) return;
+      var act = btn.getAttribute('data-act');
+      if (act === 'create') accCreate(m, host);
+      else if (act === 'reset') accReset(m);
+      else if (act === 'toggle') accToggle(m, host);
+      else if (act === 'delete') accDelete(m, host);
+    });
+  }
+
+  // Crée le compte via une instance Firebase SECONDAIRE → l'admin reste connecté.
+  async function accCreate(m, host) {
+    if (!m || !m.email) return;
+    var cfg = (typeof ACTIVE_FIREBASE_CONFIG !== 'undefined') ? ACTIVE_FIREBASE_CONFIG : null;
+    if (!cfg || !window.firebase) { if (typeof toast === 'function') toast('Configuration Firebase indisponible', 'err'); return; }
+    var secApp = null;
+    try {
+      secApp = firebase.initializeApp(cfg, 'admin-worker-' + Date.now());
+      var tmp = 'Tmp!' + Math.random().toString(36).slice(2, 10) + Math.random().toString(36).slice(2, 6).toUpperCase() + '7';
+      await secApp.auth().createUserWithEmailAndPassword(m.email, tmp);
+      try { await secApp.auth().signOut(); } catch (e) {}
+      // e-mail pour que la personne définisse elle-même son mot de passe
+      try { await firebase.auth().sendPasswordResetEmail(m.email); } catch (e) {}
+      if (m._id) await db.collection('equipe').doc(m._id).set({ accountCreated: true, actif: true }, { merge: true });
+      if (typeof toast === 'function') toast('Compte créé — e-mail envoyé à ' + m.email, 'ok');
+    } catch (e) {
+      if (e && e.code === 'auth/email-already-in-use') {
+        if (typeof toast === 'function') toast('Ce compte existe déjà', 'err');
+        if (m._id) { try { await db.collection('equipe').doc(m._id).set({ accountCreated: true }, { merge: true }); } catch (x) {} }
+      } else if (typeof toast === 'function') toast('Échec création : ' + (e.code || e.message), 'err');
+    } finally {
+      try { if (secApp) await secApp.delete(); } catch (e) {}
+      render(host);
+    }
+  }
+
+  async function accReset(m) {
+    if (!m || !m.email) return;
+    try { await firebase.auth().sendPasswordResetEmail(m.email); if (typeof toast === 'function') toast('E-mail de mot de passe envoyé à ' + m.email, 'ok'); }
+    catch (e) { if (typeof toast === 'function') toast('Échec : ' + (e.code || e.message), 'err'); }
+  }
+
+  async function accToggle(m, host) {
+    if (!m || !m._id) { if (typeof toast === 'function') toast('Enregistre d\'abord ce membre', 'err'); return; }
+    var next = (m.actif === false); // inactif → on réactive
+    try { await db.collection('equipe').doc(m._id).set({ actif: next }, { merge: true }); if (typeof toast === 'function') toast(next ? 'Accès réactivé' : 'Accès désactivé', 'ok'); render(host); }
+    catch (e) { if (typeof toast === 'function') toast('Échec : ' + (e.code || e.message), 'err'); }
+  }
+
+  async function accDelete(m, host) {
+    if (!m || !m._id) return;
+    if (!window.confirm('Retirer ' + (m.nom || m.email) + ' de l\'équipe ? Son accès sera bloqué. (L\'identifiant technique de connexion subsistera jusqu\'à la mise en place du serveur.)')) return;
+    try { await db.collection('equipe').doc(m._id).delete(); if (typeof toast === 'function') toast('Membre retiré', 'ok'); render(host); }
+    catch (e) { if (typeof toast === 'function') toast('Échec : ' + (e.code || e.message), 'err'); }
+  }
+
+  // L'utilisateur connecté est-il actif ? (false seulement si explicitement désactivé)
+  function isCurrentActive() {
+    try {
+      if (!_roster || !CU()) return true;
+      var mail = (CU().email || '').toLowerCase();
+      var m = (_roster || []).find(function (x) { return (x.email || '').toLowerCase() === mail; });
+      return !(m && m.actif === false);
+    } catch (e) { return true; }
+  }
+
+  window.Equipe = { mount: mount, load: load, roleForCurrent: roleForCurrent, reconcile: reconcile, isCurrentActive: isCurrentActive, SEED: SEED };
 })();

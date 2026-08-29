@@ -4547,7 +4547,19 @@ async function showApp() {
   // Non bloquant : le démarrage ne doit jamais dépendre de ces appels.
   // La réconciliation tourne en arrière-plan ; l'abonnement owner==uid capte
   // ses écritures en temps réel dès qu'elles arrivent.
-  try { if (window.Equipe) { Equipe.load(); if (Equipe.reconcile) Equipe.reconcile(); } } catch(e) {}
+  try {
+    if (window.Equipe) {
+      Equipe.load().then(function() {
+        try {
+          if (Equipe.isCurrentActive && !Equipe.isCurrentActive() && !isAdminUser()) {
+            if (typeof toast === 'function') toast('Votre accès a été désactivé. Contactez votre responsable.', 'err');
+            setTimeout(function(){ try { firebase.auth().signOut(); } catch(e){} }, 1500);
+          }
+        } catch(e) {}
+      });
+      if (Equipe.reconcile) Equipe.reconcile();
+    }
+  } catch(e) {}
   accordsLoad();
 
   startListeners();
@@ -15190,7 +15202,7 @@ if ('serviceWorker' in navigator) {
 <script src="alertes.js?v=1"></script>
 <script src="paie-sim.js?v=1"></script>
 <script src="remises-accord.js?v=1"></script>
-<script src="equipe.js?v=9"></script>
+<script src="equipe.js?v=10"></script>
 <script src="fiche360.js?v=1"></script>
 <script src="offline-status.js?v=1"></script>
 <script>
