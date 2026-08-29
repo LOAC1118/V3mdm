@@ -1198,6 +1198,31 @@ thead th.ts-active { text-decoration:underline; text-underline-offset:3px; }
   #login-screen .login-switch a{ color:#E03A0C; }
 </style>
 <!-- ═══ COHOR-LOGIN-END ═══ -->
+<!-- ═══ COHOR-CHROME-START — barre du haut + fût sombre (retirer ce bloc pour revenir) ═══ -->
+<style id="cohor-chrome">
+  /* Barre du haut — claire, plus haute, filet chaud */
+  .topbar{ height:62px; background:#FFFFFF; border-bottom:1px solid #E3DFD7; box-shadow:none; }
+  .brand-name{ font-family:'Sora',sans-serif; }
+  .t-tab{ border-radius:99px; }
+  .t-tab:hover{ background:#F2EFE9; color:#14120F; }
+  .t-tab.active{ background:#14120F !important; color:#FFFFFF !important; }
+
+  /* Barre latérale — fût sombre COHOR */
+  .sidebar{ background:#14120F; border-right:1px solid rgba(255,255,255,.07); }
+  .sidebar .nav-label{ color:rgba(255,255,255,.42); }
+  .sidebar .nav-item{ color:rgba(255,255,255,.64); }
+  .sidebar .nav-item:hover{ background:rgba(255,255,255,.08); color:#FFFFFF; }
+  .sidebar .nav-item.active{ background:#FF4D1C !important; color:#FFFFFF !important; }
+  .sidebar .nav-item.active .nav-icon{ opacity:1; }
+  .sidebar .nav-badge{ background:rgba(255,255,255,.10); color:rgba(255,255,255,.72); }
+  .sidebar .nav-item.active .nav-badge{ background:rgba(255,255,255,.22); color:#FFFFFF; }
+  .sidebar .nav-divider-sidebar{ background:rgba(255,255,255,.10); }
+  .sidebar-footer{ border-top:1px solid rgba(255,255,255,.10); }
+  .sidebar .sf-name{ color:#FFFFFF; }
+  .sidebar .sf-role{ color:rgba(255,255,255,.5); }
+  .sidebar .sf-avatar{ background:rgba(255,255,255,.14); color:#FFFFFF; }
+</style>
+<!-- ═══ COHOR-CHROME-END ═══ -->
 </head>
 <body>
 <script>
