@@ -426,11 +426,12 @@
     box.style.cssText = 'margin-top:26px';
     var rows = (_roster || []).map(function (m) {
       var actif = (m.actif !== false);
+      var created = !!m.accountCreated;
       var bid = 'acc-st-' + slugMail(m.email);
       return '<div class="eq-acc" data-email="' + esc(m.email) + '">'
         + '<div class="eq-acc-main"><div class="eq-acc-nom">' + esc(m.nom || m.email) + '</div>'
         +   '<div class="eq-acc-mail">' + esc(m.email) + '</div></div>'
-        + '<div><span id="' + bid + '" class="eq-badge eq-badge-wait">vérification…</span>'
+        + '<div><span id="' + bid + '" class="eq-badge ' + (created ? 'eq-badge-ok' : 'eq-badge-none') + '">' + (created ? 'compte créé' : 'pas de compte') + '</span>'
         +   (actif ? '' : ' <span class="eq-badge eq-badge-off">désactivé</span>') + '</div>'
         + '<div class="eq-acc-actions">'
         +   '<button class="eq-mini" data-act="create">Créer le compte</button>'
@@ -444,16 +445,18 @@
       + (rows || '<div class="eq-empty">Enregistre d\'abord l\'équipe pour gérer les comptes.</div>');
     wrap.appendChild(box);
 
-    // Statut de chaque compte (existe ou non) — API lisible côté client.
+    // Le statut vient du référentiel (accountCreated, posé à la création via l'app).
+    // On tente une vérification Firebase qui ne peut que CONFIRMER un compte
+    // (jamais l'infirmer) — sans effet si la protection anti-énumération est active.
     (_roster || []).forEach(function (m) {
+      if (m.accountCreated) return;
       var el = document.getElementById('acc-st-' + slugMail(m.email));
       if (!el) return;
       try {
         firebase.auth().fetchSignInMethodsForEmail(m.email).then(function (methods) {
           if (methods && methods.length) { el.className = 'eq-badge eq-badge-ok'; el.textContent = 'compte créé'; }
-          else { el.className = 'eq-badge eq-badge-none'; el.textContent = 'pas de compte'; }
-        }).catch(function () { el.className = 'eq-badge eq-badge-none'; el.textContent = 'statut inconnu'; });
-      } catch (e) { el.textContent = '—'; }
+        }).catch(function () {});
+      } catch (e) {}
     });
 
     box.addEventListener('click', function (e) {
