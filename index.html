@@ -1179,6 +1179,8 @@ thead th.ts-active { text-decoration:underline; text-underline-offset:3px; }
     box-shadow:0 16px 44px rgba(20,18,15,.14); }
   #login-screen .login-logo-ico{ background:#FF4D1C !important; border-radius:17px;
     box-shadow:0 8px 18px -6px rgba(245,81,30,.55); }
+  #login-screen .login-logo-ico{ background:transparent !important; border-radius:0 !important;
+    box-shadow:none !important; width:auto !important; height:auto !important; }
   #login-screen .login-logo-name{ font-family:'Sora',sans-serif; font-weight:700;
     color:#14120F; letter-spacing:-.03em; font-size:1.55rem; }
   #login-screen .login-logo-sub{ color:#A8A29A; }
@@ -1235,15 +1237,14 @@ thead th.ts-active { text-decoration:underline; text-underline-offset:3px; }
   .cohor-brand-sub{ font-size:.58rem; letter-spacing:.12em; text-transform:uppercase;
     color:rgba(255,255,255,.45); margin-top:4px; }
 
-  /* Logo COHOR dans la barre du haut (remplace l'ancien logo MDM/NATURALINE) */
-  .cohor-topbrand{ display:flex; align-items:center; gap:8px; }
-  .cohor-topbrand-ico{ width:30px; height:30px; border-radius:9px; background:#FF4D1C;
-    display:flex; align-items:center; justify-content:center; font-size:16px; flex-shrink:0;
-    box-shadow:0 4px 10px -3px rgba(245,81,30,.55); }
+  /* Logo COHOR dans la barre du haut (anneaux entrelacés officiels) */
+  .cohor-topbrand{ display:flex; align-items:center; gap:9px; }
+  .cohor-topbrand-ico{ display:flex; align-items:center; color:#FF4D1C; }
+  .cohor-topbrand-ico svg{ height:24px; width:auto; display:block; }
   .cohor-topbrand-name{ font-family:'Sora',sans-serif; font-weight:700; font-size:1.15rem;
     letter-spacing:-.02em; color:#FFFFFF; }
   body.cohor-nuit .cohor-topbrand-name{ color:#F4F2ED; }
-  body.cohor-nuit .cohor-topbrand-ico{ background:#D6FF3F; }
+  body.cohor-nuit .cohor-topbrand-ico{ color:#D6FF3F; }
 
   /* Sélecteur flottant Éclat / Nuit */
   #cohor-switch{ position:fixed; left:16px; bottom:16px; z-index:1000; display:inline-flex;
@@ -1437,7 +1438,7 @@ thead th.ts-active { text-decoration:underline; text-underline-offset:3px; }
 <div id="login-screen">
   <div class="login-box">
     <div class="login-logo">
-      <div class="login-logo-ico">🌿</div>
+      <div class="login-logo-ico"><svg viewBox="0 0 46 26" fill="none" style="height:44px;width:auto;color:#FF4D1C;"><circle cx="30" cy="13" r="9.5" stroke="currentColor" stroke-width="3.6"/><circle cx="16" cy="13" r="9.5" stroke="currentColor" stroke-width="3.6"/><path d="M26.75 21.93 A9.5 9.5 0 0 1 20.82 15.46" stroke="currentColor" stroke-width="3.6" stroke-linecap="round"/></svg></div>
       <div class="login-logo-name">COHOR</div>
       <div class="login-logo-sub">Espace commercial</div>
     </div>
@@ -1478,7 +1479,7 @@ thead th.ts-active { text-decoration:underline; text-underline-offset:3px; }
 <div class="topbar">
   <div class="brand">
     <div class="brand-plate" id="brand-logo" aria-label="COHOR">
-      <div class="cohor-topbrand"><span class="cohor-topbrand-ico">🌿</span><span class="cohor-topbrand-name">COHOR</span></div>
+      <div class="cohor-topbrand"><span class="cohor-topbrand-ico"><svg viewBox="0 0 46 26" fill="none"><circle cx="30" cy="13" r="9.5" stroke="currentColor" stroke-width="3.8"/><circle cx="16" cy="13" r="9.5" stroke="currentColor" stroke-width="3.8"/><path d="M26.75 21.93 A9.5 9.5 0 0 1 20.82 15.46" stroke="currentColor" stroke-width="3.8" stroke-linecap="round"/></svg></span><span class="cohor-topbrand-name">COHOR</span></div>
     </div>
     <div id="brand-switcher" style="display:flex;align-items:center;background:var(--bg2);border-radius:10px;padding:3px;margin-left:12px;">
       <button id="brand-btn-mdm" onclick="setCurrentBrand('mdm')" style="border:none;background:var(--surface);color:var(--blue-p700);font-size:.72rem;font-weight:600;padding:6px 10px;border-radius:7px;cursor:pointer;transition:background .15s;white-space:nowrap;box-shadow:0 1px 2px rgba(26,28,26,.08);">MDM</button>
