@@ -1207,6 +1207,8 @@ thead th.ts-active { text-decoration:underline; text-underline-offset:3px; }
   .topbar-center .t-tab{ border-radius:99px; color:rgba(255,255,255,.62); }
   .topbar-center .t-tab:hover{ background:rgba(255,255,255,.08); color:#FFFFFF; }
   .topbar-center .t-tab.active{ background:#FF4D1C !important; color:#FFFFFF !important; }
+  /* Menu du haut retiré : la navigation d'ordinateur passe par le fût rangé */
+  .topbar-center{ display:none !important; }
 
   /* Barre latérale — fût sombre COHOR */
   .sidebar{ background:#14120F; border-right:1px solid rgba(255,255,255,.07); }
@@ -1548,22 +1550,6 @@ thead th.ts-active { text-decoration:underline; text-underline-offset:3px; }
       <svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="8" cy="8" r="6.5"/><circle cx="8" cy="8" r="2.8"/><path d="M8 8 13 3.5"/></svg>
       Radar
     </div>
-    <div class="nav-item" onclick="showSection('tournees',null,this)">
-      <svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M8 1.5c-2.2 0-4 1.8-4 4 0 3 4 9 4 9s4-6 4-9c0-2.2-1.8-4-4-4z"/><circle cx="8" cy="5.5" r="1.5"/></svg>
-      Tournées
-    </div>
-    <div class="nav-item" onclick="showSection('visites',null,this)">
-      <svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 1.5h7l3 3v10H3z"/><path d="M9.5 1.5v3.5h3.5M5.5 8h5M5.5 11h5"/></svg>
-      Visites
-    </div>
-    <div class="nav-item" onclick="showSection('recherche',null,this)">
-      <svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="7" cy="7" r="5"/><path d="m11 11 3.5 3.5"/></svg>
-      Recherche produit
-    </div>
-    <div class="nav-item" onclick="showSection('rgpd',null,this)">
-      <svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M8 1.5v13M3 4.5h10M5 4.5L3 9h4zM11 4.5L9 9h4z"/></svg>
-      Conformité
-    </div>
     <div class="nav-item" onclick="showSection('bdc',null,this)">
       <svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 2h12l-1 8H3z"/><circle cx="6" cy="14" r="1"/><circle cx="11" cy="14" r="1"/></svg>
       Bon de Commande
@@ -1572,17 +1558,49 @@ thead th.ts-active { text-decoration:underline; text-underline-offset:3px; }
       <svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="5" cy="5" r="2.5"/><path d="M1 14c0-2.5 1.8-4.5 4-4.5s4 2 4 4.5"/><circle cx="12" cy="6" r="2"/><path d="M10 14c0-2 1-3.5 2-3.5s3 1.5 3 3.5"/></svg>
       Base clients
     </div>
+  </div>
+
+  <div class="nav-divider-sidebar"></div>
+
+  <div class="nav-section">
+    <div class="nav-label">Terrain</div>
+    <div class="nav-item" onclick="showSection('recherche',null,this)">
+      <svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="7" cy="7" r="5"/><path d="m11 11 3.5 3.5"/></svg>
+      Recherche produit
+    </div>
+    <div class="nav-item" onclick="showSection('tournees',null,this)">
+      <svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M8 1.5c-2.2 0-4 1.8-4 4 0 3 4 9 4 9s4-6 4-9c0-2.2-1.8-4-4-4z"/><circle cx="8" cy="5.5" r="1.5"/></svg>
+      Tournées
+    </div>
+    <div class="nav-item" onclick="showSection('visites',null,this)">
+      <svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 1.5h7l3 3v10H3z"/><path d="M9.5 1.5v3.5h3.5M5.5 8h5M5.5 11h5"/></svg>
+      Visites
+    </div>
+    <div class="nav-item" onclick="showSection('cadencier',null,this)">
+      <svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="1.5" y="3" width="13" height="11.5" rx="1.5"/><path d="M1.5 6.5h13M5 1.5v3M11 1.5v3"/><path d="M4.5 9h2M4.5 11.5h2M9.5 9h2M9.5 11.5h2"/></svg>
+      Cadencier
+    </div>
     <div class="nav-item" onclick="showSection('accords',null,this)">
       <svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 8l3 3 9-9"/><rect x="1" y="1" width="14" height="14" rx="2"/></svg>
       Accords
     </div>
-    <div class="nav-item" onclick="showSection('frais',null,this)">
-      <svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="1" y="3" width="14" height="10" rx="2"/><path d="M1 6h14"/><circle cx="5" cy="9.5" r="1"/></svg>
-      Frais <span class="nav-badge" id="nb-frais">0</span>
+  </div>
+
+  <div class="nav-divider-sidebar"></div>
+
+  <div class="nav-section">
+    <div class="nav-label">Analyse</div>
+    <div class="nav-item" onclick="showSection('top100',null,this)">
+      <svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 2h8v3a4 4 0 0 1-8 0z"/><path d="M12 3h2v1a2 2 0 0 1-2 2M4 3H2v1a2 2 0 0 0 2 2"/><path d="M6.5 9h3M8 9v3M6 13h4"/></svg>
+      Top 100
     </div>
     <div class="nav-item" onclick="showSection('commissions',null,this)">
       <svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="8" cy="8" r="6"/><path d="M8 5v6M6 7h3.5a1.5 1.5 0 0 1 0 3H6"/></svg>
       Commissions
+    </div>
+    <div class="nav-item" onclick="showSection('frais',null,this)">
+      <svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="1" y="3" width="14" height="10" rx="2"/><path d="M1 6h14"/><circle cx="5" cy="9.5" r="1"/></svg>
+      Frais <span class="nav-badge" id="nb-frais">0</span>
     </div>
     <div class="nav-item" onclick="showSection('assortiment',null,this)">
       <svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="1.5" y="1.5" width="5" height="5" rx="1"/><rect x="9.5" y="1.5" width="5" height="5" rx="1"/><rect x="1.5" y="9.5" width="5" height="5" rx="1"/><path d="M9.5 12h5M12 9.5v5"/></svg>
@@ -1592,6 +1610,28 @@ thead th.ts-active { text-decoration:underline; text-underline-offset:3px; }
       <svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M8 1.5 15 14H1z"/><path d="M8 6.5v3.5"/><circle cx="8" cy="11.8" r=".7" fill="currentColor" stroke="none"/></svg>
       Alertes
     </div>
+  </div>
+
+  <div class="nav-divider-sidebar"></div>
+
+  <div class="nav-section">
+    <div class="nav-label">Équipe & outils</div>
+    <div class="nav-item" onclick="showSection('mailing',null,this)">
+      <svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="1" y="3" width="14" height="10" rx="1.5"/><path d="M1 4.5l7 5 7-5"/></svg>
+      Mailing
+    </div>
+    <div class="nav-item" onclick="showSection('promos',null,this)">
+      <svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M8.5 1.5H2v6.5l6.5 6.5 6.5-6.5z"/><circle cx="5" cy="5" r="1.1"/></svg>
+      Promos
+    </div>
+    <div class="nav-item" onclick="showSection('ia',null,this)">
+      <svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2.5" y="5.5" width="11" height="8" rx="2"/><path d="M8 5.5V3M6.5 2h3"/><circle cx="6" cy="9.5" r=".9" fill="currentColor" stroke="none"/><circle cx="10" cy="9.5" r=".9" fill="currentColor" stroke="none"/></svg>
+      Assistant IA
+    </div>
+    <div class="nav-item" onclick="showSection('rgpd',null,this)">
+      <svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M8 1.5v13M3 4.5h10M5 4.5L3 9h4zM11 4.5L9 9h4z"/></svg>
+      Conformité
+    </div>
     <div class="nav-item hidden" id="nav-item-comptes" onclick="showSection('comptes',null,this)">
       <svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="5.5" cy="5.5" r="2.5"/><circle cx="11" cy="6" r="2"/><path d="M1 14c0-2.5 1.8-4.5 4.5-4.5S10 11.5 10 14"/><path d="M9.5 9.7c2 .2 3.5 1.8 3.5 4.3"/></svg>
       Comptes
@@ -1600,25 +1640,9 @@ thead th.ts-active { text-decoration:underline; text-underline-offset:3px; }
       <svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="8" cy="5" r="2.4"/><path d="M2.5 14c0-3 2.4-5 5.5-5s5.5 2 5.5 5"/><path d="M13.5 6.5l1.2 1.2 2-2"/></svg>
       Équipe
     </div>
-    <div class="nav-item" onclick="showSection('mailing',null,this)">
-      <svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="1" y="3" width="14" height="10" rx="1.5"/><path d="M1 4.5l7 5 7-5"/></svg>
-      Mailing
-    </div>
-    <div class="nav-item" onclick="showSection('top100',null,this)">
-      <svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 2h8v3a4 4 0 0 1-8 0z"/><path d="M12 3h2v1a2 2 0 0 1-2 2M4 3H2v1a2 2 0 0 0 2 2"/><path d="M6.5 9h3M8 9v3M6 13h4"/></svg>
-      Top 100
-    </div>
-    <div class="nav-item" onclick="showSection('cadencier',null,this)">
-      <svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="1.5" y="3" width="13" height="11.5" rx="1.5"/><path d="M1.5 6.5h13M5 1.5v3M11 1.5v3"/><path d="M4.5 9h2M4.5 11.5h2M9.5 9h2M9.5 11.5h2"/></svg>
-      Cadencier
-    </div>
-    <div class="nav-item" onclick="showSection('ia',null,this)">
-      <svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2.5" y="5.5" width="11" height="8" rx="2"/><path d="M8 5.5V3M6.5 2h3"/><circle cx="6" cy="9.5" r=".9" fill="currentColor" stroke="none"/><circle cx="10" cy="9.5" r=".9" fill="currentColor" stroke="none"/></svg>
-      Assistant IA
-    </div>
   </div>
 
-  <div class="nav-divider-sidebar"></div>
+<div class="nav-divider-sidebar"></div><div class="nav-divider-sidebar"></div>
 
   <div class="nav-section">
     <div class="nav-label">Actions rapides</div>
@@ -3266,9 +3290,11 @@ thead th.ts-active { text-decoration:underline; text-underline-offset:3px; }
 </div>
 
 <div class="mmenu-sheet" id="mmenu-sheet" role="menu" aria-hidden="true">
+
   <div class="mmenu-handle"></div>
   <div class="mmenu-title">Sections</div>
 
+  <div style="font-size:.68rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--g500);padding:.9rem 1.1rem .3rem;">Principal</div>
   <button class="mmenu-item active" role="menuitem" data-sec="dashboard" onclick="mnavGo('dashboard')">
     <span class="mmenu-ico"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="1" y="1" width="6" height="6" rx="1.5"/><rect x="9" y="1" width="6" height="6" rx="1.5"/><rect x="1" y="9" width="6" height="6" rx="1.5"/><rect x="9" y="9" width="6" height="6" rx="1.5"/></svg></span>
     <span class="mmenu-label">Dashboard</span>
@@ -3276,22 +3302,6 @@ thead th.ts-active { text-decoration:underline; text-underline-offset:3px; }
   <button class="mmenu-item" role="menuitem" data-sec="radar" onclick="mnavGo('radar')">
     <span class="mmenu-ico"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="8" cy="8" r="6.5"/><circle cx="8" cy="8" r="2.8"/><path d="M8 8 13 3.5"/></svg></span>
     <span class="mmenu-label">Radar</span>
-  </button>
-  <button class="mmenu-item" role="menuitem" data-sec="tournees" onclick="mnavGo('tournees')">
-    <span class="mmenu-ico"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M8 1.5c-2.2 0-4 1.8-4 4 0 3 4 9 4 9s4-6 4-9c0-2.2-1.8-4-4-4z"/><circle cx="8" cy="5.5" r="1.5"/></svg></span>
-    <span class="mmenu-label">Tournées</span>
-  </button>
-  <button class="mmenu-item" role="menuitem" data-sec="visites" onclick="mnavGo('visites')">
-    <span class="mmenu-ico"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 1.5h7l3 3v10H3z"/><path d="M9.5 1.5v3.5h3.5M5.5 8h5M5.5 11h5"/></svg></span>
-    <span class="mmenu-label">Visites</span>
-  </button>
-  <button class="mmenu-item" role="menuitem" data-sec="recherche" onclick="mnavGo('recherche')">
-    <span class="mmenu-ico"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="7" cy="7" r="5"/><path d="m11 11 3.5 3.5"/></svg></span>
-    <span class="mmenu-label">Recherche produit</span>
-  </button>
-  <button class="mmenu-item" role="menuitem" data-sec="rgpd" onclick="mnavGo('rgpd')">
-    <span class="mmenu-ico"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M8 1.5v13M3 4.5h10M5 4.5L3 9h4zM11 4.5L9 9h4z"/></svg></span>
-    <span class="mmenu-label">Conformité</span>
   </button>
   <button class="mmenu-item" role="menuitem" data-sec="bdc" onclick="mnavGo('bdc')">
     <span class="mmenu-ico"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 2h12l-1 8H3z"/><circle cx="6" cy="14" r="1"/><circle cx="11" cy="14" r="1"/></svg></span>
@@ -3301,17 +3311,41 @@ thead th.ts-active { text-decoration:underline; text-underline-offset:3px; }
     <span class="mmenu-ico"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="5" cy="5" r="2.5"/><path d="M1 14c0-2.5 1.8-4.5 4-4.5s4 2 4 4.5"/><circle cx="12" cy="6" r="2"/><path d="M10 14c0-2 1-3.5 2-3.5s3 1.5 3 3.5"/></svg></span>
     <span class="mmenu-label">Base clients</span>
   </button>
+
+  <div style="font-size:.68rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--g500);padding:.9rem 1.1rem .3rem;">Terrain</div>
+  <button class="mmenu-item" role="menuitem" data-sec="recherche" onclick="mnavGo('recherche')">
+    <span class="mmenu-ico"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="7" cy="7" r="5"/><path d="m11 11 3.5 3.5"/></svg></span>
+    <span class="mmenu-label">Recherche produit</span>
+  </button>
+  <button class="mmenu-item" role="menuitem" data-sec="tournees" onclick="mnavGo('tournees')">
+    <span class="mmenu-ico"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M8 1.5c-2.2 0-4 1.8-4 4 0 3 4 9 4 9s4-6 4-9c0-2.2-1.8-4-4-4z"/><circle cx="8" cy="5.5" r="1.5"/></svg></span>
+    <span class="mmenu-label">Tournées</span>
+  </button>
+  <button class="mmenu-item" role="menuitem" data-sec="visites" onclick="mnavGo('visites')">
+    <span class="mmenu-ico"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 1.5h7l3 3v10H3z"/><path d="M9.5 1.5v3.5h3.5M5.5 8h5M5.5 11h5"/></svg></span>
+    <span class="mmenu-label">Visites</span>
+  </button>
+  <button class="mmenu-item" role="menuitem" data-sec="cadencier" onclick="mnavGo('cadencier')">
+    <span class="mmenu-ico"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="1.5" y="3" width="13" height="11.5" rx="1.5"/><path d="M1.5 6.5h13M5 1.5v3M11 1.5v3"/><path d="M4.5 9h2M4.5 11.5h2M9.5 9h2M9.5 11.5h2"/></svg></span>
+    <span class="mmenu-label">Cadencier</span>
+  </button>
   <button class="mmenu-item" role="menuitem" data-sec="accords" onclick="mnavGo('accords')">
     <span class="mmenu-ico"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 8l3 3 9-9"/><rect x="1" y="1" width="14" height="14" rx="2"/></svg></span>
     <span class="mmenu-label">Accords</span>
   </button>
-  <button class="mmenu-item" role="menuitem" data-sec="frais" onclick="mnavGo('frais')">
-    <span class="mmenu-ico"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="1" y="3" width="14" height="10" rx="2"/><path d="M1 6h14"/><circle cx="5" cy="9.5" r="1"/></svg></span>
-    <span class="mmenu-label">Frais</span>
+
+  <div style="font-size:.68rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--g500);padding:.9rem 1.1rem .3rem;">Analyse</div>
+  <button class="mmenu-item" role="menuitem" data-sec="top100" onclick="mnavGo('top100')">
+    <span class="mmenu-ico"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 2h8v3a4 4 0 0 1-8 0z"/><path d="M12 3h2v1a2 2 0 0 1-2 2M4 3H2v1a2 2 0 0 0 2 2"/><path d="M6.5 9h3M8 9v3M6 13h4"/></svg></span>
+    <span class="mmenu-label">Top 100 Produits</span>
   </button>
   <button class="mmenu-item" role="menuitem" data-sec="commissions" onclick="mnavGo('commissions')">
     <span class="mmenu-ico"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="8" cy="8" r="6"/><path d="M8 5v6M6 7h3.5a1.5 1.5 0 0 1 0 3H6"/></svg></span>
     <span class="mmenu-label">Commissions</span>
+  </button>
+  <button class="mmenu-item" role="menuitem" data-sec="frais" onclick="mnavGo('frais')">
+    <span class="mmenu-ico"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="1" y="3" width="14" height="10" rx="2"/><path d="M1 6h14"/><circle cx="5" cy="9.5" r="1"/></svg></span>
+    <span class="mmenu-label">Frais</span>
   </button>
   <button class="mmenu-item" role="menuitem" data-sec="assortiment" onclick="mnavGo('assortiment')">
     <span class="mmenu-ico"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="1.5" y="1.5" width="5" height="5" rx="1"/><rect x="9.5" y="1.5" width="5" height="5" rx="1"/><rect x="1.5" y="9.5" width="5" height="5" rx="1"/><path d="M9.5 12h5M12 9.5v5"/></svg></span>
@@ -3321,14 +3355,8 @@ thead th.ts-active { text-decoration:underline; text-underline-offset:3px; }
     <span class="mmenu-ico"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M8 1.5 15 14H1z"/><path d="M8 6.5v3.5"/><circle cx="8" cy="11.8" r=".7" fill="currentColor" stroke="none"/></svg></span>
     <span class="mmenu-label">Alertes</span>
   </button>
-  <button class="mmenu-item hidden" id="mtab-comptes" role="menuitem" data-sec="comptes" onclick="mnavGo('comptes')">
-    <span class="mmenu-ico"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="5.5" cy="5.5" r="2.5"/><circle cx="11" cy="6" r="2"/><path d="M1 14c0-2.5 1.8-4.5 4.5-4.5S10 11.5 10 14"/><path d="M9.5 9.7c2 .2 3.5 1.8 3.5 4.3"/></svg></span>
-    <span class="mmenu-label">Comptes</span>
-  </button>
-  <button class="mmenu-item hidden" id="mtab-equipe" role="menuitem" data-sec="equipe" onclick="mnavGo('equipe')">
-    <span class="mmenu-ico"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="8" cy="5" r="2.4"/><path d="M2.5 14c0-3 2.4-5 5.5-5s5.5 2 5.5 5"/><path d="M13.5 6.5l1.2 1.2 2-2"/></svg></span>
-    <span class="mmenu-label">Équipe</span>
-  </button>
+
+  <div style="font-size:.68rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--g500);padding:.9rem 1.1rem .3rem;">Équipe & outils</div>
   <button class="mmenu-item" role="menuitem" data-sec="mailing" onclick="mnavGo('mailing')">
     <span class="mmenu-ico"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="1" y="3" width="14" height="10" rx="1.5"/><path d="M1 4.5l7 5 7-5"/></svg></span>
     <span class="mmenu-label">Mailing</span>
@@ -3337,17 +3365,21 @@ thead th.ts-active { text-decoration:underline; text-underline-offset:3px; }
     <span class="mmenu-ico"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="5" cy="5" r="1.6"/><circle cx="11" cy="11" r="1.6"/><path d="M4 12L12 4"/></svg></span>
     <span class="mmenu-label">Promos PDF</span>
   </button>
-  <button class="mmenu-item" role="menuitem" data-sec="top100" onclick="mnavGo('top100')">
-    <span class="mmenu-ico"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 2h8v3a4 4 0 0 1-8 0z"/><path d="M12 3h2v1a2 2 0 0 1-2 2M4 3H2v1a2 2 0 0 0 2 2"/><path d="M6.5 9h3M8 9v3M6 13h4"/></svg></span>
-    <span class="mmenu-label">Top 100 Produits</span>
-  </button>
-  <button class="mmenu-item" role="menuitem" data-sec="cadencier" onclick="mnavGo('cadencier')">
-    <span class="mmenu-ico"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="1.5" y="3" width="13" height="11.5" rx="1.5"/><path d="M1.5 6.5h13M5 1.5v3M11 1.5v3"/><path d="M4.5 9h2M4.5 11.5h2M9.5 9h2M9.5 11.5h2"/></svg></span>
-    <span class="mmenu-label">Cadencier</span>
-  </button>
   <button class="mmenu-item" role="menuitem" data-sec="ia" onclick="mnavGo('ia')">
     <span class="mmenu-ico"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2.5" y="5.5" width="11" height="8" rx="2"/><path d="M8 5.5V3M6.5 2h3"/><circle cx="6" cy="9.5" r=".9" fill="currentColor" stroke="none"/><circle cx="10" cy="9.5" r=".9" fill="currentColor" stroke="none"/></svg></span>
     <span class="mmenu-label">Assistant IA</span>
+  </button>
+  <button class="mmenu-item" role="menuitem" data-sec="rgpd" onclick="mnavGo('rgpd')">
+    <span class="mmenu-ico"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M8 1.5v13M3 4.5h10M5 4.5L3 9h4zM11 4.5L9 9h4z"/></svg></span>
+    <span class="mmenu-label">Conformité</span>
+  </button>
+  <button class="mmenu-item hidden" id="mtab-comptes" role="menuitem" data-sec="comptes" onclick="mnavGo('comptes')">
+    <span class="mmenu-ico"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="5.5" cy="5.5" r="2.5"/><circle cx="11" cy="6" r="2"/><path d="M1 14c0-2.5 1.8-4.5 4.5-4.5S10 11.5 10 14"/><path d="M9.5 9.7c2 .2 3.5 1.8 3.5 4.3"/></svg></span>
+    <span class="mmenu-label">Comptes</span>
+  </button>
+  <button class="mmenu-item hidden" id="mtab-equipe" role="menuitem" data-sec="equipe" onclick="mnavGo('equipe')">
+    <span class="mmenu-ico"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="8" cy="5" r="2.4"/><path d="M2.5 14c0-3 2.4-5 5.5-5s5.5 2 5.5 5"/><path d="M13.5 6.5l1.2 1.2 2-2"/></svg></span>
+    <span class="mmenu-label">Équipe</span>
   </button>
 </div>
 
