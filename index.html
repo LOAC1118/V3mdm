@@ -2025,12 +2025,12 @@ thead th.ts-active { text-decoration:underline; text-underline-offset:3px; }
   <div id="sec-bdc" class="hidden" style="flex-direction:column;width:100%;">
     <div style="background:var(--surface);border-bottom:1px solid var(--border);padding:.55rem 1rem;display:flex;align-items:center;gap:8px;flex-shrink:0;flex-wrap:wrap;">
       <div style="font-family:var(--fdisp);font-size:.9rem;color:var(--g900);flex:1;min-width:140px;">🌾 Bon de Commande MDM 2026</div>
-      <button class="btn btn-ghost" style="font-size:.72rem;padding:.3rem .7rem;" onclick="openBdcImport()">📄 Importer commande</button>
-      <button class="btn btn-ghost" style="font-size:.72rem;padding:.3rem .7rem;color:#266327;border-color:rgba(38,99,39,.35);" onclick="if(typeof BdcSuggest!=='undefined')BdcSuggest.open();">🧠 Suggérer</button>
-      <button class="btn btn-ghost" style="font-size:.72rem;padding:.3rem .7rem;color:#266327;border-color:rgba(38,99,39,.35);" onclick="if(typeof RemisesAccord!=='undefined')RemisesAccord.open();">💰 Remises</button>
-      <button class="btn btn-ghost" style="font-size:.72rem;padding:.3rem .7rem;color:#a78bfa;border-color:rgba(167,139,250,.3);" onclick="boxOpen()">📦 Création BOX</button>
-      <button class="btn btn-ghost" style="font-size:.72rem;padding:.3rem .7rem;color:#e8c98a;border-color:rgba(245,158,11,.3);" onclick="openStockImport()">📦 Mettre à jour stocks</button>
-      <button class="btn btn-ghost" style="font-size:.72rem;padding:.3rem .7rem;" onclick="resetBDC()">🗑 Effacer</button>
+      <button class="btn btn-ghost" style="font-size:1rem;padding:.34rem .58rem;line-height:1;" onclick="openBdcImport()" title="Importer une commande" aria-label="Importer une commande">📄</button>
+      <button class="btn btn-ghost" style="font-size:1rem;padding:.34rem .58rem;line-height:1;color:#266327;border-color:rgba(38,99,39,.35);" onclick="if(typeof BdcSuggest!=='undefined')BdcSuggest.open();" title="Suggérer des produits" aria-label="Suggérer">🧠</button>
+      <button class="btn btn-ghost" style="font-size:1rem;padding:.34rem .58rem;line-height:1;color:#266327;border-color:rgba(38,99,39,.35);" onclick="if(typeof RemisesAccord!=='undefined')RemisesAccord.open();" title="Remises" aria-label="Remises">💰</button>
+      <button class="btn btn-ghost" style="font-size:1rem;padding:.34rem .58rem;line-height:1;color:#a78bfa;border-color:rgba(167,139,250,.3);" onclick="boxOpen()" title="Création BOX" aria-label="Création BOX">📦</button>
+      <button class="btn btn-ghost" style="font-size:1rem;padding:.34rem .58rem;line-height:1;color:#e8c98a;border-color:rgba(245,158,11,.3);" onclick="openStockImport()" title="Mettre à jour les stocks" aria-label="Mettre à jour les stocks">🔄</button>
+      <button class="btn btn-ghost" style="font-size:1rem;padding:.34rem .58rem;line-height:1;" onclick="resetBDC()" title="Effacer la commande" aria-label="Effacer la commande">🗑</button>
       <div style="display:flex;gap:5px;">
         <button class="btn btn-primary" style="font-size:.95rem;padding:.32rem .6rem;line-height:1;" onclick="bdcSendOrder()" title="Envoyer la commande" aria-label="Envoyer la commande">📤</button>
         <button class="btn btn-ghost" style="font-size:.95rem;padding:.32rem .6rem;line-height:1;border-color:var(--blue-p300);color:var(--blue-p700);" onclick="bdcOpenOutlook()" title="Envoyer par email" aria-label="Envoyer par email">✉️</button>
