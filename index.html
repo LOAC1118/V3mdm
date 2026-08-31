@@ -4613,6 +4613,10 @@ async function comptesDelete(uid, label) {
 // données vers "<collection>_mdm" (la marque historique), sans jamais écraser
 // quoi que ce soit si la cible contient déjà des documents.
 async function migrateLegacyCollectionsToMdm() {
+  // Obsolète en modèle équipe : la migration vers les collections partagées est
+  // faite. On n'exécute plus cette routine (elle noyait le démarrage d'appels
+  // en échec et fragilisait le cache Firebase).
+  if (typeof useSharedModel === 'function' && useSharedModel()) return;
   if (localStorage.getItem('mdm_legacy_migration_done_v1') === '1') return;
   var report = [];
   try {
@@ -4667,6 +4671,8 @@ async function migrateLegacyCollectionsToMdm() {
 // sans notion de commercial) au compte de la 1ère personne qui se connecte après
 // l'ajout du multi-commercial. Les comptes créés ensuite démarrent à zéro. ───
 async function migrateLegacyDataToCurrentUser() {
+  // Obsolète en modèle équipe (voir ci-dessus).
+  if (typeof useSharedModel === 'function' && useSharedModel()) return;
   if (localStorage.getItem('mdm_user_migration_done_v1') === '1') return;
   if (!currentUser || !currentUser.uid) return;
   var brands = ['mdm', 'naturaline'];
@@ -7877,6 +7883,38 @@ const FIREBASE_CONFIG_STAGING = {
 };
 
 // Interrupteur prod/test : ?test dans l'URL → bac à sable. Par défaut → PROD.
+// ─── Auto-réparation du cache Firebase corrompu ────────────────────────────
+// Le SDK Firestore peut, rarement, tomber dans un état interne corrompu
+// ("INTERNAL ASSERTION FAILED / Unexpected state"), souvent après un vidage
+// partiel du cache. On le détecte, on purge la base locale IndexedDB de
+// Firebase, et on recharge UNE seule fois (garde-fou anti-boucle).
+(function () {
+  function looksLikeFsCorruption(msg) {
+    msg = String(msg || '');
+    return msg.indexOf('INTERNAL ASSERTION FAILED') >= 0 || msg.indexOf('Unexpected state') >= 0;
+  }
+  function heal() {
+    try {
+      if (sessionStorage.getItem('fs_recover') === '1') return; // déjà tenté cette session
+      sessionStorage.setItem('fs_recover', '1');
+      var done = function () { setTimeout(function () { location.reload(); }, 250); };
+      if (indexedDB && indexedDB.databases) {
+        indexedDB.databases().then(function (dbs) {
+          (dbs || []).forEach(function (d) { if (d && d.name && /firestore|firebase/i.test(d.name)) { try { indexedDB.deleteDatabase(d.name); } catch (e) {} } });
+          done();
+        }).catch(done);
+      } else { done(); }
+    } catch (e) {}
+  }
+  window.addEventListener('error', function (e) {
+    if (e && looksLikeFsCorruption(e.message || (e.error && e.error.message))) heal();
+  });
+  window.addEventListener('unhandledrejection', function (e) {
+    var r = e && e.reason;
+    if (looksLikeFsCorruption(r && (r.message || r.toString ? r.toString() : r))) heal();
+  });
+})();
+
 var __USE_TEST = false;
 try { __USE_TEST = new URLSearchParams(location.search).has('test'); } catch(e) {}
 const ACTIVE_FIREBASE_CONFIG = __USE_TEST ? FIREBASE_CONFIG_STAGING : FIREBASE_CONFIG;
