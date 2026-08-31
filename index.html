@@ -1765,6 +1765,9 @@ thead th.ts-active { text-decoration:underline; text-underline-offset:3px; }
 
       <div id="dash-ca-content" style="display:none;padding:0 1rem 1rem;">
 
+        <!-- ── SYNTHÈSE DE L'HISTORIQUE ARCHIVÉ ─────────────────── -->
+        <div id="dash-archive-summary"></div>
+
         <!-- ── FILTRES ─────────────────────────────────────────── -->
         <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;padding:.6rem .8rem;background:var(--surface2);border-radius:8px;margin-bottom:1.25rem;">
           <span style="font-size:.7rem;font-weight:600;color:var(--g600);text-transform:uppercase;letter-spacing:.05em;">Filtres :</span>
@@ -11267,6 +11270,10 @@ function dashCaSaveToFirestore() {
       if (status) status.textContent = total + ' commandes · ✅ sauvegardées';
       if (typeof toast === 'function') toast('✅ ' + total + ' commandes sauvegardées', 'ok');
       dashCaUpdateLastImportLabel();
+      // Recharge TOUT l'historique accumulé depuis Firestore (au-delà de la
+      // fenêtre du fichier), pour que le tableau de bord et l'encart de synthèse
+      // reflètent l'ensemble, pas seulement les 12 derniers mois importés.
+      try { setTimeout(function(){ if (typeof dashCaLoadFromFirestore === 'function') dashCaLoadFromFirestore(); }, 400); } catch(e) {}
       return;
     }
     var end = Math.min(start + BATCH, total);
@@ -11726,9 +11733,61 @@ function dashCloseObjectifs() {
   document.getElementById('dash-objectifs-modal').style.display = 'none';
 }
 
+function dashRenderArchiveSummary() {
+  var host = document.getElementById('dash-archive-summary');
+  if (!host) return;
+  var rows = (typeof dashCaRows !== 'undefined' && dashCaRows) ? dashCaRows : [];
+  // Synthèse sur TOUT l'historique accumulé (indépendante des filtres année/mois).
+  var minD = null, maxD = null, total = 0, nb = 0, byYear = {};
+  rows.forEach(function (r) {
+    var d = r.dateRef; if (!d || isNaN(d)) return;
+    if (!minD || d < minD) minD = d;
+    if (!maxD || d > maxD) maxD = d;
+    var ca = Number(r.ca || 0);
+    total += ca; nb++;
+    var y = d.getFullYear();
+    byYear[y] = (byYear[y] || 0) + ca;
+  });
+  if (!nb) { host.innerHTML = ''; return; }
+  var years = Object.keys(byYear).map(Number).sort(function (a, b) { return a - b; });
+  function fmtE(n) { return Math.round(n).toLocaleString('fr-FR') + ' €'; }
+  function fmtD(d) { return d ? d.toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric' }) : '—'; }
+
+  var yearCards = years.map(function (y, i) {
+    var val = byYear[y];
+    var delta = '';
+    if (i > 0) {
+      var prev = byYear[years[i - 1]];
+      if (prev) {
+        var pct = Math.round((val - prev) / Math.abs(prev) * 100);
+        var up = pct >= 0;
+        delta = '<span style="font-size:.72rem;font-weight:700;color:' + (up ? '#1f7a34' : '#c4321b') + ';margin-left:6px;">' + (up ? '▲' : '▼') + ' ' + Math.abs(pct) + '%</span>';
+      }
+    }
+    return '<div style="flex:1;min-width:120px;background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:.7rem .9rem;">' +
+      '<div style="font-size:.66rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--g500);">' + y + '</div>' +
+      '<div style="font-family:\'Sora\',sans-serif;font-weight:600;font-size:1.02rem;color:#14120F;margin-top:2px;">' + fmtE(val) + delta + '</div>' +
+      '</div>';
+  }).join('');
+
+  host.innerHTML =
+    '<div style="background:#fff;border:1px solid var(--border);border-radius:16px;padding:1rem 1.1rem;margin-bottom:1.25rem;">' +
+      '<div style="display:flex;flex-wrap:wrap;align-items:baseline;gap:10px 18px;margin-bottom:.85rem;">' +
+        '<div style="font-family:\'Sora\',sans-serif;font-weight:600;font-size:.98rem;color:#14120F;">🗂️ Historique archivé</div>' +
+        '<div style="font-size:.78rem;color:var(--g600);"><b>' + nb.toLocaleString('fr-FR') + '</b> commandes · du <b>' + fmtD(minD) + '</b> au <b>' + fmtD(maxD) + '</b></div>' +
+        '<div style="margin-left:auto;font-size:.78rem;color:var(--g600);">CA total archivé : <b style="color:#FF4D1C;font-family:\'Sora\',sans-serif;">' + fmtE(total) + '</b></div>' +
+      '</div>' +
+      '<div style="display:flex;flex-wrap:wrap;gap:8px;">' + yearCards + '</div>' +
+      '<div style="font-size:.68rem;color:var(--g500);margin-top:.7rem;">Cet historique s\'enrichit automatiquement à chaque import et n\'est jamais réduit à la fenêtre de ton fichier — les commandes plus anciennes que ton fichier restent conservées.</div>' +
+    '</div>';
+}
+
 function dashCaRender() {
   // Guard : si le DOM du dashboard n'est pas encore prêt, on annule silencieusement
   if (!document.getElementById('dash-ca-year')) return;
+
+  // Encart de synthèse de l'historique complet (indépendant des filtres)
+  try { dashRenderArchiveSummary(); } catch(e) {}
 
   var yearF   = document.getElementById('dash-ca-year').value;
   var opF     = (document.getElementById('dash-ca-op')     || {value:''}).value;
