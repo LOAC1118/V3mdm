@@ -2523,6 +2523,7 @@ thead th.ts-active { text-decoration:underline; text-underline-offset:3px; }
           <div><label class="lb">Code postal</label><input type="text" id="cdb-edit-cp"/></div>
           <div><label class="lb">Ville</label><input type="text" id="cdb-edit-ville"/></div>
           <div style="grid-column:span 2;"><label class="lb">Notes</label><textarea id="cdb-edit-notes" style="min-height:60px;"></textarea></div>
+          <div id="cdb-edit-owner-row" style="grid-column:span 2;display:none;"><label class="lb">Rattaché à (commercial · secteur)</label><select id="cdb-edit-owner-select" style="width:100%;padding:9px 11px;border:1px solid var(--border-med,#d8dcd4);border-radius:8px;font-size:.85rem;background:#fff;"></select></div>
         </div>
         <!-- Encart accord commercial -->
         <div id="cdb-accord-encart" style="display:none;padding:0 1.25rem .5rem;"></div>
@@ -4867,6 +4868,7 @@ async function showApp() {
     var isCommercial = (typeof useSharedModel === 'function' && useSharedModel()
                         && typeof isManagerUser === 'function' && !isManagerUser());
     document.body.classList.toggle('cohor-commercial', !!isCommercial);
+    if (typeof isManagerUser === 'function' && isManagerUser() && typeof loadTeamMembers === 'function') loadTeamMembers();
   } catch(e) {}
   // Non bloquant : le démarrage ne doit jamais dépendre de ces appels.
   // Réconciliation en arrière-plan (non bloquant). Le blocage d'un compte
@@ -13421,6 +13423,36 @@ function cdbNewOrderFromClient(c) {
   }, 150);
 }
 
+// ─── Rattachement client → commercial (menu « Rattaché à ») ───────────────
+var teamMembersCache = [];
+function loadTeamMembers() {
+  try {
+    return db.collection('equipe').get().then(function(snap){
+      var arr = [];
+      snap.forEach(function(d){
+        var m = d.data();
+        if (m && m.email && (m.role === 'commercial' || m.role === 'manager')) {
+          arr.push({ nom: m.nom || m.email, email: (m.email||'').toLowerCase(), region: m.region || '', role: m.role, uid: m.uid || '' });
+        }
+      });
+      arr.sort(function(a,b){ return (a.nom||'').localeCompare(b.nom||''); });
+      teamMembersCache = arr;
+      return arr;
+    }).catch(function(){ return teamMembersCache; });
+  } catch(e) { return Promise.resolve(teamMembersCache); }
+}
+function cdbFillOwnerSelect(currentEmail) {
+  var sel = document.getElementById('cdb-edit-owner-select');
+  if (!sel) return;
+  var cur = (currentEmail || '').toLowerCase();
+  var opts = '<option value="">— Non attribué —</option>';
+  (teamMembersCache || []).forEach(function(m){
+    opts += '<option value="' + m.email + '"' + (m.email === cur ? ' selected' : '') + '>'
+          + (m.nom || m.email) + (m.region ? (' · ' + m.region) : '') + '</option>';
+  });
+  sel.innerHTML = opts;
+}
+
 function cdbOpenEdit(id) {
   var c = id ? cdbContacts.find(function(x){ return x.id === id; }) : null;
   if (id && !c) { toast('Contact introuvable — rechargez la page', 'err'); return; }
@@ -13461,6 +13493,19 @@ function cdbOpenEdit(id) {
     if (el) el.value = c ? (c[f] || '') : '';
   });
   document.getElementById('cdb-edit-prospect').value = c && c.prospect ? '1' : '0';
+
+  // « Rattaché à » : réservé admin/manager. Alimenté par le référentiel Équipe.
+  try {
+    var ownerRow = document.getElementById('cdb-edit-owner-row');
+    if (ownerRow && typeof isManagerUser === 'function' && isManagerUser()) {
+      ownerRow.style.display = '';
+      var curMail = (c && c.ownerEmail) ? c.ownerEmail : '';
+      cdbFillOwnerSelect(curMail);
+      if (!teamMembersCache.length) { loadTeamMembers().then(function(){ cdbFillOwnerSelect(curMail); }); }
+    } else if (ownerRow) {
+      ownerRow.style.display = 'none';
+    }
+  } catch(e) {}
 
   // Onglet infos par défaut
   cdbSwitchTab('infos');
@@ -13985,6 +14030,24 @@ function cdbSave() {
   c.prospect = parseInt(document.getElementById('cdb-edit-prospect').value) || 0;
   if (!c.nom) { toast('Raison sociale requise', 'err'); return; }
   if (!id && currentUser) c.owner = currentUser.uid; // propriétaire = créateur (modèle B)
+
+  // « Rattaché à » (admin/manager) : réassigne le client à un commercial.
+  try {
+    var _ownerRow = document.getElementById('cdb-edit-owner-row');
+    var _ownerSel = document.getElementById('cdb-edit-owner-select');
+    if (_ownerRow && _ownerSel && _ownerRow.style.display !== 'none') {
+      var _em = (_ownerSel.value || '').toLowerCase();
+      if (_em) {
+        var _m = (teamMembersCache || []).find(function(x){ return x.email === _em; });
+        c.ownerEmail = _em;
+        c.secteur = _m ? (_m.region || '') : (c.secteur || '');
+        c.owner = (_m && _m.uid) ? _m.uid : '';   // uid si connu, sinon aligné à la 1re connexion du commercial
+      } else {
+        c.ownerEmail = '';   // « Non attribué »
+        c.secteur = '';
+      }
+    }
+  } catch(e) {}
 
   if (typeof firebase !== 'undefined' && firebase.firestore) {
     bcol('contacts').doc(c.id).set(c).then(function(){
