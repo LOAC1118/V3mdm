@@ -10663,6 +10663,16 @@ function suiviParseDate(v) {
   // FR dd/mm/yyyy ou dd-mm-yyyy
   m = s.match(/^(\d{1,2})[-\/](\d{1,2})[-\/](\d{4})/);
   if (m) return new Date(+m[3], +m[2]-1, +m[1]);
+  // FR dd/mm/yy (année sur 2 chiffres) → 20yy, toujours jour/mois (jamais mois/jour)
+  m = s.match(/^(\d{1,2})[-\/](\d{1,2})[-\/](\d{2})(?!\d)/);
+  if (m) return new Date(2000 + (+m[3]), +m[2]-1, +m[1]);
+  // Date à barres non reconnue : on NE devine PAS à l'américaine (new Date()
+  // lirait mois/jour et fabriquerait une date fausse, parfois dans le futur).
+  // On la signale et on l'ignore plutôt que de corrompre l'analyse.
+  if (/^\d{1,2}[-\/]\d{1,2}[-\/]\d/.test(s)) {
+    try { console.warn('[DashCA] date à barres non reconnue, ignorée :', JSON.stringify(v)); } catch(e){}
+    return null;
+  }
   var d = new Date(s);
   return isNaN(d) ? null : d;
 }
