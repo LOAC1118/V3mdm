@@ -3900,14 +3900,36 @@ let db = null, auth = null, currentUser = null, fbFunctions = null;
 // (suffixe _<marque>_<uid>). 'profils' reste commun et global (compte Firebase
 // Auth, indépendant de la marque et déjà identifié par son propre uid).
 var BRAND_SCOPED_COLLECTIONS = ['clients','contacts','prospects','commandes','commandes_meta','commandes_stats','frais','notes_frais','activite','objectifs_ca','config','cadenciers','visites','visites_photos'];
+
+// ═══ BASCULE MODÈLE ÉQUIPE EN PROD (migration) ═══════════════════════════
+// PROD_TEAM_MODE       : en prod, lire/écrire les collections PARTAGÉES
+//                        (données migrées) au lieu des collections personnelles.
+// PROD_TEAM_ADMIN_ONLY : étape 2a — SEUL l'admin bascule (pour valider) ; tout
+//                        autre compte reste en modèle personnel. Passer à false
+//                        (étape 2b) pour basculer toute l'équipe.
+// POUR ANNULER LA BASCULE : remettre PROD_TEAM_MODE = false.
+var PROD_TEAM_MODE = true;
+var PROD_TEAM_ADMIN_ONLY = true;
+
+function useSharedModel() {
+  try {
+    if (typeof __USE_TEST !== 'undefined' && __USE_TEST) return true;   // bac à sable
+    if (PROD_TEAM_MODE) {
+      if (PROD_TEAM_ADMIN_ONLY) return (typeof isAdminUser === 'function' && isAdminUser());
+      return true;
+    }
+  } catch(e) {}
+  return false;
+}
+
 function bcol(name) {
   if (BRAND_SCOPED_COLLECTIONS.indexOf(name) !== -1) {
-    // Modèle B (migration équipe) : collections PARTAGÉES sans suffixe uid,
-    // activé UNIQUEMENT sur le bac à sable (?test). La prod reste en modèle A
-    // (collections par utilisateur) tant qu'on ne l'a pas migrée exprès.
-    if (typeof __USE_TEST !== 'undefined' && __USE_TEST) {
+    // Modèle B (équipe) : collections PARTAGÉES sans suffixe uid.
+    // Activé sur le bac à sable (?test) ET en prod via PROD_TEAM_MODE.
+    if (useSharedModel()) {
       return db.collection(name + '_' + CURRENT_BRAND);
     }
+    // Modèle A (personnel) : collections suffixées par l'uid.
     var uidSuffix = (currentUser && currentUser.uid) ? ('_' + currentUser.uid) : '';
     return db.collection(name + '_' + CURRENT_BRAND + uidSuffix);
   }
