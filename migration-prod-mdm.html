@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Migration PROD — MDM (modèle équipe)</title>
+<style>
+  body{font-family:-apple-system,Segoe UI,Roboto,sans-serif;background:#0f1113;color:#e7e7e7;margin:0;padding:24px;line-height:1.5;}
+  .wrap{max-width:820px;margin:0 auto;}
+  h1{font-size:1.25rem;margin:0 0 4px;}
+  .sub{color:#9aa0a6;font-size:.85rem;margin-bottom:18px;}
+  .card{background:#181b1e;border:1px solid #2a2e33;border-radius:12px;padding:18px;margin-bottom:16px;}
+  label{display:block;font-size:.8rem;color:#b7bdc3;margin:10px 0 4px;}
+  input{width:100%;box-sizing:border-box;padding:10px 12px;border-radius:8px;border:1px solid #333a41;background:#0f1113;color:#fff;font-size:.95rem;}
+  button{appearance:none;border:0;border-radius:8px;padding:11px 16px;font-weight:600;font-size:.9rem;cursor:pointer;margin-top:12px;}
+  .btn-sim{background:#2b3946;color:#cfe3ff;border:1px solid #3d5163;}
+  .btn-go{background:#FF4D1C;color:#fff;}
+  .btn-go:disabled{background:#5a5a5a;cursor:not-allowed;}
+  .note{font-size:.8rem;color:#9aa0a6;margin-top:8px;}
+  .err{color:#ff8a80;}
+  .ok{color:#8fd66a;}
+  .warn{background:#2a1e12;border:1px solid #5a3a1a;color:#ffcf9e;padding:10px 12px;border-radius:8px;font-size:.82rem;margin:10px 0;}
+  #log{background:#0b0d0f;border:1px solid #22262b;border-radius:8px;padding:12px;height:340px;overflow:auto;font:12px/1.5 ui-monospace,Menlo,Consolas,monospace;white-space:pre-wrap;margin-top:12px;}
+  .brandtag{display:inline-block;background:#FF4D1C;color:#fff;font-weight:700;font-size:.72rem;padding:2px 8px;border-radius:20px;letter-spacing:.04em;}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Migration PROD — <span class="brandtag">MDM</span></h1>
+  <div class="sub">Projet <b>bdcmdm26</b> · copie des collections personnelles vers les collections partagées (modèle équipe), avec ajout du propriétaire. <b>Ne supprime jamais</b> les collections d'origine.</div>
+
+  <div class="card" id="login-card">
+    <label for="email">Email admin</label>
+    <input id="email" type="email" placeholder="loacdev@outlook.fr" autocomplete="username">
+    <label for="pass">Mot de passe</label>
+    <input id="pass" type="password" autocomplete="current-password">
+    <button class="btn-go" id="btn-login">Se connecter</button>
+    <div class="note" id="login-msg"></div>
+  </div>
+
+  <div class="card" id="mig-card" style="display:none;">
+    <div class="note" id="who"></div>
+    <div class="warn">
+      <b>Rappel :</b> lance d'abord la <b>Simulation</b> (aucune écriture) pour vérifier les volumes.
+      Le mode <b>Appliquer</b> écrit dans les collections partagées <code>*_mdm</code> ; tes collections
+      personnelles <code>*_mdm_&lt;uid&gt;</code> restent intactes. L'opération est ré-exécutable sans créer de doublons.
+    </div>
+    <button class="btn-sim" id="btn-sim">🔍 Simulation (aucune écriture)</button>
+    <button class="btn-go" id="btn-go" disabled>✍️ Appliquer la migration MDM</button>
+    <div class="note">Le bouton « Appliquer » s'active après une simulation réussie.</div>
+    <div id="log"></div>
+  </div>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+<script>
+  var CFG = {
+    apiKey:            "AIzaSyBk9X0E5XGx8GPXzZoD7bt4AdJE4NUwEyQ",
+    authDomain:        "bdcmdm26.firebaseapp.com",
+    projectId:         "bdcmdm26",
+    storageBucket:     "bdcmdm26.firebasestorage.app",
+    messagingSenderId: "907040110034",
+    appId:             "1:907040110034:web:3c5f1d4a3c56a7efe9840b"
+  };
+  firebase.initializeApp(CFG);
+  var auth = firebase.auth();
+  var db   = firebase.firestore();
+
+  var BRAND = 'mdm';
+  var SCOPED = ['clients','contacts','prospects','commandes','commandes_meta','commandes_stats','frais','notes_frais','activite','objectifs_ca','config','cadenciers','visites','visites_photos'];
+
+  function el(id){ return document.getElementById(id); }
+  function log(m, cls){ var d=el('log'); var s=document.createElement('div'); if(cls)s.className=cls; s.textContent=m; d.appendChild(s); d.scrollTop=d.scrollHeight; }
+
+  el('btn-login').onclick = async function(){
+    var msg = el('login-msg'); msg.textContent='Connexion…'; msg.className='note';
+    try { await auth.signInWithEmailAndPassword(el('email').value.trim(), el('pass').value); }
+    catch(e){ msg.textContent='Échec : '+(e.code||e.message); msg.className='note err'; }
+  };
+
+  auth.onAuthStateChanged(function(user){
+    if(!user) return;
+    el('login-card').style.display='none';
+    el('mig-card').style.display='';
+    el('who').textContent='Connecté : '+(user.email||user.uid)+'  (uid '+user.uid.slice(0,8)+'…)';
+  });
+
+  // Lecture d'une collection source, renvoie les docs
+  async function readSource(col){
+    var src = col+'_'+BRAND+'_'+auth.currentUser.uid;
+    var snap = await db.collection(src).get();
+    return { name:src, docs:snap.docs };
+  }
+
+  // ── SIMULATION ──
+  el('btn-sim').onclick = async function(){
+    el('log').innerHTML='';
+    el('btn-sim').disabled=true; el('btn-go').disabled=true;
+    var uid = auth.currentUser.uid;
+    log('SIMULATION — aucune écriture. Projet bdcmdm26, marque MDM.', 'ok');
+    log('Propriétaire qui sera posé : '+uid, 'note');
+    var grand=0, anyErr=false;
+    for (var i=0;i<SCOPED.length;i++){
+      var col=SCOPED[i];
+      try{
+        var r=await readSource(col);
+        grand+=r.docs.length;
+        log('  '+r.name+'  →  '+col+'_'+BRAND+'  :  '+r.docs.length+' doc(s)');
+      }catch(e){
+        anyErr=true;
+        log('  ⚠ '+col+'_'+BRAND+'_'+uid+' — lecture impossible ('+(e.code||e.message)+')','err');
+      }
+    }
+    log('\nTotal à copier : '+grand+' document(s).', 'ok');
+    if (anyErr) log('Des collections n\'ont pas pu être lues (voir ci-dessus).','err');
+    log('Si les volumes te semblent cohérents, tu peux cliquer « Appliquer ».','note');
+    el('btn-sim').disabled=false; el('btn-go').disabled=false;
+  };
+
+  // ── APPLIQUER ──
+  el('btn-go').onclick = async function(){
+    if (!confirm('Appliquer la migration MDM : copier tes collections personnelles vers les collections partagées *_mdm (avec propriétaire). Tes originaux ne sont pas touchés. Continuer ?')) return;
+    el('log').innerHTML='';
+    el('btn-sim').disabled=true; el('btn-go').disabled=true;
+    var uid = auth.currentUser.uid;
+    log('APPLICATION de la migration — écriture dans les collections *_mdm.', 'ok');
+    var grand=0, anyErr=false;
+
+    for (var i=0;i<SCOPED.length;i++){
+      var col=SCOPED[i];
+      var dest=col+'_'+BRAND;
+      try{
+        var r=await readSource(col);
+        if (!r.docs.length){ log('  '+col+' : vide, ignorée'); continue; }
+        var written=0;
+        // batches de 400
+        for (var start=0; start<r.docs.length; start+=400){
+          var batch=db.batch();
+          var end=Math.min(start+400, r.docs.length);
+          for (var j=start;j<end;j++){
+            var d=r.docs[j];
+            var data=d.data();
+            if (data.owner===undefined || data.owner===null || data.owner==='') data.owner=uid;
+            batch.set(db.collection(dest).doc(d.id), data, { merge:true });
+          }
+          await batch.commit();
+          written=end;
+          log('  '+dest+' : '+written+'/'+r.docs.length+'…');
+        }
+        grand+=r.docs.length;
+        log('  ✓ '+dest+' — '+r.docs.length+' doc(s) copié(s)', 'ok');
+      }catch(e){
+        anyErr=true;
+        log('  ✗ '+dest+' — ERREUR : '+(e.code||e.message), 'err');
+      }
+    }
+    log('\n'+(anyErr?'⚠ Terminé avec des erreurs':'✅ Migration MDM terminée')+' — '+grand+' document(s) copié(s).', anyErr?'err':'ok');
+    if (anyErr) log('Si l\'erreur est « permission-denied », les règles de prod bloquent l\'écriture des collections partagées : il faudra les ouvrir avant (dis-le à ton assistant).','err');
+    el('btn-sim').disabled=false; el('btn-go').disabled=false;
+  };
+</script>
+</body>
+</html>
