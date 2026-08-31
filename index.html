@@ -2082,8 +2082,8 @@ thead th.ts-active { text-decoration:underline; text-underline-offset:3px; }
       <button class="btn btn-ghost" style="font-size:1rem;padding:.34rem .58rem;line-height:1;color:#e8c98a;border-color:rgba(245,158,11,.3);" onclick="openStockImport()" title="Mettre à jour les stocks" aria-label="Mettre à jour les stocks">🔄</button>
       <button class="btn btn-ghost" style="font-size:1rem;padding:.34rem .58rem;line-height:1;" onclick="resetBDC()" title="Effacer la commande" aria-label="Effacer la commande">🗑</button>
       <div style="display:flex;gap:5px;">
-        <button class="btn btn-primary" style="font-size:.95rem;padding:.32rem .6rem;line-height:1;" onclick="bdcSendOrder()" title="Envoyer la commande" aria-label="Envoyer la commande">📤</button>
-        <button class="btn btn-ghost" style="font-size:.95rem;padding:.32rem .6rem;line-height:1;border-color:var(--blue-p300);color:var(--blue-p700);" onclick="bdcOpenOutlook()" title="Envoyer par email" aria-label="Envoyer par email">✉️</button>
+        <button class="btn btn-primary" style="padding:.4rem .62rem;line-height:1;" onclick="bdcSendOrder()" title="Envoyer la commande" aria-label="Envoyer la commande"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" style="width:16px;height:16px;display:block;"><path d="M18 2 8.5 11.5"/><path d="M18 2l-6 16-3.5-6.5L2 8z"/></svg></button>
+        <button class="btn btn-ghost" style="padding:.4rem .62rem;line-height:1;border-color:var(--blue-p300);color:var(--blue-p700);" onclick="bdcOpenOutlook()" title="Envoyer par email" aria-label="Envoyer par email"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" style="width:16px;height:16px;display:block;"><rect x="2" y="4.5" width="16" height="11" rx="2"/><path d="M2.5 6l7.5 5 7.5-5"/></svg></button>
       </div>
     </div>
     <!-- Bandeau articles saisis (sticky) — cliquable pour ouvrir le détail éditable -->
@@ -2144,12 +2144,13 @@ thead th.ts-active { text-decoration:underline; text-underline-offset:3px; }
         </div>
         <div id="bdc-alert" style="display:none;border-radius:6px;padding:.5rem .7rem;font-size:.72rem;margin-top:.6rem;line-height:1.4;"></div>
         <div style="display:flex;gap:6px;margin-top:.7rem;">
-          <button id="bdc-btn-send" class="btn btn-primary" style="flex:1;justify-content:center;" onclick="bdcSendOrder()">
+          <button id="bdc-btn-send" class="btn btn-primary" style="flex:1;justify-content:center;" onclick="bdcSendOrder()" title="Envoyer la commande" aria-label="Envoyer la commande">
             <div id="bdc-spinner" style="display:none;width:11px;height:11px;border:2px solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;animation:spin .7s linear infinite;margin-right:5px;"></div>
-            <span id="bdc-send-label">📤 Envoyer à MDM</span>
+            <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" style="width:18px;height:18px;display:block;"><path d="M18 2 8.5 11.5"/><path d="M18 2l-6 16-3.5-6.5L2 8z"/></svg>
+            <span id="bdc-send-label" style="display:none;"></span>
           </button>
-          <button class="btn btn-ghost" style="flex:1;justify-content:center;font-size:.72rem;border-color:var(--blue-p300);color:var(--blue-p700);background:var(--blue-p50);" onclick="bdcOpenOutlook()" title="Ouvrir votre client mail vers commande@moulindesmoines.com">
-            ✉️ Envoyer par email
+          <button class="btn btn-ghost" style="flex:1;justify-content:center;border-color:var(--blue-p300);color:var(--blue-p700);background:var(--blue-p50);" onclick="bdcOpenOutlook()" title="Envoyer par email" aria-label="Envoyer par email">
+            <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" style="width:18px;height:18px;display:block;"><rect x="2" y="4.5" width="16" height="11" rx="2"/><path d="M2.5 6l7.5 5 7.5-5"/></svg>
           </button>
         </div>
       </div>
@@ -4334,11 +4335,14 @@ function isAdminUser() {
   try { return localStorage.getItem('mdm_admin_uid') === currentUser.uid; } catch(e){ return false; }
 }
 function initAdminAccountsUI() {
-  if (!isAdminUser()) return;
+  // Affiche Équipe/Comptes pour l'admin, et les MASQUE explicitement pour tous
+  // les autres (sinon, après une session admin, elles resteraient visibles pour
+  // un commercial tant que la page n'est pas rechargée entièrement).
+  var show = isAdminUser();
   var ids = ['t-tab-comptes', 'nav-item-comptes', 'mtab-comptes', 'nav-item-equipe', 'mtab-equipe'];
   ids.forEach(function(id) {
     var el = document.getElementById(id);
-    if (el) el.classList.remove('hidden');
+    if (el) el.classList.toggle('hidden', !show);
   });
 }
 
