@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Équipe & attribution PROD — MDM</title>
+<style>
+  body{font-family:-apple-system,Segoe UI,Roboto,sans-serif;background:#0f1113;color:#e7e7e7;margin:0;padding:24px;line-height:1.5;}
+  .wrap{max-width:900px;margin:0 auto;}
+  h1{font-size:1.25rem;margin:0 0 4px;} h2{font-size:1rem;margin:0 0 8px;}
+  .sub{color:#9aa0a6;font-size:.85rem;margin-bottom:18px;}
+  .card{background:#181b1e;border:1px solid #2a2e33;border-radius:12px;padding:18px;margin-bottom:16px;}
+  label{display:block;font-size:.8rem;color:#b7bdc3;margin:10px 0 4px;}
+  input[type=email],input[type=password]{width:100%;box-sizing:border-box;padding:10px 12px;border-radius:8px;border:1px solid #333a41;background:#0f1113;color:#fff;font-size:.95rem;}
+  button{appearance:none;border:0;border-radius:8px;padding:11px 16px;font-weight:600;font-size:.9rem;cursor:pointer;margin:12px 8px 0 0;}
+  .btn-sim{background:#2b3946;color:#cfe3ff;border:1px solid #3d5163;}
+  .btn-go{background:#FF4D1C;color:#fff;} .btn-go:disabled{background:#5a5a5a;cursor:not-allowed;}
+  .btn-seed{background:#2b463a;color:#cfffe3;border:1px solid #3d6351;}
+  .note{font-size:.8rem;color:#9aa0a6;margin-top:8px;} .err{color:#ff8a80;} .ok{color:#8fd66a;}
+  table{width:100%;border-collapse:collapse;margin-top:10px;font-size:.82rem;}
+  th,td{text-align:left;padding:6px 8px;border-bottom:1px solid #23272c;vertical-align:top;}
+  th{color:#9aa0a6;font-weight:600;}
+  .warn{background:#2a1e12;border:1px solid #5a3a1a;color:#ffcf9e;padding:10px 12px;border-radius:8px;font-size:.82rem;margin:10px 0;}
+  #log,#logseed{background:#0b0d0f;border:1px solid #22262b;border-radius:8px;padding:12px;max-height:300px;overflow:auto;font:12px/1.5 ui-monospace,Menlo,Consolas,monospace;white-space:pre-wrap;margin-top:12px;}
+  .tag{display:inline-block;background:#FF4D1C;color:#fff;font-weight:700;font-size:.72rem;padding:2px 8px;border-radius:20px;letter-spacing:.04em;}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Équipe &amp; attribution PROD — <span class="tag">MDM</span></h1>
+  <div class="sub">Projet <b>bdcmdm26</b>, collections partagées. Étape 3 : écrire le référentiel Équipe, puis rattacher chaque client à son commercial par département.</div>
+
+  <div class="card" id="login-card">
+    <label for="email">Email admin</label>
+    <input id="email" type="email" placeholder="cspoto@moulindesmoines.com" autocomplete="username">
+    <label for="pass">Mot de passe</label>
+    <input id="pass" type="password" autocomplete="current-password">
+    <button class="btn-go" id="btn-login">Se connecter</button>
+    <div class="note" id="login-msg"></div>
+  </div>
+
+  <div id="tools" style="display:none;">
+    <div class="card">
+      <div class="note" id="who"></div>
+    </div>
+
+    <!-- ÉTAPE 3A — RÉFÉRENTIEL -->
+    <div class="card">
+      <h2>1 · Référentiel Équipe</h2>
+      <div class="note">Voici la répartition validée. Vérifie-la, puis écris-la dans la base (elle alimentera l'écran Équipe et l'attribution).</div>
+      <div id="roster-table"></div>
+      <button class="btn-seed" id="btn-seed">📝 Écrire le référentiel Équipe</button>
+      <div id="logseed"></div>
+    </div>
+
+    <!-- ÉTAPE 3B — ATTRIBUTION -->
+    <div class="card">
+      <h2>2 · Attribution des secteurs</h2>
+      <div class="warn">Lance d'abord la <b>Simulation</b> (aucune écriture). Elle compte, par commercial, combien de clients seraient rattachés, et signale les départements sans commercial. Puis <b>Applique</b> : chaque client reçoit son <code>ownerEmail</code> et son secteur.</div>
+      <button class="btn-sim" id="btn-sim">🔍 Simulation</button>
+      <button class="btn-go" id="btn-apply" disabled>✍️ Appliquer l'attribution</button>
+      <div class="note">Le bouton « Appliquer » s'active après une simulation réussie. (Écris d'abord le référentiel ci-dessus.)</div>
+      <div id="log"></div>
+    </div>
+  </div>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+<script>
+  var CFG = {
+    apiKey:"AIzaSyBk9X0E5XGx8GPXzZoD7bt4AdJE4NUwEyQ", authDomain:"bdcmdm26.firebaseapp.com",
+    projectId:"bdcmdm26", storageBucket:"bdcmdm26.firebasestorage.app",
+    messagingSenderId:"907040110034", appId:"1:907040110034:web:3c5f1d4a3c56a7efe9840b"
+  };
+  firebase.initializeApp(CFG);
+  var auth=firebase.auth(), db=firebase.firestore();
+  var BRAND='mdm';
+
+  // Répartition validée sur le bac à sable (Corse 20 rattachée au Sud-Est).
+  var ROSTER = [
+    { nom:'Christophe de SAINT PIERRE', email:'christophedesaintpierre@moulindesmoines.com', role:'manager',    region:'Direction commerciale', departements:'' },
+    { nom:'Sébastien CLUCKERS',         email:'scluckers@moulindesmoines.com', role:'commercial', region:'Nord-Est',      departements:'02,08,10,21,25,39,51,52,54,55,57,58,59,60,62,67,68,70,71,80,88,89,90' },
+    { nom:'Stéphanie LE CORNEC',        email:'slecornec@moulindesmoines.com', role:'commercial', region:'Île-de-France', departements:'75,77,78,91,92,93,94,95' },
+    { nom:'Pascal LE NAOUR',            email:'plenaour@moulindesmoines.com',  role:'commercial', region:'Nord-Ouest',    departements:'14,22,27,28,29,35,44,49,50,53,56,61,72,76,85' },
+    { nom:'Christophe SPOTO',           email:'cspoto@moulindesmoines.com',    role:'commercial', region:'Centre-Est',    departements:'01,03,07,15,18,26,36,37,38,41,42,43,45,63,69,73,74' },
+    { nom:'Guillaume DEVANNES',         email:'gdevannes@moulindesmoines.com', role:'commercial', region:'Sud-Ouest',     departements:'09,11,12,16,17,19,23,24,31,32,33,40,46,47,64,65,66,79,81,82,86,87' },
+    { nom:'Patricia POLITO',            email:'ppolito@moulindesmoines.com',   role:'commercial', region:'Sud-Est',       departements:'04,05,06,13,20,2A,2B,30,34,48,83,84' }
+  ];
+  var ADMIN_GUARDS = ['loacdev@outlook.fr','cspoto@moulindesmoines.com'];
+
+  function slugMail(m){ return String(m||'').toLowerCase().trim().replace(/[^a-z0-9]+/g,'_').replace(/^_+|_+$/g,''); }
+  function deptOfCp(cp){ cp=String(cp==null?'':cp).trim(); if(!cp) return null; if(/^9[78]\d/.test(cp)) return cp.slice(0,3); var d=cp.slice(0,2); return /^\d{2}$/.test(d)?d:null; }
+  function parseDepts(txt){ return String(txt||'').split(/[^0-9AB]+/i).map(function(s){return s.trim().toUpperCase();}).filter(Boolean); }
+  function buildDeptMap(){ var map={},conf=[]; ROSTER.forEach(function(m){ if(m.role==='manager'&&!parseDepts(m.departements).length) return; parseDepts(m.departements).forEach(function(d){ if(map[d]&&map[d].email!==m.email&&conf.indexOf(d)<0) conf.push(d); map[d]=m; }); }); return {map:map,conflicts:conf}; }
+  function emailToUid(email){ if(!email) return null; var lc=email.toLowerCase(); if(auth.currentUser&&(auth.currentUser.email||'').toLowerCase()===lc) return auth.currentUser.uid; return null; }
+
+  function el(id){ return document.getElementById(id); }
+  function logTo(id,m,cls){ var d=el(id); var s=document.createElement('div'); if(cls)s.className=cls; s.textContent=m; d.appendChild(s); d.scrollTop=d.scrollHeight; }
+
+  el('btn-login').onclick=async function(){ var m=el('login-msg'); m.textContent='Connexion…'; m.className='note';
+    try{ await auth.signInWithEmailAndPassword(el('email').value.trim(), el('pass').value); }
+    catch(e){ m.textContent='Échec : '+(e.code||e.message); m.className='note err'; } };
+
+  auth.onAuthStateChanged(function(u){ if(!u) return;
+    el('login-card').style.display='none'; el('tools').style.display='';
+    el('who').textContent='Connecté : '+(u.email||u.uid);
+    renderRoster();
+  });
+
+  function renderRoster(){
+    var rows=ROSTER.map(function(m){
+      return '<tr><td>'+m.nom+'</td><td>'+m.email+'</td><td>'+m.role+'</td><td>'+m.region+'</td><td style="color:#9cf;">'+(m.departements||'(tous)')+'</td></tr>';
+    }).join('');
+    el('roster-table').innerHTML='<table><thead><tr><th>Nom</th><th>Email</th><th>Rôle</th><th>Secteur</th><th>Départements</th></tr></thead><tbody>'+rows+'</tbody></table>';
+  }
+
+  // ── 3A : écrire le référentiel ──
+  el('btn-seed').onclick=async function(){
+    el('logseed').innerHTML='';
+    try{
+      var batch=db.batch();
+      ROSTER.forEach(function(m){
+        batch.set(db.collection('equipe').doc(slugMail(m.email)), {
+          nom:m.nom||'', email:(m.email||'').toLowerCase(), role:m.role==='manager'?'manager':'commercial',
+          region:m.region||'', departements:m.departements||'', actif:true,
+          majAt: firebase.firestore.FieldValue.serverTimestamp()
+        }, {merge:true});
+      });
+      await batch.commit();
+      var mgr=ROSTER.filter(function(m){return m.role==='manager'&&m.email;}).map(function(m){return m.email.toLowerCase();});
+      ADMIN_GUARDS.forEach(function(e){ if(mgr.indexOf(e)<0) mgr.push(e); });
+      await db.collection('roles').doc('managers').set({ emails:mgr, majAt:firebase.firestore.FieldValue.serverTimestamp() }, {merge:true});
+      logTo('logseed','✅ Référentiel écrit : '+ROSTER.length+' membres. Managers : '+mgr.join(', '),'ok');
+    }catch(e){ logTo('logseed','✗ '+(e.code||e.message),'err'); }
+  };
+
+  // ── 3B : attribution ──
+  async function runAttribution(dryRun){
+    el('log').innerHTML='';
+    var dm=buildDeptMap();
+    if(!Object.keys(dm.map).length){ logTo('log','Aucun département dans le référentiel.','err'); return; }
+    if(dm.conflicts.length) logTo('log','⚠ Départements en double : '+dm.conflicts.join(', '),'err');
+    logTo('log',(dryRun?'— SIMULATION —':'— APPLICATION —')+' marque '+BRAND,'ok');
+    try{
+      var snap=await db.collection('contacts_'+BRAND).get();
+      var counts={},unmatched=[],noCp=0,total=0,updates=[];
+      snap.forEach(function(doc){ total++; var c=doc.data(); var d=deptOfCp(c.cp);
+        if(!d){ noCp++; return; }
+        var m=dm.map[d]; if(!m){ if(unmatched.indexOf(d)<0) unmatched.push(d); return; }
+        counts[m.email]=(counts[m.email]||0)+1;
+        if(!dryRun){ var uid=emailToUid(m.email); var upd={ownerEmail:m.email,secteur:m.region||''}; if(uid) upd.owner=uid; updates.push({ref:doc.ref,upd:upd}); }
+      });
+      logTo('log','\nClients : '+total+' au total');
+      Object.keys(counts).sort().forEach(function(mail){ var m=ROSTER.find(function(x){return x.email===mail;}); logTo('log','  '+counts[mail]+'  →  '+(m?m.nom:mail)+' ('+(m?m.region:'')+')'); });
+      if(noCp) logTo('log','  '+noCp+' sans code postal exploitable (non attribués)','err');
+      if(unmatched.length) logTo('log','  Départements sans commercial : '+unmatched.sort().join(', '),'err');
+      if(dryRun){ logTo('log','\nSimulation OK. Si les volumes te conviennent, clique « Appliquer ».','ok'); el('btn-apply').disabled=false; return; }
+      // écriture par lots de 400
+      var w=0;
+      for(var s=0;s<updates.length;s+=400){ var b=db.batch(); var e=Math.min(s+400,updates.length);
+        for(var j=s;j<e;j++) b.update(updates[j].ref, updates[j].upd);
+        await b.commit(); w=e; logTo('log','  écriture '+w+'/'+updates.length+'…');
+      }
+      logTo('log','\n✅ Attribution appliquée — '+updates.length+' clients rattachés.','ok');
+    }catch(err){ logTo('log','✗ ERREUR : '+(err.code||err.message),'err'); if((err.code||'').indexOf('permission')>=0) logTo('log','Les règles bloquent l\'écriture ? (normalement admin autorisé)','err'); }
+  }
+  el('btn-sim').onclick=function(){ el('btn-sim').disabled=true; runAttribution(true).finally(function(){ el('btn-sim').disabled=false; }); };
+  el('btn-apply').onclick=function(){ if(!confirm('Appliquer l\'attribution : écrire ownerEmail + secteur sur les clients concernés ?')) return; el('btn-apply').disabled=true; el('btn-sim').disabled=true; runAttribution(false).finally(function(){ el('btn-sim').disabled=false; }); };
+</script>
+</body>
+</html>
