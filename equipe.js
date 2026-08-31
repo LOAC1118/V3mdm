@@ -175,6 +175,11 @@
 
     renderAccounts(host);
     if (typeof __USE_TEST !== 'undefined' && __USE_TEST) appendMigration(host);
+    try {
+      var _team  = (typeof useSharedModel === 'function') && useSharedModel();
+      var _admin = (typeof isAdminUser === 'function') && isAdminUser();
+      if (_team && _admin) appendAttribution(host);
+    } catch (e) {}
   }
 
   // ── Migration modèle B (bac à sable uniquement) ──────────────────────
@@ -192,8 +197,12 @@
       + '<div id="eq-miglog" style="display:none;font-family:ui-monospace,Menlo,monospace;font-size:11px;background:#0f1710;color:#c7e6c9;border-radius:9px;padding:10px;height:180px;overflow:auto;white-space:pre-wrap;margin-top:10px;"></div>';
     wrap.appendChild(box);
     box.querySelector('#eq-migrate').onclick = function () { migrate(box.querySelector('#eq-miglog')); };
+  }
 
-    // ── Attribution par secteur (étape 2b) ──
+  // Panneau d'attribution — disponible pour l'admin en mode équipe (prod incluse).
+  function appendAttribution(host) {
+    var wrap = host.querySelector('.eq-wrap'); if (!wrap) return;
+    // ── Attribution par secteur ──
     var box2 = document.createElement('div');
     box2.style.cssText = 'margin-top:14px;padding:14px 16px;border:1px dashed #4a86d8;border-radius:12px;background:#f2f7ff';
     box2.innerHTML =
