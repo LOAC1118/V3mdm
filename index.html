@@ -1710,7 +1710,7 @@ thead th.ts-active { text-decoration:underline; text-underline-offset:3px; }
       <div class="stat-card"><div class="stat-label">Contacts</div><div class="stat-val" id="stat-clients">—</div><div class="stat-delta">base clients</div></div>
       <div class="stat-card" id="dash-actifs-card" style="cursor:pointer;" onclick="showSection('contacts-db',null,null)" title="Voir la base clients">
         <div class="stat-label">✅ Clients actifs</div>
-        <div style="display:flex;align-items:baseline;gap:6px;"><div class="stat-val" id="stat-actifs" style="color:#266327;">—</div><div style="font-size:.7rem;color:#b0402f;font-weight:600;" id="stat-inactifs-badge"></div></div>
+        <div style="display:flex;align-items:baseline;gap:6px;"><div class="stat-val" id="stat-actifs" style="color:#FF4D1C;">—</div><div style="font-size:.7rem;color:#b0402f;font-weight:600;" id="stat-inactifs-badge"></div></div>
         <div class="stat-delta" id="stat-actifs-delta">cmd dans les 3 derniers mois</div>
       </div>
       <div class="stat-card"><div class="stat-label">BDC saisis</div><div class="stat-val" id="stat-commandes">—</div><div class="stat-delta">bons de commande</div></div>
@@ -1802,9 +1802,9 @@ thead th.ts-active { text-decoration:underline; text-underline-offset:3px; }
             <div style="font-size:1.6rem;font-weight:800;color:var(--blue-p700);line-height:1;" id="dashk-cours">—</div>
             <div style="font-size:.7rem;color:var(--g500);margin-top:5px;" id="dashk-nb-sub">— commandes</div>
           </div>
-          <div style="background:#fff;border-radius:12px;padding:1.1rem 1.2rem;border:1px solid var(--border);border-top:4px solid #266327;box-shadow:var(--shadow-sm);">
+          <div style="background:#fff;border-radius:12px;padding:1.1rem 1.2rem;border:1px solid var(--border);border-top:4px solid #FF4D1C;box-shadow:var(--shadow-sm);">
             <div style="font-size:.65rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--g500);margin-bottom:6px;">CA Facturé</div>
-            <div style="font-size:1.6rem;font-weight:800;color:#266327;line-height:1;" id="dashk-fac">—</div>
+            <div style="font-size:1.6rem;font-weight:800;color:#FF4D1C;line-height:1;" id="dashk-fac">—</div>
             <div style="font-size:.7rem;color:var(--g500);margin-top:5px;">N° facture émis</div>
           </div>
           <div style="background:#fff;border-radius:12px;padding:1.1rem 1.2rem;border:1px solid var(--border);border-top:4px solid #b07d1a;box-shadow:var(--shadow-sm);">
@@ -1834,10 +1834,10 @@ thead th.ts-active { text-decoration:underline; text-underline-offset:3px; }
             <div style="font-size:.7rem;color:var(--g500);margin-top:4px;" id="dash-panier-detail">—</div>
           </div>
           <!-- Clients actifs / inactifs -->
-          <div style="background:#fff;border-radius:10px;padding:.9rem 1rem;border:1px solid var(--border);border-left:4px solid #266327;cursor:pointer;" onclick="dashShowInactifs()" title="Cliquez pour voir les clients inactifs">
+          <div style="background:#fff;border-radius:10px;padding:.9rem 1rem;border:1px solid var(--border);border-left:4px solid #FF4D1C;cursor:pointer;" onclick="dashShowInactifs()" title="Cliquez pour voir les clients inactifs">
             <div style="font-size:.62rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--g400);margin-bottom:4px;">👥 Clients actifs du mois</div>
             <div style="display:flex;align-items:baseline;gap:8px;">
-              <div style="font-size:1.35rem;font-weight:800;color:#266327;line-height:1;" id="dash-actifs-mois">—</div>
+              <div style="font-size:1.35rem;font-weight:800;color:#FF4D1C;line-height:1;" id="dash-actifs-mois">—</div>
               <div style="font-size:.82rem;font-weight:600;color:#b0402f;" id="dash-inactifs-mois"></div>
             </div>
             <div style="font-size:.7rem;color:var(--g500);margin-top:4px;" id="dash-actifs-detail">ayant commandé ce mois</div>
@@ -1929,7 +1929,7 @@ thead th.ts-active { text-decoration:underline; text-underline-offset:3px; }
                 <div style="font-size:.62rem;color:var(--g500);">commandes</div>
               </div>
               <div style="text-align:center;">
-                <div id="dash-recent-ca-fac" style="font-size:1.1rem;font-weight:700;color:#266327;">—</div>
+                <div id="dash-recent-ca-fac" style="font-size:1.1rem;font-weight:700;color:#FF4D1C;">—</div>
                 <div style="font-size:.62rem;color:var(--g500);">facturé</div>
               </div>
               <div style="text-align:center;">
@@ -1970,7 +1970,7 @@ thead th.ts-active { text-decoration:underline; text-underline-offset:3px; }
                   <th>Mois</th>
                   <th style="text-align:right;">Nb cmds</th>
                   <th style="text-align:right;">Ticket moy.</th>
-                  <th style="text-align:right;color:#266327;">CA Total</th>
+                  <th style="text-align:right;color:#FF4D1C;">CA Total</th>
                   <th style="text-align:right;color:#8f6415;">En cours</th>
                   <th style="text-align:right;color:var(--blue-p700);">Facturé</th>
                   <th style="text-align:right;color:#b0402f;">Avoirs</th>
@@ -2093,8 +2093,8 @@ thead th.ts-active { text-decoration:underline; text-underline-offset:3px; }
     <div style="background:var(--surface);border-bottom:1px solid var(--border);padding:.55rem 1rem;display:flex;align-items:center;gap:8px;flex-shrink:0;flex-wrap:wrap;">
       <div style="font-family:var(--fdisp);font-size:.9rem;color:var(--g900);flex:1;min-width:140px;">🌾 Bon de Commande MDM 2026</div>
       <button class="btn btn-ghost" style="font-size:1rem;padding:.34rem .58rem;line-height:1;" onclick="openBdcImport()" title="Importer une commande" aria-label="Importer une commande">📄</button>
-      <button class="btn btn-ghost" style="font-size:1rem;padding:.34rem .58rem;line-height:1;color:#266327;border-color:rgba(38,99,39,.35);" onclick="if(typeof BdcSuggest!=='undefined')BdcSuggest.open();" title="Suggérer des produits" aria-label="Suggérer">🧠</button>
-      <button class="btn btn-ghost" style="font-size:1rem;padding:.34rem .58rem;line-height:1;color:#266327;border-color:rgba(38,99,39,.35);" onclick="if(typeof RemisesAccord!=='undefined')RemisesAccord.open();" title="Remises" aria-label="Remises">💰</button>
+      <button class="btn btn-ghost" style="font-size:1rem;padding:.34rem .58rem;line-height:1;color:#FF4D1C;border-color:rgba(255,77,28,.35);" onclick="if(typeof BdcSuggest!=='undefined')BdcSuggest.open();" title="Suggérer des produits" aria-label="Suggérer">🧠</button>
+      <button class="btn btn-ghost" style="font-size:1rem;padding:.34rem .58rem;line-height:1;color:#FF4D1C;border-color:rgba(255,77,28,.35);" onclick="if(typeof RemisesAccord!=='undefined')RemisesAccord.open();" title="Remises" aria-label="Remises">💰</button>
       <button class="btn btn-ghost" style="font-size:1rem;padding:.34rem .58rem;line-height:1;color:#a78bfa;border-color:rgba(167,139,250,.3);" onclick="boxOpen()" title="Création BOX" aria-label="Création BOX">📦</button>
       <button class="btn btn-ghost" style="font-size:1rem;padding:.34rem .58rem;line-height:1;color:#e8c98a;border-color:rgba(245,158,11,.3);" onclick="openStockImport()" title="Mettre à jour les stocks" aria-label="Mettre à jour les stocks">🔄</button>
       <button class="btn btn-ghost" style="font-size:1rem;padding:.34rem .58rem;line-height:1;" onclick="resetBDC()" title="Effacer la commande" aria-label="Effacer la commande">🗑</button>
@@ -2230,7 +2230,7 @@ thead th.ts-active { text-decoration:underline; text-underline-offset:3px; }
   <div id="sec-frais" class="hidden">
     <div class="page-header">
       <div>
-        <div class="page-title">Note de frais <span id="nfd-save-status" style="font-size:.65rem;font-weight:400;background:#eef3ee;color:#266327;padding:2px 8px;border-radius:10px;margin-left:8px;display:none;">✓ sauvegardé</span></div>
+        <div class="page-title">Note de frais <span id="nfd-save-status" style="font-size:.65rem;font-weight:400;background:#FFF3EE;color:#FF4D1C;padding:2px 8px;border-radius:10px;margin-left:8px;display:none;">✓ sauvegardé</span></div>
         <div class="page-sub">Saisie ligne par ligne · sauvegarde automatique · génération PDF mensuel</div>
         <div id="nfd-period-label" style="font-size:.72rem;color:var(--blue-p700);font-weight:600;margin-top:2px;"></div>
       </div>
@@ -2274,7 +2274,7 @@ thead th.ts-active { text-decoration:underline; text-underline-offset:3px; }
       <div class="stat-card" style="border-top:3px solid var(--g700)!important;"><div class="stat-label">Nb dépenses</div><div class="stat-val" id="nfd-kpi-nb">0</div></div>
       <div class="stat-card" style="border-top:3px solid #2563b0!important;"><div class="stat-label">Total HT</div><div class="stat-val" id="nfd-kpi-ht" style="color:#2563b0;">0,00 €</div></div>
       <div class="stat-card" style="border-top:3px solid #8f6415!important;"><div class="stat-label">Total TVA</div><div class="stat-val" id="nfd-kpi-tva" style="color:#8f6415;">0,00 €</div></div>
-      <div class="stat-card" style="border-top:3px solid #266327!important;"><div class="stat-label">Total TTC</div><div class="stat-val" id="nfd-kpi-ttc" style="color:#266327;">0,00 €</div></div>
+      <div class="stat-card" style="border-top:3px solid #FF4D1C!important;"><div class="stat-label">Total TTC</div><div class="stat-val" id="nfd-kpi-ttc" style="color:#FF4D1C;">0,00 €</div></div>
     </div>
 
     <!-- Saisie nouvelle ligne / édition -->
@@ -2301,7 +2301,7 @@ thead th.ts-active { text-decoration:underline; text-underline-offset:3px; }
         <div><label class="lb">Description</label><input type="text" id="nfd-new-desc" placeholder="Ex: Total Bourges → Lyon"/></div>
         <div style="display:flex;gap:6px;">
           <button class="btn btn-ghost" onclick="nfdOpenScanner()" title="Scanner le ticket avec la caméra" style="white-space:nowrap;position:relative;">
-            📷<span id="nfd-photo-badge" class="hidden" style="position:absolute;top:-5px;right:-5px;width:14px;height:14px;border-radius:50%;background:var(--em600,#266327);"></span>
+            📷<span id="nfd-photo-badge" class="hidden" style="position:absolute;top:-5px;right:-5px;width:14px;height:14px;border-radius:50%;background:var(--em600,#FF4D1C);"></span>
           </button>
           <button class="btn btn-ghost hidden" id="nfd-cancel-edit-btn" onclick="nfdCancelEdit()" style="white-space:nowrap;">✕ Annuler</button>
           <button class="btn btn-primary" id="nfd-submit-btn" onclick="nfdAddLine()" style="white-space:nowrap;">➕ Ajouter</button>
@@ -2426,8 +2426,8 @@ thead th.ts-active { text-decoration:underline; text-underline-offset:3px; }
 
         <!-- Mode rapide : import sans mapping -->
         <div style="background:#f0fdf4;border:1px solid #86efac;border-radius:7px;padding:.7rem .9rem;margin-bottom:.8rem;">
-          <div style="font-size:.78rem;font-weight:600;color:#266327;margin-bottom:.4rem;">🚀 Import rapide (recommandé)</div>
-          <div style="font-size:.72rem;color:#1c4d1e;margin-bottom:.5rem;">Le système détecte automatiquement les colonnes Code, Nom, Email, Tél, Adresse, etc.</div>
+          <div style="font-size:.78rem;font-weight:600;color:#FF4D1C;margin-bottom:.4rem;">🚀 Import rapide (recommandé)</div>
+          <div style="font-size:.72rem;color:#14120F;margin-bottom:.5rem;">Le système détecte automatiquement les colonnes Code, Nom, Email, Tél, Adresse, etc.</div>
           <button class="btn btn-primary" onclick="cdbImportApplyAuto()" style="font-size:.8rem;padding:.4rem .9rem;background:#16a34a;border-color:#16a34a;">⚡ Importer automatiquement</button>
         </div>
 
@@ -2856,7 +2856,7 @@ thead th.ts-active { text-decoration:underline; text-underline-offset:3px; }
       </div>
       <div class="card" style="padding:1rem;">
         <div style="font-size:.72rem;color:var(--g500);text-transform:uppercase;letter-spacing:.04em;font-weight:600;">CA HT cumulé</div>
-        <div class="stat-val" id="cad-stat-ca" style="font-size:1.5rem;color:var(--em600,#266327);margin-top:4px;">—</div>
+        <div class="stat-val" id="cad-stat-ca" style="font-size:1.5rem;color:var(--em600,#FF4D1C);margin-top:4px;">—</div>
       </div>
       <div class="card" style="padding:1rem;">
         <div style="font-size:.72rem;color:var(--g500);text-transform:uppercase;letter-spacing:.04em;font-weight:600;">Commandes</div>
@@ -2954,7 +2954,7 @@ thead th.ts-active { text-decoration:underline; text-underline-offset:3px; }
       </div>
       <div class="card" style="padding:1rem;">
         <div style="font-size:.72rem;color:var(--g500);text-transform:uppercase;letter-spacing:.04em;font-weight:600;">CA HT cumulé</div>
-        <div class="stat-val" id="top100-stat-ca" style="font-size:1.5rem;color:var(--em600,#266327);margin-top:4px;">—</div>
+        <div class="stat-val" id="top100-stat-ca" style="font-size:1.5rem;color:var(--em600,#FF4D1C);margin-top:4px;">—</div>
       </div>
       <div class="card" style="padding:1rem;">
         <div style="font-size:.72rem;color:var(--g500);text-transform:uppercase;letter-spacing:.04em;font-weight:600;">Colis vendus</div>
@@ -3447,7 +3447,7 @@ thead th.ts-active { text-decoration:underline; text-underline-offset:3px; }
       <button class="btn btn-ghost" id="nfd-scan-btn-cancel" onclick="nfdCloseScanner()" style="background:transparent;color:#cbd5e1;border-color:rgba(255,255,255,.15);">Annuler</button>
       <button class="btn btn-primary" id="nfd-scan-btn-capture" onclick="nfdCapturePhoto()" style="flex:1;">📸 Prendre la photo</button>
       <button class="btn btn-ghost hidden" id="nfd-scan-btn-retake" onclick="nfdRetakePhoto()" style="background:transparent;color:#cbd5e1;border-color:rgba(255,255,255,.15);">↺ Reprendre</button>
-      <button class="btn btn-primary hidden" id="nfd-scan-btn-confirm" onclick="nfdConfirmPhoto()" style="flex:1;background:var(--em600,#266327);border-color:var(--em600,#266327);">✓ Utiliser cette photo</button>
+      <button class="btn btn-primary hidden" id="nfd-scan-btn-confirm" onclick="nfdConfirmPhoto()" style="flex:1;background:var(--em600,#FF4D1C);border-color:var(--em600,#FF4D1C);">✓ Utiliser cette photo</button>
     </div>
   </div>
 </div>
@@ -4120,7 +4120,7 @@ function accordsRender() {
         (p.label || ('≥'+p.seuil+'€ → '+p.remise+'%')) + '</span>';
     }).join('');
     var promosBadges = (acc.promos||[]).map(function(p) {
-      return '<span style="display:inline-block;padding:2px 8px;background:var(--em100,#eef3ee);color:var(--em700,#266327);border-radius:12px;font-size:.72rem;font-weight:600;margin:2px;">' +
+      return '<span style="display:inline-block;padding:2px 8px;background:var(--em100,#FFF3EE);color:var(--em700,#FF4D1C);border-radius:12px;font-size:.72rem;font-weight:600;margin:2px;">' +
         p.periode + ' −' + p.remise + '%</span>';
     }).join('');
     var validite = (acc.debut && acc.fin) ? acc.debut.slice(0,7).replace('-','/') + ' → ' + acc.fin.slice(0,7).replace('-','/') : '—';
@@ -4501,7 +4501,7 @@ async function comptesRender() {
       var actif = (r.actif !== false); // par défaut actif si le champ n'existe pas encore
       var roleLabel = (r.role === 'admin') ? '👑 Admin' : '👤 Commercial';
       var statutBadge = actif
-        ? '<span style="display:inline-block;padding:2px 10px;border-radius:20px;background:var(--em100,#eef3ee);color:var(--em700,#266327);font-size:.72rem;font-weight:600;">● Actif</span>'
+        ? '<span style="display:inline-block;padding:2px 10px;border-radius:20px;background:var(--em100,#FFF3EE);color:var(--em700,#FF4D1C);font-size:.72rem;font-weight:600;">● Actif</span>'
         : '<span style="display:inline-block;padding:2px 10px;border-radius:20px;background:#f8ede9;color:#b91c1c;font-size:.72rem;font-weight:600;">● Désactivé</span>';
 
       var actions = '';
@@ -5375,7 +5375,7 @@ function top100RenderTable(){
       '<td style="padding:.5rem .6rem;font-family:monospace;font-size:.74rem;color:var(--g500);white-space:nowrap;">'+top100Esc(r.code)+'</td>'+
       '<td style="padding:.5rem .6rem;font-family:monospace;font-size:.72rem;color:var(--g500);white-space:nowrap;">'+top100Esc(r.ean||'—')+'</td>'+
       '<td style="padding:.5rem .6rem;text-align:right;font-weight:'+(metric==='qte'?'700':'400')+';color:'+(metric==='qte'?'var(--blue-p700)':'var(--g700)')+';">'+top100Int(r.qte)+'</td>'+
-      '<td style="padding:.5rem .6rem;text-align:right;white-space:nowrap;font-weight:'+(metric==='ca'?'700':'400')+';color:'+(metric==='ca'?'var(--em600,#266327)':'var(--g700)')+';">'+top100Eur(r.ca)+'</td>'+
+      '<td style="padding:.5rem .6rem;text-align:right;white-space:nowrap;font-weight:'+(metric==='ca'?'700':'400')+';color:'+(metric==='ca'?'var(--em600,#FF4D1C)':'var(--g700)')+';">'+top100Eur(r.ca)+'</td>'+
       '<td style="padding:.5rem .6rem;text-align:center;color:var(--g600);">'+(r.nbCmd==null?'—':top100Int(r.nbCmd))+'</td>'+
       '<td style="padding:.5rem .6rem;text-align:center;color:var(--g600);">'+top100Int(r.nbCli)+'</td>'+
       '<td style="padding:.5rem .6rem;text-align:right;'+stockStyle+'">'+stock+'</td>'+
@@ -6724,7 +6724,7 @@ function nfdEditLine(id) {
   // (cf. logique dans nfdAddLine). Le badge reflète juste s'il y a déjà une photo.
   nfdPendingPhoto = null;
   var badge = document.getElementById('nfd-photo-badge');
-  if (line.photo) { badge.classList.remove('hidden'); badge.style.background = 'var(--em600,#266327)'; }
+  if (line.photo) { badge.classList.remove('hidden'); badge.style.background = 'var(--em600,#FF4D1C)'; }
   else { badge.classList.add('hidden'); }
 
   document.getElementById('nfd-form-title').textContent = '✏️ Modifier la ligne du ' + nfdFmtDate(line.date);
@@ -6761,7 +6761,7 @@ function nfdOpenScanner() {
   document.getElementById('nfd-scan-btn-retake').classList.add('hidden');
   document.getElementById('nfd-scan-btn-confirm').classList.add('hidden');
   var badge = document.getElementById('nfd-photo-badge');
-  if (badge) badge.style.background = 'var(--em600,#266327)';
+  if (badge) badge.style.background = 'var(--em600,#FF4D1C)';
   nfdSetScanStatus('Initialisation de la caméra…');
   nfdStartCamera();
 }
@@ -6873,7 +6873,7 @@ function nfdAnalyzeTicket(dataUrl) {
   var callAnalyse = fbFunctions.httpsCallable('analyseTicketFrais');
   callAnalyse({ imageBase64: imageBase64, mediaType: mediaType }).then(function(result) {
     var data = result.data;
-    if (statusEl) { statusEl.style.background = 'var(--em600,#266327)'; }
+    if (statusEl) { statusEl.style.background = 'var(--em600,#FF4D1C)'; }
 
     if (!data || data.lisible === false) {
       toast('🔍 Ticket analysé, mais peu lisible — vérifiez/complétez les champs manuellement', 'err');
@@ -7034,7 +7034,7 @@ function nfdRender() {
     var restant  = PLAFOND_HD - totalHD;
     var pct      = Math.min(100, Math.round(totalHD / PLAFOND_HD * 100));
     var couleur  = pct >= 100 ? '#b0402f' : pct >= 85 ? '#b07d1a' : '#16a34a';
-    var barColor = pct >= 100 ? '#b0402f' : pct >= 85 ? '#b07d1a' : '#2f7530';
+    var barColor = pct >= 100 ? '#b0402f' : pct >= 85 ? '#b07d1a' : '#E8420F';
 
     var hdRow = '<tr style="border-top:2px dashed var(--blue-p300);background:#f0f6fc;">' +
       '<td style="padding:.5rem .75rem;">' +
@@ -8176,7 +8176,7 @@ function commRefresh() {
           : '<tr><td colspan="2" style="padding:.3rem .6rem;font-size:.8rem;color:var(--amber);">⚠️ Aucun objectif défini — à saisir dans Dashboard → Objectifs pour activer le bonus 2%</td></tr>';
 
         var depassLine = (globalObjectif > 0 && depassement > 0)
-          ? '<tr><td style="padding:.4rem .6rem;color:#266327;font-weight:600;">📈 Dépassement</td><td style="padding:.4rem .6rem;text-align:right;font-size:1.15rem;font-weight:700;color:#266327;">+' + commFmt(depassement) + '</td></tr>'
+          ? '<tr><td style="padding:.4rem .6rem;color:#FF4D1C;font-weight:600;">📈 Dépassement</td><td style="padding:.4rem .6rem;text-align:right;font-size:1.15rem;font-weight:700;color:#FF4D1C;">+' + commFmt(depassement) + '</td></tr>'
           : (globalObjectif > 0 ? '<tr><td style="padding:.4rem .6rem;color:var(--amber);font-weight:600;">⏳ Reste à faire</td><td style="padding:.4rem .6rem;text-align:right;font-size:1rem;color:var(--amber);">' + commFmt(globalObjectif - globalCAtotal) + '</td></tr>' : '');
 
         var commDetail = globalObjectif > 0 && depassement > 0
@@ -8407,7 +8407,7 @@ function commHistRender() {
     if (ca === 0 && obj === 0) {
       statut = '<span style="color:var(--g400);font-size:.72rem;">—</span>';
     } else if (ca >= obj && obj > 0) {
-      statut = '<span style="background:#eef3ee;color:#266327;padding:2px 8px;border-radius:20px;font-size:.7rem;font-weight:600;">✅ Dépassé</span>';
+      statut = '<span style="background:#FFF3EE;color:#FF4D1C;padding:2px 8px;border-radius:20px;font-size:.7rem;font-weight:600;">✅ Dépassé</span>';
     } else if (ca > 0) {
       statut = '<span style="background:#fef9c3;color:#7a5512;padding:2px 8px;border-radius:20px;font-size:.7rem;font-weight:600;">⏳ En cours</span>';
     } else {
@@ -8421,7 +8421,7 @@ function commHistRender() {
       '<td style="padding:.5rem .75rem;">' + label + ' ' + year + (isCur ? ' 📍' : '') + '</td>' +
       '<td style="padding:.5rem .75rem;text-align:right;color:var(--blue-p800);">' + fmt(ca) + '</td>' +
       '<td style="padding:.5rem .75rem;text-align:right;color:var(--amber);">' + fmt(obj) + '</td>' +
-      '<td style="padding:.5rem .75rem;text-align:right;color:' + (depass > 0 ? '#266327' : 'var(--g400)') + ';">' + fmt(depass) + '</td>' +
+      '<td style="padding:.5rem .75rem;text-align:right;color:' + (depass > 0 ? '#FF4D1C' : 'var(--g400)') + ';">' + fmt(depass) + '</td>' +
       '<td style="padding:.5rem .75rem;text-align:right;font-weight:700;color:#6a6f64;">' + fmt(comm) + '</td>' +
       '<td style="padding:.5rem .75rem;text-align:center;">' + statut + '</td>' +
     '</tr>';
@@ -8732,8 +8732,8 @@ function bdcHistRender() {
     var date = cmd.createdAt ? new Date(cmd.createdAt.seconds ? cmd.createdAt.seconds*1000 : cmd.createdAt).toLocaleDateString('fr-FR') : '—';
     var heure = cmd.createdAt ? new Date(cmd.createdAt.seconds ? cmd.createdAt.seconds*1000 : cmd.createdAt).toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'}) : '';
     var statut = cmd.statut || 'Saisie';
-    var statutColor = statut === 'Envoyée' ? '#266327' : '#7a5512';
-    var statutBg = statut === 'Envoyée' ? '#eef3ee' : '#fef9c3';
+    var statutColor = statut === 'Envoyée' ? '#FF4D1C' : '#7a5512';
+    var statutBg = statut === 'Envoyée' ? '#FFF3EE' : '#fef9c3';
     var nbRefs = cmd.nbRefs || (cmd.lignes ? cmd.lignes.length : '?');
     var montant = cmd.montant ? cmd.montant.toLocaleString('fr-FR',{minimumFractionDigits:2,maximumFractionDigits:2})+'€' : '—';
     return '<div style="display:flex;align-items:center;gap:10px;padding:.6rem .75rem;border-radius:8px;border:1px solid var(--border);margin-bottom:.5rem;background:var(--surface);">' +
@@ -9134,12 +9134,12 @@ function bdcStockBadgeHtml(p, light) {
   }
   if (stkColis <= 20) {
     return light
-      ? '<span'+titleAttr+' style="display:inline-block;padding:2px 6px;border-radius:10px;font-size:.65rem;font-weight:600;background:#eef3ee;color:#1c4d1e;border:1px solid #86efac;">🟢 '+label+'</span>'
-      : '<span'+titleAttr+' style="display:inline-block;padding:2px 6px;border-radius:10px;font-size:.65rem;font-weight:600;background:#052e16;color:#86efac;border:1px solid #1c4d1e;">🟢 '+label+'</span>';
+      ? '<span'+titleAttr+' style="display:inline-block;padding:2px 6px;border-radius:10px;font-size:.65rem;font-weight:600;background:#FFF3EE;color:#14120F;border:1px solid #86efac;">🟢 '+label+'</span>'
+      : '<span'+titleAttr+' style="display:inline-block;padding:2px 6px;border-radius:10px;font-size:.65rem;font-weight:600;background:#052e16;color:#86efac;border:1px solid #14120F;">🟢 '+label+'</span>';
   }
   return light
-    ? '<span'+titleAttr+' style="display:inline-block;padding:2px 6px;border-radius:10px;font-size:.65rem;font-weight:600;background:#e2ede2;color:#1c4d1e;border:1px solid #7fb47f;">✅ '+label+'</span>'
-    : '<span'+titleAttr+' style="display:inline-block;padding:2px 6px;border-radius:10px;font-size:.65rem;font-weight:600;background:#17351a;color:#7fb47f;border:1px solid #1c4d1e;">✅ '+label+'</span>';
+    ? '<span'+titleAttr+' style="display:inline-block;padding:2px 6px;border-radius:10px;font-size:.65rem;font-weight:600;background:#e2ede2;color:#14120F;border:1px solid #7fb47f;">✅ '+label+'</span>'
+    : '<span'+titleAttr+' style="display:inline-block;padding:2px 6px;border-radius:10px;font-size:.65rem;font-weight:600;background:#14120F;color:#7fb47f;border:1px solid #14120F;">✅ '+label+'</span>';
 }
 
 function buildTable() {
@@ -9320,12 +9320,12 @@ function bdcBuildHtml() {
     tB += p.pu_ht*q*pcb; tN += tot; nbC += q; nbR++;
     rowsHtml +=
       '<tr>' +
-        '<td style="padding:8px 10px;border-bottom:1px solid #e6efe6;font-family:Consolas,monospace;font-size:12px;color:#266327;white-space:nowrap;">'+p.code+'</td>' +
+        '<td style="padding:8px 10px;border-bottom:1px solid #e6efe6;font-family:Consolas,monospace;font-size:12px;color:#FF4D1C;white-space:nowrap;">'+p.code+'</td>' +
         '<td style="padding:8px 10px;border-bottom:1px solid #e6efe6;font-size:13px;color:#1e293b;">'+p.libelle+'</td>' +
-        '<td style="padding:8px 10px;border-bottom:1px solid #e6efe6;text-align:center;font-weight:bold;color:#266327;">'+q+' col.</td>' +
+        '<td style="padding:8px 10px;border-bottom:1px solid #e6efe6;text-align:center;font-weight:bold;color:#FF4D1C;">'+q+' col.</td>' +
         '<td style="padding:8px 10px;border-bottom:1px solid #e6efe6;text-align:center;font-size:12px;color:#64748b;">'+(q*pcb)+' UVC</td>' +
         '<td style="padding:8px 10px;border-bottom:1px solid #e6efe6;text-align:right;color:#374151;">'+bdcFmt(pN)+'</td>' +
-        '<td style="padding:8px 10px;border-bottom:1px solid #e6efe6;text-align:right;font-weight:bold;color:#266327;">'+bdcFmt(tot)+'</td>' +
+        '<td style="padding:8px 10px;border-bottom:1px solid #e6efe6;text-align:right;font-weight:bold;color:#FF4D1C;">'+bdcFmt(tot)+'</td>' +
       '</tr>';
   });
 
@@ -9339,7 +9339,7 @@ function bdcBuildHtml() {
   if (tel) infoItems += '<tr><td style="padding:4px 12px;font-size:12px;color:#64748b;">T\u00e9l\u00e9phone</td><td style="padding:4px 12px;font-size:13px;color:#1e293b;">'+tel+'</td></tr>';
   infoItems += '<tr><td style="padding:4px 12px;font-size:12px;color:#64748b;">Email</td><td style="padding:4px 12px;font-size:13px;color:#1e293b;">'+mail+'</td></tr>';
   infoItems += '<tr><td style="padding:4px 12px;font-size:12px;color:#64748b;">Date commande</td><td style="padding:4px 12px;font-size:13px;color:#1e293b;font-weight:bold;">'+today+'</td></tr>';
-  if (dl) infoItems += '<tr><td style="padding:4px 12px;font-size:12px;color:#64748b;">Livraison souhait\u00e9e</td><td style="padding:4px 12px;font-size:13px;color:#266327;font-weight:bold;">'+livDate+'</td></tr>';
+  if (dl) infoItems += '<tr><td style="padding:4px 12px;font-size:12px;color:#64748b;">Livraison souhait\u00e9e</td><td style="padding:4px 12px;font-size:13px;color:#FF4D1C;font-weight:bold;">'+livDate+'</td></tr>';
   if (com) infoItems += '<tr><td style="padding:4px 12px;font-size:12px;color:#64748b;">Commentaire</td><td style="padding:4px 12px;font-size:13px;color:#1e293b;font-style:italic;">'+com+'</td></tr>';
 
   // ── Version "Outlook-safe" : pas de linear-gradient, box-shadow ni border-radius
@@ -9351,7 +9351,7 @@ function bdcBuildHtml() {
     '<table role="presentation" width="620" cellpadding="0" cellspacing="0" border="0" style="background-color:#ffffff;border:1px solid #e6efe6;">' +
 
     // Header (couleur pleine, pas de degrade)
-    '<tr><td bgcolor="#266327" style="background-color:#266327;padding:24px 28px;">' +
+    '<tr><td bgcolor="#FF4D1C" style="background-color:#FF4D1C;padding:24px 28px;">' +
       '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"><tr>' +
         '<td valign="middle"><div style="font-size:20px;font-weight:bold;color:#ffffff;">Moulin des Moines</div>' +
         '<div style="font-size:13px;color:#bfdbfe;margin-top:4px;">Bon de Commande 2026</div></td>' +
@@ -9366,15 +9366,15 @@ function bdcBuildHtml() {
 
     // Infos commande
     '<tr><td style="padding:20px 28px 0;">' +
-      '<div style="font-size:11px;font-weight:bold;color:#266327;text-transform:uppercase;letter-spacing:1px;margin-bottom:10px;">Informations commande</div>' +
+      '<div style="font-size:11px;font-weight:bold;color:#FF4D1C;text-transform:uppercase;letter-spacing:1px;margin-bottom:10px;">Informations commande</div>' +
       '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#f6f9fd" style="background-color:#f6f9fd;">'+infoItems+'</table>' +
     '</td></tr>' +
 
     // Tableau articles
     '<tr><td style="padding:20px 28px 0;">' +
-      '<div style="font-size:11px;font-weight:bold;color:#266327;text-transform:uppercase;letter-spacing:1px;margin-bottom:10px;">Articles command\u00e9s</div>' +
+      '<div style="font-size:11px;font-weight:bold;color:#FF4D1C;text-transform:uppercase;letter-spacing:1px;margin-bottom:10px;">Articles command\u00e9s</div>' +
       '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border:1px solid #e6efe6;">' +
-        '<tr bgcolor="#266327" style="background-color:#266327;">' +
+        '<tr bgcolor="#FF4D1C" style="background-color:#FF4D1C;">' +
           '<th style="padding:9px 10px;font-size:11px;font-weight:bold;color:#bfdbfe;text-align:left;">Code</th>' +
           '<th style="padding:9px 10px;font-size:11px;font-weight:bold;color:#bfdbfe;text-align:left;">D\u00e9signation</th>' +
           '<th style="padding:9px 10px;font-size:11px;font-weight:bold;color:#bfdbfe;text-align:center;">Colis</th>' +
@@ -9385,9 +9385,9 @@ function bdcBuildHtml() {
         rowsHtml +
         remiseLigne +
         '<tr bgcolor="#eef6fd" style="background-color:#eef6fd;">' +
-          '<td colspan="4" style="padding:10px;font-size:12px;color:#266327;">'+nbR+' r\u00e9f\u00e9rence(s) \u00b7 '+nbC+' colis au total</td>' +
-          '<td style="padding:10px;text-align:right;font-size:12px;color:#266327;font-weight:bold;">TOTAL HT NET</td>' +
-          '<td style="padding:10px;text-align:right;font-size:16px;font-weight:bold;color:#266327;">'+bdcFmt(tN)+'</td>' +
+          '<td colspan="4" style="padding:10px;font-size:12px;color:#FF4D1C;">'+nbR+' r\u00e9f\u00e9rence(s) \u00b7 '+nbC+' colis au total</td>' +
+          '<td style="padding:10px;text-align:right;font-size:12px;color:#FF4D1C;font-weight:bold;">TOTAL HT NET</td>' +
+          '<td style="padding:10px;text-align:right;font-size:16px;font-weight:bold;color:#FF4D1C;">'+bdcFmt(tN)+'</td>' +
         '</tr>' +
       '</table>' +
     '</td></tr>' +
@@ -9396,7 +9396,7 @@ function bdcBuildHtml() {
     '<tr><td style="padding:20px 28px 28px;text-align:center;">' +
       '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border-top:1px solid #e6efe6;"><tr><td style="padding-top:16px;text-align:center;">' +
       '<div style="font-size:11px;color:#94a3b8;">' +
-        'Ce bon de commande a \u00e9t\u00e9 transmis via MDM CRM 2026 \u00b7 R\u00e9alis\u00e9 par <strong style="color:#266327;">LOAC DEV Solutions</strong>' +
+        'Ce bon de commande a \u00e9t\u00e9 transmis via MDM CRM 2026 \u00b7 R\u00e9alis\u00e9 par <strong style="color:#FF4D1C;">LOAC DEV Solutions</strong>' +
       '</div>' +
       '</td></tr></table>' +
     '</td></tr>' +
@@ -9909,7 +9909,7 @@ function boxRecalc() {
         '<td style="padding:.35rem .4rem;font-weight:700;color:var(--blue-p700);">' + (i+1) + '</td>' +
         '<td style="padding:.35rem .4rem;">' + e.code + ' — ' + e.libelle + (e.poids ? ' <span style="color:var(--g500);font-size:.7rem;">' + e.poids + '</span>' : '') + '</td>' +
         '<td style="padding:.35rem .4rem;text-align:center;">' + nbEtages + '</td>' +
-        '<td style="padding:.35rem .4rem;text-align:right;font-weight:700;color:var(--em600,#266327);">' + colis + ' col.</td>' +
+        '<td style="padding:.35rem .4rem;text-align:right;font-weight:700;color:var(--em600,#FF4D1C);">' + colis + ' col.</td>' +
         '<td style="padding:.35rem .4rem;text-align:right;">' + uvc + ' UVC</td>' +
         '<td style="padding:.35rem .4rem;text-align:right;">' + (totalLigne !== null ? totalLigne.toFixed(2).replace('.',',') + '€' : '<span style="color:var(--g400);">—</span>') + '</td>' +
       '</tr>';
@@ -10781,7 +10781,7 @@ function suiviRender() {
     return '<tr>' +
       '<td style="font-weight:600;color:var(--g900);">' + label + '</td>' +
       '<td style="text-align:right;">' + m.nb + '</td>' +
-      td(m.livre, '#266327') +
+      td(m.livre, '#FF4D1C') +
       td(m.facture, 'var(--blue-p700)') +
       td(m.att_fac, '#8f6415') +
       td(m.att_liv, '#6a6f64') +
@@ -11558,7 +11558,7 @@ function dashRenderInactiveClients() {
 
     var actions = '';
     if (c.email) actions += '<a href="mailto:' + cdbEsc(c.email) + '?subject=' + encodeURIComponent('Moulin des Moines — On vous a manqué !') + '" title="Email à ' + cdbEsc(c.email) + '" style="display:inline-flex;width:26px;height:26px;align-items:center;justify-content:center;border-radius:6px;background:var(--blue-p50);color:var(--blue-p700);margin-right:4px;text-decoration:none;">✉️</a>';
-    if (c.telephone) actions += '<a href="tel:' + cdbEsc(c.telephone.replace(/\s+/g,'')) + '" title="Appeler ' + cdbEsc(c.telephone) + '" style="display:inline-flex;width:26px;height:26px;align-items:center;justify-content:center;border-radius:6px;background:#f0fdf4;color:#1c4d1e;text-decoration:none;">📞</a>';
+    if (c.telephone) actions += '<a href="tel:' + cdbEsc(c.telephone.replace(/\s+/g,'')) + '" title="Appeler ' + cdbEsc(c.telephone) + '" style="display:inline-flex;width:26px;height:26px;align-items:center;justify-content:center;border-radius:6px;background:#f0fdf4;color:#14120F;text-decoration:none;">📞</a>';
     if (!actions) actions = '<span style="color:var(--g300);font-size:.68rem;">Pas de contact</span>';
 
     return '<tr style="border-top:1px solid var(--border);cursor:pointer;" onclick="cdbOpenEdit(\'' + c.id + '\')">' +
@@ -11674,8 +11674,8 @@ function dashOpenObjectifs(forceYear) {
       });
     }
     var pct = (val && caReel > 0) ? Math.min(Math.round(caReel / val * 100), 999) : 0;
-    var barColor   = pct >= 100 ? '#266327' : pct >= 75 ? '#b07d1a' : '#e5e7eb';
-    var labelColor = pct >= 100 ? '#266327' : pct >= 75 ? '#8f6415' : '#6b7280';
+    var barColor   = pct >= 100 ? '#FF4D1C' : pct >= 75 ? '#b07d1a' : '#e5e7eb';
+    var labelColor = pct >= 100 ? '#FF4D1C' : pct >= 75 ? '#8f6415' : '#6b7280';
 
     html += '<div style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:10px;padding:.75rem .9rem;">';
     html += '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.4rem;">';
@@ -11807,7 +11807,7 @@ function dashCaRender() {
     var attCell = '<td style="text-align:right;">';
     if (obj > 0 && caTotal > 0) {
       var pct = Math.round(caTotal / obj * 100);
-      var col = pct >= 100 ? '#266327' : pct >= 75 ? '#b07d1a' : '#b0402f';
+      var col = pct >= 100 ? '#FF4D1C' : pct >= 75 ? '#b07d1a' : '#b0402f';
       var icon = pct >= 100 ? '✅' : pct >= 75 ? '⚡' : '⚠️';
       attCell += '<div style="display:flex;flex-direction:column;align-items:flex-end;gap:2px;">';
       attCell += '<span style="font-size:.78rem;font-weight:700;color:'+col+';">' + icon + ' ' + pct + '%</span>';
@@ -11837,7 +11837,7 @@ function dashCaRender() {
       '<td style="text-align:right;">' + dashCaFmt(totAvoirs) + '</td>' +
       '<td style="text-align:right;color:#8f6415;">'+(totalObj ? dashCaFmt(totalObj) : '—')+'</td>' +
       '<td style="text-align:right;">' + (totalObj > 0 && (totCours+totFac) > 0 ?
-        '<span style="font-weight:700;color:'+(Math.round((totCours+totFac)/totalObj*100)>=100?'#266327':'#8f6415')+';font-size:.85rem;">' +
+        '<span style="font-weight:700;color:'+(Math.round((totCours+totFac)/totalObj*100)>=100?'#FF4D1C':'#8f6415')+';font-size:.85rem;">' +
         Math.round((totCours+totFac)/totalObj*100) + '%</span>' : '—') + '</td>' +
     '</tr>'
   ) : '<tr><td colspan="9" style="text-align:center;padding:2rem;color:var(--g500);">Aucune donnée</td></tr>');
@@ -11914,18 +11914,18 @@ function dashRenderRecentOrders(filtered) {
   tbody.innerHTML = recent.map(function(r) {
     var statutBadge;
     if (r.statut === 'facturee') {
-      statutBadge = '<span style="display:inline-block;padding:2px 7px;border-radius:10px;font-size:.65rem;font-weight:600;background:#eef3ee;color:#1c4d1e;">✅ Facturée</span>';
+      statutBadge = '<span style="display:inline-block;padding:2px 7px;border-radius:10px;font-size:.65rem;font-weight:600;background:#FFF3EE;color:#14120F;">✅ Facturée</span>';
     } else if (r.statut === 'avoir') {
       statutBadge = '<span style="display:inline-block;padding:2px 7px;border-radius:10px;font-size:.65rem;font-weight:600;background:#f8ede9;color:#8f3325;">↩ Avoir</span>';
     } else if (r.statut === 'livre') {
       statutBadge = '<span style="display:inline-block;padding:2px 7px;border-radius:10px;font-size:.65rem;font-weight:600;background:#fef9c3;color:#854d0e;">📦 Livré</span>';
     } else {
-      statutBadge = '<span style="display:inline-block;padding:2px 7px;border-radius:10px;font-size:.65rem;font-weight:600;background:#e2ede2;color:#1c4d1e;">⏳ En cours</span>';
+      statutBadge = '<span style="display:inline-block;padding:2px 7px;border-radius:10px;font-size:.65rem;font-weight:600;background:#e2ede2;color:#14120F;">⏳ En cours</span>';
     }
 
     var numFac = r.numFac ? r.numFac : '—';
     var dateD  = r.dateFac || r.dateRef;
-    var caColor = r.statut === 'avoir' ? '#b0402f' : r.statut === 'facturee' ? '#266327' : '#8f6415';
+    var caColor = r.statut === 'avoir' ? '#b0402f' : r.statut === 'facturee' ? '#FF4D1C' : '#8f6415';
 
     return '<tr style="border-bottom:1px solid var(--border);transition:background .1s;" ' +
       'onmouseover="this.style.background=\'var(--blue-p50)\'" onmouseout="this.style.background=\'\'">' +
@@ -11970,7 +11970,7 @@ function dashCaRenderCurrentMonth(filtered, byMonth, months) {
     }
     var diff = val - prevVal;
     var pctDiff = (diff / Math.abs(prevVal)) * 100;
-    var color = diff > 0 ? '#266327' : (diff < 0 ? '#b0402f' : 'var(--g500)');
+    var color = diff > 0 ? '#FF4D1C' : (diff < 0 ? '#b0402f' : 'var(--g500)');
     var arrow = diff > 0 ? '▲' : (diff < 0 ? '▼' : '=');
     el.innerHTML = '<span style="color:'+color+';font-weight:600;">' + arrow + ' ' +
       (Math.abs(pctDiff) < 1 ? '<1%' : (pctDiff > 0 ? '+' : '') + pctDiff.toFixed(0) + '%') +
@@ -12045,7 +12045,7 @@ function dashCaRenderCurrentMonth(filtered, byMonth, months) {
     if (n1Data && n1Data.facture > 0 && cur.facture > 0) {
       var n1Diff = cur.facture - n1Data.facture;
       var n1Pct = n1Diff / n1Data.facture * 100;
-      var n1Color = n1Diff >= 0 ? '#266327' : '#b0402f';
+      var n1Color = n1Diff >= 0 ? '#FF4D1C' : '#b0402f';
       var n1Arrow = n1Diff >= 0 ? '▲' : '▼';
       n1El.innerHTML = '<span style="color:'+n1Color+';">'+n1Arrow+' '+(n1Pct >= 0?'+':'')+n1Pct.toFixed(1)+'%</span>';
       n1DetailEl.textContent = dashCaFmt(cur.facture) + ' vs ' + dashCaFmt(n1Data.facture) + ' en ' + (now.getFullYear()-1);
@@ -12256,7 +12256,7 @@ function dashCaDrawTops(filtered) {
       ? '<div style="display:grid;grid-template-columns:1fr 140px 130px;gap:8px;padding:.3rem 0;border-bottom:2px solid var(--border);margin-bottom:.3rem;">' +
           '<div style="font-size:.6rem;font-weight:700;text-transform:uppercase;color:var(--g400);">Client</div>' +
           '<div style="font-size:.6rem;font-weight:700;text-transform:uppercase;color:var(--blue-p600);text-align:right;">CA Fichier importé</div>' +
-          '<div style="font-size:.6rem;font-weight:700;text-transform:uppercase;color:#1c4d1e;text-align:right;">CA BDC saisis</div>' +
+          '<div style="font-size:.6rem;font-weight:700;text-transform:uppercase;color:#14120F;text-align:right;">CA BDC saisis</div>' +
         '</div>'
       : '';
 
@@ -12282,7 +12282,7 @@ function dashCaDrawTops(filtered) {
       var bdcCol = hasBDC
         ? '<div style="text-align:right;">' +
             (bdc
-              ? '<span style="font-size:.82rem;font-weight:700;color:#1c4d1e;">' + dashCaFmt(bdc.ca) + '</span>' +
+              ? '<span style="font-size:.82rem;font-weight:700;color:#14120F;">' + dashCaFmt(bdc.ca) + '</span>' +
                 '<div style="font-size:.58rem;color:#4ade80;">' + bdc.nb + ' BDC</div>'
               : '<span style="font-size:.7rem;color:var(--g300);">—</span>'
             ) +
@@ -12300,11 +12300,11 @@ function dashCaDrawTops(filtered) {
             '<span style="font-size:.6rem;color:var(--g400);">' + share + '%</span>' +
           '</div>' +
           '<div style="background:var(--g100);border-radius:3px;height:5px;overflow:hidden;">' +
-            '<div style="height:5px;border-radius:3px;background:linear-gradient(90deg,#266327 '+pctFac+'%,var(--blue-p400) '+pctFac+'%);width:'+pct+'%;transition:width .4s;"></div>' +
+            '<div style="height:5px;border-radius:3px;background:linear-gradient(90deg,#FF4D1C '+pctFac+'%,var(--blue-p400) '+pctFac+'%);width:'+pct+'%;transition:width .4s;"></div>' +
           '</div>' +
           '<div style="display:flex;gap:10px;font-size:.6rem;color:var(--g500);margin-top:2px;">' +
             '<span>' + it.nb + ' cmd' + (it.nb>1?'s':'') + '</span>' +
-            '<span style="color:#266327;">✓ ' + dashCaFmt(it.fac) + '</span>' +
+            '<span style="color:#FF4D1C;">✓ ' + dashCaFmt(it.fac) + '</span>' +
             (it.cours > 0 ? '<span style="color:#8f6415;">⏳ ' + dashCaFmt(it.cours) + '</span>' : '') +
           '</div>' +
         '</div>' +
@@ -13374,9 +13374,9 @@ function cdbBuildCATab(c) {
   var moisNoms = ['','Jan','Fév','Mar','Avr','Mai','Juin','Juil','Août','Sep','Oct','Nov','Déc'];
   var fmtCA = function(n){ return n > 0 ? n.toLocaleString('fr-FR',{minimumFractionDigits:2,maximumFractionDigits:2})+' €' : '—'; };
   var fmtPct = function(curr, prev) {
-    if (!prev || prev === 0) return curr > 0 ? '<span style="color:#266327;font-size:.65rem;font-weight:700;">NEW</span>' : '';
+    if (!prev || prev === 0) return curr > 0 ? '<span style="color:#FF4D1C;font-size:.65rem;font-weight:700;">NEW</span>' : '';
     var p = ((curr - prev) / Math.abs(prev) * 100);
-    var col = p > 0 ? '#266327' : '#b0402f';
+    var col = p > 0 ? '#FF4D1C' : '#b0402f';
     var arrow = p > 0 ? '▲' : '▼';
     return '<span style="color:'+col+';font-size:.65rem;font-weight:700;">'+arrow+' '+(p>0?'+':'')+p.toFixed(0)+'%</span>';
   };
@@ -13396,8 +13396,8 @@ function cdbBuildCATab(c) {
   html +=     '<div style="font-size:.68rem;color:var(--g500);margin-top:3px;">vs '+PREV_YEAR+' : '+fmtCA(totPrev)+' '+fmtPct(totCurr,totPrev)+'</div>';
   html +=   '</div>';
   html +=   '<div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:10px;padding:.8rem 1rem;">';
-  html +=     '<div style="font-size:.6rem;font-weight:700;text-transform:uppercase;color:#1c4d1e;margin-bottom:4px;">CA Facturé '+NOW_YEAR+'</div>';
-  html +=     '<div style="font-size:1.4rem;font-weight:800;color:#1c4d1e;">'+fmtCA(totCurrFac)+'</div>';
+  html +=     '<div style="font-size:.6rem;font-weight:700;text-transform:uppercase;color:#14120F;margin-bottom:4px;">CA Facturé '+NOW_YEAR+'</div>';
+  html +=     '<div style="font-size:1.4rem;font-weight:800;color:#14120F;">'+fmtCA(totCurrFac)+'</div>';
   html +=     '<div style="font-size:.68rem;color:var(--g500);margin-top:3px;">'+(totCurr>0?(totCurrFac/totCurr*100).toFixed(0)+'% facturé':'—')+'</div>';
   html +=   '</div>';
   html +=   '<div style="background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:.8rem 1rem;">';
@@ -13422,7 +13422,7 @@ function cdbBuildCATab(c) {
   html += '<th style="padding:.4rem .6rem;text-align:left;font-weight:600;color:var(--g600);">Mois</th>';
   html += '<th style="padding:.4rem .6rem;text-align:right;color:var(--blue-p700);">CA '+NOW_YEAR+'</th>';
   html += '<th style="padding:.4rem .6rem;text-align:right;color:var(--blue-p800);">Cumulé '+NOW_YEAR+'</th>';
-  html += '<th style="padding:.4rem .6rem;text-align:right;color:#266327;">Facturé</th>';
+  html += '<th style="padding:.4rem .6rem;text-align:right;color:#FF4D1C;">Facturé</th>';
   html += '<th style="padding:.4rem .6rem;text-align:right;color:var(--g500);">CA '+PREV_YEAR+'</th>';
   html += '<th style="padding:.4rem .6rem;text-align:right;">Évol.</th>';
   html += '</tr></thead><tbody>';
@@ -13459,7 +13459,7 @@ function cdbBuildCATab(c) {
     } else html += '<span style="color:var(--g300);">—</span>';
     html += '</td>';
     html += '<td style="padding:.35rem .6rem;text-align:right;font-weight:600;color:var(--blue-p800);font-size:.72rem;">'+(cumCur>0?fmtCA(cumCur):'—')+'</td>';
-    html += '<td style="padding:.35rem .6rem;text-align:right;color:#266327;font-size:.72rem;">'+(cur&&cur.fac>0?fmtCA(cur.fac):'—')+'</td>';
+    html += '<td style="padding:.35rem .6rem;text-align:right;color:#FF4D1C;font-size:.72rem;">'+(cur&&cur.fac>0?fmtCA(cur.fac):'—')+'</td>';
     html += '<td style="padding:.35rem .6rem;text-align:right;color:var(--g400);font-size:.72rem;">'+(prv?fmtCA(prv.ca):'—')+'</td>';
     html += '<td style="padding:.35rem .6rem;text-align:right;">'+fmtPct(cur?cur.ca:0, prv?prv.ca:0)+'</td>';
     html += '</tr>';
@@ -13483,7 +13483,7 @@ function cdbBuildCATab(c) {
     html += '<th style="padding:.3rem .5rem;text-align:center;color:var(--g600);">Statut</th>';
     html += '</tr></thead><tbody>';
     recent.forEach(function(r) {
-      var statColor = r.statut==='facturee' ? '#266327' : r.statut==='avoir' ? '#b0402f' : '#8f6415';
+      var statColor = r.statut==='facturee' ? '#FF4D1C' : r.statut==='avoir' ? '#b0402f' : '#8f6415';
       var statLabel = r.statut==='facturee' ? 'Facturé' : r.statut==='avoir' ? 'Avoir' : 'En cours';
       var dateStr = r.dateRef ? r.dateRef.toLocaleDateString('fr-FR') : '—';
       html += '<tr style="border-top:1px solid var(--border);">';
@@ -13514,7 +13514,7 @@ function cdbDrawClientChart(byYearMonth, yearsPresent, moisNoms) {
 
     var labels = moisNoms.slice(1); // Jan…Déc
     // Une couleur par année (la plus récente en avant, ordre croissant pour la légende)
-    var palette = ['#b07d1a', '#60a5e8', '#2563b0', '#6a6f64', '#266327'];
+    var palette = ['#b07d1a', '#60a5e8', '#2563b0', '#6a6f64', '#FF4D1C'];
     var datasets = yearsPresent.map(function(y, idx) {
       var data = [];
       for (var mi = 1; mi <= 12; mi++) {
@@ -13539,7 +13539,7 @@ function cdbDrawClientChart(byYearMonth, yearsPresent, moisNoms) {
       }
       datasets.push({
         type: 'line', label: 'Cumulé ' + curYear, data: cumData,
-        borderColor: '#1c4d1e', backgroundColor: '#1c4d1e', borderWidth: 2,
+        borderColor: '#14120F', backgroundColor: '#14120F', borderWidth: 2,
         pointRadius: 2, pointHoverRadius: 4, tension: .25, fill: false,
         yAxisID: 'yCum', order: 0
       });
@@ -13785,9 +13785,9 @@ function cdbShowCA(id) {
           '<div style="font-size:.62rem;color:var(--g600);font-weight:600;text-transform:uppercase;">Cumul 2025</div>' +
           '<div style="font-size:1rem;font-weight:700;color:var(--g700);">' + fmtCA(cum25) + '</div>' +
         '</div>' +
-        '<div style="padding:.6rem .7rem;background:#f0fdf4;border-radius:7px;border-left:3px solid #266327;">' +
+        '<div style="padding:.6rem .7rem;background:#f0fdf4;border-radius:7px;border-left:3px solid #FF4D1C;">' +
           '<div style="font-size:.62rem;color:var(--g600);font-weight:600;text-transform:uppercase;">Stat 2026 Avril</div>' +
-          '<div style="font-size:1rem;font-weight:700;color:#266327;">' + fmtCA(stat26) + '</div>' +
+          '<div style="font-size:1rem;font-weight:700;color:#FF4D1C;">' + fmtCA(stat26) + '</div>' +
         '</div>' +
         '<div style="padding:.6rem .7rem;background:#fef3c7;border-radius:7px;border-left:3px solid #8f6415;">' +
           '<div style="font-size:.62rem;color:var(--g600);font-weight:600;text-transform:uppercase;">Stat 2025 Avril</div>' +
@@ -14011,7 +14011,7 @@ var ML_TEMPLATES = {
   },
   nouveau: {
     subject: "✨ Nouveauté : découvrez notre dernière innovation bio",
-    body: '<h2 style="color:#266327;">Une nouveauté à découvrir</h2>' +
+    body: '<h2 style="color:#FF4D1C;">Une nouveauté à découvrir</h2>' +
           '<p>Bonjour,</p>' +
           '<p>Nous avons le plaisir de vous présenter un <b>nouveau produit</b> qui vient enrichir notre catalogue :</p>' +
           '<p><i>[Description du produit]</i></p>' +
@@ -14219,8 +14219,8 @@ function mlAiRefreshSettings(){
     else if (p === 'gemini') {
       var gm = mlAiGetGeminiModel();
       st.textContent = gm ? ('✅ Clé OK — modèle : ' + gm) : '✅ Clé enregistrée (modèle détecté au 1er usage)';
-      st.style.color = '#266327';
-    } else { st.textContent = '✅ Clé enregistrée'; st.style.color = '#266327'; }
+      st.style.color = '#FF4D1C';
+    } else { st.textContent = '✅ Clé enregistrée'; st.style.color = '#FF4D1C'; }
   }
 }
 // La configuration vit désormais dans la section IA dédiée
@@ -14473,7 +14473,7 @@ function mlAiRefreshPdf(){
   var cl = document.getElementById('ml-ai-pdf-clear');
   if (nm) {
     if (!src) { nm.textContent = 'Aucun document'; nm.style.color = 'var(--g500)'; }
-    else { nm.textContent = src.name + (src.fromPJ ? ' (pièce jointe du mail)' : ''); nm.style.color = '#266327'; }
+    else { nm.textContent = src.name + (src.fromPJ ? ' (pièce jointe du mail)' : ''); nm.style.color = '#FF4D1C'; }
   }
   if (cl) cl.style.display = mlAiPDF ? 'inline-block' : 'none';
 }
@@ -14993,7 +14993,7 @@ function mlSetPJ(file) {
     document.getElementById('ml-pj-info').style.display = 'flex';
     document.getElementById('ml-pj-drop').style.display = 'none';
     document.getElementById('ml-pj-status').textContent = file.name;
-    document.getElementById('ml-pj-status').style.color = '#266327';
+    document.getElementById('ml-pj-status').style.color = '#FF4D1C';
     if (typeof mlAiRefreshPdf === 'function') mlAiRefreshPdf();
   };
   reader.readAsDataURL(file);
