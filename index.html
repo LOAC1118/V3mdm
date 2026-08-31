@@ -11861,6 +11861,18 @@ function dashRenderArchiveSummary() {
 }
 
 function dashCaRender() {
+  // Masque l'import CA pour les commerciaux (réservé au responsable) — appliqué
+  // à chaque rendu pour être robuste au timing/re-render.
+  try {
+    var _com = (typeof useSharedModel === 'function' && useSharedModel()
+                && typeof isManagerUser === 'function' && !isManagerUser());
+    document.body.classList.toggle('cohor-commercial', !!_com);
+    if (_com) {
+      var _u = document.getElementById('dash-ca-upload'); if (_u) _u.style.setProperty('display', 'none', 'important');
+      var _r = document.getElementById('dash-ca-reload'); if (_r) _r.style.setProperty('display', 'none', 'important');
+    }
+  } catch(e) {}
+
   // Guard : si le DOM du dashboard n'est pas encore prêt, on annule silencieusement
   if (!document.getElementById('dash-ca-year')) return;
 
