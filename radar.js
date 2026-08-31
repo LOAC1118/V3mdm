@@ -113,6 +113,10 @@
       if (!(ca > 0)) return;
       var d = dateCmd(r);
       if (!d || isNaN(d)) return;
+      // Ignore les dates dans le futur (donnée erronée / date mal importée) :
+      // une commande ne peut pas avoir été passée après aujourd'hui, et une telle
+      // date fausserait « la plus récente » et tout le calcul de cadence.
+      if (d.getTime() > now.getTime()) return;
 
       var code = normCode(r.codeClient);
       var key = code.noZero ? 'C:' + code.noZero : 'N:' + normName(r.clientNomKey || r.client);
