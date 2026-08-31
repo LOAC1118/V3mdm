@@ -5048,6 +5048,17 @@ function showSection(name, tabEl, sideEl) {
   document.querySelectorAll('.mmenu-item[data-sec="'+name+'"]').forEach(t=>t.classList.add('active'));
   updateMobileNav(name);
   tnavSync(name);
+  // Masque l'import CA (réservé au responsable) à chaque affichage — infaillible.
+  try {
+    var _com = (typeof useSharedModel === 'function' && useSharedModel()
+                && typeof isManagerUser === 'function' && !isManagerUser());
+    document.body.classList.toggle('cohor-commercial', !!_com);
+    if (_com) {
+      ['dash-ca-upload','dash-ca-reload'].forEach(function(id){
+        var e = document.getElementById(id); if (e) e.style.setProperty('display','none','important');
+      });
+    }
+  } catch(e) {}
   if (name==='dashboard') { refreshDashboard(); if (typeof dashRenderInactiveClients === 'function') dashRenderInactiveClients(); }
   if (name==='radar') { setTimeout(function(){ if (typeof RadarClients !== 'undefined') RadarClients.mount(); }, 80); }
   if (name==='tournees') { setTimeout(function(){ if (typeof Tournees !== 'undefined') Tournees.mount(); }, 80); }
