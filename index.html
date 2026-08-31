@@ -1419,6 +1419,13 @@ thead th.ts-active { text-decoration:underline; text-underline-offset:3px; }
   .badge, .tag, .chip{ border-radius:99px; }
 </style>
 <!-- ═══ COHOR-GLOBAL-END ═══ -->
+<!-- ═══ COHOR-ROLE-START — interface réservée au responsable ═══ -->
+<style id="cohor-role">
+  /* Import du fichier CA national : masqué pour les commerciaux */
+  body.cohor-commercial #dash-ca-upload,
+  body.cohor-commercial #dash-ca-reload { display:none !important; }
+</style>
+<!-- ═══ COHOR-ROLE-END ═══ -->
 </head>
 <body>
 <script>
@@ -3909,7 +3916,7 @@ var BRAND_SCOPED_COLLECTIONS = ['clients','contacts','prospects','commandes','co
 //                        (étape 2b) pour basculer toute l'équipe.
 // POUR ANNULER LA BASCULE : remettre PROD_TEAM_MODE = false.
 var PROD_TEAM_MODE = true;
-var PROD_TEAM_ADMIN_ONLY = true;
+var PROD_TEAM_ADMIN_ONLY = false;
 
 function useSharedModel() {
   try {
@@ -4403,7 +4410,7 @@ function isManagerUser() {
 // Le manager (et l'admin) voient tout. En prod (modèle A), aucun filtrage.
 function roleAllowsContact(c) {
   try {
-    if (typeof __USE_TEST === 'undefined' || !__USE_TEST) return true; // prod modèle A : silos déjà séparés
+    if (!useSharedModel()) return true; // hors modèle équipe : pas de cloisonnement
     if (isManagerUser()) return true;
     if (!currentUser) return true;
     var myUid = currentUser.uid;
@@ -4416,7 +4423,7 @@ function roleAllowsContact(c) {
 }
 function roleFilterContacts(list) {
   if (!Array.isArray(list)) return list;
-  if (typeof __USE_TEST === 'undefined' || !__USE_TEST || isManagerUser()) return list;
+  if (!useSharedModel() || isManagerUser()) return list;
   return list.filter(roleAllowsContact);
 }
 
@@ -4429,7 +4436,7 @@ function roleFilterContacts(list) {
 function contactsQuery() {
   var col = bcol('contacts');
   try {
-    if (typeof __USE_TEST !== 'undefined' && __USE_TEST && currentUser && !isManagerUser()) {
+    if (useSharedModel() && currentUser && !isManagerUser()) {
       return col.where('owner', '==', currentUser.uid);
     }
   } catch(e) {}
@@ -4438,7 +4445,7 @@ function contactsQuery() {
 
 // Un commercial cloisonné (bac à sable) ? (manager/prod = false)
 function cdbScopedCommercial() {
-  try { return (typeof __USE_TEST !== 'undefined' && __USE_TEST && !!currentUser && !isManagerUser()); }
+  try { return (useSharedModel() && !!currentUser && !isManagerUser()); }
   catch(e) { return false; }
 }
 // Union robuste : clients dont je suis propriétaire (owner==uid) OU rattachés à
@@ -4463,7 +4470,7 @@ function cdbFetchContactsScoped() {
 function roleFilterCaRows(rows) {
   try {
     if (!Array.isArray(rows)) return rows;
-    if (typeof __USE_TEST === 'undefined' || !__USE_TEST || isManagerUser()) return rows;
+    if (!useSharedModel() || isManagerUser()) return rows;
     function nName(s){ return String(s||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/\s+/g,' ').trim(); }
     function nCode(s){ var str=String(s||'').trim(); if(str.endsWith('.0')) str=str.slice(0,-2); var nz=str.replace(/^0+/,'')||str; return {full:str,noZero:nz}; }
     var byCode={}, byNoZero={}, byName={};
@@ -4488,7 +4495,7 @@ function roleReapplyCaFilter() {
 // (owner) ou si son client est dans sa base filtrée. Manager/prod : tout.
 function roleAllowsCommande(o) {
   try {
-    if (typeof __USE_TEST === 'undefined' || !__USE_TEST || isManagerUser()) return true;
+    if (!useSharedModel() || isManagerUser()) return true;
     if (!currentUser) return true;
     if (o.owner && o.owner === currentUser.uid) return true;
     function nName(s){ return String(s||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/\s+/g,' ').trim(); }
@@ -4848,6 +4855,12 @@ async function showApp() {
   await migrateLegacyDataToCurrentUser();
   loadStockMapFromCache();
   initAdminAccountsUI();
+  try {
+    // Interface commerciale : masque l'import CA (réservé au responsable).
+    var isCommercial = (typeof useSharedModel === 'function' && useSharedModel()
+                        && typeof isManagerUser === 'function' && !isManagerUser());
+    document.body.classList.toggle('cohor-commercial', !!isCommercial);
+  } catch(e) {}
   // Non bloquant : le démarrage ne doit jamais dépendre de ces appels.
   // Réconciliation en arrière-plan (non bloquant). Le blocage d'un compte
   // désactivé est déjà géré proprement plus haut, avant le chargement.
@@ -10864,6 +10877,11 @@ function dashCaReset() {
 
 function dashCaLoad(file) {
   if (!file) return;
+  // Import du fichier national réservé au responsable (admin/manager).
+  if (useSharedModel() && typeof isManagerUser === 'function' && !isManagerUser()) {
+    if (typeof toast === 'function') toast("L'import du fichier CA est réservé à votre responsable.", 'err');
+    return;
+  }
   if (typeof XLSX === 'undefined') {
     withXLSX(function() { dashCaLoad(file); });
     return;
@@ -15560,7 +15578,7 @@ if ('serviceWorker' in navigator) {
 <script src="alertes.js?v=1"></script>
 <script src="paie-sim.js?v=1"></script>
 <script src="remises-accord.js?v=1"></script>
-<script src="equipe.js?v=11"></script>
+<script src="equipe.js?v=12"></script>
 <script src="fiche360.js?v=1"></script>
 <script src="offline-status.js?v=1"></script>
 <script>

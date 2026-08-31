@@ -388,7 +388,8 @@
   // Bac à sable (modèle B) uniquement. Idempotent (ne retouche rien après coup).
   async function reconcile() {
     try {
-      if (typeof __USE_TEST === 'undefined' || !__USE_TEST) return;
+      var _team = (typeof useSharedModel === 'function') ? useSharedModel() : (typeof __USE_TEST !== 'undefined' && __USE_TEST);
+      if (!_team) return;
       if (!CU()) return;
       var uid = CU().uid, mail = (CU().email || '').toLowerCase();
       if (!mail) return;
