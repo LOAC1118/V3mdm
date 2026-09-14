@@ -1684,7 +1684,7 @@ thead th.ts-active { text-decoration:underline; text-underline-offset:3px; }
       <svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="8" cy="6" r="3"/><path d="M2 14c0-3 2.7-5 6-5s6 2 6 5"/><path d="M12 3v4M10 5h4"/></svg>
       Nouveau contact
     </div>
-    <div class="nav-item cohor-import-only" onclick="openSyncModal()" style="color:#e8c98a;margin-top:2px;">
+    <div class="nav-item" onclick="openSyncModal()" style="color:#e8c98a;margin-top:2px;">
       <svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" style="color:#e8c98a;opacity:1;"><path d="M2 8A6 6 0 0 1 13 5"/><path d="M14 8A6 6 0 0 1 3 11"/><polyline points="11,3 14,5 11,7"/><polyline points="5,9 2,11 5,13"/></svg>
       Synchroniser données
     </div>
@@ -10929,11 +10929,6 @@ function dashCaReset() {
 
 function dashCaLoad(file) {
   if (!file) return;
-  // Import du fichier national réservé au responsable (admin/manager).
-  if (useSharedModel() && typeof isManagerUser === 'function' && !isManagerUser()) {
-    if (typeof toast === 'function') toast("L'import du fichier CA est réservé à votre responsable.", 'err');
-    return;
-  }
   if (typeof XLSX === 'undefined') {
     withXLSX(function() { dashCaLoad(file); });
     return;
@@ -15416,14 +15411,95 @@ window.addEventListener('load', function() {
 var syncPendingCmd = null;  // fichier commandes en attente
 var syncPendingStk = null;  // fichier stocks en attente
 
+// ─── IMPORTS COMMERCIAL (sa base clients + ses commandes) ─────────────────
+// Import clients ADDITIF et cloisonné : ajoute/met à jour SES clients (rattachés
+// à lui), sans jamais supprimer la base des autres. Clé de dédoublonnage : numClient.
+function comApplyClients(rows) {
+  if (!rows || !rows.length) { toast('Fichier vide', 'err'); return; }
+  var meMail = (currentUser && currentUser.email ? currentUser.email : '').toLowerCase();
+  var meUid  = currentUser ? currentUser.uid : '';
+  var meRegion = '';
+  try { var mm = (teamMembersCache || []).find(function(x){ return x.email === meMail; }); if (mm) meRegion = mm.region || ''; } catch(e) {}
+  var byNum = {};
+  cdbContacts.forEach(function(c){ if (c.numClient) byNum[String(c.numClient).trim()] = c; });
+
+  var parsed = [], added = 0, updated = 0;
+  rows.forEach(function(row, ix) {
+    if (!row || typeof row !== 'object') return;
+    var c = {};
+    Object.keys(row).forEach(function(col) {
+      var ln = String(col).toLowerCase().trim(), v = row[col];
+      if (v === '' || v == null) return;
+      if (ln === 'code client' || ln === 'numclient') c.numClient = String(v).trim();
+      else if (ln === 'raison sociale' || ln === 'nom') c.nom = String(v).trim();
+      else if (ln === 'mail' || ln === 'email' || ln === 'e-mail') c.email = String(v).trim().toLowerCase();
+      else if (ln === 'téléphone' || ln === 'telephone' || ln === 'tel') c.telephone = String(v).trim();
+      else if (ln === 'adresse') { if (!c.adresse) c.adresse = String(v).trim(); }
+      else if (ln === 'code postal' || ln === 'cp') c.cp = String(v).trim();
+      else if (ln === 'ville') c.ville = String(v).trim();
+      else if (ln === 'groupe') c.groupe = String(v).trim();
+      else if (ln === 'prospect') c.prospect = (v == 1 || String(v).toLowerCase() === 'oui' || String(v).toLowerCase() === 'true') ? 1 : 0;
+      else if (ln.indexOf('cumul') >= 0 && ln.indexOf('2026') >= 0) c.cumul2026 = parseFloat(String(v).replace(',','.').replace(/[^\d.\-]/g,'')) || 0;
+      else if (ln.indexOf('cumul') >= 0 && ln.indexOf('2025') >= 0) c.cumul2025 = parseFloat(String(v).replace(',','.').replace(/[^\d.\-]/g,'')) || 0;
+    });
+    if (!(c.numClient || c.nom)) return;
+    var ex = c.numClient ? byNum[String(c.numClient).trim()] : null;
+    var merged = ex ? Object.assign({}, ex, c) : Object.assign({ id: 'c_' + Date.now() + '_' + ix }, c);
+    merged.ownerEmail = meMail; merged.owner = meUid; if (meRegion) merged.secteur = meRegion;
+    parsed.push(merged);
+    if (ex) updated++; else added++;
+  });
+  if (!parsed.length) { toast('Aucun client valide dans le fichier', 'err'); return; }
+  if (!confirm('Importer ' + parsed.length + ' client(s) dans VOTRE base ?\n(' + added + ' nouveau(x), ' + updated + ' mis à jour)\nAucun client existant n\'est supprimé.')) return;
+
+  var i = 0;
+  (function next() {
+    if (i >= parsed.length) {
+      parsed.forEach(function(c){ var k = cdbContacts.findIndex(function(x){ return x.id === c.id; }); if (k >= 0) cdbContacts[k] = c; else cdbContacts.push(c); });
+      try { localStorage.setItem(CDB_CACHE_KEY(), JSON.stringify(cdbContacts)); } catch(e) {}
+      if (typeof cdbRender === 'function') cdbRender();
+      toast('✅ ' + parsed.length + ' clients importés dans votre base', 'ok');
+      closeSyncModalCom();
+      return;
+    }
+    var b = db.batch(), end = Math.min(i + 400, parsed.length);
+    for (var j = i; j < end; j++) b.set(bcol('contacts').doc(parsed[j].id), parsed[j], { merge: true });
+    b.commit().then(function(){ i = end; next(); }).catch(function(e){ toast('Erreur : ' + (e.code || e.message), 'err'); });
+  })();
+}
+function comImportClients(file) {
+  if (!file) return;
+  if (typeof XLSX === 'undefined') { withXLSX(function(){ comImportClients(file); }); return; }
+  var r = new FileReader();
+  r.onload = function(e) {
+    try {
+      var wb = XLSX.read(e.target.result, { type: 'array' });
+      var ws = wb.Sheets[wb.SheetNames[0]];
+      var rows = XLSX.utils.sheet_to_json(ws, { defval: '' });
+      comApplyClients(rows);
+    } catch (err) { toast('Lecture impossible : ' + err.message, 'err'); }
+  };
+  r.readAsArrayBuffer(file);
+}
+function comImportCmd(file) {
+  if (!file) return;
+  dashCaLoad(file);          // accumulation par n° de commande (sûr)
+  closeSyncModalCom();
+}
+
 function openSyncModal() {
-  // Centre d'imports (fichiers nationaux) réservé au responsable (admin/manager).
+  // Commercial : fenêtre d'import personnelle (ses clients + ses commandes).
+  // Admin / directeur : fenêtre nationale complète.
   if (typeof useSharedModel === 'function' && useSharedModel()
       && typeof isManagerUser === 'function' && !isManagerUser()) {
-    if (typeof toast === 'function') toast("Les imports de fichiers sont réservés à votre responsable.", 'err');
-    return;
+    var cm = document.getElementById('sync-modal-com');
+    if (cm) { cm.style.display = 'flex'; return; }
   }
   document.getElementById('sync-modal').style.display = 'flex';
+}
+function closeSyncModalCom() {
+  var cm = document.getElementById('sync-modal-com');
+  if (cm) cm.style.display = 'none';
 }
 
 function closeSyncModal() {
@@ -15695,6 +15771,60 @@ if ('serviceWorker' in navigator) {
   </div>
 </div>
 
+<!-- ═══ FENÊTRE D'IMPORT COMMERCIAL (ses clients + ses commandes) ═══ -->
+<div id="sync-modal-com" style="display:none;position:fixed;inset:0;background:rgba(20,18,15,.55);z-index:99999;align-items:center;justify-content:center;">
+  <div style="background:#fff;border-radius:16px;width:min(520px,95vw);max-height:90vh;overflow-y:auto;box-shadow:0 24px 64px rgba(0,0,0,.35);">
+    <div style="background:#14120F;border-radius:16px 16px 0 0;padding:1.1rem 1.4rem;display:flex;align-items:center;justify-content:space-between;">
+      <div>
+        <div style="font-size:1rem;font-weight:700;color:#fff;">📥 Mes imports</div>
+        <div style="font-size:.72rem;color:rgba(255,255,255,.6);margin-top:2px;">Mettez à jour votre base clients et vos statistiques</div>
+      </div>
+      <button onclick="closeSyncModalCom()" style="background:rgba(255,255,255,.15);border:none;border-radius:7px;padding:5px 9px;color:#fff;font-size:1.1rem;cursor:pointer;line-height:1;">✕</button>
+    </div>
+    <div style="padding:1.25rem;display:flex;flex-direction:column;gap:1rem;">
+
+      <!-- Ma base clients -->
+      <div style="border:1px solid #E3DFD7;border-radius:12px;overflow:hidden;">
+        <div style="background:#FFF4EF;padding:.75rem 1rem;border-bottom:1px solid #E3DFD7;">
+          <div style="font-size:.85rem;font-weight:700;color:#14120F;">👥 Ma base clients</div>
+          <div style="font-size:.7rem;color:#8A8F86;margin-top:2px;">Ajoute ou met à jour VOS clients (Excel, même format que d'habitude). Aucun client existant n'est supprimé.</div>
+        </div>
+        <div style="padding:1rem;">
+          <label for="com-cli-file" style="display:flex;align-items:center;gap:10px;border:2px dashed #FF9366;border-radius:9px;padding:.9rem 1rem;cursor:pointer;background:#FFF8F4;">
+            <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" style="width:24px;height:24px;color:#FF4D1C;flex-shrink:0;"><path d="M3 14v3h14v-3M10 3v9M7 6l3-3 3 3"/></svg>
+            <div>
+              <div style="font-size:.82rem;font-weight:600;color:#E03A0C;">Glisser ou cliquer pour sélectionner</div>
+              <div style="font-size:.7rem;color:#8A8F86;">Excel ou CSV · votre base clients</div>
+            </div>
+          </label>
+          <input type="file" id="com-cli-file" accept=".xlsx,.xls,.csv" style="display:none;" onchange="comImportClients(this.files[0])"/>
+        </div>
+      </div>
+
+      <!-- Mes commandes -->
+      <div style="border:1px solid #E3DFD7;border-radius:12px;overflow:hidden;">
+        <div style="background:#FFF4EF;padding:.75rem 1rem;border-bottom:1px solid #E3DFD7;">
+          <div style="font-size:.85rem;font-weight:700;color:#14120F;">📊 Mes commandes</div>
+          <div style="font-size:.7rem;color:#8A8F86;margin-top:2px;">Met à jour VOTRE analyse CA (fichier commandes, même format). Les commandes s'accumulent.</div>
+        </div>
+        <div style="padding:1rem;">
+          <label for="com-cmd-file" style="display:flex;align-items:center;gap:10px;border:2px dashed #FF9366;border-radius:9px;padding:.9rem 1rem;cursor:pointer;background:#FFF8F4;">
+            <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" style="width:24px;height:24px;color:#FF4D1C;flex-shrink:0;"><path d="M3 14v3h14v-3M10 3v9M7 6l3-3 3 3"/></svg>
+            <div>
+              <div style="font-size:.82rem;font-weight:600;color:#E03A0C;">Glisser ou cliquer pour sélectionner</div>
+              <div style="font-size:.7rem;color:#8A8F86;">Excel ou CSV · vos commandes</div>
+            </div>
+          </label>
+          <input type="file" id="com-cmd-file" accept=".xlsx,.xls,.csv" style="display:none;" onchange="comImportCmd(this.files[0])"/>
+        </div>
+      </div>
+
+      <div style="display:flex;justify-content:flex-end;">
+        <button onclick="closeSyncModalCom()" style="padding:.5rem 1.2rem;border:1px solid #E3DFD7;border-radius:8px;background:#fff;color:#40463c;font-size:.82rem;cursor:pointer;">Fermer</button>
+      </div>
+    </div>
+  </div>
+</div>
 <!-- RADAR CLIENTS — module d'alertes commerciales -->
 <script src="radar.js?v=5"></script>
 <script src="tournees.js?v=4"></script>
