@@ -123,11 +123,11 @@
 
   async function render(host) {
     injectCSS();
-    if (typeof isAdminUser === 'function' && !isAdminUser()) {
-      host.innerHTML = '<div class="eq-empty">Cet écran est réservé au manager.</div>';
+    await load();
+    if (!(typeof isManagerUser === 'function' && isManagerUser())) {
+      host.innerHTML = '<div class="eq-empty">Cet écran est réservé au directeur commercial et à l\'administrateur.</div>';
       return;
     }
-    await load();
     var list = (_roster && _roster.length) ? _roster.slice() : null;
 
     var body = list
@@ -176,9 +176,9 @@
     renderAccounts(host);
     if (typeof __USE_TEST !== 'undefined' && __USE_TEST) appendMigration(host);
     try {
-      var _team  = (typeof useSharedModel === 'function') && useSharedModel();
-      var _admin = (typeof isAdminUser === 'function') && isAdminUser();
-      if (_team && _admin) appendAttribution(host);
+      var _team = (typeof useSharedModel === 'function') && useSharedModel();
+      var _mgr  = (typeof isManagerUser === 'function') && isManagerUser();
+      if (_team && _mgr) appendAttribution(host);
     } catch (e) {}
   }
 
@@ -432,32 +432,90 @@
   // ── Comptes & accès (chemin A : gestion depuis l'app) ──
   function renderAccounts(host) {
     var wrap = host.querySelector('.eq-wrap'); if (!wrap) return;
+    var viewerAdmin   = (typeof isAdminUser === 'function' && isAdminUser());
+    var viewerManager = (typeof isManagerUser === 'function' && isManagerUser());
+    if (!viewerManager) return;
+
+    function clientCount(email) {
+      try { return (window.cdbContacts || []).filter(function (c) { return (c.ownerEmail || '').toLowerCase() === (email || '').toLowerCase(); }).length; }
+      catch (e) { return 0; }
+    }
+    function roleInfo(m) {
+      var em = (m.email || '').toLowerCase();
+      var admins = (typeof ADMIN_EMAILS !== 'undefined') ? ADMIN_EMAILS.map(function (x) { return String(x).toLowerCase(); }) : [];
+      if (admins.indexOf(em) >= 0) return { t: 'Admin', bg: '#efe6ff', c: '#6d28d9' };
+      if (m.role === 'manager')    return { t: 'Directeur', bg: '#eaf5ee', c: '#1f7a34' };
+      return { t: 'Commercial', bg: '#eef1ec', c: '#5a5f56' };
+    }
+
     var box = document.createElement('div');
     box.style.cssText = 'margin-top:26px';
     var rows = (_roster || []).map(function (m) {
       var actif = (m.actif !== false);
       var created = !!m.accountCreated;
       var bid = 'acc-st-' + slugMail(m.email);
+      var ri = roleInfo(m);
+      var isAdminRow = (ri.t === 'Admin');
+      var nb = clientCount(m.email);
+
+      var roleCtl = '';
+      if (viewerAdmin && !isAdminRow) {
+        roleCtl = '<select class="eq-mini" data-act="role" title="Changer le rôle" style="padding:5px 8px;">'
+          + '<option value="commercial"' + (m.role !== 'manager' ? ' selected' : '') + '>Commercial</option>'
+          + '<option value="manager"'    + (m.role === 'manager' ? ' selected' : '') + '>Directeur</option>'
+          + '</select>';
+      }
+      var actions;
+      if (isAdminRow) {
+        actions = '<button class="eq-mini" data-act="reset">Renvoyer mdp</button>';
+      } else {
+        actions = '<button class="eq-mini" data-act="create">Créer</button>'
+          + '<button class="eq-mini" data-act="reset">Renvoyer mdp</button>'
+          + '<button class="eq-mini" data-act="toggle">' + (actif ? 'Désactiver' : 'Réactiver') + '</button>'
+          + roleCtl
+          + (viewerAdmin ? '<button class="eq-mini eq-mini-danger" data-act="delete">Retirer</button>' : '');
+      }
+
       return '<div class="eq-acc" data-email="' + esc(m.email) + '">'
-        + '<div class="eq-acc-main"><div class="eq-acc-nom">' + esc(m.nom || m.email) + '</div>'
-        +   '<div class="eq-acc-mail">' + esc(m.email) + '</div></div>'
+        + '<div class="eq-acc-main">'
+        +   '<div class="eq-acc-nom">' + esc(m.nom || m.email)
+        +     ' <span class="eq-badge" style="background:' + ri.bg + ';color:' + ri.c + ';">' + ri.t + '</span></div>'
+        +   '<div class="eq-acc-mail">' + esc(m.email) + (m.region ? (' · ' + esc(m.region)) : '') + ' · ' + nb + ' client' + (nb > 1 ? 's' : '') + '</div>'
+        + '</div>'
         + '<div><span id="' + bid + '" class="eq-badge ' + (created ? 'eq-badge-ok' : 'eq-badge-none') + '">' + (created ? 'compte créé' : 'pas de compte') + '</span>'
         +   (actif ? '' : ' <span class="eq-badge eq-badge-off">désactivé</span>') + '</div>'
-        + '<div class="eq-acc-actions">'
-        +   '<button class="eq-mini" data-act="create">Créer le compte</button>'
-        +   '<button class="eq-mini" data-act="reset">Renvoyer mdp</button>'
-        +   '<button class="eq-mini" data-act="toggle">' + (actif ? 'Désactiver' : 'Réactiver') + '</button>'
-        +   '<button class="eq-mini eq-mini-danger" data-act="delete">Retirer</button>'
-        + '</div></div>';
+        + '<div class="eq-acc-actions">' + actions + '</div></div>';
     }).join('');
+
+    var intro = viewerAdmin
+      ? 'Crée les comptes, renvoie un mot de passe, active/désactive, change le rôle ou retire un accès.'
+      : 'Crée les comptes de tes commerciaux, renvoie un mot de passe, active ou désactive un accès.';
+    // Synthèse de pilotage (vision d'ensemble équipe)
+    var _members = (_roster || []);
+    var _nbMembers = _members.length;
+    var _nbActifs = _members.filter(function(x){ return x.actif !== false; }).length;
+    var _nbCrees = _members.filter(function(x){ return !!x.accountCreated; }).length;
+    var _nbAttente = _nbMembers - _nbCrees;
+    var _nbClients = 0; try { _members.forEach(function(x){ _nbClients += clientCount(x.email); }); } catch(e) {}
+    function _stat(v, lbl, col) {
+      return '<div style="flex:1;min-width:90px;background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:.6rem .8rem;">'
+        + '<div style="font:700 1.15rem/1 \'Inter\',sans-serif;color:' + (col || '#1a1a1a') + ';">' + v + '</div>'
+        + '<div style="font:600 .6rem/1.2 \'Inter\',sans-serif;text-transform:uppercase;letter-spacing:.05em;color:#9aa096;margin-top:3px;">' + lbl + '</div></div>';
+    }
+    var summary = '<div style="display:flex;gap:8px;flex-wrap:wrap;margin:4px 0 16px;">'
+      + _stat(_nbMembers, 'Membres')
+      + _stat(_nbActifs, 'Actifs', '#1f7a34')
+      + _stat(_nbCrees, 'Comptes créés')
+      + _stat(_nbAttente, 'À créer', _nbAttente ? '#b57500' : '#1a1a1a')
+      + _stat(_nbClients, 'Clients attribués', '#FF4D1C')
+      + '</div>';
+
     box.innerHTML = '<div class="eq-h" style="margin-top:10px"><h2 style="font:600 17px/1.1 \'Fraunces\',Georgia,serif">Comptes &amp; accès</h2>'
-      + '<p>Crée les comptes de connexion, renvoie un e-mail de mot de passe, active/désactive ou retire un accès. Tu restes connecté pendant la création.</p></div>'
+      + '<p>' + intro + ' Tu restes connecté pendant la création.</p></div>'
+      + summary
       + (rows || '<div class="eq-empty">Enregistre d\'abord l\'équipe pour gérer les comptes.</div>');
     wrap.appendChild(box);
 
-    // Le statut vient du référentiel (accountCreated, posé à la création via l'app).
-    // On tente une vérification Firebase qui ne peut que CONFIRMER un compte
-    // (jamais l'infirmer) — sans effet si la protection anti-énumération est active.
     (_roster || []).forEach(function (m) {
       if (m.accountCreated) return;
       var el = document.getElementById('acc-st-' + slugMail(m.email));
@@ -472,8 +530,7 @@
     box.addEventListener('click', function (e) {
       var btn = e.target.closest && e.target.closest('button[data-act]'); if (!btn) return;
       var rowEl = btn.closest('.eq-acc'); if (!rowEl) return;
-      var email = rowEl.getAttribute('data-email');
-      var m = (_roster || []).find(function (x) { return (x.email || '') === email; });
+      var m = (_roster || []).find(function (x) { return (x.email || '') === rowEl.getAttribute('data-email'); });
       if (!m) return;
       var act = btn.getAttribute('data-act');
       if (act === 'create') accCreate(m, host);
@@ -481,6 +538,28 @@
       else if (act === 'toggle') accToggle(m, host);
       else if (act === 'delete') accDelete(m, host);
     });
+    box.addEventListener('change', function (e) {
+      var sel = e.target.closest && e.target.closest('select[data-act="role"]'); if (!sel) return;
+      var rowEl = sel.closest('.eq-acc'); if (!rowEl) return;
+      var m = (_roster || []).find(function (x) { return (x.email || '') === rowEl.getAttribute('data-email'); });
+      if (m) accSetRole(m, sel.value, host);
+    });
+  }
+
+  // Changement de rôle (admin uniquement) : commercial ↔ directeur.
+  async function accSetRole(m, newRole, host) {
+    if (!(typeof isAdminUser === 'function' && isAdminUser())) { if (typeof toast === 'function') toast('Le changement de rôle est réservé à l\'administrateur.', 'err'); return; }
+    if (!m || !m._id) return;
+    var role = (newRole === 'manager') ? 'manager' : 'commercial';
+    try {
+      await db.collection('equipe').doc(m._id).set({ role: role }, { merge: true });
+      m.role = role;
+      var mgr = (_roster || []).filter(function (x) { return x.role === 'manager' && x.email; }).map(function (x) { return x.email.toLowerCase(); });
+      ['loacdev@outlook.fr', 'cspoto@moulindesmoines.com'].forEach(function (e) { if (mgr.indexOf(e) < 0) mgr.push(e); });
+      await db.collection('roles').doc('managers').set({ emails: mgr, majAt: firebase.firestore.FieldValue.serverTimestamp() }, { merge: true });
+      if (typeof toast === 'function') toast('Rôle mis à jour : ' + (role === 'manager' ? 'Directeur' : 'Commercial'), 'ok');
+      render(host);
+    } catch (e) { if (typeof toast === 'function') toast('Échec : ' + (e.code || e.message), 'err'); }
   }
 
   // Crée le compte via une instance Firebase SECONDAIRE → l'admin reste connecté.
@@ -523,6 +602,7 @@
   }
 
   async function accDelete(m, host) {
+    if (!(typeof isAdminUser === 'function' && isAdminUser())) { if (typeof toast === 'function') toast('Le retrait d\'un compte est réservé à l\'administrateur.', 'err'); return; }
     if (!m || !m._id) return;
     if (!window.confirm('Retirer ' + (m.nom || m.email) + ' de l\'équipe ? Son accès sera bloqué. (L\'identifiant technique de connexion subsistera jusqu\'à la mise en place du serveur.)')) return;
     try { await db.collection('equipe').doc(m._id).delete(); if (typeof toast === 'function') toast('Membre retiré', 'ok'); render(host); }
