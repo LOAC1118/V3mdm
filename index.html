@@ -2111,6 +2111,7 @@ thead th.ts-active { text-decoration:underline; text-underline-offset:3px; }
       <button class="btn btn-ghost" style="font-size:1rem;padding:.34rem .58rem;line-height:1;" onclick="resetBDC()" title="Effacer la commande" aria-label="Effacer la commande">🗑</button>
       <div style="display:flex;gap:5px;">
         <button class="btn btn-primary" style="padding:.4rem .62rem;line-height:1;" onclick="bdcSendOrder()" title="Envoyer la commande" aria-label="Envoyer la commande"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" style="width:16px;height:16px;display:block;"><path d="M18 2 8.5 11.5"/><path d="M18 2l-6 16-3.5-6.5L2 8z"/></svg></button>
+        <button class="btn btn-ghost" style="padding:.4rem .62rem;line-height:1;" onclick="bdcExportPdf()" title="Exporter le bon de commande en PDF" aria-label="Exporter en PDF"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" style="width:16px;height:16px;display:block;"><path d="M6 2h6l4 4v12H6z" transform="translate(-1,0)"/><path d="M11 2v4h4"/><path d="M6.5 12.5h5M6.5 15h3.5"/></svg></button>
         <button class="btn btn-ghost" style="padding:.4rem .62rem;line-height:1;border-color:var(--blue-p300);color:var(--blue-p700);" onclick="bdcOpenOutlook()" title="Envoyer par email" aria-label="Envoyer par email"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" style="width:16px;height:16px;display:block;"><rect x="2" y="4.5" width="16" height="11" rx="2"/><path d="M2.5 6l7.5 5 7.5-5"/></svg></button>
       </div>
     </div>
@@ -2176,6 +2177,9 @@ thead th.ts-active { text-decoration:underline; text-underline-offset:3px; }
             <div id="bdc-spinner" style="display:none;width:11px;height:11px;border:2px solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;animation:spin .7s linear infinite;margin-right:5px;"></div>
             <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" style="width:18px;height:18px;display:block;"><path d="M18 2 8.5 11.5"/><path d="M18 2l-6 16-3.5-6.5L2 8z"/></svg>
             <span id="bdc-send-label" style="display:none;"></span>
+          </button>
+          <button class="btn btn-ghost" style="flex:0 0 auto;justify-content:center;border-color:var(--blue-p300);color:var(--blue-p700);background:var(--blue-p50);" onclick="bdcExportPdf()" title="Exporter en PDF" aria-label="Exporter en PDF">
+            <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" style="width:18px;height:18px;display:block;"><path d="M5 2h6l4 4v12H5z"/><path d="M11 2v4h4"/><path d="M7.5 12.5h5M7.5 15h3.5"/></svg>
           </button>
           <button class="btn btn-ghost" style="flex:1;justify-content:center;border-color:var(--blue-p300);color:var(--blue-p700);background:var(--blue-p50);" onclick="bdcOpenOutlook()" title="Envoyer par email" aria-label="Envoyer par email">
             <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" style="width:18px;height:18px;display:block;"><rect x="2" y="4.5" width="16" height="11" rx="2"/><path d="M2.5 6l7.5 5 7.5-5"/></svg>
@@ -9516,6 +9520,75 @@ function bdcBuildText() {
   });
   lines.push('','TOTAL : '+nbR+' ref. | '+nbC+' colis | '+bdcFmt(tN)+' HT');
   return lines.join('\n');
+}
+
+// ── Export du bon de commande en PDF (jsPDF + autotable) ──────────────────
+function bdcExportPdf() {
+  var mag = g('bdc-magasin');
+  var hasOrder = Object.keys(bdcQtys).some(function(k){ return bdcQtys[k] > 0; });
+  if (!mag)      { bdcShowAlert('Veuillez renseigner le nom du magasin.', 'err'); return; }
+  if (!hasOrder) { bdcShowAlert('Aucun article commandé.', 'err'); return; }
+  withJsPdf(function() {
+    try {
+      var doc = new window.jspdf.jsPDF({ orientation:'portrait', unit:'mm', format:'a4' });
+      if (typeof doc.autoTable !== 'function') { toast('Plugin PDF non chargé — réessayez', 'err'); return; }
+      var brand = (typeof CURRENT_BRAND !== 'undefined' && CURRENT_BRAND === 'naturaline') ? 'NATURALINE' : 'MDM';
+      var today = new Date().toLocaleDateString('fr-FR');
+      var W = doc.internal.pageSize.getWidth();
+
+      // En-tête
+      doc.setFont('helvetica','bold'); doc.setFontSize(17); doc.setTextColor(20,18,15);
+      doc.text('Bon de commande', 14, 18);
+      doc.setFontSize(10); doc.setTextColor(255,77,28);
+      doc.text('COHOR · ' + brand, 14, 24);
+      doc.setFont('helvetica','normal'); doc.setFontSize(9); doc.setTextColor(110,105,99);
+      doc.text('Date : ' + today, W - 14, 18, { align:'right' });
+
+      // Bloc client
+      var y = 34;
+      doc.setFont('helvetica','bold'); doc.setFontSize(11); doc.setTextColor(20,18,15);
+      doc.text(String(mag), 14, y); y += 6;
+      doc.setFont('helvetica','normal'); doc.setFontSize(9); doc.setTextColor(70,70,70);
+      var nc = g('bdc-numclient'), ct = g('bdc-contact'), mail = g('bdc-email'),
+          tel = g('bdc-tel'), dl = g('bdc-datelivraison'), com = g('bdc-comment');
+      function line(t){ doc.text(t, 14, y); y += 4.6; }
+      if (nc)  line('Code client : ' + nc);
+      if (ct)  line('Contact : ' + ct);
+      if (mail) line('Email : ' + mail);
+      if (tel) line('Tél : ' + tel);
+      if (dl)  line('Livraison : ' + new Date(dl).toLocaleDateString('fr-FR'));
+      if (typeof bdcRemise !== 'undefined' && bdcRemise > 0) line('Remise : ' + bdcRemise + '%');
+      if (com) line('Commentaire : ' + com);
+
+      // Tableau des articles
+      var body = [], tN = 0, nbC = 0, nbR = 0;
+      PRODUCTS.forEach(function(p){
+        var q = bdcQtys[p.code] || 0; if (!q) return;
+        var pcb = parseFloat(p.pcb) || 1, pN = bdcPrixNet(p), tot = pN * q * pcb;
+        tN += tot; nbC += q; nbR++;
+        body.push([ p.code, p.libelle, String(q*pcb), bdcFmt(pN), bdcFmt(tot) ]);
+      });
+      doc.autoTable({
+        startY: y + 3,
+        head: [['Code','Désignation','Qté (UVC)','PU HT net','Total HT']],
+        body: body,
+        styles: { fontSize:8, cellPadding:2, overflow:'linebreak' },
+        headStyles: { fillColor:[20,18,15], textColor:[255,255,255], fontStyle:'bold' },
+        columnStyles: { 0:{cellWidth:22}, 2:{halign:'right'}, 3:{halign:'right'}, 4:{halign:'right'} },
+        margin: { left:14, right:14 }
+      });
+
+      var fy = (doc.lastAutoTable ? doc.lastAutoTable.finalY : y) + 9;
+      doc.setFont('helvetica','bold'); doc.setFontSize(10); doc.setTextColor(20,18,15);
+      doc.text(nbR + ' références · ' + nbC + ' colis', 14, fy);
+      doc.setTextColor(255,77,28); doc.setFontSize(12);
+      doc.text('Total HT net : ' + bdcFmt(tN), W - 14, fy, { align:'right' });
+
+      var safe = String(mag).replace(/[^a-zA-Z0-9]+/g,'_').slice(0,30);
+      doc.save('BDC_' + safe + '_' + new Date().toISOString().slice(0,10) + '.pdf');
+      toast('📄 PDF du bon de commande généré', 'ok');
+    } catch(e) { toast('Erreur PDF : ' + (e.message || e), 'err'); }
+  }, function(){ toast('Chargement du module PDF impossible', 'err'); });
 }
 
 // ── Ouvrir Outlook avec la commande pré-remplie ──────────────────────────
