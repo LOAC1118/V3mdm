@@ -80,7 +80,23 @@
     '.eq-badge-off{background:#fdecea;color:#b42318}',
     '.eq-mini{appearance:none;border:1px solid #d3d8ce;background:#fff;color:#40463c;border-radius:8px;padding:6px 10px;cursor:pointer;font:600 12px "Inter",sans-serif}',
     '.eq-mini:hover{background:#f5f7f3}',
-    '.eq-mini-danger{border-color:#e7c9c2;background:#fff8f5;color:#b42318}'
+    '.eq-mini-danger{border-color:#e7c9c2;background:#fff8f5;color:#b42318}',
+    '.eqa-card{background:#fff;border:1px solid #e7e9e5;border-radius:14px;padding:14px 16px;margin-bottom:10px}',
+    '.eqa-top{display:flex;align-items:center;gap:11px}',
+    '.eqa-av{width:38px;height:38px;border-radius:11px;display:flex;align-items:center;justify-content:center;font:700 13px "Inter",sans-serif;color:#fff;flex-shrink:0}',
+    '.eqa-id{flex:1;min-width:0}',
+    '.eqa-name{font:600 14px "Inter",sans-serif;color:#1a1a1a;display:flex;align-items:center;gap:7px;flex-wrap:wrap}',
+    '.eqa-sub{font:500 12px "Inter",sans-serif;color:#9aa096;margin-top:2px;overflow:hidden;text-overflow:ellipsis}',
+    '.eqa-status{font:600 11px "Inter",sans-serif;padding:4px 10px;border-radius:20px;white-space:nowrap;flex-shrink:0}',
+    '.eqa-actions{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:12px}',
+    '.eqa-primary{appearance:none;border:0;background:#FF4D1C;color:#fff;border-radius:9px;padding:8px 14px;font:600 12.5px "Inter",sans-serif;cursor:pointer}',
+    '.eqa-primary:hover{background:#E03A0C}',
+    '.eqa-btn{appearance:none;border:1px solid #d3d8ce;background:#fff;color:#40463c;border-radius:9px;padding:8px 12px;font:600 12.5px "Inter",sans-serif;cursor:pointer}',
+    '.eqa-btn:hover{background:#f5f7f3}',
+    '.eqa-admin{display:flex;align-items:center;gap:8px;margin-left:auto;padding-left:12px;border-left:1px solid #ededed}',
+    '.eqa-role{border:1px solid #d3d8ce;border-radius:9px;padding:7px 9px;font:600 12px "Inter",sans-serif;color:#40463c;background:#fff;cursor:pointer}',
+    '.eqa-del{appearance:none;border:0;background:none;color:#b42318;font:600 12px "Inter",sans-serif;cursor:pointer;padding:8px 4px}',
+    '.eqa-del:hover{text-decoration:underline}'
   ].join('');
 
   function injectCSS() {
@@ -458,33 +474,47 @@
       var isAdminRow = (ri.t === 'Admin');
       var nb = clientCount(m.email);
 
-      var roleCtl = '';
+      // Avatar (initiales) coloré selon le rôle
+      var initiales = String(m.nom || m.email || '?').replace(/[^A-Za-zÀ-ÿ\s]/g,'').split(/\s+/).filter(Boolean).map(function(w){ return w[0].toUpperCase(); }).slice(0,2).join('') || '?';
+      var avColor = isAdminRow ? '#7c3aed' : (m.role === 'manager' ? '#1f7a34' : '#FF6A3A');
+
+      // Pastille de statut
+      var status;
+      if (!created)      status = '<span id="' + bid + '" class="eqa-status" style="background:#fff4e5;color:#9a5a12;">○ Sans compte</span>';
+      else if (!actif)   status = '<span id="' + bid + '" class="eqa-status" style="background:#fdecea;color:#b42318;">● Désactivé</span>';
+      else               status = '<span id="' + bid + '" class="eqa-status" style="background:#eaf5ee;color:#1f7a3d;">● Actif</span>';
+
+      // Action principale contextuelle + secondaires
+      var actions;
+      if (isAdminRow) {
+        actions = '<button class="eqa-btn" data-act="reset">Renvoyer le mot de passe</button>';
+      } else if (!created) {
+        actions = '<button class="eqa-primary" data-act="create">+ Créer le compte</button>';
+      } else {
+        actions = '<button class="eqa-btn" data-act="reset">Renvoyer le mot de passe</button>'
+                + '<button class="eqa-btn" data-act="toggle">' + (actif ? 'Désactiver' : 'Réactiver') + '</button>';
+      }
+      // Groupe admin (rôle + retirer), discret et à part
       if (viewerAdmin && !isAdminRow) {
-        roleCtl = '<select class="eq-mini" data-act="role" title="Changer le rôle" style="padding:5px 8px;">'
+        var roleSel = '<select class="eqa-role" data-act="role" title="Changer le rôle">'
           + '<option value="commercial"' + (m.role !== 'manager' ? ' selected' : '') + '>Commercial</option>'
           + '<option value="manager"'    + (m.role === 'manager' ? ' selected' : '') + '>Directeur</option>'
           + '</select>';
-      }
-      var actions;
-      if (isAdminRow) {
-        actions = '<button class="eq-mini" data-act="reset">Renvoyer mdp</button>';
-      } else {
-        actions = '<button class="eq-mini" data-act="create">Créer</button>'
-          + '<button class="eq-mini" data-act="reset">Renvoyer mdp</button>'
-          + '<button class="eq-mini" data-act="toggle">' + (actif ? 'Désactiver' : 'Réactiver') + '</button>'
-          + roleCtl
-          + (viewerAdmin ? '<button class="eq-mini eq-mini-danger" data-act="delete">Retirer</button>' : '');
+        actions += '<div class="eqa-admin">' + roleSel + '<button class="eqa-del" data-act="delete">Retirer</button></div>';
       }
 
-      return '<div class="eq-acc" data-email="' + esc(m.email) + '">'
-        + '<div class="eq-acc-main">'
-        +   '<div class="eq-acc-nom">' + esc(m.nom || m.email)
-        +     ' <span class="eq-badge" style="background:' + ri.bg + ';color:' + ri.c + ';">' + ri.t + '</span></div>'
-        +   '<div class="eq-acc-mail">' + esc(m.email) + (m.region ? (' · ' + esc(m.region)) : '') + ' · ' + nb + ' client' + (nb > 1 ? 's' : '') + '</div>'
+      return '<div class="eqa-card" data-email="' + esc(m.email) + '">'
+        + '<div class="eqa-top">'
+        +   '<div class="eqa-av" style="background:' + avColor + ';">' + initiales + '</div>'
+        +   '<div class="eqa-id">'
+        +     '<div class="eqa-name">' + esc(m.nom || m.email)
+        +       ' <span class="eq-badge" style="background:' + ri.bg + ';color:' + ri.c + ';">' + ri.t + '</span></div>'
+        +     '<div class="eqa-sub">' + esc(m.email) + (m.region ? (' · ' + esc(m.region)) : '') + ' · ' + nb + ' client' + (nb > 1 ? 's' : '') + '</div>'
+        +   '</div>'
+        +   status
         + '</div>'
-        + '<div><span id="' + bid + '" class="eq-badge ' + (created ? 'eq-badge-ok' : 'eq-badge-none') + '">' + (created ? 'compte créé' : 'pas de compte') + '</span>'
-        +   (actif ? '' : ' <span class="eq-badge eq-badge-off">désactivé</span>') + '</div>'
-        + '<div class="eq-acc-actions">' + actions + '</div></div>';
+        + '<div class="eqa-actions">' + actions + '</div>'
+        + '</div>';
     }).join('');
 
     var intro = viewerAdmin
@@ -522,14 +552,14 @@
       if (!el) return;
       try {
         firebase.auth().fetchSignInMethodsForEmail(m.email).then(function (methods) {
-          if (methods && methods.length) { el.className = 'eq-badge eq-badge-ok'; el.textContent = 'compte créé'; }
+          if (methods && methods.length) { el.className = 'eqa-status'; el.style.background = '#eaf5ee'; el.style.color = '#1f7a3d'; el.textContent = '● Actif'; }
         }).catch(function () {});
       } catch (e) {}
     });
 
     box.addEventListener('click', function (e) {
       var btn = e.target.closest && e.target.closest('button[data-act]'); if (!btn) return;
-      var rowEl = btn.closest('.eq-acc'); if (!rowEl) return;
+      var rowEl = btn.closest('.eqa-card'); if (!rowEl) return;
       var m = (_roster || []).find(function (x) { return (x.email || '') === rowEl.getAttribute('data-email'); });
       if (!m) return;
       var act = btn.getAttribute('data-act');
@@ -540,7 +570,7 @@
     });
     box.addEventListener('change', function (e) {
       var sel = e.target.closest && e.target.closest('select[data-act="role"]'); if (!sel) return;
-      var rowEl = sel.closest('.eq-acc'); if (!rowEl) return;
+      var rowEl = sel.closest('.eqa-card'); if (!rowEl) return;
       var m = (_roster || []).find(function (x) { return (x.email || '') === rowEl.getAttribute('data-email'); });
       if (m) accSetRole(m, sel.value, host);
     });
