@@ -1228,6 +1228,11 @@ thead th.ts-active { text-decoration:underline; text-underline-offset:3px; }
   .topbar-center .t-tab.active{ background:#FF4D1C !important; color:#FFFFFF !important; }
   /* Menu du haut retiré : la navigation d'ordinateur passe par le fût rangé */
   .topbar-center{ display:none !important; }
+  /* Badge de rôle à côté de l'avatar */
+  #topbar-role-badge{ font:700 10px/1 'Inter',sans-serif; text-transform:uppercase; letter-spacing:.04em;
+    padding:5px 9px; border-radius:20px; background:rgba(255,255,255,.14); color:rgba(255,255,255,.85); white-space:nowrap; }
+  #topbar-role-badge[data-role="Admin"]{ background:#7c3aed; color:#fff; }
+  #topbar-role-badge[data-role="Directeur"]{ background:#1f7a34; color:#fff; }
 
   /* Barre latérale — fût sombre COHOR */
   .sidebar{ background:#14120F; border-right:1px solid rgba(255,255,255,.07); }
@@ -1549,6 +1554,7 @@ thead th.ts-active { text-decoration:underline; text-underline-offset:3px; }
   <div class="topbar-right">
     <div class="sync-indicator"><div class="sync-dot" id="sync-dot"></div><span id="sync-label">Connecté</span></div>
     <span class="badge-count" id="badge-prospects">0</span>
+    <span id="topbar-role-badge" data-role="Commercial">Commercial</span>
     <div style="position:relative;">
       <div class="avatar" id="avatar-btn" onclick="toggleAvatarMenu()"><span id="avatar-initials">?</span></div>
       <div class="avatar-menu" id="avatar-menu">
@@ -1664,7 +1670,7 @@ thead th.ts-active { text-decoration:underline; text-underline-offset:3px; }
     </div>
     <div class="nav-item hidden" id="nav-item-equipe" onclick="showSection('equipe',null,this)">
       <svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="8" cy="5" r="2.4"/><path d="M2.5 14c0-3 2.4-5 5.5-5s5.5 2 5.5 5"/><path d="M13.5 6.5l1.2 1.2 2-2"/></svg>
-      Équipe
+      Équipe & comptes
     </div>
   </div>
 
@@ -3414,7 +3420,7 @@ thead th.ts-active { text-decoration:underline; text-underline-offset:3px; }
   </button>
   <button class="mmenu-item hidden" id="mtab-equipe" role="menuitem" data-sec="equipe" onclick="mnavGo('equipe')">
     <span class="mmenu-ico"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="8" cy="5" r="2.4"/><path d="M2.5 14c0-3 2.4-5 5.5-5s5.5 2 5.5 5"/><path d="M13.5 6.5l1.2 1.2 2-2"/></svg></span>
-    <span class="mmenu-label">Équipe</span>
+    <span class="mmenu-label">Équipe & comptes</span>
   </button>
 </div>
 
@@ -4394,7 +4400,7 @@ function initAdminAccountsUI() {
   // explicitement pour les commerciaux. Réévalué après chargement du référentiel
   // (le rôle « directeur » en dépend).
   var show = (typeof isManagerUser === 'function') ? isManagerUser() : isAdminUser();
-  var ids = ['t-tab-comptes', 'nav-item-comptes', 'mtab-comptes', 'nav-item-equipe', 'mtab-equipe'];
+  var ids = ['nav-item-equipe', 'mtab-equipe'];
   ids.forEach(function(id) {
     var el = document.getElementById(id);
     if (el) el.classList.toggle('hidden', !show);
@@ -4403,6 +4409,23 @@ function initAdminAccountsUI() {
 
 // Étape 1 migration équipe : statut manager = admin historique OU rôle 'manager'
 // dans le référentiel Équipe (additif, ne remplace pas isAdminUser()).
+// Libellé du rôle courant (3 rôles) + mise à jour du badge de la barre du haut.
+function currentRoleLabel() {
+  try {
+    if (typeof isAdminUser === 'function' && isAdminUser()) return 'Admin';
+    if (typeof isManagerUser === 'function' && isManagerUser()) return 'Directeur';
+  } catch(e) {}
+  return 'Commercial';
+}
+function updateRoleBadge() {
+  var lbl = currentRoleLabel();
+  var b = document.getElementById('topbar-role-badge');
+  if (b) { b.textContent = lbl; b.setAttribute('data-role', lbl); }
+  var av = document.getElementById('sb-role'); if (av) av.textContent = lbl;
+  var ml = document.getElementById('menu-role-lbl');
+  if (ml) ml.textContent = (lbl === 'Admin' ? '👑 ' : lbl === 'Directeur' ? '🎯 ' : '👤 ') + lbl;
+}
+
 function isManagerUser() {
   try {
     if (typeof isAdminUser === 'function' && isAdminUser()) return true;
@@ -4833,7 +4856,7 @@ async function showApp() {
     const profil = await db.collection('profils').doc(currentUser.uid).get();
     const role = profil.exists ? (profil.data().role || 'commercial') : 'commercial';
     s2('sb-role', role.charAt(0).toUpperCase()+role.slice(1));
-    s2('menu-role-lbl', role==='admin' ? '👑 Administrateur' : '👤 Commercial');
+    try { updateRoleBadge(); } catch(e) {}
 
     // Compte désactivé par l'administrateur : on bloque l'accès immédiatement.
     if (profil.exists && profil.data().actif === false) {
@@ -4877,7 +4900,7 @@ async function showApp() {
   // Non bloquant : le démarrage ne doit jamais dépendre de ces appels.
   // Réconciliation en arrière-plan (non bloquant). Le blocage d'un compte
   // désactivé est déjà géré proprement plus haut, avant le chargement.
-  try { if (window.Equipe) { Equipe.load().then(function(){ try { initAdminAccountsUI(); } catch(e){} }); if (Equipe.reconcile) Equipe.reconcile(); } } catch(e) {}
+  try { if (window.Equipe) { Equipe.load().then(function(){ try { initAdminAccountsUI(); updateRoleBadge(); } catch(e){} }); if (Equipe.reconcile) Equipe.reconcile(); } } catch(e) {}
   accordsLoad();
 
   startListeners();
