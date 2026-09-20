@@ -1432,6 +1432,48 @@ thead th.ts-active { text-decoration:underline; text-underline-offset:3px; }
   body.cohor-commercial .cohor-import-only { display:none !important; }
 </style>
 <!-- ═══ COHOR-ROLE-END ═══ -->
+<!-- ═══ COHOR-AGENDA-START ═══ -->
+<style id="cohor-agenda">
+  #sec-agenda .ag-head{display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:16px}
+  .ag-title{font-family:'Sora',sans-serif;font-weight:600;font-size:1.35rem;color:#14120F;letter-spacing:-.03em}
+  .ag-sub{font-size:.82rem;color:#6E6963;margin-top:2px}
+  .ag-headctl{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+  .ag-toggle{display:inline-flex;background:#F2EFE9;border-radius:99px;padding:3px}
+  .ag-tg{border:0;background:none;border-radius:99px;padding:6px 14px;font:600 .8rem 'Inter',sans-serif;color:#6E6963;cursor:pointer}
+  .ag-tg.on{background:#14120F;color:#fff}
+  .ag-new{border:0;background:#FF4D1C;color:#fff;border-radius:99px;padding:9px 16px;font:600 .82rem 'Inter',sans-serif;cursor:pointer}
+  .ag-new:hover{background:#E03A0C}
+  .ag-monthbar{display:flex;align-items:center;gap:10px;margin-bottom:12px}
+  .ag-nav{border:1px solid #E3DFD7;background:#fff;border-radius:9px;min-width:34px;height:34px;font-size:1.1rem;cursor:pointer;color:#40463c}
+  .ag-nav:hover{background:#F2EFE9}
+  .ag-todaybtn{padding:0 12px;font:600 .78rem 'Inter',sans-serif}
+  .ag-monthlbl{font-family:'Sora',sans-serif;font-weight:600;font-size:1.05rem;color:#14120F;text-transform:capitalize;min-width:140px}
+  .ag-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:6px}
+  .ag-dow{font:700 .66rem 'Inter',sans-serif;text-transform:uppercase;letter-spacing:.05em;color:#A8A29A;text-align:center;padding:4px 0}
+  .ag-cell{min-height:92px;background:#fff;border:1px solid #E3DFD7;border-radius:10px;padding:5px;cursor:pointer;overflow:hidden;transition:border-color .1s}
+  .ag-cell:hover{border-color:#FF4D1C}
+  .ag-cell.ag-empty{background:transparent;border:none;cursor:default}
+  .ag-cell.ag-today{border-color:#FF4D1C;box-shadow:0 0 0 1px #FF4D1C inset}
+  .ag-daynum{font:600 .78rem 'Inter',sans-serif;color:#40463c;margin-bottom:3px}
+  .ag-today .ag-daynum{color:#FF4D1C}
+  .ag-cnt{background:#FF4D1C;color:#fff;border-radius:9px;padding:0 5px;font-size:.6rem;font-weight:700;vertical-align:middle}
+  .ag-chip{background:#FFE7DE;color:#B4300A;border-radius:5px;padding:2px 5px;margin-bottom:2px;font:500 .64rem 'Inter',sans-serif;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .ag-chip b{font-weight:700}
+  .ag-more{font:600 .62rem 'Inter',sans-serif;color:#8A8F86;padding-left:3px}
+  .ag-list{display:flex;flex-direction:column;gap:8px}
+  .ag-li{display:flex;align-items:center;gap:12px;background:#fff;border:1px solid #E3DFD7;border-radius:12px;padding:12px 14px;cursor:pointer}
+  .ag-li:hover{border-color:#FF4D1C}
+  .ag-li-date{text-align:center;min-width:44px}
+  .ag-li-d{font-family:'Sora',sans-serif;font-weight:700;font-size:1.2rem;color:#14120F;line-height:1}
+  .ag-li-m{font:600 .62rem 'Inter',sans-serif;text-transform:uppercase;color:#A8A29A}
+  .ag-li-main{flex:1;min-width:0}
+  .ag-li-cli{font-weight:600;font-size:.88rem;color:#14120F}
+  .ag-li-sub{font-size:.72rem;color:#8A8F86;margin-top:1px}
+  .ag-li-arr{color:#C9C4BB;font-size:1.2rem}
+  .ag-empty-msg{padding:30px;text-align:center;color:#8A8F86;background:#fff;border:1px dashed #E3DFD7;border-radius:12px}
+  @media(max-width:640px){ .ag-cell{min-height:58px} .ag-chip,.ag-more{display:none} .ag-monthlbl{min-width:0;font-size:.95rem} }
+</style>
+<!-- ═══ COHOR-AGENDA-END ═══ -->
 </head>
 <body>
 <script>
@@ -1581,6 +1623,10 @@ thead th.ts-active { text-decoration:underline; text-underline-offset:3px; }
     <div class="nav-item" onclick="showSection('radar',null,this)">
       <svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="8" cy="8" r="6.5"/><circle cx="8" cy="8" r="2.8"/><path d="M8 8 13 3.5"/></svg>
       Radar
+    </div>
+    <div class="nav-item" onclick="showSection('agenda',null,this)">
+      <svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="1.5" y="3" width="13" height="11.5" rx="1.5"/><path d="M1.5 6.5h13M5 1.5v3M11 1.5v3"/></svg>
+      Agenda <span class="nav-badge agenda-navbadge" style="display:none;background:#FF4D1C;color:#fff;"></span>
     </div>
     <div class="nav-item" onclick="showSection('bdc',null,this)">
       <svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 2h12l-1 8H3z"/><circle cx="6" cy="14" r="1"/><circle cx="11" cy="14" r="1"/></svg>
@@ -1778,6 +1824,9 @@ thead th.ts-active { text-decoration:underline; text-underline-offset:3px; }
       </label>
 
       <div id="dash-ca-content" style="display:none;padding:0 1rem 1rem;">
+
+        <!-- ── RAPPEL RDV DU JOUR ── -->
+        <div id="agenda-today-dash"></div>
 
         <!-- ── SYNTHÈSE DE L'HISTORIQUE ARCHIVÉ ─────────────────── -->
         <div id="dash-archive-summary"></div>
@@ -2052,6 +2101,36 @@ thead th.ts-active { text-decoration:underline; text-underline-offset:3px; }
       <p style="margin:.2rem 0 0;font-size:.82rem;color:var(--g600);">Qui relancer aujourd'hui, et pourquoi. Calculé sur le rythme d'achat propre à chaque client.</p>
     </div>
     <div id="rdr-root"></div>
+  </div>
+
+  <!-- AGENDA -->
+  <div id="sec-agenda" class="hidden" style="padding:1.75rem 2rem;overflow-y:auto;flex:1;background:var(--bg);box-sizing:border-box;">
+    <div id="agenda-host"></div>
+  </div>
+
+  <!-- Modale RDV -->
+  <div id="agenda-modal" style="display:none;position:fixed;inset:0;background:rgba(20,18,15,.5);z-index:99999;align-items:center;justify-content:center;">
+    <div style="background:#fff;border-radius:16px;width:min(480px,95vw);max-height:92vh;overflow-y:auto;box-shadow:0 24px 64px rgba(0,0,0,.3);">
+      <div style="background:#14120F;border-radius:16px 16px 0 0;padding:1rem 1.3rem;display:flex;align-items:center;justify-content:space-between;">
+        <div id="ag-m-title" style="font-size:1rem;font-weight:700;color:#fff;">Nouveau rendez-vous</div>
+        <button onclick="Agenda.closeModal()" style="background:rgba(255,255,255,.15);border:none;border-radius:7px;padding:4px 9px;color:#fff;font-size:1.1rem;cursor:pointer;line-height:1;">✕</button>
+      </div>
+      <div style="padding:1.2rem;display:grid;grid-template-columns:1fr 1fr;gap:.8rem;">
+        <input type="hidden" id="ag-m-id">
+        <div style="grid-column:span 2;"><label class="lb">Client</label><input id="ag-m-client" list="ag-m-clients" placeholder="Rechercher un client…" style="width:100%;"><datalist id="ag-m-clients"></datalist></div>
+        <div><label class="lb">Date</label><input type="date" id="ag-m-date" style="width:100%;"></div>
+        <div><label class="lb">Heure</label><input type="time" id="ag-m-heure" value="09:00" style="width:100%;"></div>
+        <div><label class="lb">Type</label><select id="ag-m-type" style="width:100%;"></select></div>
+        <div><label class="lb">Lieu</label><input id="ag-m-lieu" placeholder="(optionnel)" style="width:100%;"></div>
+        <div style="grid-column:span 2;"><label class="lb">Objet</label><input id="ag-m-objet" placeholder="Objet du rendez-vous" style="width:100%;"></div>
+        <div style="grid-column:span 2;"><label class="lb">Notes</label><textarea id="ag-m-notes" style="min-height:60px;width:100%;"></textarea></div>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px;padding:0 1.2rem 1.2rem;">
+        <button id="ag-m-del" class="btn btn-ghost" style="margin-right:auto;color:#b0402f;" onclick="Agenda.del()">🗑 Supprimer</button>
+        <button class="btn btn-ghost" onclick="Agenda.closeModal()">Annuler</button>
+        <button class="btn btn-primary" onclick="Agenda.save()">💾 Enregistrer</button>
+      </div>
+    </div>
   </div>
 
   <!-- TOURNEES -->
@@ -3344,6 +3423,10 @@ thead th.ts-active { text-decoration:underline; text-underline-offset:3px; }
     <span class="mmenu-ico"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="8" cy="8" r="6.5"/><circle cx="8" cy="8" r="2.8"/><path d="M8 8 13 3.5"/></svg></span>
     <span class="mmenu-label">Radar</span>
   </button>
+  <button class="mmenu-item" role="menuitem" data-sec="agenda" onclick="mnavGo('agenda')">
+    <span class="mmenu-ico"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="1.5" y="3" width="13" height="11.5" rx="1.5"/><path d="M1.5 6.5h13M5 1.5v3M11 1.5v3"/></svg></span>
+    <span class="mmenu-label">Agenda</span>
+  </button>
   <button class="mmenu-item" role="menuitem" data-sec="bdc" onclick="mnavGo('bdc')">
     <span class="mmenu-ico"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 2h12l-1 8H3z"/><circle cx="6" cy="14" r="1"/><circle cx="11" cy="14" r="1"/></svg></span>
     <span class="mmenu-label">Bon de commande</span>
@@ -3918,7 +4001,7 @@ let db = null, auth = null, currentUser = null, fbFunctions = null;
 // Les collections listées ici sont dupliquées par marque ET par commercial
 // (suffixe _<marque>_<uid>). 'profils' reste commun et global (compte Firebase
 // Auth, indépendant de la marque et déjà identifié par son propre uid).
-var BRAND_SCOPED_COLLECTIONS = ['clients','contacts','prospects','commandes','commandes_meta','commandes_stats','frais','notes_frais','activite','objectifs_ca','config','cadenciers','visites','visites_photos'];
+var BRAND_SCOPED_COLLECTIONS = ['clients','contacts','prospects','commandes','commandes_meta','commandes_stats','frais','notes_frais','activite','objectifs_ca','config','cadenciers','visites','visites_photos','rendez_vous'];
 
 // ═══ BASCULE MODÈLE ÉQUIPE EN PROD (migration) ═══════════════════════════
 // PROD_TEAM_MODE       : en prod, lire/écrire les collections PARTAGÉES
@@ -4901,6 +4984,7 @@ async function showApp() {
   // Réconciliation en arrière-plan (non bloquant). Le blocage d'un compte
   // désactivé est déjà géré proprement plus haut, avant le chargement.
   try { if (window.Equipe) { Equipe.load().then(function(){ try { initAdminAccountsUI(); updateRoleBadge(); } catch(e){} }); if (Equipe.reconcile) Equipe.reconcile(); } } catch(e) {}
+  try { if (window.Agenda) Agenda.load(); } catch(e) {}
   accordsLoad();
 
   startListeners();
@@ -5091,6 +5175,7 @@ function showSection(name, tabEl, sideEl) {
   } catch(e) {}
   if (name==='dashboard') { refreshDashboard(); if (typeof dashRenderInactiveClients === 'function') dashRenderInactiveClients(); }
   if (name==='radar') { setTimeout(function(){ if (typeof RadarClients !== 'undefined') RadarClients.mount(); }, 80); }
+  if (name==='agenda') { setTimeout(function(){ if (window.Agenda) Agenda.mount(); }, 60); }
   if (name==='tournees') { setTimeout(function(){ if (typeof Tournees !== 'undefined') Tournees.mount(); }, 80); }
   if (name==='visites') { setTimeout(function(){ if (typeof Visites !== 'undefined') Visites.mount(); }, 80); }
   if (name==='rgpd') { setTimeout(function(){ if (typeof RGPD !== 'undefined') RGPD.mount(); }, 80); }
@@ -15923,6 +16008,7 @@ if ('serviceWorker' in navigator) {
 </div>
 <!-- RADAR CLIENTS — module d'alertes commerciales -->
 <script src="radar.js?v=5"></script>
+<script src="agenda.js?v=1"></script>
 <script src="tournees.js?v=4"></script>
 <script src="visites.js?v=2"></script>
 <script src="rgpd.js?v=1"></script>
