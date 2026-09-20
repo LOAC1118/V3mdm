@@ -1474,6 +1474,30 @@ thead th.ts-active { text-decoration:underline; text-underline-offset:3px; }
   @media(max-width:640px){ .ag-cell{min-height:58px} .ag-chip,.ag-more{display:none} .ag-monthlbl{min-width:0;font-size:.95rem} }
 </style>
 <!-- ═══ COHOR-AGENDA-END ═══ -->
+<!-- ═══ COHOR-CARNET-START ═══ -->
+<style id="cohor-carnet">
+  #sec-carnet .cn-head{margin-bottom:16px}
+  .cn-title{font-family:'Sora',sans-serif;font-weight:600;font-size:1.35rem;color:#14120F;letter-spacing:-.03em}
+  .cn-sub{font-size:.82rem;color:#6E6963;margin-top:2px}
+  .cn-datebar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:14px}
+  .cn-datebar input[type=date]{border:1px solid #E3DFD7;border-radius:9px;padding:7px 10px;font:600 .82rem 'Inter',sans-serif;color:#14120F}
+  .cn-day{font-family:'Sora',sans-serif;font-weight:600;color:#14120F;text-transform:capitalize;margin-left:4px}
+  .cn-editor{background:#fff;border:1px solid #E3DFD7;border-radius:16px;padding:14px;margin-bottom:16px}
+  .cn-editor textarea{width:100%;min-height:220px;border:0;outline:none;resize:vertical;font:400 .95rem/1.6 'Inter',sans-serif;color:#14120F;background:transparent}
+  .cn-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px;padding-top:10px;border-top:1px solid #EFEAE1}
+  .cn-btn{border:1px solid #d3d8ce;background:#fff;color:#40463c;border-radius:99px;padding:9px 15px;font:600 .82rem 'Inter',sans-serif;cursor:pointer}
+  .cn-btn:hover{background:#f5f7f3}
+  .cn-btn.cn-rec{background:#FCEAE6;border-color:#e7c9c2;color:#b42318;animation:cn-pulse 1.2s infinite}
+  @keyframes cn-pulse{0%,100%{opacity:1}50%{opacity:.55}}
+  .cn-primary{border:0;background:#FF4D1C;color:#fff;border-radius:99px;padding:9px 16px;font:600 .82rem 'Inter',sans-serif;cursor:pointer;margin-left:auto}
+  .cn-primary:hover{background:#E03A0C}
+  .cn-primary:disabled{background:#c9a99f;cursor:wait}
+  .cn-resume{background:#FFF4EF;border:1px solid #F6C7B4;border-radius:16px;padding:16px 18px}
+  .cn-resume-h{font-family:'Sora',sans-serif;font-weight:700;color:#E03A0C;margin-bottom:8px}
+  .cn-resume-b{font:400 .9rem/1.6 'Inter',sans-serif;color:#40463c}
+  @media(max-width:640px){ .cn-primary{margin-left:0} }
+</style>
+<!-- ═══ COHOR-CARNET-END ═══ -->
 </head>
 <body>
 <script>
@@ -1627,6 +1651,10 @@ thead th.ts-active { text-decoration:underline; text-underline-offset:3px; }
     <div class="nav-item" onclick="showSection('agenda',null,this)">
       <svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="1.5" y="3" width="13" height="11.5" rx="1.5"/><path d="M1.5 6.5h13M5 1.5v3M11 1.5v3"/></svg>
       Agenda <span class="nav-badge agenda-navbadge" style="display:none;background:#FF4D1C;color:#fff;"></span>
+    </div>
+    <div class="nav-item" onclick="showSection('carnet',null,this)">
+      <svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 2h8a1 1 0 0 1 1 1v11l-2-1.3L9 14l-2-1.3L5 14l-2-1.3V3a1 1 0 0 1 1-1z"/><path d="M6 5.5h4M6 8h4"/></svg>
+      Carnet
     </div>
     <div class="nav-item" onclick="showSection('bdc',null,this)">
       <svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 2h12l-1 8H3z"/><circle cx="6" cy="14" r="1"/><circle cx="11" cy="14" r="1"/></svg>
@@ -2106,6 +2134,11 @@ thead th.ts-active { text-decoration:underline; text-underline-offset:3px; }
   <!-- AGENDA -->
   <div id="sec-agenda" class="hidden" style="padding:1.75rem 2rem;overflow-y:auto;flex:1;background:var(--bg);box-sizing:border-box;">
     <div id="agenda-host"></div>
+  </div>
+
+  <!-- CARNET -->
+  <div id="sec-carnet" class="hidden" style="padding:1.75rem 2rem;overflow-y:auto;flex:1;background:var(--bg);box-sizing:border-box;">
+    <div id="carnet-host"></div>
   </div>
 
   <!-- Modale RDV -->
@@ -3427,6 +3460,10 @@ thead th.ts-active { text-decoration:underline; text-underline-offset:3px; }
     <span class="mmenu-ico"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="1.5" y="3" width="13" height="11.5" rx="1.5"/><path d="M1.5 6.5h13M5 1.5v3M11 1.5v3"/></svg></span>
     <span class="mmenu-label">Agenda</span>
   </button>
+  <button class="mmenu-item" role="menuitem" data-sec="carnet" onclick="mnavGo('carnet')">
+    <span class="mmenu-ico"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 2h8a1 1 0 0 1 1 1v11l-2-1.3L9 14l-2-1.3L5 14l-2-1.3V3a1 1 0 0 1 1-1z"/><path d="M6 5.5h4M6 8h4"/></svg></span>
+    <span class="mmenu-label">Carnet</span>
+  </button>
   <button class="mmenu-item" role="menuitem" data-sec="bdc" onclick="mnavGo('bdc')">
     <span class="mmenu-ico"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 2h12l-1 8H3z"/><circle cx="6" cy="14" r="1"/><circle cx="11" cy="14" r="1"/></svg></span>
     <span class="mmenu-label">Bon de commande</span>
@@ -4001,7 +4038,7 @@ let db = null, auth = null, currentUser = null, fbFunctions = null;
 // Les collections listées ici sont dupliquées par marque ET par commercial
 // (suffixe _<marque>_<uid>). 'profils' reste commun et global (compte Firebase
 // Auth, indépendant de la marque et déjà identifié par son propre uid).
-var BRAND_SCOPED_COLLECTIONS = ['clients','contacts','prospects','commandes','commandes_meta','commandes_stats','frais','notes_frais','activite','objectifs_ca','config','cadenciers','visites','visites_photos','rendez_vous'];
+var BRAND_SCOPED_COLLECTIONS = ['clients','contacts','prospects','commandes','commandes_meta','commandes_stats','frais','notes_frais','activite','objectifs_ca','config','cadenciers','visites','visites_photos','rendez_vous','carnet'];
 
 // ═══ BASCULE MODÈLE ÉQUIPE EN PROD (migration) ═══════════════════════════
 // PROD_TEAM_MODE       : en prod, lire/écrire les collections PARTAGÉES
@@ -5108,7 +5145,7 @@ if (typeof cdbPageSize  === 'undefined') window.cdbPageSize  = 50;
 // ═══════════════════════════════════════════════
 //  NAVIGATION
 // ═══════════════════════════════════════════════
-const SECTIONS = ['dashboard','radar','tournees','visites','recherche','rgpd','bdc','frais','contacts-db','commissions','comptes','mailing','accords','promos','top100','cadencier','ia','assortiment','alertes','equipe','agenda'];
+const SECTIONS = ['dashboard','radar','tournees','visites','recherche','rgpd','bdc','frais','contacts-db','commissions','comptes','mailing','accords','promos','top100','cadencier','ia','assortiment','alertes','equipe','agenda','carnet'];
 // ═══════════════════════════════════════════════
 //  MENUS DEROULANTS DE LA BARRE DU HAUT
 // ═══════════════════════════════════════════════
@@ -5176,6 +5213,7 @@ function showSection(name, tabEl, sideEl) {
   if (name==='dashboard') { refreshDashboard(); if (typeof dashRenderInactiveClients === 'function') dashRenderInactiveClients(); }
   if (name==='radar') { setTimeout(function(){ if (typeof RadarClients !== 'undefined') RadarClients.mount(); }, 80); }
   if (name==='agenda') { setTimeout(function(){ if (window.Agenda) Agenda.mount(); }, 60); }
+  if (name==='carnet') { setTimeout(function(){ if (window.Carnet) Carnet.mount(); }, 60); }
   if (name==='tournees') { setTimeout(function(){ if (typeof Tournees !== 'undefined') Tournees.mount(); }, 80); }
   if (name==='visites') { setTimeout(function(){ if (typeof Visites !== 'undefined') Visites.mount(); }, 80); }
   if (name==='rgpd') { setTimeout(function(){ if (typeof RGPD !== 'undefined') RGPD.mount(); }, 80); }
@@ -16009,6 +16047,7 @@ if ('serviceWorker' in navigator) {
 <!-- RADAR CLIENTS — module d'alertes commerciales -->
 <script src="radar.js?v=5"></script>
 <script src="agenda.js?v=1"></script>
+<script src="carnet.js?v=1"></script>
 <script src="tournees.js?v=4"></script>
 <script src="visites.js?v=2"></script>
 <script src="rgpd.js?v=1"></script>
