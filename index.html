@@ -2160,6 +2160,7 @@ thead th.ts-active { text-decoration:underline; text-underline-offset:3px; }
       </div>
       <div style="display:flex;align-items:center;gap:8px;padding:0 1.2rem 1.2rem;">
         <button id="ag-m-del" class="btn btn-ghost" style="margin-right:auto;color:#b0402f;" onclick="Agenda.del()">🗑 Supprimer</button>
+        <button id="ag-m-ics" class="btn btn-ghost" title="Ajouter à Calendrier (iPhone)" onclick="Agenda.exportOne()">📅</button>
         <button class="btn btn-ghost" onclick="Agenda.closeModal()">Annuler</button>
         <button class="btn btn-primary" onclick="Agenda.save()">💾 Enregistrer</button>
       </div>
@@ -16046,7 +16047,7 @@ if ('serviceWorker' in navigator) {
 </div>
 <!-- RADAR CLIENTS — module d'alertes commerciales -->
 <script src="radar.js?v=5"></script>
-<script src="agenda.js?v=1"></script>
+<script src="agenda.js?v=2"></script>
 <script src="carnet.js?v=1"></script>
 <script src="tournees.js?v=4"></script>
 <script src="visites.js?v=2"></script>

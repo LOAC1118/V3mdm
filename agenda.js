@@ -83,6 +83,7 @@
       + '<div class="ag-headctl">'
       +   '<div class="ag-toggle"><button class="ag-tg' + (_view==='month'?' on':'') + '" onclick="Agenda.setView(\'month\')">Mois</button>'
       +   '<button class="ag-tg' + (_view==='list'?' on':'') + '" onclick="Agenda.setView(\'list\')">Liste</button></div>'
+      +   '<button class="ag-tg" title="Exporter mes RDV à venir vers Calendrier (iPhone)" onclick="Agenda.exportAll()">📅 Exporter</button>'
       +   '<button class="ag-new" onclick="Agenda.openNew()">+ Nouveau rendez-vous</button>'
       + '</div></div>';
     host.innerHTML = head + (_view==='month' ? renderMonth() : renderList());
@@ -162,6 +163,7 @@
     wrap.querySelector('#ag-m-notes').value = r ? (r.notes||'') : '';
     wrap.querySelector('#ag-m-lieu').value = r ? (r.lieu||'') : '';
     wrap.querySelector('#ag-m-del').style.display = r ? '' : 'none';
+    var ics = wrap.querySelector('#ag-m-ics'); if (ics) ics.style.display = r ? '' : 'none';
     wrap.style.display = 'flex';
   }
   function closeModal() { var w = document.getElementById('agenda-modal'); if (w) w.style.display='none'; }
@@ -208,12 +210,70 @@
       .catch(function(e){ toast('Erreur : '+(e.code||e.message),'err'); });
   }
 
+  // ── Export calendrier (.ics) → Calendrier Apple / Google / Outlook ──
+  function icsEsc(s){ return String(s==null?'':s).replace(/\\/g,'\\\\').replace(/;/g,'\\;').replace(/,/g,'\\,').replace(/\r?\n/g,'\\n'); }
+  function icsFold(line){
+    var out = [], l = line;
+    while (l.length > 73) { out.push(l.slice(0,73)); l = ' ' + l.slice(73); }
+    out.push(l); return out.join('\r\n');
+  }
+  function icsStamp(d){ return d.getUTCFullYear()+pad(d.getUTCMonth()+1)+pad(d.getUTCDate())+'T'+pad(d.getUTCHours())+pad(d.getUTCMinutes())+pad(d.getUTCSeconds())+'Z'; }
+  function icsLocal(dateStr, hhmm){
+    var d = String(dateStr).replace(/-/g,''); var h = String(hhmm||'09:00').split(':');
+    return d+'T'+pad(parseInt(h[0],10)||0)+pad(parseInt(h[1],10)||0)+'00';
+  }
+  function icsEvent(r){
+    var start = icsLocal(r.date, r.heure);
+    var h = String(r.heure||'09:00').split(':');
+    var endD = new Date(+r.date.slice(0,4), +r.date.slice(5,7)-1, +r.date.slice(8,10), parseInt(h[0],10)||0, (parseInt(h[1],10)||0)+60);
+    var end = endD.getFullYear()+pad(endD.getMonth()+1)+pad(endD.getDate())+'T'+pad(endD.getHours())+pad(endD.getMinutes())+'00';
+    var titre = (r.type||'RDV') + (r.clientNom ? ' – '+r.clientNom : '') + (r.objet ? ' ('+r.objet+')' : '');
+    var L = ['BEGIN:VEVENT',
+      'UID:'+r.id+'@cohor-crm',
+      'DTSTAMP:'+icsStamp(new Date()),
+      'DTSTART;TZID=Europe/Paris:'+start,
+      'DTEND;TZID=Europe/Paris:'+end,
+      'SUMMARY:'+icsEsc(titre)];
+    if (r.lieu) L.push('LOCATION:'+icsEsc(r.lieu));
+    if (r.notes || r.objet) L.push('DESCRIPTION:'+icsEsc([r.objet, r.notes].filter(Boolean).join('\n')));
+    L.push('BEGIN:VALARM','TRIGGER:-PT30M','ACTION:DISPLAY','DESCRIPTION:Rappel rendez-vous','END:VALARM','END:VEVENT');
+    return L.map(icsFold).join('\r\n');
+  }
+  function icsDownload(events, filename){
+    var tz = ['BEGIN:VTIMEZONE','TZID:Europe/Paris',
+      'BEGIN:DAYLIGHT','TZOFFSETFROM:+0100','TZOFFSETTO:+0200','TZNAME:CEST','DTSTART:19700329T020000','RRULE:FREQ=YEARLY;BYMONTH=3;BYDAY=-1SU','END:DAYLIGHT',
+      'BEGIN:STANDARD','TZOFFSETFROM:+0200','TZOFFSETTO:+0100','TZNAME:CET','DTSTART:19701025T030000','RRULE:FREQ=YEARLY;BYMONTH=10;BYDAY=-1SU','END:STANDARD',
+      'END:VTIMEZONE'].join('\r\n');
+    var txt = 'BEGIN:VCALENDAR\r\nVERSION:2.0\r\nPRODID:-//COHOR CRM//Agenda//FR\r\nCALSCALE:GREGORIAN\r\nMETHOD:PUBLISH\r\n'
+      + tz + '\r\n' + events.join('\r\n') + '\r\nEND:VCALENDAR\r\n';
+    var blob = new Blob([txt], { type: 'text/calendar;charset=utf-8' });
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement('a'); a.href = url; a.download = filename;
+    document.body.appendChild(a); a.click();
+    setTimeout(function(){ document.body.removeChild(a); URL.revokeObjectURL(url); }, 1500);
+  }
+  function exportOne() {
+    var w = document.getElementById('agenda-modal'); if (!w) return;
+    var id = w.querySelector('#ag-m-id').value;
+    var r = _rdv.filter(function(x){ return x.id===id; })[0];
+    if (!r) { toast('Enregistrez d\'abord le rendez-vous','err'); return; }
+    icsDownload([icsEvent(r)], 'rdv-'+r.date+'.ics');
+  }
+  function exportAll() {
+    var t = todayStr();
+    var list = _rdv.filter(function(r){ return r.date && r.date >= t; });
+    if (!list.length) { toast('Aucun rendez-vous à venir à exporter','err'); return; }
+    icsDownload(list.map(icsEvent), 'mes-rdv-cohor.ics');
+    toast(list.length+' rendez-vous exporté(s)','ok');
+  }
+
   function setView(v){ _view = v; render(); }
   function move(n){ _cur.setMonth(_cur.getMonth()+n); render(); }
   function goToday(){ _cur = new Date(); _cur.setDate(1); render(); }
 
   window.Agenda = {
     mount: mount, setView: setView, move: move, goToday: goToday,
+    exportOne: exportOne, exportAll: exportAll,
     openNew: openNew, openEdit: openEdit, save: save, del: del, closeModal: closeModal,
     updateReminder: updateReminder, load: load
   };
