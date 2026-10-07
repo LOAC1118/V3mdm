@@ -198,7 +198,8 @@
     var u = me(); if (!u) return Promise.reject(new Error('Non connecté'));
     var date = /^\d{4}-\d{2}-\d{2}$/.test(o.data.date||'') ? o.data.date : ymd(new Date());
     var ref = bcol('carnet').doc(u.uid + '_' + date);
-    return ref.get().then(function(s){
+    // Jour sans note : la lecture d'un doc inexistant est refusée par les règles → « vide »
+    return ref.get().catch(function(){ return { exists: false }; }).then(function(s){
       var old = s.exists ? (s.data().texte || '') : '';
       var heure = pad(new Date().getHours()) + ':' + pad(new Date().getMinutes());
       var nt = (old ? old + '\n\n' : '') + heure + ' — ' + (o.data.texte||'');

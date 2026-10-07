@@ -215,7 +215,8 @@
     var ref = bcol('carnet').doc(u.uid + '_' + _r.date);
     var titre = 'Visite ' + (_r.clientNom || '') + (_r.heure ? ' (' + _r.heure + ')' : '');
     var corps = _r.resume || _r.cr || '';
-    ref.get().then(function(s){
+    // Lecture d'un jour sans note : refusée par les règles (doc inexistant) → on considère « vide »
+    ref.get().catch(function(){ return { exists: false }; }).then(function(s){
       var old = s.exists ? (s.data().texte || '') : '';
       return ref.set({ date: _r.date, texte: (old ? old + '\n\n' : '') + titre + ' —\n' + corps,
         owner: u.uid, ownerEmail: (u.email || '').toLowerCase(), updatedAt: Date.now() }, { merge: true });
