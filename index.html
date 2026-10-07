@@ -2157,6 +2157,7 @@ thead th.ts-active { text-decoration:underline; text-underline-offset:3px; }
         <div><label class="lb">Lieu</label><input id="ag-m-lieu" placeholder="(optionnel)" style="width:100%;"></div>
         <div style="grid-column:span 2;"><label class="lb">Objet</label><input id="ag-m-objet" placeholder="Objet du rendez-vous" style="width:100%;"></div>
         <div style="grid-column:span 2;"><label class="lb">Notes</label><textarea id="ag-m-notes" style="min-height:60px;width:100%;"></textarea></div>
+        <div id="vis-box" style="grid-column:span 2;"></div>
       </div>
       <div style="display:flex;align-items:center;gap:8px;padding:0 1.2rem 1.2rem;">
         <button id="ag-m-del" class="btn btn-ghost" style="margin-right:auto;color:#b0402f;" onclick="Agenda.del()">🗑 Supprimer</button>
@@ -16047,8 +16048,9 @@ if ('serviceWorker' in navigator) {
 </div>
 <!-- RADAR CLIENTS — module d'alertes commerciales -->
 <script src="radar.js?v=5"></script>
-<script src="agenda.js?v=2"></script>
+<script src="agenda.js?v=3"></script>
 <script src="carnet.js?v=1"></script>
+<script src="visite.js?v=1"></script>
 <script src="assistant.js?v=2"></script>
 <script src="tournees.js?v=4"></script>
 <script src="visites.js?v=2"></script>

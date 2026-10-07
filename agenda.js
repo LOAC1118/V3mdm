@@ -129,7 +129,7 @@
       var dd = new Date(r.date+'T00:00:00');
       return '<div class="ag-li" onclick="Agenda.openEdit(\''+r.id+'\')">'
         + '<div class="ag-li-date"><div class="ag-li-d">'+dd.getDate()+'</div><div class="ag-li-m">'+MOIS[dd.getMonth()].slice(0,3)+'</div></div>'
-        + '<div class="ag-li-main"><div class="ag-li-cli">'+esc(r.clientNom||r.objet||'RDV')+'</div>'
+        + '<div class="ag-li-main"><div class="ag-li-cli">'+esc(r.clientNom||r.objet||'RDV')+((r.cr||r.transcription)?' 📝':'')+'</div>'
         + '<div class="ag-li-sub">'+esc(r.heure||'')+' · '+esc(r.type||'')+(r.objet&&r.clientNom?(' · '+esc(r.objet)):'')
         + (isManager()&&r.ownerEmail?(' · '+esc(r.ownerEmail)):'')+'</div></div>'
         + '<div class="ag-li-arr">›</div></div>';
@@ -164,9 +164,13 @@
     wrap.querySelector('#ag-m-lieu').value = r ? (r.lieu||'') : '';
     wrap.querySelector('#ag-m-del').style.display = r ? '' : 'none';
     var ics = wrap.querySelector('#ag-m-ics'); if (ics) ics.style.display = r ? '' : 'none';
+    try { if (window.Visite) Visite.bind(r); } catch(e){ console.warn('[Visite]', e); }
     wrap.style.display = 'flex';
   }
-  function closeModal() { var w = document.getElementById('agenda-modal'); if (w) w.style.display='none'; }
+  function closeModal() {
+    try { if (window.Visite) Visite.stop(true); } catch(e){}
+    var w = document.getElementById('agenda-modal'); if (w) w.style.display='none';
+  }
 
   function save() {
     var w = document.getElementById('agenda-modal'); if (!w) return;
