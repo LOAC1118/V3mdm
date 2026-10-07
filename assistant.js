@@ -247,7 +247,8 @@
     if ($('asst-fab')) return;
     var css = document.createElement('style');
     css.textContent =
-      '#asst-fab{position:fixed;right:16px;bottom:calc(16px + env(safe-area-inset-bottom));z-index:9990;width:54px;height:54px;border-radius:50%;border:0;background:#FF4D1C;color:#fff;font-size:1.5rem;box-shadow:0 6px 20px rgba(0,0,0,.35);cursor:pointer;display:none}'
+      '#asst-fab{position:fixed;right:22px;bottom:90px;z-index:9990;width:54px;height:54px;border-radius:50%;border:2px solid #FF4D1C;background:#1c1a17;color:#fff;font-size:1.5rem;box-shadow:0 6px 20px rgba(0,0,0,.35);cursor:pointer;display:none}'
+      + '@media(max-width:768px){#asst-fab{right:14px;bottom:134px;width:48px;height:48px}}'
       + '#asst-panel{position:fixed;inset:0;z-index:99998;background:rgba(20,18,15,.55);display:none;align-items:flex-end;justify-content:center}'
       + '.asst-box{width:100%;max-width:560px;max-height:88vh;background:#fff;color:#1c1a17;border-radius:18px 18px 0 0;display:flex;flex-direction:column;font-family:inherit}'
       + '@media(min-width:700px){#asst-panel{align-items:center}.asst-box{border-radius:18px}}'
