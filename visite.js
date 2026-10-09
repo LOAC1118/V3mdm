@@ -38,7 +38,7 @@
 
   // ── Affichage ──
   function bind(r) {
-    css(); stopAll(true);
+    css(); preloadNoSleep(); stopAll(true);
     _r = r || null; _blob = null; _chunks = [];
     render();
   }
@@ -86,6 +86,38 @@
     try { _sr.start(); _srOn = true; b.classList.add('rec'); b.textContent = '⏹ Stop'; } catch(e){}
   }
 
+  // ── Écran maintenu allumé : Wake Lock natif + NoSleep (vidéo invisible) en secours ──
+  var _nosleep = null, _wakeOn = false;
+  var NOSLEEP_URL = 'https://cdnjs.cloudflare.com/ajax/libs/nosleep/0.12.0/NoSleep.min.js';
+  function preloadNoSleep() {
+    try { if (typeof lazyLoad === 'function' && !window.NoSleep) lazyLoad(NOSLEEP_URL, function(){}, function(){}); } catch(e){}
+  }
+  function wakeOn() {                      // à appeler directement dans le clic (geste utilisateur)
+    _wakeOn = false;
+    try { if (window.NoSleep) { if (!_nosleep) _nosleep = new NoSleep(); _nosleep.enable(); _wakeOn = true; } } catch(e){}
+    try {
+      if (navigator.wakeLock) navigator.wakeLock.request('screen').then(function(w){
+        _wake = w; _wakeOn = true;
+        w.addEventListener && w.addEventListener('release', function(){ _wake = null; });
+      }).catch(function(){});
+    } catch(e){}
+  }
+  function wakeOff() {
+    try { if (_wake) { _wake.release(); _wake = null; } } catch(e){}
+    try { if (_nosleep) _nosleep.disable(); } catch(e){}
+    _wakeOn = false;
+  }
+  // iOS libère le verrou quand l'app passe en arrière-plan : on le reprend au retour
+  document.addEventListener('visibilitychange', function(){
+    if (document.visibilityState !== 'visible' || !_mr) return;
+    if (_mr.state === 'recording' || _mr.state === 'paused') {
+      if (_mr.state === 'paused') { try { _mr.resume(); } catch(e){} }
+      try { if (navigator.wakeLock && !_wake) navigator.wakeLock.request('screen').then(function(w){ _wake = w; }).catch(function(){}); } catch(e){}
+    } else if (_chunks.length && !_blob) {
+      note('⚠️ L\'enregistrement a été interrompu (écran verrouillé ou changement d\'app)', 'err');
+    }
+  });
+
   // ── Enregistrement audio ──
   function pickMime() {
     var c = ['audio/mp4', 'audio/webm;codecs=opus', 'audio/webm'];
@@ -95,6 +127,7 @@
   function toggleRec() {
     if (_mr && _mr.state === 'recording') { _mr.stop(); return; }
     if (!$('vis-consent') || !$('vis-consent').checked) { note('Cochez d\'abord : interlocuteur informé de l\'enregistrement', 'err'); return; }
+    wakeOn();                              // dans le geste du clic (obligatoire sur iOS)
     navigator.mediaDevices.getUserMedia({ audio: true }).then(function(stream){
       _stream = stream; _chunks = []; _blob = null; _mime = pickMime();
       var opt = { audioBitsPerSecond: 32000 }; if (_mime) opt.mimeType = _mime;
@@ -106,18 +139,17 @@
       var b = $('vis-rec'); b.classList.add('rec'); b.textContent = '⏹ Arrêter';
       $('vis-audio').innerHTML = '';
       _timer = setInterval(tick, 500);
-      try { if (navigator.wakeLock) navigator.wakeLock.request('screen').then(function(w){ _wake = w; }).catch(function(){}); } catch(e){}
-    }).catch(function(){ note('Micro refusé ou indisponible', 'err'); });
+    }).catch(function(){ wakeOff(); note('Micro refusé ou indisponible', 'err'); });
   }
   function tick() {
     var s = Math.floor((Date.now() - _t0) / 1000);
-    var el = $('vis-time'); if (el) el.textContent = '● ' + pad(Math.floor(s/60)) + ':' + pad(s%60) + ' (écran à garder allumé)';
+    var el = $('vis-time'); if (el) el.textContent = '● ' + pad(Math.floor(s/60)) + ':' + pad(s%60) + (_wakeOn ? '  🔆 écran maintenu allumé' : '  ⚠️ gardez l\'écran allumé');
     if (s >= MAX_SEC && _mr && _mr.state === 'recording') _mr.stop();
   }
   function onStop() {
     clearInterval(_timer); _timer = null;
     try { _stream.getTracks().forEach(function(t){ t.stop(); }); } catch(e){}
-    try { if (_wake) { _wake.release(); _wake = null; } } catch(e){}
+    wakeOff();
     var b = $('vis-rec'); if (b) { b.classList.remove('rec'); b.textContent = '⏺ Enregistrer la conversation'; }
     var el = $('vis-time'); if (el) el.textContent = '';
     _blob = new Blob(_chunks, { type: (_mr && _mr.mimeType) || _mime || 'audio/mp4' });
@@ -134,7 +166,7 @@
     try { if (_mr && _mr.state === 'recording') { _mr.onstop = null; _mr.stop(); } } catch(e){}
     try { if (_stream) _stream.getTracks().forEach(function(t){ t.stop(); }); } catch(e){}
     try { if (_sr && _srOn) _sr.stop(); } catch(e){}
-    try { if (_wake) { _wake.release(); _wake = null; } } catch(e){}
+    wakeOff();
     clearInterval(_timer); _timer = null; _mr = null; _stream = null;
   }
 
