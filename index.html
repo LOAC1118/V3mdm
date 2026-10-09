@@ -14001,6 +14001,7 @@ function cdbShowMenu(anchor, id) {
   var c = cdbContacts.find(function(x){ return x.id === id; });
   var actions = [
     { icon: '🗂️', label: 'Préparer la visite', fn: function(){ if (typeof Fiche360 !== 'undefined') Fiche360.open(id); else toast('Module fiche 360 indisponible','err'); } },
+    { icon: '📈', label: 'Analyse client',     fn: function(){ if (typeof AnalyseClient !== 'undefined') AnalyseClient.open(id); else toast('Module analyse indisponible','err'); } },
     { icon: '✏️', label: 'Modifier la fiche',  fn: function(){ cdbOpenEdit(id); } },
     { icon: '🛒', label: 'Nouveau BDC',        fn: function(){ if(c) cdbNewOrderFromClient(c); } },
     { icon: '📄', label: 'Importer commande PDF', fn: function(){ showSection('bdc',null); setTimeout(function(){ openPdfImport(); }, 200); } },
@@ -16051,6 +16052,7 @@ if ('serviceWorker' in navigator) {
 <script src="agenda.js?v=3"></script>
 <script src="carnet.js?v=1"></script>
 <script src="visite.js?v=2"></script>
+<script src="analyse-client.js?v=1"></script>
 <script src="assistant.js?v=3"></script>
 <script src="tournees.js?v=4"></script>
 <script src="visites.js?v=2"></script>
