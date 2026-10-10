@@ -13984,6 +13984,7 @@ function cdbShowMenu(anchor, id) {
     { icon: '📊', label: 'CA & commandes',     fn: function(){ cdbOpenEdit(id); setTimeout(function(){ cdbSwitchTab('ca'); }, 50); } },
     { icon: '📝', label: 'Nouveau compte rendu', fn: function(){ if (typeof Visites !== 'undefined') Visites.nouvelle(id); else toast('Module visites indisponible','err'); } },
     { icon: '🗂', label: 'Historique des visites', fn: function(){ cdbOpenEdit(id); setTimeout(function(){ cdbSwitchTab('visites'); }, 50); } },
+    { icon: '✉️', label: 'E-mail Outlook',     fn: function(){ if (typeof Mail !== 'undefined') Mail.open(id); else toast('Module e-mail indisponible','err'); } },
     { icon: '📋', label: 'Copier l\'email',    fn: function(){
         if (c && c.email) { navigator.clipboard.writeText(c.email).then(function(){ toast('Email copié', 'ok'); }); }
         else toast('Pas d\'email renseigné', 'err');
@@ -16028,6 +16029,7 @@ if ('serviceWorker' in navigator) {
 <script src="agenda.js?v=3"></script>
 <script src="visite.js?v=5"></script>
 <script src="notes.js?v=2"></script>
+<script src="mail.js?v=1"></script>
 <script src="analyse-client.js?v=1"></script>
 <script src="assistant.js?v=4"></script>
 <script src="tournees.js?v=4"></script>
