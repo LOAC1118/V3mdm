@@ -1656,6 +1656,10 @@ thead th.ts-active { text-decoration:underline; text-underline-offset:3px; }
       <svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 2h8a1 1 0 0 1 1 1v11l-2-1.3L9 14l-2-1.3L5 14l-2-1.3V3a1 1 0 0 1 1-1z"/><path d="M6 5.5h4M6 8h4"/></svg>
       Carnet
     </div>
+    <div class="nav-item" onclick="showSection('notes',null,this)">
+      <svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 2h7l3 3v9H3z"/><path d="M10 2v3h3M5.5 8h5M5.5 10.5h5"/></svg>
+      Notes
+    </div>
     <div class="nav-item" onclick="showSection('bdc',null,this)">
       <svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 2h12l-1 8H3z"/><circle cx="6" cy="14" r="1"/><circle cx="11" cy="14" r="1"/></svg>
       Bon de Commande
@@ -2139,6 +2143,9 @@ thead th.ts-active { text-decoration:underline; text-underline-offset:3px; }
   <!-- CARNET -->
   <div id="sec-carnet" class="hidden" style="padding:1.75rem 2rem;overflow-y:auto;flex:1;background:var(--bg);box-sizing:border-box;">
     <div id="carnet-host"></div>
+  </div>
+  <div id="sec-notes" class="hidden" style="padding:1.75rem 2rem;overflow-y:auto;flex:1;background:var(--bg);box-sizing:border-box;">
+    <div id="notes-host"></div>
   </div>
 
   <!-- Modale RDV -->
@@ -3465,6 +3472,10 @@ thead th.ts-active { text-decoration:underline; text-underline-offset:3px; }
   <button class="mmenu-item" role="menuitem" data-sec="carnet" onclick="mnavGo('carnet')">
     <span class="mmenu-ico"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 2h8a1 1 0 0 1 1 1v11l-2-1.3L9 14l-2-1.3L5 14l-2-1.3V3a1 1 0 0 1 1-1z"/><path d="M6 5.5h4M6 8h4"/></svg></span>
     <span class="mmenu-label">Carnet</span>
+  </button>
+  <button class="mmenu-item" role="menuitem" data-sec="notes" onclick="mnavGo('notes')">
+    <span class="mmenu-ico"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 2h7l3 3v9H3z"/><path d="M10 2v3h3M5.5 8h5M5.5 10.5h5"/></svg></span>
+    <span class="mmenu-label">Notes</span>
   </button>
   <button class="mmenu-item" role="menuitem" data-sec="bdc" onclick="mnavGo('bdc')">
     <span class="mmenu-ico"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 2h12l-1 8H3z"/><circle cx="6" cy="14" r="1"/><circle cx="11" cy="14" r="1"/></svg></span>
@@ -5147,7 +5158,7 @@ if (typeof cdbPageSize  === 'undefined') window.cdbPageSize  = 50;
 // ═══════════════════════════════════════════════
 //  NAVIGATION
 // ═══════════════════════════════════════════════
-const SECTIONS = ['dashboard','radar','tournees','visites','recherche','rgpd','bdc','frais','contacts-db','commissions','comptes','mailing','accords','promos','top100','cadencier','ia','assortiment','alertes','equipe','agenda','carnet'];
+const SECTIONS = ['dashboard','radar','tournees','visites','recherche','rgpd','bdc','frais','contacts-db','commissions','comptes','mailing','accords','promos','top100','cadencier','ia','assortiment','alertes','equipe','agenda','carnet','notes'];
 // ═══════════════════════════════════════════════
 //  MENUS DEROULANTS DE LA BARRE DU HAUT
 // ═══════════════════════════════════════════════
@@ -5216,6 +5227,7 @@ function showSection(name, tabEl, sideEl) {
   if (name==='radar') { setTimeout(function(){ if (typeof RadarClients !== 'undefined') RadarClients.mount(); }, 80); }
   if (name==='agenda') { setTimeout(function(){ if (window.Agenda) Agenda.mount(); }, 60); }
   if (name==='carnet') { setTimeout(function(){ if (window.Carnet) Carnet.mount(); }, 60); }
+  if (name==='notes') { setTimeout(function(){ if (window.Notes) Notes.mount(); }, 60); }
   if (name==='tournees') { setTimeout(function(){ if (typeof Tournees !== 'undefined') Tournees.mount(); }, 80); }
   if (name==='visites') { setTimeout(function(){ if (typeof Visites !== 'undefined') Visites.mount(); }, 80); }
   if (name==='rgpd') { setTimeout(function(){ if (typeof RGPD !== 'undefined') RGPD.mount(); }, 80); }
@@ -16051,7 +16063,8 @@ if ('serviceWorker' in navigator) {
 <script src="radar.js?v=5"></script>
 <script src="agenda.js?v=3"></script>
 <script src="carnet.js?v=1"></script>
-<script src="visite.js?v=3"></script>
+<script src="visite.js?v=4"></script>
+<script src="notes.js?v=1"></script>
 <script src="analyse-client.js?v=1"></script>
 <script src="assistant.js?v=3"></script>
 <script src="tournees.js?v=4"></script>

@@ -12,6 +12,7 @@
   var _stream = null, _mr = null, _chunks = [], _blob = null, _mime = '';
   var _timer = null, _t0 = 0, _wake = null, _sr = null, _srOn = false;
   var _busy = false;
+  var _boxId = 'vis-box', _col = 'rendez_vous';   // cible : RDV de l'agenda (défaut) ou note libre (collection carnet)
 
   function esc(s){ return String(s==null?'':s).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];}); }
   function pad(n){ return (n<10?'0':'')+n; }
@@ -37,23 +38,28 @@
   }
 
   // ── Affichage ──
-  function bind(r) {
+  function bind(r, opts) {
     css(); preloadNoSleep(); stopAll(true);
+    opts = opts || {};
+    _boxId = opts.box || 'vis-box'; _col = opts.col || 'rendez_vous';
+    // un seul bloc actif à la fois (les identifiants internes sont partagés)
+    ['vis-box', 'notes-vis-box'].forEach(function(id){ if (id !== _boxId && $(id)) $(id).innerHTML = ''; });
     _r = r || null; _blob = null; _chunks = [];
     render();
   }
   function render() {
-    var box = $('vis-box'); if (!box) return;
+    var box = $(_boxId); if (!box) return;
+    var isNote = (_col === 'carnet');
     if (!_r) { box.innerHTML = '<div class="vis-small">💡 Enregistrez d\'abord le rendez-vous : vous pourrez ensuite y ajouter un compte-rendu, dicter ou enregistrer la conversation.</div>'; return; }
     var SR = window.SpeechRecognition || window.webkitSpeechRecognition;
     var canRec = !!(navigator.mediaDevices && window.MediaRecorder);
     box.innerHTML =
       '<div class="vis-wrap">'
-      + '<div class="vis-h">📝 Compte-rendu de visite</div>'
+      + '<div class="vis-h">' + (isNote ? '📝 Note' : '📝 Compte-rendu de visite') + '</div>'
       + '<textarea id="vis-cr" class="vis-ta" placeholder="Notes de la visite… (sur iPhone : micro 🎤 du clavier)">' + esc(_r.cr||'') + '</textarea>'
       + '<div class="vis-row">'
       +   (SR ? '<button class="vis-b" id="vis-dic" onclick="Visite.dicter()">🎤 Dicter</button>' : '')
-      +   '<button class="vis-b p" onclick="Visite.save()">💾 Enregistrer le compte-rendu</button>'
+      +   '<button class="vis-b p" onclick="Visite.save()">💾 Enregistrer ' + (isNote ? 'la note' : 'le compte-rendu') + '</button>'
       + '</div>'
       + (canRec
         ? '<div class="vis-row" style="margin-top:4px">'
@@ -69,7 +75,7 @@
     var h = '';
     if (_r && _r.resume) h += '<div class="vis-h">✨ Résumé</div><div class="vis-res">' + esc(_r.resume) + '</div>';
     if (_r && _r.transcription) h += '<details class="vis-det"><summary>Transcription complète</summary><div>' + esc(_r.transcription) + '</div></details>';
-    if (_r && (_r.resume || _r.transcription)) h += '<div class="vis-row"><button class="vis-b" onclick="Visite.toCarnet()">📓 Ajouter le résumé au Carnet</button></div>';
+    if (_r && _col !== 'carnet' && (_r.resume || _r.transcription)) h += '<div class="vis-row"><button class="vis-b" onclick="Visite.toCarnet()">📓 Ajouter le résumé au Carnet</button></div>';
     return h;
   }
 
@@ -233,7 +239,7 @@
   function persist(fields) {
     if (!_r || !_r.id) return Promise.reject(new Error('RDV non enregistré'));
     fields.crUpdatedAt = Date.now();
-    return bcol('rendez_vous').doc(_r.id).set(fields, { merge: true });
+    return bcol(_col).doc(_r.id).set(fields, { merge: true });
   }
   function save() {
     var ta = $('vis-cr'); if (!ta || !_r) return;
