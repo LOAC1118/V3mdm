@@ -1,7 +1,7 @@
 /* ═══════════════════════════════════════════════════════════════════════
    ASSISTANT COHOR — agent IA (étape 1)
    Tu écris ou dictes une phrase ; l'IA la transforme en ACTIONS précises
-   (créer un RDV, modifier une fiche client, ajouter une note au Carnet).
+   (créer un RDV, modifier une fiche client, ajouter une note).
    Rien n'est écrit sans ta validation : chaque action s'affiche sur une
    carte de confirmation. Les écritures passent par ton compte, donc les
    règles Firestore et le cloisonnement par secteur s'appliquent.
@@ -53,7 +53,7 @@
       + 'Transforme la demande en une liste d\'ACTIONS. Types possibles UNIQUEMENT :\n'
       + '1) {"type":"creer_rdv","client":"nom du client tel que dit","date":"YYYY-MM-DD","heure":"HH:MM","rdv_type":"Visite|Appel|Rendez-vous|Relance|Livraison|Autre","objet":"...","lieu":"...","notes":"..."}\n'
       + '2) {"type":"modifier_client","client":"nom du client","champs":{"telephone":"...","email":"...","adresse":"...","cp":"...","ville":"...","notes":"texte À AJOUTER aux notes"}} (n\'inclure que les champs à changer)\n'
-      + '3) {"type":"ajouter_note","texte":"...","date":"YYYY-MM-DD"} (note libre du carnet ; date = aujourd\'hui si non précisée)\n'
+      + '3) {"type":"ajouter_note","texte":"...","date":"YYYY-MM-DD"} (note libre ; date = aujourd\'hui si non précisée)\n'
       + 'Résous les dates relatives (« jeudi », « demain », « la semaine prochaine ») en date réelle future. '
       + 'Si l\'heure n\'est pas dite, mets "09:00". N\'invente jamais une information absente de la demande. '
       + 'Si la demande ne correspond à aucune action possible (ex. passer une commande, supprimer), renvoie actions:[] et explique dans "message". '
@@ -130,7 +130,7 @@
         h += '<div class="asst-l"><b>' + CHAMPS[k] + '</b> : ' + (k==='notes' ? 'ajout « ' + esc(ch[k]) + ' »' : esc(old) + ' → <b>' + esc(ch[k]) + '</b>') + '</div>';
       });
     } else {
-      h += '<div class="asst-t">📓 Note au Carnet</div><div class="asst-l">' + esc(dateFr(d.date || ymd(new Date()))) + '</div>'
+      h += '<div class="asst-t">📝 Nouvelle note</div><div class="asst-l">' + esc(dateFr(d.date || ymd(new Date()))) + '</div>'
         + '<div class="asst-l">« ' + esc(d.texte||'') + ' »</div>';
     }
     return h;
@@ -197,14 +197,12 @@
   function doNote(o) {
     var u = me(); if (!u) return Promise.reject(new Error('Non connecté'));
     var date = /^\d{4}-\d{2}-\d{2}$/.test(o.data.date||'') ? o.data.date : ymd(new Date());
-    var ref = bcol('carnet').doc(u.uid + '_' + date);
-    // Jour sans note : la lecture d'un doc inexistant est refusée par les règles → « vide »
-    return ref.get().catch(function(){ return { exists: false }; }).then(function(s){
-      var old = s.exists ? (s.data().texte || '') : '';
-      var heure = pad(new Date().getHours()) + ':' + pad(new Date().getMinutes());
-      var nt = (old ? old + '\n\n' : '') + heure + ' — ' + (o.data.texte||'');
-      return ref.set({ date: date, texte: nt, owner: u.uid, ownerEmail: (u.email||'').toLowerCase(), updatedAt: Date.now() }, { merge: true });
-    });
+    var now = Date.now();
+    var c = (typeof cdbContacts !== 'undefined' && cdbContacts) ? cdbContacts.filter(function(x){ return o.data.client && norm(x.nom) === norm(o.data.client); })[0] : null;
+    // note libre (section Notes) : privée, rattachable à un client plus tard
+    return bcol('carnet').doc().set({ kind: 'note', owner: u.uid, ownerEmail: (u.email||'').toLowerCase(), date: date,
+      titre: '', cr: o.data.texte || '', clientNom: c ? c.nom : '', clientId: c ? c.id : '', secteur: c ? (c.secteur||'') : '',
+      createdAt: now, updatedAt: now });
   }
 
   function run(i) {

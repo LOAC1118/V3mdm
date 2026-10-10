@@ -3,7 +3,7 @@
    de conversation + transcription/résumé IA (via le module Visite).
    Le client peut être rattaché APRÈS coup, puis la note ajoutée à sa fiche.
    Stockage : collection privée bcol('carnet') — document { kind:'note', owner… }
-   (mêmes règles que le Carnet : strictement privé, aucune règle à ajouter).
+   (strictement privé, aucune règle à ajouter). Reprend aussi les anciennes pages du Carnet.
    Champs : titre, cr (texte), transcription, resume, clientNom, clientId,
    secteur, date, createdAt, updatedAt.
    ═══════════════════════════════════════════════════════════════════════ */
@@ -33,8 +33,14 @@
   function load() {
     var u = me(); if (!u) return;
     try { if (_unsub) { _unsub(); _unsub = null; } } catch(e){}
-    _unsub = col().where('owner', '==', u.uid).where('kind', '==', 'note').onSnapshot(function(snap){
+    _unsub = col().where('owner', '==', u.uid).onSnapshot(function(snap){
       _notes = snap.docs.map(function(d){ var o = d.data(); o.id = d.id; return o; })
+        .filter(function(o){
+          if (o.kind === 'note') return true;
+          // anciennes pages du Carnet (une par jour) : on les garde comme notes
+          if (!o.kind && (o.texte || o.resume)) { if (!o.cr) o.cr = o.texte || ''; if (!o.titre) o.titre = 'Carnet du ' + (o.date || ''); return true; }
+          return false;
+        })
         .sort(function(a, b){ return stamp(b) - stamp(a); });
       renderList();
     }, function(e){ console.warn('[Notes]', e && e.code); var h = $('notes-host'); if (h && !_notes.length) h.innerHTML = '<div class="nt-empty">Notes indisponibles : ' + esc((e && e.code) || 'erreur') + '</div>'; });

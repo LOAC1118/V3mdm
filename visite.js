@@ -12,7 +12,7 @@
   var _stream = null, _mr = null, _chunks = [], _blob = null, _mime = '';
   var _timer = null, _t0 = 0, _wake = null, _sr = null, _srOn = false;
   var _busy = false;
-  var _boxId = 'vis-box', _col = 'rendez_vous';   // cible : RDV de l'agenda (défaut) ou note libre (collection carnet)
+  var _boxId = 'vis-box', _col = 'rendez_vous';   // cible : RDV de l'agenda (défaut) ou note libre (module Notes, collection « carnet »)
 
   function esc(s){ return String(s==null?'':s).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];}); }
   function pad(n){ return (n<10?'0':'')+n; }
@@ -75,7 +75,6 @@
     var h = '';
     if (_r && _r.resume) h += '<div class="vis-h">✨ Résumé</div><div class="vis-res">' + esc(_r.resume) + '</div>';
     if (_r && _r.transcription) h += '<details class="vis-det"><summary>Transcription complète</summary><div>' + esc(_r.transcription) + '</div></details>';
-    if (_r && _col !== 'carnet' && (_r.resume || _r.transcription)) h += '<div class="vis-row"><button class="vis-b" onclick="Visite.toCarnet()">📓 Ajouter le résumé au Carnet</button></div>';
     return h;
   }
 
@@ -247,20 +246,5 @@
     persist({ cr: ta.value }).then(function(){ note('✅ Compte-rendu enregistré', 'ok'); })
       .catch(function(e){ note('Erreur : ' + (e.code || e.message), 'err'); });
   }
-  function toCarnet() {
-    var u = (typeof currentUser !== 'undefined') ? currentUser : null;
-    if (!u || !_r) return;
-    var ref = bcol('carnet').doc(u.uid + '_' + _r.date);
-    var titre = 'Visite ' + (_r.clientNom || '') + (_r.heure ? ' (' + _r.heure + ')' : '');
-    var corps = _r.resume || _r.cr || '';
-    // Lecture d'un jour sans note : refusée par les règles (doc inexistant) → on considère « vide »
-    ref.get().catch(function(){ return { exists: false }; }).then(function(s){
-      var old = s.exists ? (s.data().texte || '') : '';
-      return ref.set({ date: _r.date, texte: (old ? old + '\n\n' : '') + titre + ' —\n' + corps,
-        owner: u.uid, ownerEmail: (u.email || '').toLowerCase(), updatedAt: Date.now() }, { merge: true });
-    }).then(function(){ note('📓 Ajouté au Carnet du ' + _r.date, 'ok'); })
-      .catch(function(e){ note('Erreur : ' + (e.code || e.message), 'err'); });
-  }
-
-  window.Visite = { bind: bind, dicter: dicter, toggleRec: toggleRec, transcribe: transcribe, save: save, toCarnet: toCarnet, stop: stopAll };
+  window.Visite = { bind: bind, dicter: dicter, toggleRec: toggleRec, transcribe: transcribe, save: save, stop: stopAll };
 })();
