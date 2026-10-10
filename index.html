@@ -13737,11 +13737,14 @@ function cdbBuildCATab(c) {
   var normName = function(s){ return String(s||'').toLowerCase().replace(/\s+/g,' ').trim(); };
   var normCode = function(s){ var v=String(s||'').trim(); if(v.endsWith('.0')) v=v.slice(0,-2); return v; };
 
+  // Rattachement : le CODE client prime. Le nom (égalité exacte, pas « contient »)
+  // ne sert que si la fiche ou la ligne n'a pas de code — évite de mélanger
+  // « CASABIO » avec « CASABIO GRENOBLE » ou « CASABIO 1 ».
+  var noZero = function(s){ return normCode(s).replace(/^0+/, ''); };
   var cmds = dashCaRows.filter(function(r) {
-    if (c.numClient && r.codeClient && normCode(r.codeClient) === normCode(c.numClient)) return true;
-    if (c.nom && r.clientNomKey && normName(r.clientNomKey).indexOf(normName(c.nom)) >= 0) return true;
-    if (c.nom && r.clientNomKey && normName(c.nom).indexOf(normName(r.clientNomKey)) >= 0) return true;
-    return false;
+    var codeFiche = noZero(c.numClient), codeLigne = noZero(r.codeClient);
+    if (codeFiche && codeLigne) return codeFiche === codeLigne;
+    return !!(c.nom && r.clientNomKey && normName(r.clientNomKey) === normName(c.nom));
   });
 
   if (!cmds.length) {
@@ -13783,7 +13786,17 @@ function cdbBuildCATab(c) {
 
   // ── KPIs globaux ────────────────────────────────────────────────────────
   var totCurr = totYear[NOW_YEAR] || 0;
-  var totPrev = totYear[PREV_YEAR] || 0;
+  var totPrev = totYear[PREV_YEAR] || 0;              // année N-1 entière
+  // N-1 sur la MÊME période (1er janvier → même jour qu'aujourd'hui) pour une comparaison juste
+  var _now = new Date(), _mNow = _now.getMonth() + 1, _dNow = _now.getDate();
+  var totPrevSame = 0;
+  cmds.forEach(function(r) {
+    if (r.annee !== PREV_YEAR) return;
+    var rm, rd;
+    if (r.dateRef instanceof Date && !isNaN(r.dateRef)) { rm = r.dateRef.getMonth() + 1; rd = r.dateRef.getDate(); }
+    else { rm = parseInt(String(r.mois || '').slice(5, 7), 10) || 0; rd = 0; }
+    if (rm < _mNow || (rm === _mNow && rd <= _dNow)) totPrevSame += r.ca;
+  });
   var totCurrFac = totYearFac[NOW_YEAR] || 0;
   var nbCmds = cmds.filter(function(r){ return r.annee === NOW_YEAR; }).length;
 
@@ -13791,7 +13804,8 @@ function cdbBuildCATab(c) {
   html +=   '<div style="background:var(--blue-p50);border:1px solid var(--blue-p200);border-radius:10px;padding:.8rem 1rem;">';
   html +=     '<div style="font-size:.6rem;font-weight:700;text-transform:uppercase;color:var(--blue-p600);margin-bottom:4px;">CA Total '+NOW_YEAR+'</div>';
   html +=     '<div style="font-size:1.4rem;font-weight:800;color:var(--blue-p700);">'+fmtCA(totCurr)+'</div>';
-  html +=     '<div style="font-size:.68rem;color:var(--g500);margin-top:3px;">vs '+PREV_YEAR+' : '+fmtCA(totPrev)+' '+fmtPct(totCurr,totPrev)+'</div>';
+  html +=     '<div style="font-size:.68rem;color:var(--g500);margin-top:3px;">vs '+PREV_YEAR+' même période : '+fmtCA(totPrevSame)+' '+fmtPct(totCurr,totPrevSame)+'</div>';
+  html +=     '<div style="font-size:.64rem;color:var(--g400);margin-top:2px;">'+PREV_YEAR+' entier : '+fmtCA(totPrev)+'</div>';
   html +=   '</div>';
   html +=   '<div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:10px;padding:.8rem 1rem;">';
   html +=     '<div style="font-size:.6rem;font-weight:700;text-transform:uppercase;color:#14120F;margin-bottom:4px;">CA Facturé '+NOW_YEAR+'</div>';
