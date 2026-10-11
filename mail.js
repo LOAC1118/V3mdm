@@ -11,6 +11,8 @@
    ═══════════════════════════════════════════════════════════════════════ */
 (function () {
   var SIG_KEY = 'cohor_mail_sig_v1';
+  var WEB_KEY = 'cohor_mail_web_v1';
+  var WEB_DEF = 'https://mails.moulindesmoines.com/owa/';
   var MAILTO_MAX = 1800;     // au-delà, certains clients mail tronquent le corps
 
   var _c = null;
@@ -19,6 +21,9 @@
   function $(id){ return document.getElementById(id); }
   function note(m,t){ try { toast(m,t||'ok'); } catch(e){ console.log(m); } }
   function signature(){ try { return localStorage.getItem(SIG_KEY) || localStorage.getItem('cohor_ms_sig_v1') || ''; } catch(e){ return ''; } }
+
+  function webUrl(){ var u = ''; try { u = localStorage.getItem(WEB_KEY) || ''; } catch(e){} u = (u || WEB_DEF).trim(); if (!/^https?:\/\//i.test(u)) u = WEB_DEF; return u; }
+  function owaBase(){ var m = webUrl().match(/^(https?:\/\/[^?#]*?\/owa\/)/i); return m ? m[1] : webUrl().replace(/[?#].*$/, '').replace(/\/?$/, '/'); }
 
   function htmlToText(h) {
     return String(h || '').replace(/<\/p>\s*<p[^>]*>/gi, '\n\n').replace(/<br\s*\/?>/gi, '\n').replace(/<\/li>/gi, '\n').replace(/<li[^>]*>/gi, '• ')
@@ -48,19 +53,46 @@
     q.push('body=' + encodeURIComponent(body.replace(/\n/g, '\r\n')));
     return 'mailto:' + to.join(',') + '?' + q.join('&');     // adresses déjà validées : on garde le @ tel quel
   }
-  function openInMail() {
+  // Outlook Web (OWA) : ouvre une fenêtre de rédaction pré-remplie dans un nouvel onglet
+  function owaUrl(to, cc, sujet, body) {
+    var q = ['ae=Item', 'a=New', 't=IPM.Note', 'to=' + encodeURIComponent(to.join(';'))];
+    if (cc.length) q.push('cc=' + encodeURIComponent(cc.join(';')));
+    q.push('subject=' + encodeURIComponent(sujet));
+    q.push('body=' + encodeURIComponent(body));
+    return owaBase() + '?' + q.join('&');
+  }
+  function check() {
     var to = parseAddrs($('ml-to').value), cc = parseAddrs($('ml-cc').value);
     var sujet = $('ml-sujet').value.trim(), body = fullBody();
-    if (!to.length) { note('Indiquez un destinataire valide', 'err'); return; }
-    if (!sujet) { note('Indiquez un objet', 'err'); return; }
-    if (!($('ml-corps').value || '').trim()) { note('Le message est vide', 'err'); return; }
-    var url = mailtoUrl(to, cc, sujet, body);
+    if (!to.length) { note('Indiquez un destinataire valide', 'err'); return null; }
+    if (!sujet) { note('Indiquez un objet', 'err'); return null; }
+    if (!($('ml-corps').value || '').trim()) { note('Le message est vide', 'err'); return null; }
+    return { to: to, cc: cc, sujet: sujet, body: body };
+  }
+  function trace(sujet) {
+    var tr = $('ml-trace'); if (tr && tr.checked && _c) traceInNotes('E-mail préparé : ' + sujet);
+  }
+  function openWeb() {
+    var m = check(); if (!m) return;
+    // copie du message complet (secours si OWA ne reprend pas le texte)
+    try { navigator.clipboard.writeText(m.body).then(function(){ note('Message copié : si le texte n\'apparaît pas dans Outlook, faites Coller', 'ok'); }, function(){}); } catch(e){}
+    var url = owaUrl(m.to, m.cc, m.sujet, m.body);
+    var w = null; try { w = window.open(url, '_blank'); } catch(e){}
+    if (!w) { note('Le navigateur a bloqué l\'ouverture : autorisez les pop-ups pour ce site', 'err'); return; }
+    trace(m.sujet);
+  }
+  function openWebHome() {
+    var u = webUrl(); var w = null; try { w = window.open(u, '_blank'); } catch(e){}
+    if (!w) note('Ouverture bloquée : autorisez les pop-ups', 'err');
+  }
+  function openInMail() {
+    var m = check(); if (!m) return;
+    var url = mailtoUrl(m.to, m.cc, m.sujet, m.body);
     if (url.length > MAILTO_MAX + 300) {
-      // message long : on le copie aussi, au cas où la messagerie tronquerait le texte
-      try { navigator.clipboard.writeText(body); note('Message long : copié aussi dans le presse-papiers (collez-le si besoin)', 'ok'); } catch(e){}
+      try { navigator.clipboard.writeText(m.body); note('Message long : copié aussi dans le presse-papiers', 'ok'); } catch(e){}
     }
-    var tr = $('ml-trace'), p = (tr && tr.checked && _c) ? traceInNotes('E-mail préparé : ' + sujet) : Promise.resolve();
-    p.then(function(){ window.location.href = url; });
+    trace(m.sujet);
+    window.location.href = url;
   }
   function copyMsg() {
     var txt = 'Objet : ' + ($('ml-sujet').value || '') + '\n\n' + fullBody();
@@ -117,7 +149,7 @@
 
   // ── Réglages (signature) ──
   function saveSig() {
-    try { localStorage.setItem(SIG_KEY, $('ml-sig').value); note('Signature enregistrée', 'ok'); } catch(e){ note('Enregistrement impossible', 'err'); }
+    try { localStorage.setItem(SIG_KEY, $('ml-sig').value); var w = $('ml-web'); if (w) localStorage.setItem(WEB_KEY, w.value.trim()); note('Réglages enregistrés', 'ok'); } catch(e){ note('Enregistrement impossible', 'err'); }
   }
 
   // ── Fenêtre ──
@@ -158,8 +190,8 @@
         + '<div class="ml-act"><input id="ml-consigne" class="ml-in" style="flex:1" placeholder="Consigne pour l\'IA : ex. relance après visite, présenter les nouveautés…"><button class="ml-b" id="ml-iabtn" onclick="Mail.ia()">✨ Rédiger</button></div>'
         + '<textarea id="ml-corps" class="ml-in" placeholder="Votre message…"></textarea>'
         + '<label class="ml-mut"><input type="checkbox" id="ml-trace" checked> Noter l\'e-mail dans la fiche client</label>'
-        + '<div class="ml-act"><button class="ml-b" onclick="Mail.copyMsg()">📋 Copier</button><span class="ml-mut">' + (signature() ? 'Signature ajoutée à l\'ouverture' : 'Astuce : ajoutez votre signature dans Réglages') + '</span><button class="ml-b p" onclick="Mail.openInMail()">✉️ Ouvrir dans ma messagerie</button></div>'
-        + '<div class="ml-mut">Votre messagerie s\'ouvre avec le message prêt : vous relisez puis envoyez depuis votre boîte.</div>';
+        + '<div class="ml-act"><button class="ml-b" onclick="Mail.copyMsg()">📋 Copier</button><button class="ml-b" onclick="Mail.openInMail()" title="Pour une application mail installée (iPhone, Outlook bureau)">📱 App mail</button><button class="ml-b p" onclick="Mail.openWeb()">✉️ Ouvrir dans Outlook web</button></div>'
+        + '<div class="ml-mut">Outlook web s\'ouvre dans un nouvel onglet avec le message prêt (copié aussi dans le presse-papiers) : relisez puis envoyez. ' + (signature() ? 'Signature ajoutée.' : 'Astuce : ajoutez votre signature dans ⚙️.') + '</div>';
     } else if (tab === 'echange') {
       b.innerHTML =
           '<div class="ml-step">Gardez la trace d\'un échange dans la fiche du client : collez un e-mail reçu, ou dictez un résumé d\'appel (micro 🎤 du clavier), puis résumez-le avec l\'IA si besoin.</div>'
@@ -169,8 +201,9 @@
     } else {
       b.innerHTML =
           '<div><label class="ml-lb">Signature (ajoutée à chaque e-mail)</label><textarea id="ml-sig" class="ml-in" style="min-height:100px" placeholder="Christophe SPOTO&#10;Moulin des Moines">' + esc(signature()) + '</textarea></div>'
-        + '<div class="ml-act"><button class="ml-b p" onclick="Mail.saveSig()">Enregistrer</button></div>'
-        + '<div class="ml-mut">La signature est enregistrée sur cet appareil.</div>';
+        + '<div><label class="ml-lb">Adresse de votre messagerie web</label><input id="ml-web" class="ml-in" value="' + esc(webUrl()) + '"></div>'
+        + '<div class="ml-act"><button class="ml-b p" onclick="Mail.saveSig()">Enregistrer</button><button class="ml-b" onclick="Mail.openWebHome()">Ouvrir ma boîte</button></div>'
+        + '<div class="ml-mut">Réglages enregistrés sur cet appareil.</div>';
     }
   }
   function open(id, tab) {
@@ -187,6 +220,6 @@
   }
   function close() { var o = $('ml-ov'); if (o) o.remove(); }
 
-  window.Mail = { open: open, close: close, show: show, ia: ia, openInMail: openInMail, copyMsg: copyMsg,
-    resumer: resumer, addEchange: addEchange, saveSig: saveSig, _t: { mailtoUrl: mailtoUrl, htmlToText: htmlToText, parseAddrs: parseAddrs } };
+  window.Mail = { open: open, close: close, show: show, ia: ia, openInMail: openInMail, openWeb: openWeb, openWebHome: openWebHome, copyMsg: copyMsg,
+    resumer: resumer, addEchange: addEchange, saveSig: saveSig, _t: { mailtoUrl: mailtoUrl, owaUrl: owaUrl, htmlToText: htmlToText, parseAddrs: parseAddrs } };
 })();
