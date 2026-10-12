@@ -57,14 +57,14 @@
     if (!list.length) return '';
     var items = list.slice(0,5).map(function(r){
       return '<div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-top:1px solid var(--border);">'
-        + '<span style="font-family:\'Sora\',sans-serif;font-weight:700;color:#FF4D1C;min-width:44px;">'+esc(r.heure||'—')+'</span>'
+        + '<span style="font-family:\'Sora\',sans-serif;font-weight:700;color:var(--brand);min-width:44px;">'+esc(r.heure||'—')+'</span>'
         + '<div><div style="font-weight:600;font-size:.82rem;color:#14120F;">'+esc(r.clientNom||r.objet||'RDV')+'</div>'
         + '<div style="font-size:.7rem;color:#8A8F86;">'+esc(r.type||'')+(r.objet&&r.clientNom?(' · '+esc(r.objet)):'')+'</div></div></div>';
     }).join('');
     return '<div class="card" style="padding:1rem 1.1rem;margin-bottom:1.25rem;border-radius:16px;">'
       + '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.3rem;">'
       + '<div style="font-family:\'Sora\',sans-serif;font-weight:600;color:#14120F;">📅 Vos rendez-vous du jour</div>'
-      + '<a onclick="showSection(\'agenda\',null,this)" style="font-size:.75rem;color:#E03A0C;cursor:pointer;">Ouvrir l\'agenda →</a></div>'
+      + '<a onclick="showSection(\'agenda\',null,this)" style="font-size:.75rem;color:var(--brand-d);cursor:pointer;">Ouvrir l\'agenda →</a></div>'
       + items + '</div>';
   }
 

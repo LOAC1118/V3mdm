@@ -89,8 +89,8 @@
     '.eqa-sub{font:500 12px "Inter",sans-serif;color:#9aa096;margin-top:2px;overflow:hidden;text-overflow:ellipsis}',
     '.eqa-status{font:600 11px "Inter",sans-serif;padding:4px 10px;border-radius:20px;white-space:nowrap;flex-shrink:0}',
     '.eqa-actions{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:12px}',
-    '.eqa-primary{appearance:none;border:0;background:#FF4D1C;color:#fff;border-radius:9px;padding:8px 14px;font:600 12.5px "Inter",sans-serif;cursor:pointer}',
-    '.eqa-primary:hover{background:#E03A0C}',
+    '.eqa-primary{appearance:none;border:0;background:var(--brand);color:#fff;border-radius:9px;padding:8px 14px;font:600 12.5px "Inter",sans-serif;cursor:pointer}',
+    '.eqa-primary:hover{background:var(--brand-d)}',
     '.eqa-btn{appearance:none;border:1px solid #d3d8ce;background:#fff;color:#40463c;border-radius:9px;padding:8px 12px;font:600 12.5px "Inter",sans-serif;cursor:pointer}',
     '.eqa-btn:hover{background:#f5f7f3}',
     '.eqa-admin{display:flex;align-items:center;gap:8px;margin-left:auto;padding-left:12px;border-left:1px solid #ededed}',
@@ -537,7 +537,7 @@
       + _stat(_nbActifs, 'Actifs', '#1f7a34')
       + _stat(_nbCrees, 'Comptes créés')
       + _stat(_nbAttente, 'À créer', _nbAttente ? '#b57500' : '#1a1a1a')
-      + _stat(_nbClients, 'Clients attribués', '#FF4D1C')
+      + _stat(_nbClients, 'Clients attribués', 'var(--brand)')
       + '</div>';
 
     box.innerHTML = '<div class="eq-h" style="margin-top:10px"><h2 style="font:600 17px/1.1 \'Fraunces\',Georgia,serif">Comptes &amp; accès</h2>'

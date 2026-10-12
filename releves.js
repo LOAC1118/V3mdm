@@ -175,7 +175,7 @@
       '.rl h2{font:600 20px "Fraunces",Georgia,serif;margin:4px 0}.rl .mut{font-size:.78rem;color:#8a857d}',
       '.rl-bar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:12px 0}',
       '.rl-b{border:1px solid #d9d5cc;background:#fff;border-radius:99px;padding:9px 15px;font:600 .82rem "Inter",sans-serif;cursor:pointer}',
-      '.rl-b.p{background:#FF4D1C;border-color:#FF4D1C;color:#fff}.rl-b.on{background:#14120F;border-color:#14120F;color:#fff}',
+      '.rl-b.p{background:var(--brand);border-color:var(--brand);color:#fff}.rl-b.on{background:#14120F;border-color:#14120F;color:#fff}',
       '.rl-in{padding:9px 11px;border:1px solid #d9d5cc;border-radius:10px;font:inherit;background:#fff;box-sizing:border-box;max-width:100%}',
       '.rl-card{background:#fff;border:1px solid #e7e3da;border-radius:13px;padding:12px 14px;margin-bottom:8px;display:flex;gap:10px;align-items:center}',
       '.rl-card .t{font-weight:700;font-size:.92rem}.rl-card .s{font-size:.76rem;color:#8a857d;margin-top:2px}',

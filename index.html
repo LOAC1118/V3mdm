@@ -1169,21 +1169,33 @@ thead th.ts-active { text-decoration:underline; text-underline-offset:3px; }
 }
 </style>
 <!-- jsPDF chargé en lazy au besoin -->
-<!-- ═══ COHOR-PALETTE-START — couleur principale → orange COHOR (les 2 marques) ═══ -->
+<!-- ═══ COHOR-PALETTE-START — couleur de marque : orange (MDM) / vert (NATURALINE) ═══ -->
 <style id="cohor-palette">
-  :root, body.brand-naturaline {
-    --blue-p50:  #FFF4EF;
-    --blue-p100: #FFE7DE;
-    --blue-p300: #F6C7B4;
-    --blue-p400: #FF9366;
-    --blue-p500: #FF6D3D;
-    --blue-p600: #FF4D1C;
-    --blue-p700: #E03A0C;
-    --blue-p800: #B22F09;
-    --blue-p900: #8A2406;
-    --blue:      #FF4D1C;
-    --blue-bg:   #FFF2ED;
+  :root {
+    --brand:#FF4D1C; --brand-d:#E03A0C; --brand-dd:#B22F09; --brand-m:#FF6D3D; --brand-ml:#FF9366;
+    --brand-l:#FFE7DE; --brand-xl:#FFF4EF; --brand-rgb:255,77,28; --brand-dark:#14120F;
   }
+  body.brand-naturaline {
+    --brand:#0F7A3D; --brand-d:#0A5E30; --brand-dd:#034B25; --brand-m:#148C47; --brand-ml:#74C191;
+    --brand-l:#DDEFE4; --brand-xl:#EDF6F0; --brand-rgb:15,122,61; --brand-dark:#0B2416;
+  }
+  :root, body.brand-naturaline {
+    --blue-p50:  var(--brand-xl);
+    --blue-p100: var(--brand-l);
+    --blue-p300: var(--brand-ml);
+    --blue-p400: var(--brand-ml);
+    --blue-p500: var(--brand-m);
+    --blue-p600: var(--brand);
+    --blue-p700: var(--brand-d);
+    --blue-p800: var(--brand-dd);
+    --blue-p900: var(--brand-dd);
+    --blue:      var(--brand);
+    --blue-bg:   var(--brand-xl);
+  }
+  /* NATURALINE : fond de page légèrement verdi + fût et barre du haut vert profond */
+  body.brand-naturaline { --bg:#F2F7F3; --bg2:#E8F0EA; --surface2:#F4F8F5; }
+  body.brand-naturaline .topbar, body.brand-naturaline .sidebar { background:var(--brand-dark) !important; }
+  body.brand-naturaline #login-screen { background:#EAF2EC !important; }
 </style>
 <!-- ═══ COHOR-PALETTE-END ═══ -->
 <!-- ═══ COHOR-LOGIN-START — habillage écran de connexion (retirer ce bloc pour revenir à l'ancien) ═══ -->
@@ -1194,8 +1206,8 @@ thead th.ts-active { text-decoration:underline; text-underline-offset:3px; }
   #login-screen{ background:#F2EFE9 !important; font-family:'Instrument Sans',system-ui,sans-serif; }
   #login-screen .login-box{ border-radius:24px; border:1px solid #E3DFD7;
     box-shadow:0 16px 44px rgba(20,18,15,.14); }
-  #login-screen .login-logo-ico{ background:#FF4D1C !important; border-radius:17px;
-    box-shadow:0 8px 18px -6px rgba(245,81,30,.55); }
+  #login-screen .login-logo-ico{ background:var(--brand) !important; border-radius:17px;
+    box-shadow:0 8px 18px -6px rgba(var(--brand-rgb),.55); }
   #login-screen .login-logo-ico{ background:transparent !important; border-radius:0 !important;
     box-shadow:none !important; width:auto !important; height:auto !important; }
   #login-screen .login-logo-name{ font-family:'Sora',sans-serif; font-weight:700;
@@ -1205,16 +1217,16 @@ thead th.ts-active { text-decoration:underline; text-underline-offset:3px; }
   #login-screen .login-field label{ color:#2C2F29; }
   #login-screen .login-field input{ background:#F8F6F1; border:1px solid #E3DFD7;
     border-radius:11px; color:#14120F; font-family:'Instrument Sans',sans-serif; }
-  #login-screen .login-field input:focus{ border-color:#FF4D1C; background:#fff;
-    box-shadow:0 0 0 3px #FFE7DE; }
+  #login-screen .login-field input:focus{ border-color:var(--brand); background:#fff;
+    box-shadow:0 0 0 3px var(--brand-l); }
   #login-screen .login-field input::placeholder{ color:#A8A29A; }
-  #login-screen .btn-primary{ background:#FF4D1C !important; color:#fff !important;
+  #login-screen .btn-primary{ background:var(--brand) !important; color:#fff !important;
     border:none !important; border-radius:99px !important; font-family:'Sora',sans-serif;
-    font-weight:700; padding:.85rem; box-shadow:0 12px 22px -10px rgba(245,81,30,.6);
+    font-weight:700; padding:.85rem; box-shadow:0 12px 22px -10px rgba(var(--brand-rgb),.6);
     transition:transform .12s ease, background .15s ease; }
-  #login-screen .btn-primary:hover{ background:#E03A0C !important; transform:translateY(-1px); }
+  #login-screen .btn-primary:hover{ background:var(--brand-d) !important; transform:translateY(-1px); }
   #login-screen .login-err{ border-radius:10px; }
-  #login-screen .login-switch a{ color:#E03A0C; }
+  #login-screen .login-switch a{ color:var(--brand-d); }
 </style>
 <!-- ═══ COHOR-LOGIN-END ═══ -->
 <!-- ═══ COHOR-CHROME-START — barre du haut + fût sombre (retirer ce bloc pour revenir) ═══ -->
@@ -1225,7 +1237,7 @@ thead th.ts-active { text-decoration:underline; text-underline-offset:3px; }
   .topbar .sync-indicator, .topbar #sync-label{ color:rgba(255,255,255,.72); }
   .topbar-center .t-tab{ border-radius:99px; color:rgba(255,255,255,.62); }
   .topbar-center .t-tab:hover{ background:rgba(255,255,255,.08); color:#FFFFFF; }
-  .topbar-center .t-tab.active{ background:#FF4D1C !important; color:#FFFFFF !important; }
+  .topbar-center .t-tab.active{ background:var(--brand) !important; color:#FFFFFF !important; }
   /* Menu du haut retiré : la navigation d'ordinateur passe par le fût rangé */
   .topbar-center{ display:none !important; }
   /* Badge de rôle à côté de l'avatar */
@@ -1239,7 +1251,7 @@ thead th.ts-active { text-decoration:underline; text-underline-offset:3px; }
   .sidebar .nav-label{ color:rgba(255,255,255,.42); }
   .sidebar .nav-item{ color:rgba(255,255,255,.64); }
   .sidebar .nav-item:hover{ background:rgba(255,255,255,.08); color:#FFFFFF; }
-  .sidebar .nav-item.active{ background:#FF4D1C !important; color:#FFFFFF !important; }
+  .sidebar .nav-item.active{ background:var(--brand) !important; color:#FFFFFF !important; }
   .sidebar .nav-item.active .nav-icon{ opacity:1; }
   .sidebar .nav-badge{ background:rgba(255,255,255,.10); color:rgba(255,255,255,.72); }
   .sidebar .nav-item.active .nav-badge{ background:rgba(255,255,255,.22); color:#FFFFFF; }
@@ -1251,9 +1263,9 @@ thead th.ts-active { text-decoration:underline; text-underline-offset:3px; }
 
   /* Logo COHOR dans le fût */
   .cohor-brand{ display:flex; align-items:center; gap:10px; padding:16px 16px 12px; }
-  .cohor-brand-ico{ width:34px; height:34px; border-radius:10px; background:#FF4D1C;
+  .cohor-brand-ico{ width:34px; height:34px; border-radius:10px; background:var(--brand);
     display:flex; align-items:center; justify-content:center; font-size:18px; flex-shrink:0;
-    box-shadow:0 6px 14px -4px rgba(245,81,30,.6); }
+    box-shadow:0 6px 14px -4px rgba(var(--brand-rgb),.6); }
   .cohor-brand-name{ font-family:'Sora',sans-serif; font-weight:700; color:#FFFFFF;
     font-size:1.05rem; letter-spacing:-.02em; line-height:1; }
   .cohor-brand-sub{ font-size:.58rem; letter-spacing:.12em; text-transform:uppercase;
@@ -1261,55 +1273,10 @@ thead th.ts-active { text-decoration:underline; text-underline-offset:3px; }
 
   /* Logo COHOR dans la barre du haut (anneaux entrelacés officiels) */
   .cohor-topbrand{ display:flex; align-items:center; gap:9px; }
-  .cohor-topbrand-ico{ display:flex; align-items:center; color:#FF4D1C; }
+  .cohor-topbrand-ico{ display:flex; align-items:center; color:var(--brand); }
   .cohor-topbrand-ico svg{ height:24px; width:auto; display:block; }
   .cohor-topbrand-name{ font-family:'Sora',sans-serif; font-weight:700; font-size:1.15rem;
     letter-spacing:-.02em; color:#FFFFFF; }
-  body.cohor-nuit .cohor-topbrand-name{ color:#F4F2ED; }
-  body.cohor-nuit .cohor-topbrand-ico{ color:#D6FF3F; }
-
-  /* Sélecteur flottant Éclat / Nuit */
-  #cohor-switch{ position:fixed; left:16px; bottom:16px; z-index:1000; display:inline-flex;
-    background:#14120F; border-radius:99px; padding:3px; cursor:pointer; user-select:none;
-    font-family:'Sora',sans-serif; box-shadow:0 8px 22px rgba(0,0,0,.28); }
-  #cohor-switch .cs-opt{ padding:5px 13px; border-radius:99px; font-size:.72rem; font-weight:600;
-    color:rgba(255,255,255,.6); transition:all .15s; }
-  #cohor-switch[data-mode="eclat"] .cs-eclat{ background:#FF4D1C; color:#FFFFFF; }
-  #cohor-switch[data-mode="nuit"]  .cs-nuit{ background:#D6FF3F; color:#14120F; }
-
-  /* ═══ MODE NUIT — appliqué aux parties déjà habillées ═══ */
-  body.cohor-nuit #cohor-switch{ background:#000; }
-
-  /* Connexion — nuit */
-  body.cohor-nuit #login-screen{ background:#0B0B0D !important; }
-  body.cohor-nuit #login-screen .login-box{ background:#141416; border-color:rgba(255,255,255,.10);
-    box-shadow:0 16px 44px rgba(0,0,0,.5); }
-  body.cohor-nuit #login-screen .login-logo-ico{ background:#D6FF3F !important;
-    box-shadow:0 8px 18px -6px rgba(214,255,63,.5); }
-  body.cohor-nuit #login-screen .login-logo-name{ color:#F4F2ED; }
-  body.cohor-nuit #login-screen .login-subtitle{ color:#b7b3ab; }
-  body.cohor-nuit #login-screen .login-field label{ color:#d6d2ca; }
-  body.cohor-nuit #login-screen .login-field input{ background:#1b1b1e;
-    border-color:rgba(255,255,255,.12); color:#F4F2ED; }
-  body.cohor-nuit #login-screen .login-field input:focus{ border-color:#D6FF3F; background:#141416;
-    box-shadow:0 0 0 3px rgba(214,255,63,.18); }
-  body.cohor-nuit #login-screen .btn-primary{ background:#D6FF3F !important; color:#14120F !important;
-    box-shadow:0 12px 22px -10px rgba(214,255,63,.5); }
-  body.cohor-nuit #login-screen .btn-primary:hover{ background:#c4f02b !important; }
-  body.cohor-nuit #login-screen .login-switch a{ color:#D6FF3F; }
-
-  /* Barre du haut — nuit (logo MDM/NATURALINE forcé en blanc pour rester visible) */
-  body.cohor-nuit .topbar{ background:#141416; border-bottom-color:rgba(255,255,255,.08); }
-  body.cohor-nuit .brand-name{ color:#F4F2ED; }
-  body.cohor-nuit .brand-plate svg{ filter:brightness(0) invert(1); }
-  body.cohor-nuit .t-tab{ color:rgba(255,255,255,.6); }
-  body.cohor-nuit .t-tab:hover{ background:rgba(255,255,255,.08); color:#FFFFFF; }
-  body.cohor-nuit .t-tab.active{ background:#D6FF3F !important; color:#14120F !important; }
-
-  /* Fût — nuit (accent vert acide) */
-  body.cohor-nuit .sidebar{ background:#000000; border-right-color:rgba(255,255,255,.08); }
-  body.cohor-nuit .sidebar .nav-item.active{ background:#D6FF3F !important; color:#14120F !important; }
-  body.cohor-nuit .cohor-brand-ico{ background:#D6FF3F; box-shadow:0 6px 14px -4px rgba(214,255,63,.5); }
 </style>
 <!-- ═══ COHOR-CHROME-END ═══ -->
 <!-- ═══ COHOR-DASH-START — habillage tableau de bord (retirer ce bloc pour revenir) ═══ -->
@@ -1329,8 +1296,8 @@ thead th.ts-active { text-decoration:underline; text-underline-offset:3px; }
   #sec-dashboard .stat-delta{ color:#A8A29A; }
 
   /* Carte accent — Commission en cours (bloc « argent » en orange) */
-  #sec-dashboard #dash-comm-card{ background:#FF4D1C !important; border-color:#FF4D1C !important;
-    box-shadow:0 14px 28px -12px rgba(245,81,30,.6) !important; }
+  #sec-dashboard #dash-comm-card{ background:var(--brand) !important; border-color:var(--brand) !important;
+    box-shadow:0 14px 28px -12px rgba(var(--brand-rgb),.6) !important; }
   #sec-dashboard #dash-comm-card .stat-val{ color:#FFFFFF !important; }
   #sec-dashboard #dash-comm-card .stat-label{ color:rgba(255,255,255,.88) !important; }
   #sec-dashboard #dash-comm-card .stat-delta{ color:rgba(255,255,255,.82) !important; }
@@ -1338,12 +1305,12 @@ thead th.ts-active { text-decoration:underline; text-underline-offset:3px; }
   /* Panneaux (Rythme d'achat, Priorités, Analyse CA) */
   #sec-dashboard .dash-panel{ border-radius:20px; border-color:#E3DFD7; }
   #sec-dashboard .dash-panel-h h2{ font-family:'Sora',sans-serif; color:#14120F; }
-  #sec-dashboard .dash-panel-h a{ color:#E03A0C; }
+  #sec-dashboard .dash-panel-h a{ color:var(--brand-d); }
 
   /* Bouton primaire — pilule orange COHOR (dashboard) */
-  #sec-dashboard .btn-primary{ background:#FF4D1C !important; border-color:#FF4D1C !important;
-    border-radius:99px !important; box-shadow:0 8px 18px -8px rgba(245,81,30,.55); }
-  #sec-dashboard .btn-primary:hover{ background:#E03A0C !important; transform:translateY(-1px); }
+  #sec-dashboard .btn-primary{ background:var(--brand) !important; border-color:var(--brand) !important;
+    border-radius:99px !important; box-shadow:0 8px 18px -8px rgba(var(--brand-rgb),.55); }
+  #sec-dashboard .btn-primary:hover{ background:var(--brand-d) !important; transform:translateY(-1px); }
 </style>
 <!-- ═══ COHOR-DASH-END ═══ -->
 <!-- ═══ COHOR-CDB-START — habillage Base clients (retirer ce bloc pour revenir) ═══ -->
@@ -1360,7 +1327,7 @@ thead th.ts-active { text-decoration:underline; text-underline-offset:3px; }
   #sec-contacts-db input[type="text"], #sec-contacts-db select{
     border-radius:10px !important; border:1px solid #E3DFD7 !important; background:#FFFFFF !important; }
   #sec-contacts-db input[type="text"]:focus, #sec-contacts-db select:focus{
-    border-color:#FF4D1C !important; box-shadow:0 0 0 3px #FFE7DE !important; outline:none; }
+    border-color:var(--brand) !important; box-shadow:0 0 0 3px var(--brand-l) !important; outline:none; }
 
   /* Carte + tableau */
   #sec-contacts-db .card{ border-radius:20px; border-color:#E3DFD7; }
@@ -1372,9 +1339,9 @@ thead th.ts-active { text-decoration:underline; text-underline-offset:3px; }
   #sec-contacts-db .badge{ border-radius:99px; }
 
   /* Boutons */
-  #sec-contacts-db .btn-primary{ background:#FF4D1C !important; border-color:#FF4D1C !important;
+  #sec-contacts-db .btn-primary{ background:var(--brand) !important; border-color:var(--brand) !important;
     border-radius:99px !important; }
-  #sec-contacts-db .btn-primary:hover{ background:#E03A0C !important; }
+  #sec-contacts-db .btn-primary:hover{ background:var(--brand-d) !important; }
   #sec-contacts-db .btn-ghost{ border-radius:99px; }
   #sec-contacts-db .btn-ghost:hover{ background:#F2EFE9; border-color:#E3DFD7; }
 </style>
@@ -1382,21 +1349,21 @@ thead th.ts-active { text-decoration:underline; text-underline-offset:3px; }
 <!-- ═══ COHOR-BDC-START — habillage Bon de commande, 1re passe (retirer ce bloc pour revenir) ═══ -->
 <style id="cohor-bdc">
   /* Boutons */
-  #sec-bdc .btn-primary{ background:#FF4D1C !important; border-color:#FF4D1C !important;
+  #sec-bdc .btn-primary{ background:var(--brand) !important; border-color:var(--brand) !important;
     border-radius:99px !important; }
-  #sec-bdc .btn-primary:hover{ background:#E03A0C !important; }
+  #sec-bdc .btn-primary:hover{ background:var(--brand-d) !important; }
   #sec-bdc .btn-ghost{ border-radius:99px; }
 
   /* Champs — focus orange */
   #sec-bdc input:focus, #sec-bdc select:focus{
-    border-color:#FF4D1C !important; box-shadow:0 0 0 3px #FFE7DE !important; }
+    border-color:var(--brand) !important; box-shadow:0 0 0 3px var(--brand-l) !important; }
 
   /* Bandeau « Ma commande » — passe du bleu à l'ink COHOR, filet orange */
-  #bdc-recap-bar{ background:#14120F !important; border-bottom:2px solid #FF4D1C !important; }
+  #bdc-recap-bar{ background:#14120F !important; border-bottom:2px solid var(--brand) !important; }
   #bdc-recap-detail thead{ background:#1B1714 !important; }
 
   /* Total HT net en accent orange */
-  #bdc-total-net{ color:#FF4D1C !important; }
+  #bdc-total-net{ color:var(--brand) !important; }
 </style>
 <!-- ═══ COHOR-BDC-END ═══ -->
 <!-- ═══ COHOR-GLOBAL-START — recette COHOR sur les composants partagés = tous les écrans secondaires (retirer ce bloc pour revenir) ═══ -->
@@ -1409,12 +1376,12 @@ thead th.ts-active { text-decoration:underline; text-underline-offset:3px; }
   .card{ border-radius:20px; border-color:#E3DFD7; }
 
   /* Boutons — pilule orange COHOR */
-  .btn-primary{ background:#FF4D1C !important; border-color:#FF4D1C !important; border-radius:99px !important; }
-  .btn-primary:hover{ background:#E03A0C !important; }
+  .btn-primary{ background:var(--brand) !important; border-color:var(--brand) !important; border-radius:99px !important; }
+  .btn-primary:hover{ background:var(--brand-d) !important; }
   .btn-ghost{ border-radius:99px; }
 
   /* Champs — focus orange */
-  input:focus, select:focus, textarea:focus{ border-color:#FF4D1C !important; box-shadow:0 0 0 3px #FFE7DE !important; }
+  input:focus, select:focus, textarea:focus{ border-color:var(--brand) !important; box-shadow:0 0 0 3px var(--brand-l) !important; }
 
   /* Tableaux — en-têtes discrets chauds + survol pêche */
   thead th{ background:#F8F6F1; color:#8A8F86; }
@@ -1441,8 +1408,8 @@ thead th.ts-active { text-decoration:underline; text-underline-offset:3px; }
   .ag-toggle{display:inline-flex;background:#F2EFE9;border-radius:99px;padding:3px}
   .ag-tg{border:0;background:none;border-radius:99px;padding:6px 14px;font:600 .8rem 'Inter',sans-serif;color:#6E6963;cursor:pointer}
   .ag-tg.on{background:#14120F;color:#fff}
-  .ag-new{border:0;background:#FF4D1C;color:#fff;border-radius:99px;padding:9px 16px;font:600 .82rem 'Inter',sans-serif;cursor:pointer}
-  .ag-new:hover{background:#E03A0C}
+  .ag-new{border:0;background:var(--brand);color:#fff;border-radius:99px;padding:9px 16px;font:600 .82rem 'Inter',sans-serif;cursor:pointer}
+  .ag-new:hover{background:var(--brand-d)}
   .ag-monthbar{display:flex;align-items:center;gap:10px;margin-bottom:12px}
   .ag-nav{border:1px solid #E3DFD7;background:#fff;border-radius:9px;min-width:34px;height:34px;font-size:1.1rem;cursor:pointer;color:#40463c}
   .ag-nav:hover{background:#F2EFE9}
@@ -1451,18 +1418,18 @@ thead th.ts-active { text-decoration:underline; text-underline-offset:3px; }
   .ag-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:6px}
   .ag-dow{font:700 .66rem 'Inter',sans-serif;text-transform:uppercase;letter-spacing:.05em;color:#A8A29A;text-align:center;padding:4px 0}
   .ag-cell{min-height:92px;background:#fff;border:1px solid #E3DFD7;border-radius:10px;padding:5px;cursor:pointer;overflow:hidden;transition:border-color .1s}
-  .ag-cell:hover{border-color:#FF4D1C}
+  .ag-cell:hover{border-color:var(--brand)}
   .ag-cell.ag-empty{background:transparent;border:none;cursor:default}
-  .ag-cell.ag-today{border-color:#FF4D1C;box-shadow:0 0 0 1px #FF4D1C inset}
+  .ag-cell.ag-today{border-color:var(--brand);box-shadow:0 0 0 1px var(--brand) inset}
   .ag-daynum{font:600 .78rem 'Inter',sans-serif;color:#40463c;margin-bottom:3px}
-  .ag-today .ag-daynum{color:#FF4D1C}
-  .ag-cnt{background:#FF4D1C;color:#fff;border-radius:9px;padding:0 5px;font-size:.6rem;font-weight:700;vertical-align:middle}
-  .ag-chip{background:#FFE7DE;color:#B4300A;border-radius:5px;padding:2px 5px;margin-bottom:2px;font:500 .64rem 'Inter',sans-serif;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .ag-today .ag-daynum{color:var(--brand)}
+  .ag-cnt{background:var(--brand);color:#fff;border-radius:9px;padding:0 5px;font-size:.6rem;font-weight:700;vertical-align:middle}
+  .ag-chip{background:var(--brand-l);color:#B4300A;border-radius:5px;padding:2px 5px;margin-bottom:2px;font:500 .64rem 'Inter',sans-serif;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .ag-chip b{font-weight:700}
   .ag-more{font:600 .62rem 'Inter',sans-serif;color:#8A8F86;padding-left:3px}
   .ag-list{display:flex;flex-direction:column;gap:8px}
   .ag-li{display:flex;align-items:center;gap:12px;background:#fff;border:1px solid #E3DFD7;border-radius:12px;padding:12px 14px;cursor:pointer}
-  .ag-li:hover{border-color:#FF4D1C}
+  .ag-li:hover{border-color:var(--brand)}
   .ag-li-date{text-align:center;min-width:44px}
   .ag-li-d{font-family:'Sora',sans-serif;font-weight:700;font-size:1.2rem;color:#14120F;line-height:1}
   .ag-li-m{font:600 .62rem 'Inter',sans-serif;text-transform:uppercase;color:#A8A29A}
@@ -1511,7 +1478,7 @@ thead th.ts-active { text-decoration:underline; text-underline-offset:3px; }
 <div id="login-screen">
   <div class="login-box">
     <div class="login-logo">
-      <div class="login-logo-ico"><svg viewBox="0 0 46 26" fill="none" style="height:44px;width:auto;color:#FF4D1C;"><circle cx="30" cy="13" r="9.5" stroke="currentColor" stroke-width="3.6"/><circle cx="16" cy="13" r="9.5" stroke="currentColor" stroke-width="3.6"/><path d="M26.75 21.93 A9.5 9.5 0 0 1 20.82 15.46" stroke="currentColor" stroke-width="3.6" stroke-linecap="round"/></svg></div>
+      <div class="login-logo-ico"><svg viewBox="0 0 46 26" fill="none" style="height:44px;width:auto;color:var(--brand);"><circle cx="30" cy="13" r="9.5" stroke="currentColor" stroke-width="3.6"/><circle cx="16" cy="13" r="9.5" stroke="currentColor" stroke-width="3.6"/><path d="M26.75 21.93 A9.5 9.5 0 0 1 20.82 15.46" stroke="currentColor" stroke-width="3.6" stroke-linecap="round"/></svg></div>
       <div class="login-logo-name">COHOR</div>
       <div class="login-logo-sub">Espace commercial</div>
     </div>
@@ -1625,7 +1592,7 @@ thead th.ts-active { text-decoration:underline; text-underline-offset:3px; }
     </div>
     <div class="nav-item" onclick="showSection('agenda',null,this)">
       <svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="1.5" y="3" width="13" height="11.5" rx="1.5"/><path d="M1.5 6.5h13M5 1.5v3M11 1.5v3"/></svg>
-      Agenda <span class="nav-badge agenda-navbadge" style="display:none;background:#FF4D1C;color:#fff;"></span>
+      Agenda <span class="nav-badge agenda-navbadge" style="display:none;background:var(--brand);color:#fff;"></span>
     </div>
     <div class="nav-item" onclick="showSection('bdc',null,this)">
       <svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 2h12l-1 8H3z"/><circle cx="6" cy="14" r="1"/><circle cx="11" cy="14" r="1"/></svg>
@@ -1785,7 +1752,7 @@ thead th.ts-active { text-decoration:underline; text-underline-offset:3px; }
       <div class="stat-card"><div class="stat-label">Contacts</div><div class="stat-val" id="stat-clients">—</div><div class="stat-delta">base clients</div></div>
       <div class="stat-card" id="dash-actifs-card" style="cursor:pointer;" onclick="showSection('contacts-db',null,null)" title="Voir la base clients">
         <div class="stat-label">✅ Clients actifs</div>
-        <div style="display:flex;align-items:baseline;gap:6px;"><div class="stat-val" id="stat-actifs" style="color:#FF4D1C;">—</div><div style="font-size:.7rem;color:#b0402f;font-weight:600;" id="stat-inactifs-badge"></div></div>
+        <div style="display:flex;align-items:baseline;gap:6px;"><div class="stat-val" id="stat-actifs" style="color:var(--brand);">—</div><div style="font-size:.7rem;color:#b0402f;font-weight:600;" id="stat-inactifs-badge"></div></div>
         <div class="stat-delta" id="stat-actifs-delta">cmd dans les 3 derniers mois</div>
       </div>
       <div class="stat-card"><div class="stat-label">BDC saisis</div><div class="stat-val" id="stat-commandes">—</div><div class="stat-delta">bons de commande</div></div>
@@ -1883,9 +1850,9 @@ thead th.ts-active { text-decoration:underline; text-underline-offset:3px; }
             <div style="font-size:1.6rem;font-weight:800;color:var(--blue-p700);line-height:1;" id="dashk-cours">—</div>
             <div style="font-size:.7rem;color:var(--g500);margin-top:5px;" id="dashk-nb-sub">— commandes</div>
           </div>
-          <div style="background:#fff;border-radius:12px;padding:1.1rem 1.2rem;border:1px solid var(--border);border-top:4px solid #FF4D1C;box-shadow:var(--shadow-sm);">
+          <div style="background:#fff;border-radius:12px;padding:1.1rem 1.2rem;border:1px solid var(--border);border-top:4px solid var(--brand);box-shadow:var(--shadow-sm);">
             <div style="font-size:.65rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--g500);margin-bottom:6px;">CA Facturé</div>
-            <div style="font-size:1.6rem;font-weight:800;color:#FF4D1C;line-height:1;" id="dashk-fac">—</div>
+            <div style="font-size:1.6rem;font-weight:800;color:var(--brand);line-height:1;" id="dashk-fac">—</div>
             <div style="font-size:.7rem;color:var(--g500);margin-top:5px;">N° facture émis</div>
           </div>
           <div style="background:#fff;border-radius:12px;padding:1.1rem 1.2rem;border:1px solid var(--border);border-top:4px solid #b07d1a;box-shadow:var(--shadow-sm);">
@@ -1915,10 +1882,10 @@ thead th.ts-active { text-decoration:underline; text-underline-offset:3px; }
             <div style="font-size:.7rem;color:var(--g500);margin-top:4px;" id="dash-panier-detail">—</div>
           </div>
           <!-- Clients actifs / inactifs -->
-          <div style="background:#fff;border-radius:10px;padding:.9rem 1rem;border:1px solid var(--border);border-left:4px solid #FF4D1C;cursor:pointer;" onclick="dashShowInactifs()" title="Cliquez pour voir les clients inactifs">
+          <div style="background:#fff;border-radius:10px;padding:.9rem 1rem;border:1px solid var(--border);border-left:4px solid var(--brand);cursor:pointer;" onclick="dashShowInactifs()" title="Cliquez pour voir les clients inactifs">
             <div style="font-size:.62rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--g400);margin-bottom:4px;">👥 Clients actifs du mois</div>
             <div style="display:flex;align-items:baseline;gap:8px;">
-              <div style="font-size:1.35rem;font-weight:800;color:#FF4D1C;line-height:1;" id="dash-actifs-mois">—</div>
+              <div style="font-size:1.35rem;font-weight:800;color:var(--brand);line-height:1;" id="dash-actifs-mois">—</div>
               <div style="font-size:.82rem;font-weight:600;color:#b0402f;" id="dash-inactifs-mois"></div>
             </div>
             <div style="font-size:.7rem;color:var(--g500);margin-top:4px;" id="dash-actifs-detail">ayant commandé ce mois</div>
@@ -2010,7 +1977,7 @@ thead th.ts-active { text-decoration:underline; text-underline-offset:3px; }
                 <div style="font-size:.62rem;color:var(--g500);">commandes</div>
               </div>
               <div style="text-align:center;">
-                <div id="dash-recent-ca-fac" style="font-size:1.1rem;font-weight:700;color:#FF4D1C;">—</div>
+                <div id="dash-recent-ca-fac" style="font-size:1.1rem;font-weight:700;color:var(--brand);">—</div>
                 <div style="font-size:.62rem;color:var(--g500);">facturé</div>
               </div>
               <div style="text-align:center;">
@@ -2051,7 +2018,7 @@ thead th.ts-active { text-decoration:underline; text-underline-offset:3px; }
                   <th>Mois</th>
                   <th style="text-align:right;">Nb cmds</th>
                   <th style="text-align:right;">Ticket moy.</th>
-                  <th style="text-align:right;color:#FF4D1C;">CA Total</th>
+                  <th style="text-align:right;color:var(--brand);">CA Total</th>
                   <th style="text-align:right;color:#8f6415;">En cours</th>
                   <th style="text-align:right;color:var(--blue-p700);">Facturé</th>
                   <th style="text-align:right;color:#b0402f;">Avoirs</th>
@@ -2214,8 +2181,8 @@ thead th.ts-active { text-decoration:underline; text-underline-offset:3px; }
     <div style="background:var(--surface);border-bottom:1px solid var(--border);padding:.55rem 1rem;display:flex;align-items:center;gap:8px;flex-shrink:0;flex-wrap:wrap;">
       <div style="font-family:var(--fdisp);font-size:.9rem;color:var(--g900);flex:1;min-width:140px;">🌾 Bon de Commande MDM 2026</div>
       <button class="btn btn-ghost" style="font-size:1rem;padding:.34rem .58rem;line-height:1;" onclick="openBdcImport()" title="Importer une commande" aria-label="Importer une commande">📄</button>
-      <button class="btn btn-ghost" style="font-size:1rem;padding:.34rem .58rem;line-height:1;color:#FF4D1C;border-color:rgba(255,77,28,.35);" onclick="if(typeof BdcSuggest!=='undefined')BdcSuggest.open();" title="Suggérer des produits" aria-label="Suggérer">🧠</button>
-      <button class="btn btn-ghost" style="font-size:1rem;padding:.34rem .58rem;line-height:1;color:#FF4D1C;border-color:rgba(255,77,28,.35);" onclick="if(typeof RemisesAccord!=='undefined')RemisesAccord.open();" title="Remises" aria-label="Remises">💰</button>
+      <button class="btn btn-ghost" style="font-size:1rem;padding:.34rem .58rem;line-height:1;color:var(--brand);border-color:rgba(var(--brand-rgb),.35);" onclick="if(typeof BdcSuggest!=='undefined')BdcSuggest.open();" title="Suggérer des produits" aria-label="Suggérer">🧠</button>
+      <button class="btn btn-ghost" style="font-size:1rem;padding:.34rem .58rem;line-height:1;color:var(--brand);border-color:rgba(var(--brand-rgb),.35);" onclick="if(typeof RemisesAccord!=='undefined')RemisesAccord.open();" title="Remises" aria-label="Remises">💰</button>
       <button class="btn btn-ghost" style="font-size:1rem;padding:.34rem .58rem;line-height:1;color:#a78bfa;border-color:rgba(167,139,250,.3);" onclick="boxOpen()" title="Création BOX" aria-label="Création BOX">📦</button>
       <button class="btn btn-ghost" style="font-size:1rem;padding:.34rem .58rem;line-height:1;color:#e8c98a;border-color:rgba(245,158,11,.3);" onclick="openStockImport()" title="Mettre à jour les stocks" aria-label="Mettre à jour les stocks">🔄</button>
       <button class="btn btn-ghost" style="font-size:1rem;padding:.34rem .58rem;line-height:1;" onclick="resetBDC()" title="Effacer la commande" aria-label="Effacer la commande">🗑</button>
@@ -2355,7 +2322,7 @@ thead th.ts-active { text-decoration:underline; text-underline-offset:3px; }
   <div id="sec-frais" class="hidden">
     <div class="page-header">
       <div>
-        <div class="page-title">Note de frais <span id="nfd-save-status" style="font-size:.65rem;font-weight:400;background:#FFF3EE;color:#FF4D1C;padding:2px 8px;border-radius:10px;margin-left:8px;display:none;">✓ sauvegardé</span></div>
+        <div class="page-title">Note de frais <span id="nfd-save-status" style="font-size:.65rem;font-weight:400;background:var(--brand-xl);color:var(--brand);padding:2px 8px;border-radius:10px;margin-left:8px;display:none;">✓ sauvegardé</span></div>
         <div class="page-sub">Saisie ligne par ligne · sauvegarde automatique · génération PDF mensuel</div>
         <div id="nfd-period-label" style="font-size:.72rem;color:var(--blue-p700);font-weight:600;margin-top:2px;"></div>
       </div>
@@ -2399,7 +2366,7 @@ thead th.ts-active { text-decoration:underline; text-underline-offset:3px; }
       <div class="stat-card" style="border-top:3px solid var(--g700)!important;"><div class="stat-label">Nb dépenses</div><div class="stat-val" id="nfd-kpi-nb">0</div></div>
       <div class="stat-card" style="border-top:3px solid #2563b0!important;"><div class="stat-label">Total HT</div><div class="stat-val" id="nfd-kpi-ht" style="color:#2563b0;">0,00 €</div></div>
       <div class="stat-card" style="border-top:3px solid #8f6415!important;"><div class="stat-label">Total TVA</div><div class="stat-val" id="nfd-kpi-tva" style="color:#8f6415;">0,00 €</div></div>
-      <div class="stat-card" style="border-top:3px solid #FF4D1C!important;"><div class="stat-label">Total TTC</div><div class="stat-val" id="nfd-kpi-ttc" style="color:#FF4D1C;">0,00 €</div></div>
+      <div class="stat-card" style="border-top:3px solid var(--brand)!important;"><div class="stat-label">Total TTC</div><div class="stat-val" id="nfd-kpi-ttc" style="color:var(--brand);">0,00 €</div></div>
     </div>
 
     <!-- Saisie nouvelle ligne / édition -->
@@ -2426,7 +2393,7 @@ thead th.ts-active { text-decoration:underline; text-underline-offset:3px; }
         <div><label class="lb">Description</label><input type="text" id="nfd-new-desc" placeholder="Ex: Total Bourges → Lyon"/></div>
         <div style="display:flex;gap:6px;">
           <button class="btn btn-ghost" onclick="nfdOpenScanner()" title="Scanner le ticket avec la caméra" style="white-space:nowrap;position:relative;">
-            📷<span id="nfd-photo-badge" class="hidden" style="position:absolute;top:-5px;right:-5px;width:14px;height:14px;border-radius:50%;background:var(--em600,#FF4D1C);"></span>
+            📷<span id="nfd-photo-badge" class="hidden" style="position:absolute;top:-5px;right:-5px;width:14px;height:14px;border-radius:50%;background:var(--em600,var(--brand));"></span>
           </button>
           <button class="btn btn-ghost hidden" id="nfd-cancel-edit-btn" onclick="nfdCancelEdit()" style="white-space:nowrap;">✕ Annuler</button>
           <button class="btn btn-primary" id="nfd-submit-btn" onclick="nfdAddLine()" style="white-space:nowrap;">➕ Ajouter</button>
@@ -2551,7 +2518,7 @@ thead th.ts-active { text-decoration:underline; text-underline-offset:3px; }
 
         <!-- Mode rapide : import sans mapping -->
         <div style="background:#f0fdf4;border:1px solid #86efac;border-radius:7px;padding:.7rem .9rem;margin-bottom:.8rem;">
-          <div style="font-size:.78rem;font-weight:600;color:#FF4D1C;margin-bottom:.4rem;">🚀 Import rapide (recommandé)</div>
+          <div style="font-size:.78rem;font-weight:600;color:var(--brand);margin-bottom:.4rem;">🚀 Import rapide (recommandé)</div>
           <div style="font-size:.72rem;color:#14120F;margin-bottom:.5rem;">Le système détecte automatiquement les colonnes Code, Nom, Email, Tél, Adresse, etc.</div>
           <button class="btn btn-primary" onclick="cdbImportApplyAuto()" style="font-size:.8rem;padding:.4rem .9rem;background:#16a34a;border-color:#16a34a;">⚡ Importer automatiquement</button>
         </div>
@@ -2982,7 +2949,7 @@ thead th.ts-active { text-decoration:underline; text-underline-offset:3px; }
       </div>
       <div class="card" style="padding:1rem;">
         <div style="font-size:.72rem;color:var(--g500);text-transform:uppercase;letter-spacing:.04em;font-weight:600;">CA HT cumulé</div>
-        <div class="stat-val" id="cad-stat-ca" style="font-size:1.5rem;color:var(--em600,#FF4D1C);margin-top:4px;">—</div>
+        <div class="stat-val" id="cad-stat-ca" style="font-size:1.5rem;color:var(--em600,var(--brand));margin-top:4px;">—</div>
       </div>
       <div class="card" style="padding:1rem;">
         <div style="font-size:.72rem;color:var(--g500);text-transform:uppercase;letter-spacing:.04em;font-weight:600;">Commandes</div>
@@ -3080,7 +3047,7 @@ thead th.ts-active { text-decoration:underline; text-underline-offset:3px; }
       </div>
       <div class="card" style="padding:1rem;">
         <div style="font-size:.72rem;color:var(--g500);text-transform:uppercase;letter-spacing:.04em;font-weight:600;">CA HT cumulé</div>
-        <div class="stat-val" id="top100-stat-ca" style="font-size:1.5rem;color:var(--em600,#FF4D1C);margin-top:4px;">—</div>
+        <div class="stat-val" id="top100-stat-ca" style="font-size:1.5rem;color:var(--em600,var(--brand));margin-top:4px;">—</div>
       </div>
       <div class="card" style="padding:1rem;">
         <div style="font-size:.72rem;color:var(--g500);text-transform:uppercase;letter-spacing:.04em;font-weight:600;">Colis vendus</div>
@@ -3585,7 +3552,7 @@ thead th.ts-active { text-decoration:underline; text-underline-offset:3px; }
       <button class="btn btn-ghost" id="nfd-scan-btn-cancel" onclick="nfdCloseScanner()" style="background:transparent;color:#cbd5e1;border-color:rgba(255,255,255,.15);">Annuler</button>
       <button class="btn btn-primary" id="nfd-scan-btn-capture" onclick="nfdCapturePhoto()" style="flex:1;">📸 Prendre la photo</button>
       <button class="btn btn-ghost hidden" id="nfd-scan-btn-retake" onclick="nfdRetakePhoto()" style="background:transparent;color:#cbd5e1;border-color:rgba(255,255,255,.15);">↺ Reprendre</button>
-      <button class="btn btn-primary hidden" id="nfd-scan-btn-confirm" onclick="nfdConfirmPhoto()" style="flex:1;background:var(--em600,#FF4D1C);border-color:var(--em600,#FF4D1C);">✓ Utiliser cette photo</button>
+      <button class="btn btn-primary hidden" id="nfd-scan-btn-confirm" onclick="nfdConfirmPhoto()" style="flex:1;background:var(--em600,var(--brand));border-color:var(--em600,var(--brand));">✓ Utiliser cette photo</button>
     </div>
   </div>
 </div>
@@ -4315,7 +4282,7 @@ function accordsRender() {
         (p.label || ('≥'+p.seuil+'€ → '+p.remise+'%')) + '</span>';
     }).join('');
     var promosBadges = (acc.promos||[]).map(function(p) {
-      return '<span style="display:inline-block;padding:2px 8px;background:var(--em100,#FFF3EE);color:var(--em700,#FF4D1C);border-radius:12px;font-size:.72rem;font-weight:600;margin:2px;">' +
+      return '<span style="display:inline-block;padding:2px 8px;background:var(--em100,var(--brand-xl));color:var(--em700,var(--brand));border-radius:12px;font-size:.72rem;font-weight:600;margin:2px;">' +
         p.periode + ' −' + p.remise + '%</span>';
     }).join('');
     var validite = (acc.debut && acc.fin) ? acc.debut.slice(0,7).replace('-','/') + ' → ' + acc.fin.slice(0,7).replace('-','/') : '—';
@@ -4713,7 +4680,7 @@ async function comptesRender() {
       var actif = (r.actif !== false); // par défaut actif si le champ n'existe pas encore
       var roleLabel = (r.role === 'admin') ? '👑 Admin' : '👤 Commercial';
       var statutBadge = actif
-        ? '<span style="display:inline-block;padding:2px 10px;border-radius:20px;background:var(--em100,#FFF3EE);color:var(--em700,#FF4D1C);font-size:.72rem;font-weight:600;">● Actif</span>'
+        ? '<span style="display:inline-block;padding:2px 10px;border-radius:20px;background:var(--em100,var(--brand-xl));color:var(--em700,var(--brand));font-size:.72rem;font-weight:600;">● Actif</span>'
         : '<span style="display:inline-block;padding:2px 10px;border-radius:20px;background:#f8ede9;color:#b91c1c;font-size:.72rem;font-weight:600;">● Désactivé</span>';
 
       var actions = '';
@@ -5615,7 +5582,7 @@ function top100RenderTable(){
       '<td style="padding:.5rem .6rem;font-family:monospace;font-size:.74rem;color:var(--g500);white-space:nowrap;">'+top100Esc(r.code)+'</td>'+
       '<td style="padding:.5rem .6rem;font-family:monospace;font-size:.72rem;color:var(--g500);white-space:nowrap;">'+top100Esc(r.ean||'—')+'</td>'+
       '<td style="padding:.5rem .6rem;text-align:right;font-weight:'+(metric==='qte'?'700':'400')+';color:'+(metric==='qte'?'var(--blue-p700)':'var(--g700)')+';">'+top100Int(r.qte)+'</td>'+
-      '<td style="padding:.5rem .6rem;text-align:right;white-space:nowrap;font-weight:'+(metric==='ca'?'700':'400')+';color:'+(metric==='ca'?'var(--em600,#FF4D1C)':'var(--g700)')+';">'+top100Eur(r.ca)+'</td>'+
+      '<td style="padding:.5rem .6rem;text-align:right;white-space:nowrap;font-weight:'+(metric==='ca'?'700':'400')+';color:'+(metric==='ca'?'var(--em600,var(--brand))':'var(--g700)')+';">'+top100Eur(r.ca)+'</td>'+
       '<td style="padding:.5rem .6rem;text-align:center;color:var(--g600);">'+(r.nbCmd==null?'—':top100Int(r.nbCmd))+'</td>'+
       '<td style="padding:.5rem .6rem;text-align:center;color:var(--g600);">'+top100Int(r.nbCli)+'</td>'+
       '<td style="padding:.5rem .6rem;text-align:right;'+stockStyle+'">'+stock+'</td>'+
@@ -6964,7 +6931,7 @@ function nfdEditLine(id) {
   // (cf. logique dans nfdAddLine). Le badge reflète juste s'il y a déjà une photo.
   nfdPendingPhoto = null;
   var badge = document.getElementById('nfd-photo-badge');
-  if (line.photo) { badge.classList.remove('hidden'); badge.style.background = 'var(--em600,#FF4D1C)'; }
+  if (line.photo) { badge.classList.remove('hidden'); badge.style.background = 'var(--em600,var(--brand))'; }
   else { badge.classList.add('hidden'); }
 
   document.getElementById('nfd-form-title').textContent = '✏️ Modifier la ligne du ' + nfdFmtDate(line.date);
@@ -7001,7 +6968,7 @@ function nfdOpenScanner() {
   document.getElementById('nfd-scan-btn-retake').classList.add('hidden');
   document.getElementById('nfd-scan-btn-confirm').classList.add('hidden');
   var badge = document.getElementById('nfd-photo-badge');
-  if (badge) badge.style.background = 'var(--em600,#FF4D1C)';
+  if (badge) badge.style.background = 'var(--em600,var(--brand))';
   nfdSetScanStatus('Initialisation de la caméra…');
   nfdStartCamera();
 }
@@ -7113,7 +7080,7 @@ function nfdAnalyzeTicket(dataUrl) {
   var callAnalyse = fbFunctions.httpsCallable('analyseTicketFrais');
   callAnalyse({ imageBase64: imageBase64, mediaType: mediaType }).then(function(result) {
     var data = result.data;
-    if (statusEl) { statusEl.style.background = 'var(--em600,#FF4D1C)'; }
+    if (statusEl) { statusEl.style.background = 'var(--em600,var(--brand))'; }
 
     if (!data || data.lisible === false) {
       toast('🔍 Ticket analysé, mais peu lisible — vérifiez/complétez les champs manuellement', 'err');
@@ -8448,7 +8415,7 @@ function commRefresh() {
           : '<tr><td colspan="2" style="padding:.3rem .6rem;font-size:.8rem;color:var(--amber);">⚠️ Aucun objectif défini — à saisir dans Dashboard → Objectifs pour activer le bonus 2%</td></tr>';
 
         var depassLine = (globalObjectif > 0 && depassement > 0)
-          ? '<tr><td style="padding:.4rem .6rem;color:#FF4D1C;font-weight:600;">📈 Dépassement</td><td style="padding:.4rem .6rem;text-align:right;font-size:1.15rem;font-weight:700;color:#FF4D1C;">+' + commFmt(depassement) + '</td></tr>'
+          ? '<tr><td style="padding:.4rem .6rem;color:var(--brand);font-weight:600;">📈 Dépassement</td><td style="padding:.4rem .6rem;text-align:right;font-size:1.15rem;font-weight:700;color:var(--brand);">+' + commFmt(depassement) + '</td></tr>'
           : (globalObjectif > 0 ? '<tr><td style="padding:.4rem .6rem;color:var(--amber);font-weight:600;">⏳ Reste à faire</td><td style="padding:.4rem .6rem;text-align:right;font-size:1rem;color:var(--amber);">' + commFmt(globalObjectif - globalCAtotal) + '</td></tr>' : '');
 
         var commDetail = globalObjectif > 0 && depassement > 0
@@ -8679,7 +8646,7 @@ function commHistRender() {
     if (ca === 0 && obj === 0) {
       statut = '<span style="color:var(--g400);font-size:.72rem;">—</span>';
     } else if (ca >= obj && obj > 0) {
-      statut = '<span style="background:#FFF3EE;color:#FF4D1C;padding:2px 8px;border-radius:20px;font-size:.7rem;font-weight:600;">✅ Dépassé</span>';
+      statut = '<span style="background:var(--brand-xl);color:var(--brand);padding:2px 8px;border-radius:20px;font-size:.7rem;font-weight:600;">✅ Dépassé</span>';
     } else if (ca > 0) {
       statut = '<span style="background:#fef9c3;color:#7a5512;padding:2px 8px;border-radius:20px;font-size:.7rem;font-weight:600;">⏳ En cours</span>';
     } else {
@@ -8693,7 +8660,7 @@ function commHistRender() {
       '<td style="padding:.5rem .75rem;">' + label + ' ' + year + (isCur ? ' 📍' : '') + '</td>' +
       '<td style="padding:.5rem .75rem;text-align:right;color:var(--blue-p800);">' + fmt(ca) + '</td>' +
       '<td style="padding:.5rem .75rem;text-align:right;color:var(--amber);">' + fmt(obj) + '</td>' +
-      '<td style="padding:.5rem .75rem;text-align:right;color:' + (depass > 0 ? '#FF4D1C' : 'var(--g400)') + ';">' + fmt(depass) + '</td>' +
+      '<td style="padding:.5rem .75rem;text-align:right;color:' + (depass > 0 ? 'var(--brand)' : 'var(--g400)') + ';">' + fmt(depass) + '</td>' +
       '<td style="padding:.5rem .75rem;text-align:right;font-weight:700;color:#6a6f64;">' + fmt(comm) + '</td>' +
       '<td style="padding:.5rem .75rem;text-align:center;">' + statut + '</td>' +
     '</tr>';
@@ -9004,8 +8971,8 @@ function bdcHistRender() {
     var date = cmd.createdAt ? new Date(cmd.createdAt.seconds ? cmd.createdAt.seconds*1000 : cmd.createdAt).toLocaleDateString('fr-FR') : '—';
     var heure = cmd.createdAt ? new Date(cmd.createdAt.seconds ? cmd.createdAt.seconds*1000 : cmd.createdAt).toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'}) : '';
     var statut = cmd.statut || 'Saisie';
-    var statutColor = statut === 'Envoyée' ? '#FF4D1C' : '#7a5512';
-    var statutBg = statut === 'Envoyée' ? '#FFF3EE' : '#fef9c3';
+    var statutColor = statut === 'Envoyée' ? 'var(--brand)' : '#7a5512';
+    var statutBg = statut === 'Envoyée' ? 'var(--brand-xl)' : '#fef9c3';
     var nbRefs = cmd.nbRefs || (cmd.lignes ? cmd.lignes.length : '?');
     var montant = cmd.montant ? cmd.montant.toLocaleString('fr-FR',{minimumFractionDigits:2,maximumFractionDigits:2})+'€' : '—';
     return '<div style="display:flex;align-items:center;gap:10px;padding:.6rem .75rem;border-radius:8px;border:1px solid var(--border);margin-bottom:.5rem;background:var(--surface);">' +
@@ -9406,7 +9373,7 @@ function bdcStockBadgeHtml(p, light) {
   }
   if (stkColis <= 20) {
     return light
-      ? '<span'+titleAttr+' style="display:inline-block;padding:2px 6px;border-radius:10px;font-size:.65rem;font-weight:600;background:#FFF3EE;color:#14120F;border:1px solid #86efac;">🟢 '+label+'</span>'
+      ? '<span'+titleAttr+' style="display:inline-block;padding:2px 6px;border-radius:10px;font-size:.65rem;font-weight:600;background:var(--brand-xl);color:#14120F;border:1px solid #86efac;">🟢 '+label+'</span>'
       : '<span'+titleAttr+' style="display:inline-block;padding:2px 6px;border-radius:10px;font-size:.65rem;font-weight:600;background:#052e16;color:#86efac;border:1px solid #14120F;">🟢 '+label+'</span>';
   }
   return light
@@ -10250,7 +10217,7 @@ function boxRecalc() {
         '<td style="padding:.35rem .4rem;font-weight:700;color:var(--blue-p700);">' + (i+1) + '</td>' +
         '<td style="padding:.35rem .4rem;">' + e.code + ' — ' + e.libelle + (e.poids ? ' <span style="color:var(--g500);font-size:.7rem;">' + e.poids + '</span>' : '') + '</td>' +
         '<td style="padding:.35rem .4rem;text-align:center;">' + nbEtages + '</td>' +
-        '<td style="padding:.35rem .4rem;text-align:right;font-weight:700;color:var(--em600,#FF4D1C);">' + colis + ' col.</td>' +
+        '<td style="padding:.35rem .4rem;text-align:right;font-weight:700;color:var(--em600,var(--brand));">' + colis + ' col.</td>' +
         '<td style="padding:.35rem .4rem;text-align:right;">' + uvc + ' UVC</td>' +
         '<td style="padding:.35rem .4rem;text-align:right;">' + (totalLigne !== null ? totalLigne.toFixed(2).replace('.',',') + '€' : '<span style="color:var(--g400);">—</span>') + '</td>' +
       '</tr>';
@@ -11122,7 +11089,7 @@ function suiviRender() {
     return '<tr>' +
       '<td style="font-weight:600;color:var(--g900);">' + label + '</td>' +
       '<td style="text-align:right;">' + m.nb + '</td>' +
-      td(m.livre, '#FF4D1C') +
+      td(m.livre, 'var(--brand)') +
       td(m.facture, 'var(--blue-p700)') +
       td(m.att_fac, '#8f6415') +
       td(m.att_liv, '#6a6f64') +
@@ -12019,8 +11986,8 @@ function dashOpenObjectifs(forceYear) {
       });
     }
     var pct = (val && caReel > 0) ? Math.min(Math.round(caReel / val * 100), 999) : 0;
-    var barColor   = pct >= 100 ? '#FF4D1C' : pct >= 75 ? '#b07d1a' : '#e5e7eb';
-    var labelColor = pct >= 100 ? '#FF4D1C' : pct >= 75 ? '#8f6415' : '#6b7280';
+    var barColor   = pct >= 100 ? 'var(--brand)' : pct >= 75 ? '#b07d1a' : '#e5e7eb';
+    var labelColor = pct >= 100 ? 'var(--brand)' : pct >= 75 ? '#8f6415' : '#6b7280';
 
     html += '<div style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:10px;padding:.75rem .9rem;">';
     html += '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.4rem;">';
@@ -12113,7 +12080,7 @@ function dashRenderArchiveSummary() {
       '<div style="display:flex;flex-wrap:wrap;align-items:baseline;gap:10px 18px;margin-bottom:.85rem;">' +
         '<div style="font-family:\'Sora\',sans-serif;font-weight:600;font-size:.98rem;color:#14120F;">🗂️ Historique archivé</div>' +
         '<div style="font-size:.78rem;color:var(--g600);"><b>' + nb.toLocaleString('fr-FR') + '</b> commandes · du <b>' + fmtD(minD) + '</b> au <b>' + fmtD(maxD) + '</b></div>' +
-        '<div style="margin-left:auto;font-size:.78rem;color:var(--g600);">CA total archivé : <b style="color:#FF4D1C;font-family:\'Sora\',sans-serif;">' + fmtE(total) + '</b></div>' +
+        '<div style="margin-left:auto;font-size:.78rem;color:var(--g600);">CA total archivé : <b style="color:var(--brand);font-family:\'Sora\',sans-serif;">' + fmtE(total) + '</b></div>' +
       '</div>' +
       '<div style="display:flex;flex-wrap:wrap;gap:8px;">' + yearCards + '</div>' +
       '<div style="font-size:.68rem;color:var(--g500);margin-top:.7rem;">Cet historique s\'enrichit automatiquement à chaque import et n\'est jamais réduit à la fenêtre de ton fichier — les commandes plus anciennes que ton fichier restent conservées.</div>' +
@@ -12216,7 +12183,7 @@ function dashCaRender() {
     var attCell = '<td style="text-align:right;">';
     if (obj > 0 && caTotal > 0) {
       var pct = Math.round(caTotal / obj * 100);
-      var col = pct >= 100 ? '#FF4D1C' : pct >= 75 ? '#b07d1a' : '#b0402f';
+      var col = pct >= 100 ? 'var(--brand)' : pct >= 75 ? '#b07d1a' : '#b0402f';
       var icon = pct >= 100 ? '✅' : pct >= 75 ? '⚡' : '⚠️';
       attCell += '<div style="display:flex;flex-direction:column;align-items:flex-end;gap:2px;">';
       attCell += '<span style="font-size:.78rem;font-weight:700;color:'+col+';">' + icon + ' ' + pct + '%</span>';
@@ -12246,7 +12213,7 @@ function dashCaRender() {
       '<td style="text-align:right;">' + dashCaFmt(totAvoirs) + '</td>' +
       '<td style="text-align:right;color:#8f6415;">'+(totalObj ? dashCaFmt(totalObj) : '—')+'</td>' +
       '<td style="text-align:right;">' + (totalObj > 0 && (totCours+totFac) > 0 ?
-        '<span style="font-weight:700;color:'+(Math.round((totCours+totFac)/totalObj*100)>=100?'#FF4D1C':'#8f6415')+';font-size:.85rem;">' +
+        '<span style="font-weight:700;color:'+(Math.round((totCours+totFac)/totalObj*100)>=100?'var(--brand)':'#8f6415')+';font-size:.85rem;">' +
         Math.round((totCours+totFac)/totalObj*100) + '%</span>' : '—') + '</td>' +
     '</tr>'
   ) : '<tr><td colspan="9" style="text-align:center;padding:2rem;color:var(--g500);">Aucune donnée</td></tr>');
@@ -12323,7 +12290,7 @@ function dashRenderRecentOrders(filtered) {
   tbody.innerHTML = recent.map(function(r) {
     var statutBadge;
     if (r.statut === 'facturee') {
-      statutBadge = '<span style="display:inline-block;padding:2px 7px;border-radius:10px;font-size:.65rem;font-weight:600;background:#FFF3EE;color:#14120F;">✅ Facturée</span>';
+      statutBadge = '<span style="display:inline-block;padding:2px 7px;border-radius:10px;font-size:.65rem;font-weight:600;background:var(--brand-xl);color:#14120F;">✅ Facturée</span>';
     } else if (r.statut === 'avoir') {
       statutBadge = '<span style="display:inline-block;padding:2px 7px;border-radius:10px;font-size:.65rem;font-weight:600;background:#f8ede9;color:#8f3325;">↩ Avoir</span>';
     } else if (r.statut === 'livre') {
@@ -12334,7 +12301,7 @@ function dashRenderRecentOrders(filtered) {
 
     var numFac = r.numFac ? r.numFac : '—';
     var dateD  = r.dateFac || r.dateRef;
-    var caColor = r.statut === 'avoir' ? '#b0402f' : r.statut === 'facturee' ? '#FF4D1C' : '#8f6415';
+    var caColor = r.statut === 'avoir' ? '#b0402f' : r.statut === 'facturee' ? 'var(--brand)' : '#8f6415';
 
     return '<tr style="border-bottom:1px solid var(--border);transition:background .1s;" ' +
       'onmouseover="this.style.background=\'var(--blue-p50)\'" onmouseout="this.style.background=\'\'">' +
@@ -12379,7 +12346,7 @@ function dashCaRenderCurrentMonth(filtered, byMonth, months) {
     }
     var diff = val - prevVal;
     var pctDiff = (diff / Math.abs(prevVal)) * 100;
-    var color = diff > 0 ? '#FF4D1C' : (diff < 0 ? '#b0402f' : 'var(--g500)');
+    var color = diff > 0 ? 'var(--brand)' : (diff < 0 ? '#b0402f' : 'var(--g500)');
     var arrow = diff > 0 ? '▲' : (diff < 0 ? '▼' : '=');
     el.innerHTML = '<span style="color:'+color+';font-weight:600;">' + arrow + ' ' +
       (Math.abs(pctDiff) < 1 ? '<1%' : (pctDiff > 0 ? '+' : '') + pctDiff.toFixed(0) + '%') +
@@ -12454,7 +12421,7 @@ function dashCaRenderCurrentMonth(filtered, byMonth, months) {
     if (n1Data && n1Data.facture > 0 && cur.facture > 0) {
       var n1Diff = cur.facture - n1Data.facture;
       var n1Pct = n1Diff / n1Data.facture * 100;
-      var n1Color = n1Diff >= 0 ? '#FF4D1C' : '#b0402f';
+      var n1Color = n1Diff >= 0 ? 'var(--brand)' : '#b0402f';
       var n1Arrow = n1Diff >= 0 ? '▲' : '▼';
       n1El.innerHTML = '<span style="color:'+n1Color+';">'+n1Arrow+' '+(n1Pct >= 0?'+':'')+n1Pct.toFixed(1)+'%</span>';
       n1DetailEl.textContent = dashCaFmt(cur.facture) + ' vs ' + dashCaFmt(n1Data.facture) + ' en ' + (now.getFullYear()-1);
@@ -12709,11 +12676,11 @@ function dashCaDrawTops(filtered) {
             '<span style="font-size:.6rem;color:var(--g400);">' + share + '%</span>' +
           '</div>' +
           '<div style="background:var(--g100);border-radius:3px;height:5px;overflow:hidden;">' +
-            '<div style="height:5px;border-radius:3px;background:linear-gradient(90deg,#FF4D1C '+pctFac+'%,var(--blue-p400) '+pctFac+'%);width:'+pct+'%;transition:width .4s;"></div>' +
+            '<div style="height:5px;border-radius:3px;background:linear-gradient(90deg,var(--brand) '+pctFac+'%,var(--blue-p400) '+pctFac+'%);width:'+pct+'%;transition:width .4s;"></div>' +
           '</div>' +
           '<div style="display:flex;gap:10px;font-size:.6rem;color:var(--g500);margin-top:2px;">' +
             '<span>' + it.nb + ' cmd' + (it.nb>1?'s':'') + '</span>' +
-            '<span style="color:#FF4D1C;">✓ ' + dashCaFmt(it.fac) + '</span>' +
+            '<span style="color:var(--brand);">✓ ' + dashCaFmt(it.fac) + '</span>' +
             (it.cours > 0 ? '<span style="color:#8f6415;">⏳ ' + dashCaFmt(it.cours) + '</span>' : '') +
           '</div>' +
         '</div>' +
@@ -13829,9 +13796,9 @@ function cdbBuildCATab(c) {
   var moisNoms = ['','Jan','Fév','Mar','Avr','Mai','Juin','Juil','Août','Sep','Oct','Nov','Déc'];
   var fmtCA = function(n){ return n > 0 ? n.toLocaleString('fr-FR',{minimumFractionDigits:2,maximumFractionDigits:2})+' €' : '—'; };
   var fmtPct = function(curr, prev) {
-    if (!prev || prev === 0) return curr > 0 ? '<span style="color:#FF4D1C;font-size:.65rem;font-weight:700;">NEW</span>' : '';
+    if (!prev || prev === 0) return curr > 0 ? '<span style="color:var(--brand);font-size:.65rem;font-weight:700;">NEW</span>' : '';
     var p = ((curr - prev) / Math.abs(prev) * 100);
-    var col = p > 0 ? '#FF4D1C' : '#b0402f';
+    var col = p > 0 ? 'var(--brand)' : '#b0402f';
     var arrow = p > 0 ? '▲' : '▼';
     return '<span style="color:'+col+';font-size:.65rem;font-weight:700;">'+arrow+' '+(p>0?'+':'')+p.toFixed(0)+'%</span>';
   };
@@ -13888,7 +13855,7 @@ function cdbBuildCATab(c) {
   html += '<th style="padding:.4rem .6rem;text-align:left;font-weight:600;color:var(--g600);">Mois</th>';
   html += '<th style="padding:.4rem .6rem;text-align:right;color:var(--blue-p700);">CA '+NOW_YEAR+'</th>';
   html += '<th style="padding:.4rem .6rem;text-align:right;color:var(--blue-p800);">Cumulé '+NOW_YEAR+'</th>';
-  html += '<th style="padding:.4rem .6rem;text-align:right;color:#FF4D1C;">Facturé</th>';
+  html += '<th style="padding:.4rem .6rem;text-align:right;color:var(--brand);">Facturé</th>';
   html += '<th style="padding:.4rem .6rem;text-align:right;color:var(--g500);">CA '+PREV_YEAR+'</th>';
   html += '<th style="padding:.4rem .6rem;text-align:right;">Évol.</th>';
   html += '</tr></thead><tbody>';
@@ -13925,7 +13892,7 @@ function cdbBuildCATab(c) {
     } else html += '<span style="color:var(--g300);">—</span>';
     html += '</td>';
     html += '<td style="padding:.35rem .6rem;text-align:right;font-weight:600;color:var(--blue-p800);font-size:.72rem;">'+(cumCur>0?fmtCA(cumCur):'—')+'</td>';
-    html += '<td style="padding:.35rem .6rem;text-align:right;color:#FF4D1C;font-size:.72rem;">'+(cur&&cur.fac>0?fmtCA(cur.fac):'—')+'</td>';
+    html += '<td style="padding:.35rem .6rem;text-align:right;color:var(--brand);font-size:.72rem;">'+(cur&&cur.fac>0?fmtCA(cur.fac):'—')+'</td>';
     html += '<td style="padding:.35rem .6rem;text-align:right;color:var(--g400);font-size:.72rem;">'+(prv?fmtCA(prv.ca):'—')+'</td>';
     html += '<td style="padding:.35rem .6rem;text-align:right;">'+fmtPct(cur?cur.ca:0, prv?prv.ca:0)+'</td>';
     html += '</tr>';
@@ -13949,7 +13916,7 @@ function cdbBuildCATab(c) {
     html += '<th style="padding:.3rem .5rem;text-align:center;color:var(--g600);">Statut</th>';
     html += '</tr></thead><tbody>';
     recent.forEach(function(r) {
-      var statColor = r.statut==='facturee' ? '#FF4D1C' : r.statut==='avoir' ? '#b0402f' : '#8f6415';
+      var statColor = r.statut==='facturee' ? 'var(--brand)' : r.statut==='avoir' ? '#b0402f' : '#8f6415';
       var statLabel = r.statut==='facturee' ? 'Facturé' : r.statut==='avoir' ? 'Avoir' : 'En cours';
       var dateStr = r.dateRef ? r.dateRef.toLocaleDateString('fr-FR') : '—';
       html += '<tr style="border-top:1px solid var(--border);">';
@@ -14253,9 +14220,9 @@ function cdbShowCA(id) {
           '<div style="font-size:.62rem;color:var(--g600);font-weight:600;text-transform:uppercase;">Cumul 2025</div>' +
           '<div style="font-size:1rem;font-weight:700;color:var(--g700);">' + fmtCA(cum25) + '</div>' +
         '</div>' +
-        '<div style="padding:.6rem .7rem;background:#f0fdf4;border-radius:7px;border-left:3px solid #FF4D1C;">' +
+        '<div style="padding:.6rem .7rem;background:#f0fdf4;border-radius:7px;border-left:3px solid var(--brand);">' +
           '<div style="font-size:.62rem;color:var(--g600);font-weight:600;text-transform:uppercase;">Stat 2026 Avril</div>' +
-          '<div style="font-size:1rem;font-weight:700;color:#FF4D1C;">' + fmtCA(stat26) + '</div>' +
+          '<div style="font-size:1rem;font-weight:700;color:var(--brand);">' + fmtCA(stat26) + '</div>' +
         '</div>' +
         '<div style="padding:.6rem .7rem;background:#fef3c7;border-radius:7px;border-left:3px solid #8f6415;">' +
           '<div style="font-size:.62rem;color:var(--g600);font-weight:600;text-transform:uppercase;">Stat 2025 Avril</div>' +
@@ -14497,7 +14464,7 @@ var ML_TEMPLATES = {
   },
   nouveau: {
     subject: "✨ Nouveauté : découvrez notre dernière innovation bio",
-    body: '<h2 style="color:#FF4D1C;">Une nouveauté à découvrir</h2>' +
+    body: '<h2 style="color:var(--brand);">Une nouveauté à découvrir</h2>' +
           '<p>Bonjour,</p>' +
           '<p>Nous avons le plaisir de vous présenter un <b>nouveau produit</b> qui vient enrichir notre catalogue :</p>' +
           '<p><i>[Description du produit]</i></p>' +
@@ -14705,8 +14672,8 @@ function mlAiRefreshSettings(){
     else if (p === 'gemini') {
       var gm = mlAiGetGeminiModel();
       st.textContent = gm ? ('✅ Clé OK — modèle : ' + gm) : '✅ Clé enregistrée (modèle détecté au 1er usage)';
-      st.style.color = '#FF4D1C';
-    } else { st.textContent = '✅ Clé enregistrée'; st.style.color = '#FF4D1C'; }
+      st.style.color = 'var(--brand)';
+    } else { st.textContent = '✅ Clé enregistrée'; st.style.color = 'var(--brand)'; }
   }
 }
 // La configuration vit désormais dans la section IA dédiée
@@ -14959,7 +14926,7 @@ function mlAiRefreshPdf(){
   var cl = document.getElementById('ml-ai-pdf-clear');
   if (nm) {
     if (!src) { nm.textContent = 'Aucun document'; nm.style.color = 'var(--g500)'; }
-    else { nm.textContent = src.name + (src.fromPJ ? ' (pièce jointe du mail)' : ''); nm.style.color = '#FF4D1C'; }
+    else { nm.textContent = src.name + (src.fromPJ ? ' (pièce jointe du mail)' : ''); nm.style.color = 'var(--brand)'; }
   }
   if (cl) cl.style.display = mlAiPDF ? 'inline-block' : 'none';
 }
@@ -15479,7 +15446,7 @@ function mlSetPJ(file) {
     document.getElementById('ml-pj-info').style.display = 'flex';
     document.getElementById('ml-pj-drop').style.display = 'none';
     document.getElementById('ml-pj-status').textContent = file.name;
-    document.getElementById('ml-pj-status').style.color = '#FF4D1C';
+    document.getElementById('ml-pj-status').style.color = 'var(--brand)';
     if (typeof mlAiRefreshPdf === 'function') mlAiRefreshPdf();
   };
   reader.readAsDataURL(file);
@@ -16052,15 +16019,15 @@ if ('serviceWorker' in navigator) {
 
       <!-- Ma base clients -->
       <div style="border:1px solid #E3DFD7;border-radius:12px;overflow:hidden;">
-        <div style="background:#FFF4EF;padding:.75rem 1rem;border-bottom:1px solid #E3DFD7;">
+        <div style="background:var(--brand-xl);padding:.75rem 1rem;border-bottom:1px solid #E3DFD7;">
           <div style="font-size:.85rem;font-weight:700;color:#14120F;">👥 Ma base clients</div>
           <div style="font-size:.7rem;color:#8A8F86;margin-top:2px;">Ajoute ou met à jour VOS clients (Excel, même format que d'habitude). Aucun client existant n'est supprimé.</div>
         </div>
         <div style="padding:1rem;">
-          <label for="com-cli-file" style="display:flex;align-items:center;gap:10px;border:2px dashed #FF9366;border-radius:9px;padding:.9rem 1rem;cursor:pointer;background:#FFF8F4;">
-            <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" style="width:24px;height:24px;color:#FF4D1C;flex-shrink:0;"><path d="M3 14v3h14v-3M10 3v9M7 6l3-3 3 3"/></svg>
+          <label for="com-cli-file" style="display:flex;align-items:center;gap:10px;border:2px dashed var(--brand-ml);border-radius:9px;padding:.9rem 1rem;cursor:pointer;background:#FFF8F4;">
+            <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" style="width:24px;height:24px;color:var(--brand);flex-shrink:0;"><path d="M3 14v3h14v-3M10 3v9M7 6l3-3 3 3"/></svg>
             <div>
-              <div style="font-size:.82rem;font-weight:600;color:#E03A0C;">Glisser ou cliquer pour sélectionner</div>
+              <div style="font-size:.82rem;font-weight:600;color:var(--brand-d);">Glisser ou cliquer pour sélectionner</div>
               <div style="font-size:.7rem;color:#8A8F86;">Excel ou CSV · votre base clients</div>
             </div>
           </label>
@@ -16070,15 +16037,15 @@ if ('serviceWorker' in navigator) {
 
       <!-- Mes commandes -->
       <div style="border:1px solid #E3DFD7;border-radius:12px;overflow:hidden;">
-        <div style="background:#FFF4EF;padding:.75rem 1rem;border-bottom:1px solid #E3DFD7;">
+        <div style="background:var(--brand-xl);padding:.75rem 1rem;border-bottom:1px solid #E3DFD7;">
           <div style="font-size:.85rem;font-weight:700;color:#14120F;">📊 Mes commandes</div>
           <div style="font-size:.7rem;color:#8A8F86;margin-top:2px;">Met à jour VOTRE analyse CA (fichier commandes, même format). Les commandes s'accumulent.</div>
         </div>
         <div style="padding:1rem;">
-          <label for="com-cmd-file" style="display:flex;align-items:center;gap:10px;border:2px dashed #FF9366;border-radius:9px;padding:.9rem 1rem;cursor:pointer;background:#FFF8F4;">
-            <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" style="width:24px;height:24px;color:#FF4D1C;flex-shrink:0;"><path d="M3 14v3h14v-3M10 3v9M7 6l3-3 3 3"/></svg>
+          <label for="com-cmd-file" style="display:flex;align-items:center;gap:10px;border:2px dashed var(--brand-ml);border-radius:9px;padding:.9rem 1rem;cursor:pointer;background:#FFF8F4;">
+            <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" style="width:24px;height:24px;color:var(--brand);flex-shrink:0;"><path d="M3 14v3h14v-3M10 3v9M7 6l3-3 3 3"/></svg>
             <div>
-              <div style="font-size:.82rem;font-weight:600;color:#E03A0C;">Glisser ou cliquer pour sélectionner</div>
+              <div style="font-size:.82rem;font-weight:600;color:var(--brand-d);">Glisser ou cliquer pour sélectionner</div>
               <div style="font-size:.7rem;color:#8A8F86;">Excel ou CSV · vos commandes</div>
             </div>
           </label>
@@ -16094,13 +16061,13 @@ if ('serviceWorker' in navigator) {
 </div>
 <!-- RADAR CLIENTS — module d'alertes commerciales -->
 <script src="radar.js?v=5"></script>
-<script src="agenda.js?v=3"></script>
-<script src="visite.js?v=5"></script>
-<script src="notes.js?v=2"></script>
-<script src="releves.js?v=1"></script>
-<script src="mail.js?v=3"></script>
-<script src="analyse-client.js?v=1"></script>
-<script src="assistant.js?v=4"></script>
+<script src="agenda.js?v=4"></script>
+<script src="visite.js?v=6"></script>
+<script src="notes.js?v=3"></script>
+<script src="releves.js?v=2"></script>
+<script src="mail.js?v=4"></script>
+<script src="analyse-client.js?v=2"></script>
+<script src="assistant.js?v=5"></script>
 <script src="tournees.js?v=4"></script>
 <script src="visites.js?v=2"></script>
 <script src="rgpd.js?v=1"></script>
@@ -16113,7 +16080,7 @@ if ('serviceWorker' in navigator) {
 <script src="alertes.js?v=1"></script>
 <script src="paie-sim.js?v=1"></script>
 <script src="remises-accord.js?v=1"></script>
-<script src="equipe.js?v=15"></script>
+<script src="equipe.js?v=16"></script>
 <script src="fiche360.js?v=1"></script>
 <script src="offline-status.js?v=1"></script>
 <script>
@@ -16122,28 +16089,5 @@ if ('serviceWorker' in navigator) {
     try { if (typeof OfflineStatus !== 'undefined') OfflineStatus.mount(); } catch(e){}
   });
 </script>
-<!-- ═══ COHOR-SWITCH-START — sélecteur Éclat / Nuit (retirer ce bloc pour revenir) ═══ -->
-<div id="cohor-switch" data-mode="eclat" title="Basculer le thème COHOR" aria-label="Basculer le thème">
-  <span class="cs-opt cs-eclat">Éclat</span><span class="cs-opt cs-nuit">Nuit</span>
-</div>
-<script>
-(function(){
-  var KEY = 'cohor_theme';
-  function apply(mode){
-    document.body.classList.toggle('cohor-nuit', mode === 'nuit');
-    var s = document.getElementById('cohor-switch');
-    if (s) s.setAttribute('data-mode', mode);
-  }
-  try { apply(localStorage.getItem(KEY) === 'nuit' ? 'nuit' : 'eclat'); } catch(e) { apply('eclat'); }
-  document.addEventListener('click', function(e){
-    var sw = e.target.closest && e.target.closest('#cohor-switch');
-    if (!sw) return;
-    var nuit = !document.body.classList.contains('cohor-nuit');
-    apply(nuit ? 'nuit' : 'eclat');
-    try { localStorage.setItem(KEY, nuit ? 'nuit' : 'eclat'); } catch(e) {}
-  });
-})();
-</script>
-<!-- ═══ COHOR-SWITCH-END ═══ -->
 </body>
 </html>

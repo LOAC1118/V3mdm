@@ -254,7 +254,7 @@
     var max = Math.max.apply(null, c.map(function(x){ return x.ca; })), w = 100 / c.length;
     var s = c.map(function(x, i){
       var hh = Math.max(3, Math.round(x.ca / max * 56));
-      return '<rect x="' + (i * w + w * .15) + '%" y="' + (64 - hh) + '" width="' + (w * .7) + '%" height="' + hh + '" rx="2" fill="#FF4D1C" opacity="' + (.45 + .55 * (i + 1) / c.length) + '"><title>' + dFr(x.c) + ' : ' + eur0(x.ca) + '</title></rect>';
+      return '<rect x="' + (i * w + w * .15) + '%" y="' + (64 - hh) + '" width="' + (w * .7) + '%" height="' + hh + '" rx="2" fill="var(--brand)" opacity="' + (.45 + .55 * (i + 1) / c.length) + '"><title>' + dFr(x.c) + ' : ' + eur0(x.ca) + '</title></rect>';
     }).join('');
     return '<svg viewBox="0 0 300 64" preserveAspectRatio="none" style="width:100%;height:70px">' + s + '</svg>'
       + '<div class="anc-mut" style="display:flex;justify-content:space-between"><span>' + dFr(c[0].c) + '</span><span>paniers par commande</span><span>' + dFr(c[c.length - 1].c) + '</span></div>';
@@ -421,10 +421,10 @@
       + '.anc-hint{font-size:.78rem;color:#4a463f;background:#eef3f8;padding:8px 10px;border-radius:8px}'
       + '.anc-in{width:100%;padding:8px;border:1px solid #ddd;border-radius:8px;font:inherit}'
       + '.anc-drop{border:2px dashed #d6d1c5;border-radius:12px;padding:16px;text-align:center;background:#fff;cursor:pointer;font-size:.86rem}'
-      + '.anc-drop:hover,.anc-drop.over{border-color:#FF4D1C;background:#fff7f3}'
+      + '.anc-drop:hover,.anc-drop.over{border-color:var(--brand);background:#fff7f3}'
       + '.anc-act{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end}'
       + '.anc-b{border:1px solid #ddd;background:#fff;border-radius:99px;padding:9px 15px;font:600 .82rem inherit;cursor:pointer}'
-      + '.anc-b.p{background:#FF4D1C;border-color:#FF4D1C;color:#fff}.anc-b:disabled{opacity:.5}'
+      + '.anc-b.p{background:var(--brand);border-color:var(--brand);color:#fff}.anc-b:disabled{opacity:.5}'
       + '.anc-t{width:100%;border-collapse:collapse;font-size:.8rem}.anc-t th{text-align:left;font-size:.68rem;color:#8a857d;padding:4px 6px;text-transform:uppercase}'
       + '.anc-t td{padding:6px;border-top:1px solid #f0eee8}';
     document.head.appendChild(s);

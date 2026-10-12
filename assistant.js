@@ -246,7 +246,7 @@
     if ($('asst-fab')) return;
     var css = document.createElement('style');
     css.textContent =
-      '#asst-fab{position:fixed;right:22px;bottom:90px;z-index:9990;width:54px;height:54px;border-radius:50%;border:2px solid #FF4D1C;background:#1c1a17;color:#fff;font-size:1.5rem;box-shadow:0 6px 20px rgba(0,0,0,.35);cursor:pointer;display:none}'
+      '#asst-fab{position:fixed;right:22px;bottom:90px;z-index:9990;width:54px;height:54px;border-radius:50%;border:2px solid var(--brand);background:#1c1a17;color:#fff;font-size:1.5rem;box-shadow:0 6px 20px rgba(0,0,0,.35);cursor:pointer;display:none}'
       + '@media(max-width:768px){#asst-fab{right:14px;bottom:134px;width:48px;height:48px}}'
       + '#asst-panel{position:fixed;inset:0;z-index:99998;background:rgba(20,18,15,.55);display:none;align-items:flex-end;justify-content:center}'
       + '.asst-box{width:100%;max-width:560px;max-height:88vh;background:#fff;color:#1c1a17;border-radius:18px 18px 0 0;display:flex;flex-direction:column;font-family:inherit}'
@@ -256,16 +256,16 @@
       + '.asst-body{padding:14px 16px;overflow:auto;display:flex;flex-direction:column;gap:10px}'
       + '#asst-input{width:100%;min-height:70px;padding:10px;border:1px solid #ddd;border-radius:10px;font:inherit;resize:vertical;box-sizing:border-box}'
       + '.asst-row{display:flex;gap:8px;align-items:center}'
-      + '#asst-send{margin-left:auto;border:0;background:#FF4D1C;color:#fff;border-radius:99px;padding:9px 18px;font-weight:600;cursor:pointer}'
+      + '#asst-send{margin-left:auto;border:0;background:var(--brand);color:#fff;border-radius:99px;padding:9px 18px;font-weight:600;cursor:pointer}'
       + '#asst-mic{border:1px solid #ddd;background:#fafafa;border-radius:99px;padding:8px 14px;cursor:pointer}'
-      + '#asst-mic.on{background:#FF4D1C;color:#fff;border-color:#FF4D1C}'
+      + '#asst-mic.on{background:var(--brand);color:#fff;border-color:var(--brand)}'
       + '.asst-hint{font-size:.72rem;color:#8a857d}'
       + '.asst-card{border:1px solid #e6e2da;border-radius:12px;padding:12px;display:flex;flex-direction:column;gap:6px;background:#faf8f4}'
       + '.asst-card.done{opacity:.6}'
       + '.asst-t{font-weight:700;font-size:.9rem}.asst-l{font-size:.85rem}'
       + '.asst-sel{padding:8px;border:1px solid #ddd;border-radius:8px;font:inherit;max-width:100%}'
       + '.asst-btns{display:flex;gap:8px;justify-content:flex-end;margin-top:4px}'
-      + '.asst-yes{border:0;background:#FF4D1C;color:#fff;border-radius:99px;padding:8px 18px;font-weight:600;cursor:pointer}'
+      + '.asst-yes{border:0;background:var(--brand);color:#fff;border-radius:99px;padding:8px 18px;font-weight:600;cursor:pointer}'
       + '.asst-no{border:1px solid #ddd;background:#fff;border-radius:99px;padding:8px 14px;cursor:pointer}'
       + '.asst-all{border:0;background:#1c1a17;color:#fff;border-radius:99px;padding:10px;font-weight:600;cursor:pointer}'
       + '.asst-msg{font-size:.85rem;color:#4a463f}.asst-ok{color:#2a7d3f;font-weight:600;font-size:.85rem}'
