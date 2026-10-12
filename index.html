@@ -1629,6 +1629,10 @@ thead th.ts-active { text-decoration:underline; text-underline-offset:3px; }
       <svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="1.5" y="3" width="13" height="11.5" rx="1.5"/><path d="M1.5 6.5h13M5 1.5v3M11 1.5v3"/></svg>
       Agenda <span class="nav-badge agenda-navbadge" style="display:none;background:#FF4D1C;color:#fff;"></span>
     </div>
+        <div class="nav-item" onclick="showSection('releves',null,this)">
+      <svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 3h2l1.5 7h7L14 5H5"/><circle cx="6.5" cy="13" r="1"/><circle cx="11.5" cy="13" r="1"/></svg>
+      Relevés magasins
+    </div>
         <div class="nav-item" onclick="showSection('notes',null,this)">
       <svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 2h7l3 3v9H3z"/><path d="M10 2v3h3M5.5 8h5M5.5 10.5h5"/></svg>
       Notes
@@ -2111,6 +2115,10 @@ thead th.ts-active { text-decoration:underline; text-underline-offset:3px; }
   <!-- AGENDA -->
   <div id="sec-agenda" class="hidden" style="padding:1.75rem 2rem;overflow-y:auto;flex:1;background:var(--bg);box-sizing:border-box;">
     <div id="agenda-host"></div>
+  </div>
+
+    <div id="sec-releves" class="hidden" style="padding:1.75rem 2rem;overflow-y:auto;flex:1;background:var(--bg);box-sizing:border-box;">
+    <div id="releves-host"></div>
   </div>
 
     <div id="sec-notes" class="hidden" style="padding:1.75rem 2rem;overflow-y:auto;flex:1;background:var(--bg);box-sizing:border-box;">
@@ -3438,6 +3446,10 @@ thead th.ts-active { text-decoration:underline; text-underline-offset:3px; }
     <span class="mmenu-ico"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="1.5" y="3" width="13" height="11.5" rx="1.5"/><path d="M1.5 6.5h13M5 1.5v3M11 1.5v3"/></svg></span>
     <span class="mmenu-label">Agenda</span>
   </button>
+    <button class="mmenu-item" role="menuitem" data-sec="releves" onclick="mnavGo('releves')">
+    <span class="mmenu-ico"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 3h2l1.5 7h7L14 5H5"/><circle cx="6.5" cy="13" r="1"/><circle cx="11.5" cy="13" r="1"/></svg></span>
+    <span class="mmenu-label">Relevés magasins</span>
+  </button>
     <button class="mmenu-item" role="menuitem" data-sec="notes" onclick="mnavGo('notes')">
     <span class="mmenu-ico"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 2h7l3 3v9H3z"/><path d="M10 2v3h3M5.5 8h5M5.5 10.5h5"/></svg></span>
     <span class="mmenu-label">Notes</span>
@@ -4016,7 +4028,7 @@ let db = null, auth = null, currentUser = null, fbFunctions = null;
 // Les collections listées ici sont dupliquées par marque ET par commercial
 // (suffixe _<marque>_<uid>). 'profils' reste commun et global (compte Firebase
 // Auth, indépendant de la marque et déjà identifié par son propre uid).
-var BRAND_SCOPED_COLLECTIONS = ['clients','contacts','prospects','commandes','commandes_meta','commandes_stats','frais','notes_frais','activite','objectifs_ca','config','cadenciers','visites','visites_photos','rendez_vous','carnet'];
+var BRAND_SCOPED_COLLECTIONS = ['clients','contacts','prospects','commandes','commandes_meta','commandes_stats','frais','notes_frais','activite','objectifs_ca','config','cadenciers','visites','visites_photos','rendez_vous','carnet','releves_biocoop'];
 
 // ═══ BASCULE MODÈLE ÉQUIPE EN PROD (migration) ═══════════════════════════
 // PROD_TEAM_MODE       : en prod, lire/écrire les collections PARTAGÉES
@@ -5158,7 +5170,7 @@ if (typeof cdbPageSize  === 'undefined') window.cdbPageSize  = 50;
 // ═══════════════════════════════════════════════
 //  NAVIGATION
 // ═══════════════════════════════════════════════
-const SECTIONS = ['dashboard','radar','tournees','visites','recherche','rgpd','bdc','frais','contacts-db','commissions','comptes','mailing','accords','promos','top100','cadencier','ia','assortiment','alertes','equipe','agenda','notes'];
+const SECTIONS = ['dashboard','radar','tournees','visites','recherche','rgpd','bdc','frais','contacts-db','commissions','comptes','mailing','accords','promos','top100','cadencier','ia','assortiment','alertes','equipe','agenda','notes','releves'];
 // ═══════════════════════════════════════════════
 //  MENUS DEROULANTS DE LA BARRE DU HAUT
 // ═══════════════════════════════════════════════
@@ -5226,6 +5238,7 @@ function showSection(name, tabEl, sideEl) {
   if (name==='dashboard') { refreshDashboard(); if (typeof dashRenderInactiveClients === 'function') dashRenderInactiveClients(); }
   if (name==='radar') { setTimeout(function(){ if (typeof RadarClients !== 'undefined') RadarClients.mount(); }, 80); }
   if (name==='agenda') { setTimeout(function(){ if (window.Agenda) Agenda.mount(); }, 60); }
+  if (name==='releves') { setTimeout(function(){ if (window.Releves) Releves.mount(); }, 60); }
   if (name==='notes') { setTimeout(function(){ if (window.Notes) Notes.mount(); }, 60); }
   if (name==='tournees') { setTimeout(function(){ if (typeof Tournees !== 'undefined') Tournees.mount(); }, 80); }
   if (name==='visites') { setTimeout(function(){ if (typeof Visites !== 'undefined') Visites.mount(); }, 80); }
@@ -16078,6 +16091,7 @@ if ('serviceWorker' in navigator) {
 <script src="agenda.js?v=3"></script>
 <script src="visite.js?v=5"></script>
 <script src="notes.js?v=2"></script>
+<script src="releves.js?v=1"></script>
 <script src="mail.js?v=3"></script>
 <script src="analyse-client.js?v=1"></script>
 <script src="assistant.js?v=4"></script>
