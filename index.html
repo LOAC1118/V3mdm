@@ -1561,7 +1561,6 @@ thead th.ts-active { text-decoration:underline; text-underline-offset:3px; }
   </div>
   <div class="topbar-center">
     <button class="t-tab" data-sec="dashboard" onclick="tnavGo('dashboard')">Dashboard</button>
-    <button class="t-tab" data-sec="radar" onclick="tnavGo('radar')">Radar</button>
     <button class="t-tab" data-sec="bdc" onclick="tnavGo('bdc')">Bon de commande</button>
     <button class="t-tab" data-sec="contacts-db" onclick="tnavGo('contacts-db')">Clients</button>
     <div class="t-menu" id="tmenu-terrain">
@@ -1570,6 +1569,8 @@ thead th.ts-active { text-decoration:underline; text-underline-offset:3px; }
       <button class="t-item" data-sec="recherche" onclick="tnavGo('recherche')"><span class="t-item-ico">🔍</span>Recherche produit</button>
       <button class="t-item" data-sec="tournees" onclick="tnavGo('tournees')"><span class="t-item-ico">🗺️</span>Tournées</button>
       <button class="t-item" data-sec="visites" onclick="tnavGo('visites')"><span class="t-item-ico">📝</span>Visites</button>
+      <button class="t-item" data-sec="notes" onclick="tnavGo('notes')"><span class="t-item-ico">🗒️</span>Notes</button>
+      <button class="t-item" data-sec="releves" onclick="tnavGo('releves')"><span class="t-item-ico">🛒</span>Relevés magasins</button>
       <button class="t-item" data-sec="cadencier" onclick="tnavGo('cadencier')"><span class="t-item-ico">🗓️</span>Cadencier</button>
       <button class="t-item" data-sec="accords" onclick="tnavGo('accords')"><span class="t-item-ico">🤝</span>Accords commerciaux</button>
       </div>
@@ -1577,9 +1578,9 @@ thead th.ts-active { text-decoration:underline; text-underline-offset:3px; }
     <div class="t-menu" id="tmenu-analyse">
       <button class="t-tab t-trig" onclick="tnavMenu('analyse',event)">Analyse<svg class="t-caret" viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M2 4l3 3 3-3"/></svg></button>
       <div class="t-drop">
+      <button class="t-item" data-sec="radar" onclick="tnavGo('radar')"><span class="t-item-ico">📡</span>Radar</button>
       <button class="t-item" data-sec="top100" onclick="tnavGo('top100')"><span class="t-item-ico">🏆</span>Top 100 produits</button>
       <button class="t-item" data-sec="commissions" onclick="tnavGo('commissions')"><span class="t-item-ico">💶</span>Commissions</button>
-      <button class="t-item" data-sec="frais" onclick="tnavGo('frais')"><span class="t-item-ico">🧾</span>Notes de frais</button>
       </div>
     </div>
     <div class="t-menu" id="tmenu-outils">
@@ -1589,6 +1590,7 @@ thead th.ts-active { text-decoration:underline; text-underline-offset:3px; }
       <button class="t-item" data-sec="promos" onclick="tnavGo('promos')"><span class="t-item-ico">📄</span>Promos PDF</button>
       <button class="t-item" data-sec="ia" onclick="tnavGo('ia')"><span class="t-item-ico">🤖</span>Assistant IA</button>
       <button class="t-item" data-sec="rgpd" onclick="tnavGo('rgpd')"><span class="t-item-ico">⚖️</span>Conformité</button>
+      <button class="t-item" data-sec="frais" onclick="tnavGo('frais')"><span class="t-item-ico">🧾</span>Notes de frais</button>
       <div class="t-sep"></div>
       <button class="t-item hidden" id="t-tab-comptes" data-sec="comptes" onclick="tnavGo('comptes')"><span class="t-item-ico">🔑</span>Comptes</button>
       </div>
@@ -1621,21 +1623,9 @@ thead th.ts-active { text-decoration:underline; text-underline-offset:3px; }
       <svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="1" y="1" width="6" height="6" rx="1.5"/><rect x="9" y="1" width="6" height="6" rx="1.5"/><rect x="1" y="9" width="6" height="6" rx="1.5"/><rect x="9" y="9" width="6" height="6" rx="1.5"/></svg>
       Dashboard
     </div>
-    <div class="nav-item" onclick="showSection('radar',null,this)">
-      <svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="8" cy="8" r="6.5"/><circle cx="8" cy="8" r="2.8"/><path d="M8 8 13 3.5"/></svg>
-      Radar
-    </div>
     <div class="nav-item" onclick="showSection('agenda',null,this)">
       <svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="1.5" y="3" width="13" height="11.5" rx="1.5"/><path d="M1.5 6.5h13M5 1.5v3M11 1.5v3"/></svg>
       Agenda <span class="nav-badge agenda-navbadge" style="display:none;background:#FF4D1C;color:#fff;"></span>
-    </div>
-        <div class="nav-item" onclick="showSection('releves',null,this)">
-      <svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 3h2l1.5 7h7L14 5H5"/><circle cx="6.5" cy="13" r="1"/><circle cx="11.5" cy="13" r="1"/></svg>
-      Relevés magasins
-    </div>
-        <div class="nav-item" onclick="showSection('notes',null,this)">
-      <svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 2h7l3 3v9H3z"/><path d="M10 2v3h3M5.5 8h5M5.5 10.5h5"/></svg>
-      Notes
     </div>
     <div class="nav-item" onclick="showSection('bdc',null,this)">
       <svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 2h12l-1 8H3z"/><circle cx="6" cy="14" r="1"/><circle cx="11" cy="14" r="1"/></svg>
@@ -1663,6 +1653,14 @@ thead th.ts-active { text-decoration:underline; text-underline-offset:3px; }
       <svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 1.5h7l3 3v10H3z"/><path d="M9.5 1.5v3.5h3.5M5.5 8h5M5.5 11h5"/></svg>
       Visites
     </div>
+    <div class="nav-item" onclick="showSection('notes',null,this)">
+      <svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 2h7l3 3v9H3z"/><path d="M10 2v3h3M5.5 8h5M5.5 10.5h5"/></svg>
+      Notes
+    </div>
+    <div class="nav-item" onclick="showSection('releves',null,this)">
+      <svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 3h2l1.5 7h7L14 5H5"/><circle cx="6.5" cy="13" r="1"/><circle cx="11.5" cy="13" r="1"/></svg>
+      Relevés magasins
+    </div>
     <div class="nav-item" onclick="showSection('cadencier',null,this)">
       <svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="1.5" y="3" width="13" height="11.5" rx="1.5"/><path d="M1.5 6.5h13M5 1.5v3M11 1.5v3"/><path d="M4.5 9h2M4.5 11.5h2M9.5 9h2M9.5 11.5h2"/></svg>
       Cadencier
@@ -1677,6 +1675,10 @@ thead th.ts-active { text-decoration:underline; text-underline-offset:3px; }
 
   <div class="nav-section">
     <div class="nav-label">Analyse</div>
+    <div class="nav-item" onclick="showSection('radar',null,this)">
+      <svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="8" cy="8" r="6.5"/><circle cx="8" cy="8" r="2.8"/><path d="M8 8 13 3.5"/></svg>
+      Radar
+    </div>
     <div class="nav-item" onclick="showSection('top100',null,this)">
       <svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 2h8v3a4 4 0 0 1-8 0z"/><path d="M12 3h2v1a2 2 0 0 1-2 2M4 3H2v1a2 2 0 0 0 2 2"/><path d="M6.5 9h3M8 9v3M6 13h4"/></svg>
       Top 100
@@ -1684,10 +1686,6 @@ thead th.ts-active { text-decoration:underline; text-underline-offset:3px; }
     <div class="nav-item" onclick="showSection('commissions',null,this)">
       <svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="8" cy="8" r="6"/><path d="M8 5v6M6 7h3.5a1.5 1.5 0 0 1 0 3H6"/></svg>
       Commissions
-    </div>
-    <div class="nav-item" onclick="showSection('frais',null,this)">
-      <svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="1" y="3" width="14" height="10" rx="2"/><path d="M1 6h14"/><circle cx="5" cy="9.5" r="1"/></svg>
-      Frais <span class="nav-badge" id="nb-frais">0</span>
     </div>
     <div class="nav-item" onclick="showSection('assortiment',null,this)">
       <svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="1.5" y="1.5" width="5" height="5" rx="1"/><rect x="9.5" y="1.5" width="5" height="5" rx="1"/><rect x="1.5" y="9.5" width="5" height="5" rx="1"/><path d="M9.5 12h5M12 9.5v5"/></svg>
@@ -1719,6 +1717,10 @@ thead th.ts-active { text-decoration:underline; text-underline-offset:3px; }
       <svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M8 1.5v13M3 4.5h10M5 4.5L3 9h4zM11 4.5L9 9h4z"/></svg>
       Conformité
     </div>
+    <div class="nav-item" onclick="showSection('frais',null,this)">
+      <svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="1" y="3" width="14" height="10" rx="2"/><path d="M1 6h14"/><circle cx="5" cy="9.5" r="1"/></svg>
+      Frais <span class="nav-badge" id="nb-frais">0</span>
+    </div>
     <div class="nav-item hidden" id="nav-item-comptes" onclick="showSection('comptes',null,this)">
       <svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="5.5" cy="5.5" r="2.5"/><circle cx="11" cy="6" r="2"/><path d="M1 14c0-2.5 1.8-4.5 4.5-4.5S10 11.5 10 14"/><path d="M9.5 9.7c2 .2 3.5 1.8 3.5 4.3"/></svg>
       Comptes
@@ -1736,6 +1738,10 @@ thead th.ts-active { text-decoration:underline; text-underline-offset:3px; }
     <div class="nav-item" onclick="showSection('bdc',null,this);setTimeout(resetBDC,50)">
       <svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M8 3v10M3 8h10"/></svg>
       Nouveau BDC
+    </div>
+    <div class="nav-item" onclick="showSection('releves',null,this);setTimeout(function(){var i=document.getElementById('rl-new-nom');if(i)i.focus();},200)">
+      <svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 3h2l1.5 7h7L14 5H5"/><circle cx="6.5" cy="13" r="1"/><circle cx="11.5" cy="13" r="1"/></svg>
+      Nouveau relevé
     </div>
     <div class="nav-item" onclick="showSection('frais',null,this)">
       <svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 3h10v2l-2 2 2 2v2H3v-2l2-2-2-2z"/></svg>
@@ -3438,21 +3444,9 @@ thead th.ts-active { text-decoration:underline; text-underline-offset:3px; }
     <span class="mmenu-ico"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="1" y="1" width="6" height="6" rx="1.5"/><rect x="9" y="1" width="6" height="6" rx="1.5"/><rect x="1" y="9" width="6" height="6" rx="1.5"/><rect x="9" y="9" width="6" height="6" rx="1.5"/></svg></span>
     <span class="mmenu-label">Dashboard</span>
   </button>
-  <button class="mmenu-item" role="menuitem" data-sec="radar" onclick="mnavGo('radar')">
-    <span class="mmenu-ico"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="8" cy="8" r="6.5"/><circle cx="8" cy="8" r="2.8"/><path d="M8 8 13 3.5"/></svg></span>
-    <span class="mmenu-label">Radar</span>
-  </button>
   <button class="mmenu-item" role="menuitem" data-sec="agenda" onclick="mnavGo('agenda')">
     <span class="mmenu-ico"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="1.5" y="3" width="13" height="11.5" rx="1.5"/><path d="M1.5 6.5h13M5 1.5v3M11 1.5v3"/></svg></span>
     <span class="mmenu-label">Agenda</span>
-  </button>
-    <button class="mmenu-item" role="menuitem" data-sec="releves" onclick="mnavGo('releves')">
-    <span class="mmenu-ico"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 3h2l1.5 7h7L14 5H5"/><circle cx="6.5" cy="13" r="1"/><circle cx="11.5" cy="13" r="1"/></svg></span>
-    <span class="mmenu-label">Relevés magasins</span>
-  </button>
-    <button class="mmenu-item" role="menuitem" data-sec="notes" onclick="mnavGo('notes')">
-    <span class="mmenu-ico"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 2h7l3 3v9H3z"/><path d="M10 2v3h3M5.5 8h5M5.5 10.5h5"/></svg></span>
-    <span class="mmenu-label">Notes</span>
   </button>
   <button class="mmenu-item" role="menuitem" data-sec="bdc" onclick="mnavGo('bdc')">
     <span class="mmenu-ico"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 2h12l-1 8H3z"/><circle cx="6" cy="14" r="1"/><circle cx="11" cy="14" r="1"/></svg></span>
@@ -3476,6 +3470,14 @@ thead th.ts-active { text-decoration:underline; text-underline-offset:3px; }
     <span class="mmenu-ico"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 1.5h7l3 3v10H3z"/><path d="M9.5 1.5v3.5h3.5M5.5 8h5M5.5 11h5"/></svg></span>
     <span class="mmenu-label">Visites</span>
   </button>
+  <button class="mmenu-item" role="menuitem" data-sec="notes" onclick="mnavGo('notes')">
+    <span class="mmenu-ico"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 2h7l3 3v9H3z"/><path d="M10 2v3h3M5.5 8h5M5.5 10.5h5"/></svg></span>
+    <span class="mmenu-label">Notes</span>
+  </button>
+  <button class="mmenu-item" role="menuitem" data-sec="releves" onclick="mnavGo('releves')">
+    <span class="mmenu-ico"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 3h2l1.5 7h7L14 5H5"/><circle cx="6.5" cy="13" r="1"/><circle cx="11.5" cy="13" r="1"/></svg></span>
+    <span class="mmenu-label">Relevés magasins</span>
+  </button>
   <button class="mmenu-item" role="menuitem" data-sec="cadencier" onclick="mnavGo('cadencier')">
     <span class="mmenu-ico"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="1.5" y="3" width="13" height="11.5" rx="1.5"/><path d="M1.5 6.5h13M5 1.5v3M11 1.5v3"/><path d="M4.5 9h2M4.5 11.5h2M9.5 9h2M9.5 11.5h2"/></svg></span>
     <span class="mmenu-label">Cadencier</span>
@@ -3486,6 +3488,10 @@ thead th.ts-active { text-decoration:underline; text-underline-offset:3px; }
   </button>
 
   <div style="font-size:.68rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--g500);padding:.9rem 1.1rem .3rem;">Analyse</div>
+  <button class="mmenu-item" role="menuitem" data-sec="radar" onclick="mnavGo('radar')">
+    <span class="mmenu-ico"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="8" cy="8" r="6.5"/><circle cx="8" cy="8" r="2.8"/><path d="M8 8 13 3.5"/></svg></span>
+    <span class="mmenu-label">Radar</span>
+  </button>
   <button class="mmenu-item" role="menuitem" data-sec="top100" onclick="mnavGo('top100')">
     <span class="mmenu-ico"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 2h8v3a4 4 0 0 1-8 0z"/><path d="M12 3h2v1a2 2 0 0 1-2 2M4 3H2v1a2 2 0 0 0 2 2"/><path d="M6.5 9h3M8 9v3M6 13h4"/></svg></span>
     <span class="mmenu-label">Top 100 Produits</span>
@@ -3493,10 +3499,6 @@ thead th.ts-active { text-decoration:underline; text-underline-offset:3px; }
   <button class="mmenu-item" role="menuitem" data-sec="commissions" onclick="mnavGo('commissions')">
     <span class="mmenu-ico"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="8" cy="8" r="6"/><path d="M8 5v6M6 7h3.5a1.5 1.5 0 0 1 0 3H6"/></svg></span>
     <span class="mmenu-label">Commissions</span>
-  </button>
-  <button class="mmenu-item" role="menuitem" data-sec="frais" onclick="mnavGo('frais')">
-    <span class="mmenu-ico"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="1" y="3" width="14" height="10" rx="2"/><path d="M1 6h14"/><circle cx="5" cy="9.5" r="1"/></svg></span>
-    <span class="mmenu-label">Frais</span>
   </button>
   <button class="mmenu-item" role="menuitem" data-sec="assortiment" onclick="mnavGo('assortiment')">
     <span class="mmenu-ico"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="1.5" y="1.5" width="5" height="5" rx="1"/><rect x="9.5" y="1.5" width="5" height="5" rx="1"/><rect x="1.5" y="9.5" width="5" height="5" rx="1"/><path d="M9.5 12h5M12 9.5v5"/></svg></span>
@@ -3523,6 +3525,10 @@ thead th.ts-active { text-decoration:underline; text-underline-offset:3px; }
   <button class="mmenu-item" role="menuitem" data-sec="rgpd" onclick="mnavGo('rgpd')">
     <span class="mmenu-ico"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M8 1.5v13M3 4.5h10M5 4.5L3 9h4zM11 4.5L9 9h4z"/></svg></span>
     <span class="mmenu-label">Conformité</span>
+  </button>
+  <button class="mmenu-item" role="menuitem" data-sec="frais" onclick="mnavGo('frais')">
+    <span class="mmenu-ico"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="1" y="3" width="14" height="10" rx="2"/><path d="M1 6h14"/><circle cx="5" cy="9.5" r="1"/></svg></span>
+    <span class="mmenu-label">Frais</span>
   </button>
   <button class="mmenu-item hidden" id="mtab-comptes" role="menuitem" data-sec="comptes" onclick="mnavGo('comptes')">
     <span class="mmenu-ico"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="5.5" cy="5.5" r="2.5"/><circle cx="11" cy="6" r="2"/><path d="M1 14c0-2.5 1.8-4.5 4.5-4.5S10 11.5 10 14"/><path d="M9.5 9.7c2 .2 3.5 1.8 3.5 4.3"/></svg></span>
