@@ -4200,6 +4200,41 @@ var ACCORDS_DEFAUT = [
       'Remise 18% sur la gamme de chocolats : conditionnée à la détention de 20 références.',
       'Source : section 3.1.1 Remises sur facture. Franco global / implantation / anniversaire / paiement / dates / plan promo : à compléter depuis les autres sections de l\'accord.'
     ].join('\\n')
+  },
+  {
+    nom: 'BIOMONDE 2026',
+    debut: '2026-01-01', fin: '2026-12-31',
+    paliers: [
+      { seuil: 500, remise: 10, label: 'Remise quantitative (% CA) : dès 500 € → 10 %' },
+      { seuil: 700, remise: 12, label: 'Remise quantitative (% CA) : dès 700 € → 12 %' },
+      { seuil: 950, remise: 13, label: 'Remise quantitative (% CA) : dès 950 € → 13 %' }
+    ],
+    promos: [
+      { periode: 'Permanente (depuis 01/03/2025)', remise: 15, label: 'Remise promo 15 % CA', produits: 'BISCOTTE, BREROY, BRETZEL, BUCHETTE, DELCHACHO, FARBLE55T01, FARBLEPAT01, FARCHA, FARPEPBLC500, GREEPE (depuis 24/07/2025), GREOLI, GRESES, SPAPET, SPECULPETEPE, THAFRO' }
+    ],
+    franco: '', implantation: '', anniversaire: '',
+    paiement: '',
+    notes: [
+      'Source : tarif groupement BIOMONDE 2026 (extrait de gestion commerciale).',
+      'Remise 001 — REMISE PROMO : 15 % du CA sur 15 références (date d\'effet 01/03/2025, sauf GREEPE : 24/07/2025) :',
+      '  BISCOTTE — Biscottes épeautre 400g',
+      '  BREROY — Bretzels royales épeautre sésame 125g AB',
+      '  BRETZEL — Bretzels épeautre 150g',
+      '  BUCHETTE — Bûchettes épeautre chocolat noir 150g',
+      '  DELCHACHO — Délices châtaignes nappés chocolat',
+      '  FARBLE55T01 — Farine blé blanc T55 1kg',
+      '  FARBLEPAT01 — Farine blé blanc T45 1kg',
+      '  FARCHA — Farine châtaigne 500g',
+      '  FARPEPBLC500 — Farine petit épeautre blanche T70 500g',
+      '  GREEPE — Gressins épeautre 125g',
+      '  GREOLI — Gressins huile d\'olive 125g',
+      '  GRESES — Gressins sésame 125g',
+      '  SPAPET — Spaghettines petit épeautre',
+      '  SPECULPETEPE — Speculoos petit épeautre 230g',
+      '  THAFRO — Thalers épeautre fromage 100g',
+      'Remise 201 — REMISE QUANTITATIVE (% CA, date d\'effet 01/03/2025) : 0 € → 0 % ; 500 € → 10 % ; 700 € → 12 % ; 950 € → 13 % (palier marqué « D » dans le tarif).',
+      'À compléter : franco, conditions de paiement, implantation / anniversaire, dates de validité exactes (non indiqués dans le document).'
+    ].join('\n')
   }
 ];
 
@@ -4321,7 +4356,7 @@ function accordsView(id) {
     });
     html += '</table>';
   }
-  if (acc.notes) html += '<div style="margin-top:.8rem;padding:.6rem .8rem;background:var(--surface2);border-radius:6px;font-size:.78rem;color:var(--g600);">'+acc.notes+'</div>';
+  if (acc.notes) html += '<div style="margin-top:.8rem;padding:.6rem .8rem;background:var(--surface2);border-radius:6px;font-size:.78rem;color:var(--g600);white-space:pre-line;">'+acc.notes+'</div>';
   document.getElementById('modal-accord-view-body').innerHTML = html;
   var foot = document.getElementById('modal-accord-view-foot');
   foot.innerHTML = isAdminUser()
