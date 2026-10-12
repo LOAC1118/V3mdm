@@ -27,7 +27,7 @@
       + '.vis-ta{width:100%;min-height:90px;box-sizing:border-box;padding:8px;border:1px solid #ddd;border-radius:8px;font:inherit}'
       + '.vis-row{display:flex;flex-wrap:wrap;gap:6px;align-items:center}'
       + '.vis-b{border:1px solid #ddd;background:#fff;border-radius:99px;padding:7px 12px;font:600 .8rem inherit;cursor:pointer}'
-      + '.vis-b.p{background:#FF4D1C;border-color:#FF4D1C;color:#fff}'
+      + '.vis-b.p{background:var(--brand);border-color:var(--brand);color:#fff}'
       + '.vis-b.rec{background:#c62828;border-color:#c62828;color:#fff}'
       + '.vis-b:disabled{opacity:.5;cursor:not-allowed}'
       + '.vis-small{font-size:.74rem;color:#8a857d}'
