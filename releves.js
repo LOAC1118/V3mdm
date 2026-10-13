@@ -207,6 +207,7 @@
     var h = host(); if (!h) return; css();
     if (_view === 'edit' && _cur) return renderEdit();
     if (_view === 'compare') return renderCompare();
+    if (_view === 'dash') return renderDash();
     renderList();
   }
   function ensSelect(id, sel, onchange, all) {
@@ -234,7 +235,7 @@
       + '<button class="rl-b p" onclick="Releves.nouveau()">＋ Nouveau relevé</button></div>'
       + '<div class="rl-bar">' + ensSelect('rl-filt-ens', _ensSel, 'Releves.filtEns(this.value)', true)
       + '<input class="rl-in" placeholder="Rechercher un relevé…" value="' + esc(_q) + '" oninput="Releves.search(this.value)" style="flex:1;min-width:140px">'
-      + '<button class="rl-b" onclick="Releves.compare()">📊 Comparer</button><button class="rl-b" onclick="Releves.refEdit()">⚙️ Listes produits</button></div>'
+      + '<button class="rl-b" onclick="Releves.dash()">📈 Dashboard</button><button class="rl-b" onclick="Releves.compare()">📊 Comparer</button><button class="rl-b" onclick="Releves.refEdit()">⚙️ Listes produits</button></div>'
       + '<div id="rl-list">' + (list.length ? list.map(cardHtml).join('') : '<div class="mut" style="padding:24px;text-align:center">Aucun relevé pour le moment.</div>') + '</div></div>';
   }
   function cardHtml(r) {
@@ -455,6 +456,76 @@
           if (d.cell.raw === 'Non') d.cell.styles.textColor = [200, 50, 50]; } } });
       out(doc, 'Comparatif-' + slug(ensNom(D.ens)).slice(0, 14) + '-' + today() + '.pdf');
     });
+  }
+
+
+  // ── Dashboard par enseigne ──
+  function dashData(ens) {
+    var m = lastPerStore(ens, null, null), stores = Object.keys(m).map(function(k){ return m[k]; });
+    stores.sort(function(a, b){ return String(b.date || '').localeCompare(String(a.date || '')); });
+    var all = _rel.filter(function(r){ return relEns(r) === ens; });
+    var prods = {};
+    stores.forEach(function(r){ (r.lignes || []).forEach(function(l){
+      var o = prods[l.k] || (prods[l.k] = { k: l.k, l: l.l, f: l.f, libre: !!l.libre, pres: 0, abs: 0, px: [], ratio: [] });
+      if (l.p === true) o.pres++; else if (l.p === false) o.abs++;
+      if (l.x != null) { o.px.push({ v: l.x, s: r.magasin }); if (l.t) o.ratio.push(l.x / l.t); }
+    }); });
+    var P = Object.keys(prods).map(function(k){ var o = prods[k]; o.n = o.pres + o.abs; o.cov = o.n ? o.pres / o.n : null; return o; });
+    var perStore = stores.map(function(r){ return { r: r, st: stats(r) }; });
+    var tx = perStore.filter(function(x){ return x.st.taux != null; });
+    var fam = {};
+    P.forEach(function(o){ if (o.libre || !o.n) return; var f = fam[o.f] || (fam[o.f] = { f: o.f, pres: 0, n: 0 }); f.pres += o.pres; f.n += o.n; });
+    var allPx = []; P.forEach(function(o){ o.px.forEach(function(x){ allPx.push(x.v); }); });
+    var ratios = []; P.forEach(function(o){ o.ratio.forEach(function(x){ ratios.push(x); }); });
+    var spread = P.filter(function(o){ return o.px.length >= 2; }).map(function(o){
+      var mn = o.px.reduce(function(a, b){ return b.v < a.v ? b : a; }), mx = o.px.reduce(function(a, b){ return b.v > a.v ? b : a; });
+      return { o: o, mn: mn, mx: mx, pct: mn.v > 0 ? (mx.v - mn.v) / mn.v : 0 };
+    }).filter(function(x){ return x.pct > 0; }).sort(function(a, b){ return b.pct - a.pct; });
+    return { ens: ens, all: all, stores: stores, perStore: perStore, P: P, fam: Object.keys(fam).map(function(k){ return fam[k]; }),
+      tauxMoy: tx.length ? Math.round(tx.reduce(function(a, x){ return a + x.st.taux; }, 0) / tx.length) : null,
+      pxMoy: allPx.length ? allPx.reduce(function(a, b){ return a + b; }, 0) / allPx.length : null,
+      ratioMoy: ratios.length >= 3 ? ratios.reduce(function(a, b){ return a + b; }, 0) / ratios.length : null, spread: spread };
+  }
+  function bar(pct, color, label) {
+    return '<div style="display:flex;align-items:center;gap:8px;margin:5px 0"><div style="flex:0 0 46%;min-width:0;font-size:.74rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + label.l + '</div>'
+      + '<div style="flex:1;background:#eee9e0;border-radius:6px;height:14px;overflow:hidden"><div style="width:' + Math.max(2, pct) + '%;height:100%;background:' + color + ';border-radius:6px"></div></div>'
+      + '<div style="flex:0 0 44px;text-align:right;font-size:.78rem;font-weight:600">' + label.v + '</div></div>';
+  }
+  function kpi(v, l) { return '<div style="flex:1;min-width:120px;background:#fff;border:1px solid #e8e3da;border-radius:12px;padding:10px 12px"><div style="font:600 22px Fraunces,Georgia,serif;color:var(--brand)">' + v + '</div><div class="mut">' + l + '</div></div>'; }
+  function box(title, inner, sub) { return '<div style="background:#fff;border:1px solid #e8e3da;border-radius:14px;padding:12px 14px;margin:10px 0"><div style="font-weight:700;font-size:.9rem">' + title + '</div>' + (sub ? '<div class="mut" style="margin-bottom:6px">' + sub + '</div>' : '') + inner + '</div>'; }
+  function renderDash() {
+    var h = host(), ens = cmpEns(), D = dashData(ens), B = 'var(--brand)', GR = '#2e9d5b', RD = '#d64545';
+    var ov = ensList().map(function(e){ var d = dashData(e.id);
+      return '<button class="rl-card" style="cursor:pointer;text-align:left;flex-direction:column;align-items:flex-start;gap:2px;min-width:130px;margin:0;' + (e.id === ens ? 'border-color:var(--brand);box-shadow:0 0 0 2px var(--brand) inset' : '') + '" onclick="Releves.dashEns(\'' + e.id + '\')"><b>' + esc(e.nom) + '</b><span class="mut">' + d.stores.length + ' magasin' + (d.stores.length > 1 ? 's' : '') + ' · ' + (d.tauxMoy != null ? d.tauxMoy + ' % réf.' : '—') + '</span></button>'; }).join('');
+    var body;
+    if (!D.stores.length) body = '<div class="mut" style="padding:24px;text-align:center">Aucun relevé pour cette enseigne.</div>';
+    else {
+      var last = D.stores[0], libres = D.P.filter(function(o){ return o.libre; });
+      var stBars = D.perStore.filter(function(x){ return x.st.taux != null; }).sort(function(a, b){ return b.st.taux - a.st.taux; }).map(function(x){
+        return bar(x.st.taux, x.st.taux >= 70 ? GR : (x.st.taux >= 40 ? B : RD), { l: esc(x.r.magasin) + ' <span class="mut">' + frDate(x.r.date) + '</span>', v: x.st.taux + ' %' }); }).join('');
+      var ranked = D.P.filter(function(o){ return !o.libre && o.n >= Math.min(2, D.stores.length); });
+      var top = ranked.slice().sort(function(a, b){ return b.cov - a.cov || b.n - a.n; }).slice(0, 8);
+      var low = ranked.filter(function(o){ return o.cov < 1; }).sort(function(a, b){ return a.cov - b.cov || b.n - a.n; }).slice(0, 8);
+      var mk2 = function(o, c){ return bar(Math.round(o.cov * 100), c, { l: esc(o.l), v: o.pres + '/' + o.n }); };
+      var famBars = D.fam.filter(function(f){ return f.n; }).sort(function(a, b){ return b.pres / b.n - a.pres / a.n; }).map(function(f){ var pc = Math.round(100 * f.pres / f.n); return bar(pc, pc >= 70 ? GR : (pc >= 40 ? B : RD), { l: esc(f.f), v: pc + ' %' }); }).join('');
+      var spr = D.spread.slice(0, 8).map(function(x){
+        return '<tr><td>' + esc(x.o.l) + '</td><td style="text-align:right">' + eurP(x.mn.v) + '</td><td style="text-align:right">' + eurP(x.mx.v) + '</td><td style="text-align:right"><b>+' + Math.round(x.pct * 100) + ' %</b></td><td class="mut">' + esc(x.mn.s) + ' → ' + esc(x.mx.s) + '</td></tr>'; }).join('');
+      var rec = D.stores.slice(0, 6).map(function(r){ var st = stats(r);
+        return '<div style="display:flex;gap:8px;padding:6px 0;border-top:1px solid #f0ece4;cursor:pointer;font-size:.8rem;align-items:baseline" onclick="Releves.ouvrir(\'' + r.id + '\')"><div style="flex:1;min-width:0"><b>' + esc(r.magasin) + '</b> <span class="mut">' + esc(r.ville || '') + '</span></div><div class="mut">' + frDate(r.date) + '</div><div style="width:60px;text-align:right"><b>' + (st.taux != null ? st.taux + ' %' : '—') + '</b></div></div>'; }).join('');
+      body = '<div style="display:flex;gap:8px;flex-wrap:wrap;margin:10px 0">'
+        + kpi(D.stores.length, 'magasins relevés') + kpi(D.all.length, 'relevés au total') + kpi(D.tauxMoy != null ? D.tauxMoy + ' %' : '—', 'taux de référencement moyen')
+        + kpi(D.pxMoy != null ? eur(D.pxMoy) : '—', 'prix moyen relevé') + (D.ratioMoy != null ? kpi('× ' + D.ratioMoy.toFixed(2).replace('.', ','), 'prix rayon ÷ tarif MDM') : '') + kpi(frDate(last.date), 'dernier relevé') + '</div>'
+        + box('Référencement par magasin', stBars || '<div class="mut">Aucun produit pointé.</div>', 'Part des références pointées qui sont présentes en rayon (dernier relevé de chaque magasin)')
+        + (top.length ? box('Références les mieux implantées', top.map(function(o){ return mk2(o, GR); }).join(''), 'Présentes dans le plus de magasins') : '')
+        + (low.length ? box('Références à pousser', low.map(function(o){ return mk2(o, RD); }).join(''), 'Les moins présentes : opportunités de référencement') : '')
+        + (famBars ? box('Présence par famille', famBars) : '')
+        + (spr ? box('Écarts de prix entre magasins', '<div class="rl-tw"><table class="rl-t"><tr><th style="text-align:left">Produit</th><th>Mini</th><th>Maxi</th><th>Écart</th><th style="text-align:left">Magasins</th></tr>' + spr + '</table></div>', 'Produits dont le prix varie le plus (' + D.spread.length + ' produit' + (D.spread.length > 1 ? 's' : '') + ' avec au moins 2 prix)') : '')
+        + (libres.length ? box('Produits vus hors liste', libres.map(function(o){ return '<div style="padding:3px 0;font-size:.8rem">' + esc(o.l) + (o.px.length ? ' <span class="mut">· ' + eurP(o.px[0].v) + ' € (' + esc(o.px[0].s) + ')</span>' : '') + '</div>'; }).join('')) : '')
+        + box('Derniers relevés', rec);
+    }
+    h.innerHTML = '<div class="rl"><div class="rl-bar" style="margin-top:0"><button class="rl-b" onclick="Releves.retour()">← Relevés</button><span style="flex:1"></span><button class="rl-b" onclick="Releves.compare()">📊 Comparer</button></div>'
+      + '<h2>📈 Dashboard · ' + esc(ensNom(ens)) + '</h2><div class="mut">Synthèse de tous les relevés de l\'enseigne (dernier relevé de chaque magasin).</div>'
+      + '<div style="display:flex;gap:8px;overflow-x:auto;padding:8px 0">' + ov + '</div>' + body + '</div>';
   }
 
   // ── Listes de produits par enseigne ──
@@ -876,6 +947,7 @@
   function mount() { css(); var first = !_unsub; if (_view === 'edit' && _cur) { render(); return; } _view = 'list'; render(); if (first) loadRef().then(function(){ load(); render(); }); }
 
   window.Releves = { mount: mount, nouveau: nouveau, ouvrir: ouvrir, retour: retour, supprimer: supprimer, pt: togglePoint, prix: setPrix, nt: setNote, meta: setMeta,
+    dash: function(){ _view = 'dash'; render(); }, dashEns: function(v){ _ensSel = v; renderDash(); },
     addLibre: addLibre, delLibre: delLibre, compare: function(){ _view = 'compare'; render(); }, pdf: pdf, pdfSave: pdfSave, pdfShare: pdfShare, pdfOpen: pdfOpen, pdfCompare: pdfCompare, search: search, filtEns: filtEns, ensChange: ensChange,
     q2: function(v){ _q = v; renderRows(); }, fam: function(v){ _fam = v; renderRows(); }, only: function(){ _only = _only === 'todo' ? 'all' : 'todo'; renderEdit(); },
     cmpFam: function(v){ _cmpFam = v; renderCompare(); }, cmpEnsSet: function(v){ _ensSel = v; _cmpFam = ''; renderCompare(); },
