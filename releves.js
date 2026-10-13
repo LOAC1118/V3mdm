@@ -569,10 +569,10 @@
     ov.style.cssText = 'position:fixed;inset:0;z-index:99997;background:#000;display:flex;flex-direction:column';
     ov.innerHTML = '<div style="display:flex;align-items:center;gap:8px;padding:10px 12px;background:#14120F;color:#fff;font:600 .85rem Inter,sans-serif">'
       + '<span style="flex:1">📷 Scanner · ' + esc(ensNom(ens)) + '</span><span id="rl-sc-n" style="opacity:.8;font-weight:500"></span>'
-      + '<button class="rl-b" id="rl-sc-torch" style="display:none" onclick="Releves.scanTorch()">🔦</button>'
+      + '<button class="rl-b" id="rl-sc-zoom" style="display:none" onclick="Releves.scanZoom()">🔍 ×1</button><button class="rl-b" id="rl-sc-torch" style="display:none" onclick="Releves.scanTorch()">🔦</button><button class="rl-b" onclick="Releves.scanPhoto()">📸 Photo</button><input type="file" id="rl-sc-file" accept="image/*" capture="environment" style="display:none" onchange="Releves.photoChosen(this)">'
       + '<button class="rl-b p" onclick="Releves.scanClose()">Terminé</button></div>'
       + '<div style="position:relative;flex:1;min-height:0;background:#000"><video id="rl-sc-v" playsinline muted autoplay style="width:100%;height:100%;object-fit:cover"></video>'
-      + '<div style="position:absolute;left:12%;right:12%;top:30%;height:22%;border:2px solid rgba(255,255,255,.85);border-radius:12px;box-shadow:0 0 0 999px rgba(0,0,0,.35);pointer-events:none"></div>'
+      + '<div style="position:absolute;left:8%;right:8%;top:26%;height:30%;border:2px solid rgba(255,255,255,.85);border-radius:12px;box-shadow:0 0 0 999px rgba(0,0,0,.35);pointer-events:none"></div>'
       + '<div id="rl-sc-st" style="position:absolute;left:0;right:0;top:12px;text-align:center;color:#fff;font:500 .8rem Inter,sans-serif;text-shadow:0 1px 3px #000">Initialisation de la caméra…</div></div>'
       + '<div style="background:#fff;padding:8px 12px;display:flex;gap:8px"><input id="rl-sc-man" class="rl-in" inputmode="numeric" placeholder="ou saisir l\'EAN à la main" style="flex:1"><button class="rl-b" onclick="Releves.scanManual()">OK</button></div>'
       + '<div id="rl-sc-sheet" style="display:none;background:#fff;padding:14px;max-height:62vh;overflow:auto;border-top:3px solid var(--brand)"></div>';
@@ -582,53 +582,168 @@
   }
   function scanStatus(t) { var e = $('rl-sc-st'); if (e) e.textContent = t; }
   function scanCount() { var e = $('rl-sc-n'); if (e && _scan) e.textContent = _scan.n + ' scannés · ' + _scan.found + ' dans la liste'; }
+  var LIB_ZXW = 'https://cdn.jsdelivr.net/npm/zxing-wasm@3.1.5/dist/iife/reader/index.js';
+  var SC_FORMATS = ['EAN-13', 'EAN-8', 'UPC-A', 'UPC-E'];
+
+  // clé de contrôle EAN-13 / EAN-8 / UPC-A
+  function eanOk(c) {
+    if (!/^\d+$/.test(c) || [8, 12, 13].indexOf(c.length) === -1) return false;
+    var s = 0, n = c.length;
+    for (var i = 0; i < n - 1; i++) s += (+c.charAt(n - 2 - i)) * (i % 2 === 0 ? 3 : 1);
+    return (10 - s % 10) % 10 === +c.charAt(n - 1);
+  }
   function camStart() {
     if (!_scan) return;
-    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) { scanStatus('Caméra indisponible ici : saisissez l\'EAN à la main ci-dessous.'); return; }
-    navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: 'environment' }, width: { ideal: 1280 }, height: { ideal: 720 } }, audio: false }).then(function(st){
-      if (!_scan) { st.getTracks().forEach(function(t){ t.stop(); }); return; }
-      _scan.stream = st; _scan.video.srcObject = st; _scan.video.play().catch(function(){});
-      try { var tr = st.getVideoTracks()[0], cap = tr.getCapabilities ? tr.getCapabilities() : {};
-        if (cap.focusMode && cap.focusMode.indexOf('continuous') !== -1) tr.applyConstraints({ advanced: [{ focusMode: 'continuous' }] }).catch(function(){});
-        if (cap.torch) $('rl-sc-torch').style.display = ''; } catch(e){}
-      scanStatus('Visez le code-barres dans le cadre'); scanCount(); decodeStart();
-    }).catch(function(){ scanStatus('Accès caméra refusé (Réglages → Safari/Chrome → Caméra). Saisie manuelle possible ci-dessous.'); });
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) { scanStatus('Caméra indisponible ici : utilisez 📸 Photo ou saisissez l\'EAN.'); return; }
+    var tries = [
+      { video: { facingMode: { ideal: 'environment' }, width: { ideal: 1920 }, height: { ideal: 1080 } }, audio: false },
+      { video: { facingMode: 'environment' }, audio: false },
+      { video: true, audio: false }];
+    var next = function(i){
+      if (i >= tries.length) { scanStatus('Accès caméra refusé (Réglages → Safari/Chrome → Caméra). Utilisez 📸 Photo ou la saisie manuelle.'); return; }
+      navigator.mediaDevices.getUserMedia(tries[i]).then(function(st){
+        if (!_scan) { st.getTracks().forEach(function(t){ t.stop(); }); return; }
+        _scan.stream = st; _scan.video.srcObject = st; _scan.video.play().catch(function(){});
+        try { var tr = st.getVideoTracks()[0], cap = tr.getCapabilities ? tr.getCapabilities() : {};
+          if (cap.focusMode && cap.focusMode.indexOf('continuous') !== -1) tr.applyConstraints({ advanced: [{ focusMode: 'continuous' }] }).catch(function(){});
+          if (cap.torch) $('rl-sc-torch').style.display = '';
+          if (cap.zoom && cap.zoom.max > 1) { _scan.zoomCap = cap.zoom; $('rl-sc-zoom').style.display = ''; } } catch(e){}
+        scanCount(); decodeStart();
+      }).catch(function(){ next(i + 1); });
+    };
+    next(0);
   }
   function scanTorch() {
     try { var tr = _scan.stream.getVideoTracks()[0]; _scan.torch = !_scan.torch; tr.applyConstraints({ advanced: [{ torch: _scan.torch }] }); } catch(e){}
   }
-  function decodeStart() {
-    var v = _scan.video;
-    if ('BarcodeDetector' in window) {
-      BarcodeDetector.getSupportedFormats().then(function(f){
-        var want = ['ean_13', 'ean_8', 'upc_a', 'upc_e'].filter(function(x){ return f.indexOf(x) !== -1; });
-        if (!want.length) return zxingStart();
-        var det = new BarcodeDetector({ formats: want });
-        var loop = function(){ if (!_scan) return;
-          if (!_scan.busy && v.readyState >= 2) det.detect(v).then(function(r){ if (r && r[0]) onCode(r[0].rawValue); }).catch(function(){});
-          _scan.raf = setTimeout(loop, 160); };
-        loop();
-      }).catch(zxingStart);
-    } else zxingStart();
+  function scanZoom() {
+    try { var z = _scan.zoomCap, tr = _scan.stream.getVideoTracks()[0];
+      var lv = [z.min, Math.min(z.max, Math.max(z.min * 2, 2)), Math.min(z.max, Math.max(z.min * 3, 3))];
+      _scan.zi = ((_scan.zi || 0) + 1) % lv.length;
+      tr.applyConstraints({ advanced: [{ zoom: lv[_scan.zi] }] });
+      $('rl-sc-zoom').textContent = '🔍 ×' + (Math.round(lv[_scan.zi] / z.min * 10) / 10); } catch(e){}
   }
-  function zxingStart() {
+
+  // ── Lecture : on découpe la zone du cadre (en pleine résolution) et on la passe à zxing-wasm ──
+  function decodeStart() {
+    scanStatus('Chargement du lecteur…');
+    var go = function(){
+      if (!_scan) return;
+      try { ZXingWASM.prepareZXingModule({ fireImmediately: true }); } catch(e){}
+      if ('BarcodeDetector' in window) {
+        BarcodeDetector.getSupportedFormats().then(function(f){
+          var want = ['ean_13', 'ean_8', 'upc_a', 'upc_e'].filter(function(x){ return f.indexOf(x) !== -1; });
+          if (want.length && _scan) _scan.det = new BarcodeDetector({ formats: want });
+        }).catch(function(){}).then(frameLoop);
+      } else frameLoop();
+    };
+    if (typeof ZXingWASM !== 'undefined') go();
+    else if (typeof lazyLoad === 'function') lazyLoad(LIB_ZXW, go, function(){ if (_scan) { scanStatus('Lecteur avancé non chargé : lecteur de secours'); legacyStart(); } });
+    else legacyStart();
+  }
+  function ctxOf(c) { return c.getContext('2d', { willReadFrequently: true }); }
+  // zone du cadre-guide en coordonnées vidéo (object-fit: cover)
+  function guideRect(v, pad) {
+    var vw = v.videoWidth, vh = v.videoHeight, r = v.getBoundingClientRect();
+    var s = Math.max(r.width / vw, r.height / vh);
+    var ox = (vw - r.width / s) / 2, oy = (vh - r.height / s) / 2;
+    var gx = r.width * 0.08, gw = r.width * 0.84, gy = r.height * 0.26, gh = r.height * 0.30;
+    var cx = gx + gw / 2, cy = gy + gh / 2, w = gw * pad, h = gh * pad * 1.5;
+    var x = ox + (cx - w / 2) / s, y = oy + (cy - h / 2) / s, ww = w / s, hh = h / s;
+    x = Math.max(0, x); y = Math.max(0, y); ww = Math.min(vw - x, ww); hh = Math.min(vh - y, hh);
+    return { x: x, y: y, w: ww, h: hh, full: { x: Math.max(0, ox), y: Math.max(0, oy), w: Math.min(vw, r.width / s), h: Math.min(vh, r.height / s) } };
+  }
+  // couleur moyenne de la zone (sert de fond à la marge)
+  var _avc = null;
+  function avgColor(src, R) {
+    try { var c = _avc || (_avc = document.createElement('canvas')); c.width = c.height = 1; var x = ctxOf(c);
+      x.drawImage(src, R.x, R.y, R.w, R.h, 0, 0, 1, 1); var d = x.getImageData(0, 0, 1, 1).data; return 'rgb(' + d[0] + ',' + d[1] + ',' + d[2] + ')'; } catch(e) { return '#fff'; }
+  }
+  function frameLoop() {
+    var sc = _scan; if (!sc) return;
+    var v = sc.video, again = function(ms){ if (_scan === sc) sc.raf = setTimeout(frameLoop, ms || 60); };
+    if (sc.busy || v.readyState < 2 || !v.videoWidth) return again(150);
+    sc.tick = (sc.tick || 0) + 1;
+    var g = guideRect(v, 1.15), mode = sc.tick % 3;           // 0 : zone du cadre (élargie) ; 1-2 : toute l'image visible
+    var R = mode === 0 ? g : g.full;
+    var scale = Math.min(1, 1600 / R.w);
+    var cv = sc.cv || (sc.cv = document.createElement('canvas'));
+    // marge claire autour de la zone : donne au décodeur la « zone de silence » du code, même s'il touche le bord de la découpe
+    var pw = Math.round(R.w * scale), ph = Math.round(R.h * scale), pad = Math.max(12, Math.round(Math.max(pw, ph) * (sc.tick % 2 ? 0.03 : 0.12)));
+    cv.width = Math.max(8, pw + 2 * pad); cv.height = Math.max(8, ph + 2 * pad);
+    var cx = ctxOf(cv); cx.fillStyle = avgColor(v, R); cx.fillRect(0, 0, cv.width, cv.height); cx.drawImage(v, R.x, R.y, R.w, R.h, pad, pad, pw, ph);
+    var after = function(code){ if (!_scan || _scan !== sc) return; sc.frames = (sc.frames || 0) + 1; if (code) hit(code); else hint(); again(); };
+    var viaWasm = function(){
+      var img; try { img = cx.getImageData(0, 0, cv.width, cv.height); } catch(e){ return after(null); }
+      var bin = ['LocalAverage', 'LocalAverage', 'GlobalHistogram', 'LocalAverage'][sc.tick % 4];
+      ZXingWASM.readBarcodes(img, { formats: SC_FORMATS, tryHarder: true, tryRotate: true, tryInvert: true, tryDownscale: true, binarizer: bin, maxNumberOfSymbols: 1 })
+        .then(function(res){ var r = (res || []).filter(function(x){ return x.text && x.text.length >= 8; })[0]; after(r ? r.text : null); })
+        .catch(function(){ sc.errs = (sc.errs || 0) + 1; if (sc.errs > 20 && !sc.legacy) { legacyStart(); } after(null); });
+    };
+    if (sc.det) sc.det.detect(cv).then(function(r){ if (r && r[0]) after(r[0].rawValue); else viaWasm(); }).catch(viaWasm);
+    else viaWasm();
+  }
+  function hit(code) { onCode(code); }
+  function hint() {
+    var sc = _scan; if (!sc || sc.busy) return;
+    var t = Date.now() - (sc.t0 || (sc.t0 = Date.now()));
+    var msg = 'Visez le code-barres dans le cadre';
+    if (t > 7000) msg = 'Pas de lecture : reculez de 15–20 cm, évitez les reflets, 🔦 pour éclairer — ou 📸 Photo';
+    scanStatus(msg + ' · ' + (sc.frames || 0) + ' images');
+  }
+  // lecteur de secours (ancienne bibliothèque) si zxing-wasm indisponible
+  function legacyStart() {
+    var sc = _scan; if (!sc || sc.legacy) return; sc.legacy = true;
     var go = function(){
       if (!_scan || typeof ZXing === 'undefined') return;
       try {
         var hints = new Map(); hints.set(ZXing.DecodeHintType.POSSIBLE_FORMATS, [ZXing.BarcodeFormat.EAN_13, ZXing.BarcodeFormat.EAN_8, ZXing.BarcodeFormat.UPC_A, ZXing.BarcodeFormat.UPC_E]);
         hints.set(ZXing.DecodeHintType.TRY_HARDER, true);
         _scan.reader = new ZXing.BrowserMultiFormatReader(hints);
-        _scan.reader.decodeFromVideoElementContinuously(_scan.video, function(res){ if (res && !_scan.busy) onCode(res.getText()); });
-      } catch(e) { scanStatus('Lecteur indisponible : saisie manuelle possible.'); }
+        _scan.reader.decodeFromVideoElementContinuously(_scan.video, function(res){ if (res && _scan && !_scan.busy) onCode(res.getText()); });
+      } catch(e) { scanStatus('Lecteur indisponible : 📸 Photo ou saisie manuelle.'); }
     };
     if (typeof ZXing !== 'undefined') go();
-    else if (typeof lazyLoad === 'function' && typeof LIB_ZXING !== 'undefined') lazyLoad(LIB_ZXING, go, function(){ scanStatus('Lecteur non chargé (connexion ?) : saisie manuelle possible.'); });
-    else scanStatus('Lecteur indisponible : saisie manuelle possible.');
+    else if (typeof lazyLoad === 'function' && typeof LIB_ZXING !== 'undefined') lazyLoad(LIB_ZXING, go, function(){ scanStatus('Lecteur non chargé (connexion ?) : 📸 Photo ou saisie manuelle.'); });
+  }
+
+  // ── Photo du code (très fiable : image fixe pleine résolution, l'appareil photo fait la mise au point) ──
+  function scanPhoto() { var i = $('rl-sc-file'); if (i) { i.value = ''; i.click(); } }
+  function photoChosen(inp) {
+    var f = inp.files && inp.files[0]; if (!f || !_scan) return;
+    scanStatus('Analyse de la photo…');
+    var run = function(){
+      var mk = function(bmp){
+        var W = bmp.width, H = bmp.height, jobs = [];
+        // plein cadre, puis bandes centrales à plusieurs échelles
+        [[0, 0, 1, 1], [0, .25, 1, .5], [.1, .33, .8, .34], [0, 0, 1, .5], [0, .5, 1, .5], [.15, .2, .7, .6], [.3, 0, .4, 1], [.2, .1, .6, .8], [.35, .15, .3, .7]].forEach(function(b){
+          [99999, 1000].forEach(function(mw){ ['LocalAverage', 'GlobalHistogram'].forEach(function(bn){ [0.03, 0.12].forEach(function(pp){ jobs.push({ b: b, mw: mw, bn: bn, pp: pp }); }); }); }); });
+        var i = 0, sc = _scan;
+        var step = function(){
+          if (!_scan || _scan !== sc) return;
+          if (i >= jobs.length) { scanStatus('Code non lu sur la photo : rapprochez-vous, cadrez bien le code, ou saisissez l\'EAN.'); try { bmp.close && bmp.close(); } catch(e){} return; }
+          var j = jobs[i++], sx = Math.round(W * j.b[0]), sy = Math.round(H * j.b[1]), sw = Math.round(W * j.b[2]), sh = Math.round(H * j.b[3]);
+          var k = Math.min(1, j.mw / sw), c = document.createElement('canvas'), pw = Math.max(8, Math.round(sw * k)), ph = Math.max(8, Math.round(sh * k)), pd = Math.max(12, Math.round(Math.max(pw, ph) * j.pp));
+          c.width = pw + 2 * pd; c.height = ph + 2 * pd;
+          var x = ctxOf(c); x.fillStyle = avgColor(bmp, { x: sx, y: sy, w: sw, h: sh }); x.fillRect(0, 0, c.width, c.height); x.drawImage(bmp, sx, sy, sw, sh, pd, pd, pw, ph);
+          ZXingWASM.readBarcodes(x.getImageData(0, 0, c.width, c.height), { formats: SC_FORMATS, tryHarder: true, tryRotate: true, tryInvert: true, tryDownscale: true, binarizer: j.bn, maxNumberOfSymbols: 1 })
+            .then(function(res){ var r = (res || []).filter(function(y){ return y.text && y.text.length >= 8; })[0]; if (r) { try { bmp.close && bmp.close(); } catch(e){} _scan.busy = false; onCode(r.text, true); } else step(); })
+            .catch(step);
+        };
+        step();
+      };
+      var p = (window.createImageBitmap) ? createImageBitmap(f, { imageOrientation: 'from-image' }).catch(function(){ return createImageBitmap(f); }) : Promise.reject();
+      p.then(mk).catch(function(){ scanStatus('Photo illisible'); });
+    };
+    if (typeof ZXingWASM !== 'undefined') run();
+    else if (typeof lazyLoad === 'function') lazyLoad(LIB_ZXW, run, function(){ scanStatus('Lecteur non chargé (connexion ?) : saisie manuelle.'); });
   }
   function scanManual() { var i = $('rl-sc-man'); var v = i && i.value.trim(); if (!v) return; i.value = ''; onCode(v, true); }
   function onCode(raw, manual) {
     if (!_scan || _scan.busy) return;
     var c = String(raw).replace(/\D/g, ''); if (c.length < 8) return;
+    if (!manual && c.length !== 8 && !eanOk(c)) return;                 // lecture douteuse : on ignore
+    if (manual && !eanOk(c)) note('EAN ' + c + ' : clé de contrôle invalide — vérifiez la saisie', 'err');
     var now = Date.now(); if (!manual && c === _scan.last.c && now - _scan.last.t < 2500) return;
     _scan.last = { c: c, t: now }; _scan.busy = true; _scan.n++; beep();
     var lines = findLines(c);
@@ -735,7 +850,7 @@
     addLibre: addLibre, delLibre: delLibre, compare: function(){ _view = 'compare'; render(); }, pdf: pdf, pdfCompare: pdfCompare, search: search, filtEns: filtEns, ensChange: ensChange,
     q2: function(v){ _q = v; renderRows(); }, fam: function(v){ _fam = v; renderRows(); }, only: function(){ _only = _only === 'todo' ? 'all' : 'todo'; renderEdit(); },
     cmpFam: function(v){ _cmpFam = v; renderCompare(); }, cmpEnsSet: function(v){ _ensSel = v; _cmpFam = ''; renderCompare(); },
-    scanOpen: scanOpen, scanClose: scanClose, scanManual: scanManual, scanOk: scanOk, scanAbs: scanAbs, scanSkip: scanSkip, scanPick: scanPick, scanChoose: scanChoose, scanSearch: scanSearch, scanLibre: scanLibre, scanTorch: scanTorch, restAbs: markRestAbsent,
+    scanOpen: scanOpen, scanClose: scanClose, scanManual: scanManual, scanOk: scanOk, scanAbs: scanAbs, scanSkip: scanSkip, scanPick: scanPick, scanChoose: scanChoose, scanSearch: scanSearch, scanLibre: scanLibre, scanTorch: scanTorch, scanZoom: scanZoom, scanPhoto: scanPhoto, photoChosen: photoChosen, restAbs: markRestAbsent,
     refEdit: refEdit, refInfo: refInfo, refImport: refImport, refNew: refNew, refReset: refReset, refDel: refDel,
-    _t: { eanNorm: eanNorm, sim: sim, onCode: function(c){ return onCode(c, true); }, stats: stats, parsePrix: parsePrix, refList: refList, ensList: ensList } };
+    _t: { eanOk: eanOk, eanNorm: eanNorm, sim: sim, onCode: function(c){ return onCode(c, true); }, stats: stats, parsePrix: parsePrix, refList: refList, ensList: ensList } };
 })();
