@@ -363,12 +363,41 @@
   }
   function ascii(s) { return String(s == null ? '' : s).replace(/[✔✖]/g, '').replace(/[‘’]/g, "'").replace(/–|—/g, '-').replace(/&/g, '&'); }
   function brandName() { return (typeof CURRENT_BRAND !== 'undefined' && CURRENT_BRAND === 'naturaline') ? 'NATURALINE' : 'Moulin des Moines'; }
+  // PDF prêt : fenêtre avec Enregistrer / Partager / Ouvrir (chaque bouton = geste direct, donc accepté par iPhone et Android)
+  var _pdfBlob = null, _pdfName = '', _pdfUrl = null;
   function out(doc, name) {
-    var blob = doc.output('blob'), file = null;
-    try { file = new File([blob], name, { type: 'application/pdf' }); } catch(e){}
-    if (file && navigator.canShare && navigator.canShare({ files: [file] })) navigator.share({ files: [file], title: name }).catch(function(){ doc.save(name); });
-    else doc.save(name);
+    _pdfBlob = doc.output('blob'); _pdfName = name;
+    try { if (_pdfUrl) URL.revokeObjectURL(_pdfUrl); } catch(e){}
+    _pdfUrl = URL.createObjectURL(_pdfBlob);
+    var old = $('rl-pdfov'); if (old) old.remove();
+    var canShare = false; try { var f = new File([_pdfBlob], name, { type: 'application/pdf' }); canShare = !!(navigator.canShare && navigator.canShare({ files: [f] })); } catch(e){}
+    var ov = document.createElement('div'); ov.id = 'rl-pdfov';
+    ov.style.cssText = 'position:fixed;inset:0;z-index:99998;background:rgba(20,18,15,.55);display:flex;align-items:center;justify-content:center;padding:14px';
+    ov.innerHTML = '<div class="rl" style="background:#fff;border-radius:16px;max-width:420px;width:100%;padding:18px">'
+      + '<h2 style="margin:0 0 4px">📄 PDF prêt</h2><div class="mut" style="word-break:break-all;margin-bottom:12px">' + esc(name) + ' · ' + Math.max(1, Math.round(_pdfBlob.size / 1024)) + ' Ko</div>'
+      + '<div style="display:flex;flex-direction:column;gap:8px">'
+      + '<button class="rl-b p" style="padding:12px" onclick="Releves.pdfSave()">💾 Enregistrer sur cet appareil</button>'
+      + (canShare ? '<button class="rl-b" style="padding:12px" onclick="Releves.pdfShare()">📤 Partager / Enregistrer dans Fichiers</button>' : '')
+      + '<button class="rl-b" style="padding:12px" onclick="Releves.pdfOpen()">👁 Ouvrir</button>'
+      + '<button class="rl-b" onclick="document.getElementById(\'rl-pdfov\').remove()">Fermer</button></div>'
+      + '<div class="mut" style="margin-top:10px;font-size:.72rem">' + (canShare ? 'Sur iPhone : « Partager » puis « Enregistrer dans Fichiers ».' : 'Le fichier ira dans le dossier Téléchargements.') + ' Le relevé reste aussi consultable dans le CRM : vous pouvez regénérer ce PDF à tout moment.</div></div>';
+    document.body.appendChild(ov);
   }
+  function pdfSave() {
+    if (!_pdfBlob) return;
+    try {
+      if (window.navigator.msSaveOrOpenBlob) { window.navigator.msSaveOrOpenBlob(_pdfBlob, _pdfName); return; }
+      var a = document.createElement('a'); a.href = _pdfUrl; a.download = _pdfName; a.style.display = 'none'; document.body.appendChild(a); a.click();
+      setTimeout(function(){ a.remove(); }, 1500); note('PDF enregistré (dossier Téléchargements)', 'ok');
+    } catch(e) { note('Enregistrement impossible : utilisez « Partager » ou « Ouvrir »', 'err'); }
+  }
+  function pdfShare() {
+    if (!_pdfBlob) return;
+    try { var f = new File([_pdfBlob], _pdfName, { type: 'application/pdf' });
+      navigator.share({ files: [f], title: _pdfName }).catch(function(e){ if (e && e.name !== 'AbortError') note('Partage impossible : utilisez « Enregistrer »', 'err'); });
+    } catch(e) { note('Partage impossible', 'err'); }
+  }
+  function pdfOpen() { if (_pdfUrl) window.open(_pdfUrl, '_blank'); }
   function pdf(id) {
     var r = id ? _rel.filter(function(x){ return x.id === id; })[0] : _cur; if (!r) return;
     if (!id) flush();
@@ -847,7 +876,7 @@
   function mount() { css(); var first = !_unsub; if (_view === 'edit' && _cur) { render(); return; } _view = 'list'; render(); if (first) loadRef().then(function(){ load(); render(); }); }
 
   window.Releves = { mount: mount, nouveau: nouveau, ouvrir: ouvrir, retour: retour, supprimer: supprimer, pt: togglePoint, prix: setPrix, nt: setNote, meta: setMeta,
-    addLibre: addLibre, delLibre: delLibre, compare: function(){ _view = 'compare'; render(); }, pdf: pdf, pdfCompare: pdfCompare, search: search, filtEns: filtEns, ensChange: ensChange,
+    addLibre: addLibre, delLibre: delLibre, compare: function(){ _view = 'compare'; render(); }, pdf: pdf, pdfSave: pdfSave, pdfShare: pdfShare, pdfOpen: pdfOpen, pdfCompare: pdfCompare, search: search, filtEns: filtEns, ensChange: ensChange,
     q2: function(v){ _q = v; renderRows(); }, fam: function(v){ _fam = v; renderRows(); }, only: function(){ _only = _only === 'todo' ? 'all' : 'todo'; renderEdit(); },
     cmpFam: function(v){ _cmpFam = v; renderCompare(); }, cmpEnsSet: function(v){ _ensSel = v; _cmpFam = ''; renderCompare(); },
     scanOpen: scanOpen, scanClose: scanClose, scanManual: scanManual, scanOk: scanOk, scanAbs: scanAbs, scanSkip: scanSkip, scanPick: scanPick, scanChoose: scanChoose, scanSearch: scanSearch, scanLibre: scanLibre, scanTorch: scanTorch, scanZoom: scanZoom, scanPhoto: scanPhoto, photoChosen: photoChosen, restAbs: markRestAbsent,
