@@ -2509,12 +2509,17 @@ thead th.ts-active { text-decoration:underline; text-underline-offset:3px; }
           <input type="file" id="cdb-import-file" accept=".xlsx,.xls,.csv" onchange="cdbImportRead(this.files[0])" style="display:none;"/>
         </label>
         <div style="font-size:.78rem;color:var(--g600);padding:.8rem;background:var(--blue-p50);border-radius:7px;border-left:3px solid var(--blue-p500);">
-          <strong>ℹ️ Important :</strong> l\'import <b>remplace totalement</b> la base actuelle. Faites un export CSV avant si vous voulez sauvegarder.
+          <strong>ℹ️ Mode par défaut : fusion.</strong> Les fiches déjà présentes sont <b>conservées</b> avec vos modifications (adresse, contact, notes…) : seuls les chiffres (cumuls, stats, dernière commande) sont actualisés et les champs vides complétés. Les nouveaux clients sont ajoutés, aucun client n\'est supprimé.
         </div>
       </div>
 
       <div id="cdb-import-step2" style="display:none;">
         <div style="font-size:.82rem;margin-bottom:.6rem;">✅ Fichier lu : <strong id="cdb-import-filename"></strong> · <span id="cdb-import-nbrows">0</span> lignes détectées</div>
+
+        <div style="font-size:.78rem;margin-bottom:.7rem;padding:.6rem .8rem;border:1px solid var(--border);border-radius:7px;">
+          <label style="display:block;cursor:pointer;margin-bottom:.35rem;"><input type="radio" name="cdb-imp-mode" value="merge" checked> <b>Fusionner</b> — conserve mes modifications sur les fiches existantes (recommandé)</label>
+          <label style="display:block;cursor:pointer;color:#b91c1c;"><input type="radio" name="cdb-imp-mode" value="replace"> <b>Tout remplacer</b> — efface la base et la recrée depuis le fichier (modifications perdues)</label>
+        </div>
 
         <!-- Mode rapide : import sans mapping -->
         <div style="background:#f0fdf4;border:1px solid #86efac;border-radius:7px;padding:.7rem .9rem;margin-bottom:.8rem;">
@@ -2536,7 +2541,7 @@ thead th.ts-active { text-decoration:underline; text-underline-offset:3px; }
     </div>
     <div class="modal-foot">
       <button class="btn btn-ghost" onclick="document.getElementById('cdb-modal-import').classList.add('hidden')">Annuler</button>
-      <button class="btn btn-primary" id="cdb-import-apply" onclick="cdbImportApply()" style="display:none;">Importer et remplacer la base →</button>
+      <button class="btn btn-primary" id="cdb-import-apply" onclick="cdbImportApply()" style="display:none;">Importer →</button>
     </div>
   </div></div>
 
@@ -13505,6 +13510,10 @@ function cdbImportApply() {
     return;
   }
 
+  var modeEl = document.querySelector('input[name="cdb-imp-mode"]:checked');
+  if (!modeEl || modeEl.value !== 'replace') return cdbImportMerge(newContacts);
+  if (!confirm('« Tout remplacer » efface TOUTES les fiches actuelles (et vos modifications) avant de recréer la base depuis le fichier.\n\nContinuer ?')) return;
+
   // Désactiver les boutons
   document.querySelectorAll('#cdb-modal-import button').forEach(function(b){ b.disabled = true; });
   var applyBtn = document.getElementById('cdb-import-apply');
@@ -13553,7 +13562,7 @@ function cdbImportApply() {
         if (modal) modal.classList.add('hidden');
         toast('✅ ' + newContacts.length + ' contacts importés', 'ok');
         document.querySelectorAll('#cdb-modal-import button').forEach(function(b){ b.disabled = false; });
-        setBtn('Importer et remplacer la base →');
+        setBtn('Importer →');
         return;
       }
       var b = db.batch();
@@ -13575,6 +13584,64 @@ function cdbImportApply() {
     toast('Erreur Firestore: ' + e.message, 'err');
     document.querySelectorAll('#cdb-modal-import button').forEach(function(b){ b.disabled = false; });
   });
+}
+
+
+// ─── Import en mode FUSION : conserve les fiches existantes et leurs modifications ───
+function cdbImportMerge(incoming) {
+  var STATS = ['cumul2025', 'cumul2026', 'stat2025Avril', 'stat2026Avril', 'dateDerniereCmd', 'nbJoursSansCde'];   // actualisés depuis le fichier
+  var FILL  = ['numClient', 'nom', 'email', 'telephone', 'adresse', 'cp', 'ville', 'groupe', 'prospect'];            // complétés seulement si vides
+  function nrm(s) { return String(s == null ? '' : s).toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]/g, ''); }
+  function kNum(c) { var n = nrm(c.numClient).replace(/^0+/, ''); return n ? 'n:' + n : ''; }
+  function kNom(c) { var n = nrm(c.nom); return n ? 'm:' + n + '|' + nrm(c.cp) : ''; }
+  function empty(v) { return v === undefined || v === null || v === ''; }
+  var btns = document.querySelectorAll('#cdb-modal-import button');
+  btns.forEach(function(b){ b.disabled = true; });
+  var applyBtn = document.getElementById('cdb-import-apply');
+  function setBtn(t) { if (applyBtn) applyBtn.textContent = t; }
+  function unlock() { btns.forEach(function(b){ b.disabled = false; }); setBtn('Importer →'); }
+
+  var hasFb = !(typeof firebase === 'undefined' || !firebase.firestore);
+  var getExisting = hasFb
+    ? bcol('contacts').get().then(function(snap){ var a = []; snap.forEach(function(d){ var o = d.data() || {}; o.id = d.id; a.push(o); }); return a; })
+    : Promise.resolve((typeof cdbContacts !== 'undefined' && cdbContacts) ? cdbContacts.slice() : []);
+  setBtn('Lecture de la base…');
+  getExisting.then(function(existing) {
+    var byNum = {}, byNom = {};
+    existing.forEach(function(c){ var a = kNum(c), b = kNom(c); if (a && !byNum[a]) byNum[a] = c; if (b && !byNom[b]) byNom[b] = c; });
+    var writes = [], created = 0, updated = 0, same = 0, touched = {};
+    incoming.forEach(function(n) {
+      var ex = (kNum(n) && byNum[kNum(n)]) || (kNom(n) && byNom[kNom(n)]) || null;
+      if (!ex) { writes.push({ id: n.id, data: n, isNew: true }); created++; return; }
+      var patch = {};
+      STATS.forEach(function(f){ if (!empty(n[f]) && ex[f] !== n[f]) patch[f] = n[f]; });
+      FILL.forEach(function(f){ if (!empty(n[f]) && empty(ex[f])) patch[f] = n[f]; });
+      touched[ex.id] = 1;
+      if (Object.keys(patch).length) { writes.push({ id: ex.id, data: patch, isNew: false }); updated++; Object.keys(patch).forEach(function(f){ ex[f] = patch[f]; }); }
+      else same++;
+    });
+    var kept = existing.filter(function(c){ return !touched[c.id]; }).length;
+    function finish() {
+      var all = existing.slice();
+      writes.forEach(function(w){ if (w.isNew) all.push(w.data); });
+      cdbContacts = all;
+      try { localStorage.setItem(CDB_CACHE_KEY(), JSON.stringify(cdbContacts)); } catch(e){}
+      if (typeof cdbRender === 'function') cdbRender();
+      var modal = document.getElementById('cdb-modal-import'); if (modal) modal.classList.add('hidden');
+      unlock();
+      toast('✅ Fusion : ' + updated + ' fiche' + (updated > 1 ? 's' : '') + ' actualisée' + (updated > 1 ? 's' : '') + ', ' + created + ' nouveau' + (created > 1 ? 'x' : '') + ', ' + same + ' inchangée' + (same > 1 ? 's' : '') + ', ' + kept + ' conservée' + (kept > 1 ? 's' : '') + ' (absentes du fichier). Vos modifications sont intactes.', 'ok');
+    }
+    if (!hasFb || !writes.length) return finish();
+    var db = firebase.firestore();
+    function step(i) {
+      if (i >= writes.length) return finish();
+      var b = db.batch(), end = Math.min(i + 400, writes.length);
+      for (var j = i; j < end; j++) { var w = writes[j]; if (w.isNew) b.set(bcol('contacts').doc(w.id), w.data); else b.set(bcol('contacts').doc(w.id), w.data, { merge: true }); }
+      setBtn('Fusion ' + end + '/' + writes.length);
+      b.commit().then(function(){ step(end); }).catch(function(e){ toast('Erreur : ' + e.message, 'err'); unlock(); });
+    }
+    step(0);
+  }).catch(function(e){ toast('Erreur de lecture : ' + (e.message || e), 'err'); unlock(); });
 }
 
 // ─── FICHE CONTACT ───
