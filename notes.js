@@ -119,6 +119,7 @@
       +   '<div class="nt-actions">'
       +     '<button class="nt-b danger" onclick="Notes.del()">🗑 Supprimer</button>'
       +     '<button class="nt-b" id="nt-addcli" onclick="Notes.addToClient()">📌 Ajouter au compte client</button>'
+      +     '<button class="nt-b" id="nt-ana" onclick="Notes.openAnalyse()" style="display:none">📈 Analyse du client</button>'
       +     '<button class="nt-b p" onclick="Notes.close()">Terminer</button>'
       +   '</div>'
       + '</div></div>';
@@ -129,6 +130,7 @@
   }
   function refreshClientInfo(n) {
     var el = $('nt-clinfo'), btn = $('nt-addcli'); if (!el) return;
+    var ab = $('nt-ana'); if (ab) ab.style.display = n.clientId ? '' : 'none';
     if (!n.clientNom) { el.textContent = 'Aucun client rattaché pour le moment.'; if (btn) btn.disabled = true; return; }
     if (n.clientId) { el.textContent = '✓ Client de votre base rattaché.'; if (btn) btn.disabled = false; }
     else { el.textContent = 'Nom saisi librement : choisissez un client de la liste pour pouvoir ajouter la note à sa fiche.'; if (btn) btn.disabled = true; }
@@ -159,6 +161,7 @@
     }
     var ov = $('nt-ov'); if (ov) ov.remove();
     _cur = null;
+    p.then(function(){ var cb = _afterClose; _afterClose = null; if (cb) { try { cb(); } catch(e){} } }).catch(function(){});
     p.then(function(){
       if (n && isEmpty(n)) { return col().doc(id).delete().then(function(){ _notes = _notes.filter(function(x){ return x.id !== id; }); renderList(); }); }
     }).catch(function(){});
@@ -192,6 +195,47 @@
       .catch(function(e){ note('Erreur : ' + (e.code || e.message), 'err'); });
   }
 
+
+  // ── Liens avec l'analyse client ──
+  var _loadedOnce = null, _afterClose = null;
+  function ensureLoaded() {
+    if (_unsub) return Promise.resolve();
+    if (_loadedOnce) return _loadedOnce;
+    var u = me(); if (!u) return Promise.resolve();
+    _loadedOnce = col().where('owner', '==', u.uid).get().then(function(snap){
+      _notes = snap.docs.map(function(d){ var o = d.data(); o.id = d.id; return o; })
+        .filter(function(o){ if (o.kind === 'note') return true; if (!o.kind && (o.texte || o.resume)) { if (!o.cr) o.cr = o.texte || ''; if (!o.titre) o.titre = 'Carnet du ' + (o.date || ''); return true; } return false; })
+        .sort(function(a, b){ return stamp(b) - stamp(a); });
+    }).catch(function(){ _loadedOnce = null; });
+    return _loadedOnce;
+  }
+  // Notes rattachées à un client (par identifiant, sinon par nom exact)
+  function forClient(c) {
+    return ensureLoaded().then(function(){
+      var nn = String(c.nom || '').trim().toLowerCase();
+      return _notes.filter(function(n){ return (n.clientId && n.clientId === c.id) || (!n.clientId && nn && String(n.clientNom || '').trim().toLowerCase() === nn); })
+        .map(function(n){ return { id: n.id, date: n.date || '', titre: n.titre || '', txt: String(n.resume || n.cr || n.transcription || '').trim(), voc: !!(n.transcription || n.resume), at: stamp(n) }; })
+        .sort(function(a, b){ return (b.date || '').localeCompare(a.date || '') || b.at - a.at; });
+    });
+  }
+  // Nouvelle note déjà rattachée au client, ouverte par-dessus l'analyse
+  function nouvelleFor(c, after) {
+    var u = me(); if (!u) { note('Non connecté', 'err'); return; }
+    var ref = col().doc(), now = Date.now();
+    var data = { kind: 'note', owner: u.uid, ownerEmail: (u.email || '').toLowerCase(), date: ymd(new Date()),
+      titre: '', cr: '', clientNom: c.nom || '', clientId: c.id, secteur: c.secteur || '', createdAt: now, updatedAt: now };
+    ref.set(data).then(function(){
+      data.id = ref.id; if (!_notes.some(function(n){ return n.id === data.id; })) _notes.unshift(data);
+      _afterClose = after || null; open(ref.id);
+    }).catch(function(e){ note('Erreur : ' + (e.code || e.message), 'err'); });
+  }
+  function openFrom(id, after) { ensureLoaded().then(function(){ _afterClose = after || null; open(id); }); }
+  function openAnalyse() {
+    var n = byId(_cur); if (!n || !n.clientId) return;
+    var id = n.clientId; close();
+    setTimeout(function(){ try { AnalyseClient.open(id); } catch(e){ note('Analyse indisponible', 'err'); } }, 250);
+  }
+
   // ── Style ──
   function css() {
     if ($('nt-css')) return;
@@ -215,7 +259,7 @@
       + '.nt-nocli{font-size:.76rem;color:#a59f94;border:1px dashed #d6d1c5;border-radius:99px;padding:3px 10px}'
       + '.nt-done{font-size:.72rem;color:#2a7d3f;font-weight:600}'
       + '.nt-empty{padding:28px;text-align:center;color:#8a857d;font-size:.88rem}'
-      + '#nt-ov{position:fixed;inset:0;z-index:99996;background:rgba(20,18,15,.55);display:flex;align-items:flex-end;justify-content:center}'
+      + '#nt-ov{position:fixed;inset:0;z-index:99998;background:rgba(20,18,15,.55);display:flex;align-items:flex-end;justify-content:center}'
       + '@media(min-width:700px){#nt-ov{align-items:center}}'
       + '.nt-box{background:#fff;color:#1c1a17;width:100%;max-width:560px;max-height:93vh;overflow:auto;border-radius:18px 18px 0 0}'
       + '@media(min-width:700px){.nt-box{border-radius:18px}}'
@@ -233,5 +277,6 @@
   }
 
   window.Notes = { mount: mount, nouvelle: nouvelle, open: open, close: close, saveMeta: saveMeta, del: del,
-    addToClient: addToClient, search: search, filter: setFilter };
+    addToClient: addToClient, search: search, filter: setFilter,
+    forClient: forClient, nouvelleFor: nouvelleFor, openFrom: openFrom, openAnalyse: openAnalyse };
 })();

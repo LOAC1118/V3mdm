@@ -19,6 +19,7 @@
   var _res = null;               // analyse affichée
   var _ia = '';                  // commentaire IA
   var _lines = false;            // le fichier contient des lignes produit ?
+  var _nts = [];                 // notes du Carnet rattachées à ce client (module Notes)
   var _rel = [];                 // synthèse des relevés magasin de ce client (module Releves)
 
   function esc(s){ return String(s==null?'':s).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];}); }
@@ -319,6 +320,7 @@
     if (R.tendance != null) L.push('Tendance paniers : ' + Math.round(R.tendance * 100) + ' %');
     if (R.nAvoirs) L.push('Avoirs : ' + R.nAvoirs + ' pour ' + Math.round(R.caAvoirs) + ' €');
     if (R.delaiMoy != null) L.push('Délai livraison moyen ' + R.delaiMoy.toFixed(1) + ' j');
+    _nts.slice(0, 5).forEach(function(n){ L.push('Note de visite du ' + n.date + (n.titre ? ' (' + n.titre + ')' : '') + ' : ' + cut(n.txt, 350)); });
     _rel.forEach(function(r){
       L.push('Relevé en magasin ' + r.ensNom + ' du ' + r.date + ' : référencement ' + (r.stats.taux != null ? r.stats.taux + ' %' : 'n/a') + ' (' + r.stats.pres + ' présents, ' + r.stats.abs + ' absents)'
         + (r.tauxPeers != null ? ', autres magasins ' + r.tauxPeers + ' %' : '') + (r.prevTaux != null ? ', relevé précédent ' + r.prevTaux + ' %' : ''));
@@ -332,7 +334,7 @@
     if (typeof mlAiCall !== 'function') { note('IA indisponible', 'err'); return; }
     var b = document.querySelector('.anc-act .anc-b'); if (b) { b.disabled = true; b.textContent = '…'; }
     var sys = 'Tu es directeur commercial d\'un fournisseur de produits bio (marque Moulin des Moines) et tu conseilles un commercial terrain B2B. '
-      + 'À partir des chiffres fournis (ne rien inventer), écris en français : 1) un diagnostic en 2 phrases, 2) 3 actions concrètes pour la prochaine visite, 3) une hypothèse à vérifier. '
+      + 'À partir des chiffres, relevés magasin et notes de visite fournis (ne rien inventer ; appuie-toi sur les notes quand elles éclairent les chiffres), écris en français : 1) un diagnostic en 2 phrases, 2) 3 actions concrètes pour la prochaine visite, 3) une hypothèse à vérifier. '
       + 'Style direct, sans jargon. Réponds UNIQUEMENT par un objet JSON {"commentaire":"..."} (texte avec retours à la ligne).';
     mlAiCall(sys, facts()).then(function(txt){
       var j = parseJson(txt);
@@ -349,6 +351,7 @@
     if (R.intervals.length) t.push('Cycle moyen ' + Math.round(R.cycle) + ' j · dernière commande ' + dFr(R.last) + ' · prochaine attendue ' + dFr(R.prochaine));
     if (R.tendance != null) t.push('Tendance des paniers : ' + Math.round(R.tendance * 100) + ' %');
     R.alertes.forEach(function(a){ t.push('- ' + a.m); });
+    _nts.slice(0, 3).forEach(function(n){ t.push('Note du ' + dFr(n.date) + (n.titre ? ' (' + n.titre + ')' : '') + ' : ' + cut(n.txt, 250)); });
     _rel.forEach(function(r){
       t.push('Relevé magasin ' + r.ensNom + ' (' + dFr(r.date) + ') : référencement ' + (r.stats.taux != null ? r.stats.taux + ' %' : '—') + ', ' + r.stats.pres + ' présents / ' + r.stats.abs + ' absents');
       if (r.toPush.length) t.push('  À pousser : ' + r.toPush.map(function(p){ return p.l; }).join(', '));
@@ -370,6 +373,7 @@
       cycle: _res.intervals.length ? Math.round(_res.cycle) : null, last: _res.last, prochaine: _res.prochaine || '',
       tendance: _res.tendance != null ? Math.round(_res.tendance * 100) : null,
       alertes: _res.alertes.filter(function(a){ return a.t === 'warn'; }).map(function(a){ return a.m; }).slice(0, 4),
+      notes: _nts.slice(0, 3).map(function(n){ return { date: n.date, titre: n.titre, txt: cut(n.txt, 220) }; }),
       releves: _rel.map(function(r){ return { ens: r.ensNom, date: r.date, taux: r.stats.taux, pres: r.stats.pres, abs: r.stats.abs, push: r.toPush.map(function(p){ return p.l; }).slice(0, 5) }; }),
       ia: _ia || ''
     };
@@ -404,6 +408,7 @@
       + kpi(eur0(a.caNet), 'CA net HT') + kpi(a.n, 'commandes') + kpi(eur0(a.panier), 'panier moyen')
       + (a.cycle != null ? kpi(a.cycle + ' j', 'cycle moyen') : '') + (a.tendance != null ? kpi((a.tendance >= 0 ? '+' : '') + a.tendance + ' %', 'tendance paniers', a.tendance <= -20 ? 'warn' : '') : '') + '</div>'
       + '<div class="anc-mut" style="margin-top:8px">Dernière commande ' + dFr(a.last) + (a.prochaine ? ' · prochaine attendue ' + dFr(a.prochaine) : '') + '</div></div>'
+      + (a.notes && a.notes.length ? '<div class="anc-card"><div class="anc-lbl">📝 Notes de visite</div>' + a.notes.map(function(n){ return '<div class="anc-li"><b>' + dFr(n.date) + '</b>' + (n.titre ? ' · ' + esc(n.titre) : '') + '<div class="anc-mut">' + esc(n.txt) + '</div></div>'; }).join('') + '</div>' : '')
       + (a.releves && a.releves.length ? '<div class="anc-card"><div class="anc-lbl">🏪 Relevés en magasin</div>' + a.releves.map(function(r){ return '<div class="anc-li"><b>' + esc(r.ens) + '</b> · ' + dFr(r.date) + ' : ' + (r.taux != null ? r.taux + ' %' : '—') + ' (' + r.pres + ' présents · ' + r.abs + ' absents)' + (r.push && r.push.length ? '<br><span class="anc-mut">À pousser : ' + r.push.map(esc).join(' · ') + '</span>' : '') + '</div>'; }).join('') + '</div>' : '')
       + (a.alertes && a.alertes.length ? '<div class="anc-card"><div class="anc-lbl">Points d\'attention</div>' + a.alertes.map(function(m){ return '<div class="anc-al warn">⚠️ ' + esc(m) + '</div>'; }).join('') + '</div>' : '')
       + (a.ia ? '<div class="anc-card"><div class="anc-lbl">✨ Lecture commerciale (IA)</div><div class="anc-ia">' + esc(a.ia) + '</div></div>' : '');
@@ -438,6 +443,29 @@
       box.innerHTML = _rel.length ? relHtml(_rel) : '<div class="anc-card"><div class="anc-lbl">🏪 Relevé en magasin</div><div class="anc-mut">Aucun relevé enregistré pour ce client. Faites-en un dans <b>Terrain → Relevés</b> en choisissant ce magasin : il apparaîtra ici automatiquement et enrichira l\'analyse.</div></div>';
     }).catch(function(){ var b = $('anc-rel'); if (b) b.innerHTML = ''; });
   }
+
+
+  // ── Notes du CRM rattachées à ce client ──
+  function cut(t, n) { t = String(t || '').replace(/\s+/g, ' ').trim(); return t.length > n ? t.slice(0, n) + '…' : t; }
+  function ntsHtml() {
+    var h = '<div class="anc-card"><div class="anc-lbl">📝 Notes de visite (' + _nts.length + ')</div>';
+    if (!_nts.length) h += '<div class="anc-mut">Aucune note rattachée à ce client.' + (_c.notes ? '' : '') + '</div>';
+    _nts.slice(0, 6).forEach(function(n){
+      h += '<div class="anc-li" style="cursor:pointer;border-top:1px solid #f0eee8;padding:6px 0" onclick="AnalyseClient.openNote(\'' + n.id + '\')"><b>' + dFr(n.date) + '</b>' + (n.titre ? ' · ' + esc(n.titre) : '') + (n.voc ? ' 🎙' : '')
+        + '<div class="anc-mut">' + esc(cut(n.txt, 170)) + '</div></div>';
+    });
+    if (_nts.length > 6) h += '<div class="anc-mut">+ ' + (_nts.length - 6) + ' autre(s) note(s) dans Terrain → Notes.</div>';
+    if (!_nts.length && _c.notes) h += '<div class="anc-mut" style="margin-top:6px">Notes de la fiche : ' + esc(cut(_c.notes, 260)) + '</div>';
+    h += '<div class="anc-act" style="margin-top:8px"><button class="anc-b" onclick="AnalyseClient.newNote()">＋ Note sur ce client</button></div></div>';
+    return h;
+  }
+  function loadNts() {
+    var box = $('anc-nts'); if (!box || !_c) return;
+    if (typeof Notes === 'undefined' || !Notes.forClient) return;
+    Notes.forClient(_c).then(function(L){ _nts = L || []; box = $('anc-nts'); if (box) box.innerHTML = ntsHtml(); }).catch(function(){});
+  }
+  function openNote(id) { if (typeof Notes !== 'undefined') Notes.openFrom(id, loadNts); }
+  function newNote() { if (typeof Notes !== 'undefined' && _c) Notes.nouvelleFor(_c, loadNts); }
 
   // ── Fenêtre ──
   function css() {
@@ -477,7 +505,7 @@
     var c = (typeof cdbContacts !== 'undefined' ? cdbContacts : []).filter(function(x){ return x.id === id; })[0];
     if (!c) { note('Client introuvable', 'err'); return; }
     css();
-    _c = c; _fileRows = []; _cadencier = null; _hist = c.cmdHist || []; _res = null; _ia = ''; _lines = false; _rel = [];
+    _c = c; _fileRows = []; _cadencier = null; _hist = c.cmdHist || []; _res = null; _ia = ''; _lines = false; _rel = []; _nts = [];
     var old = $('anc-ov'); if (old) old.remove();
     var ov = document.createElement('div'); ov.id = 'anc-ov';
     ov.onclick = function(e){ if (e.target === ov) close(); };
@@ -485,13 +513,13 @@
       '<div class="anc-box"><div class="anc-top"><div><b>📈 Analyse client</b><small>' + esc(c.nom || '') + (c.numClient ? ' · ' + esc(c.numClient) : '') + '</small></div><button class="anc-x" onclick="AnalyseClient.close()">✕</button></div>'
       + '<div class="anc-body">'
       +   '<div class="anc-card"><div class="anc-lbl">Analyses enregistrées</div><div id="anc-hist"></div></div>'
-      +   '<div id="anc-rel"></div>'
+      +   '<div id="anc-rel"></div><div id="anc-nts"></div>'
       +   '<label class="anc-drop" id="anc-drop">📂 Déposez ou choisissez le fichier « Liste des commandes » de ce client<br><span class="anc-mut">(.xlsx — vous pouvez ajouter le cadencier en même temps)</span>'
       +     '<input type="file" id="anc-file" accept=".xlsx,.xls,.csv" multiple style="display:none"></label>'
       +   '<div id="anc-status" class="anc-mut"></div><div id="anc-pick"></div><div id="anc-report"></div>'
       + '</div></div>';
     document.body.appendChild(ov);
-    renderHistory(); loadRel();
+    renderHistory(); loadRel(); loadNts();
     $('anc-file').onchange = function(){ var f = this.files; lazyLoad(LIB_XLSX, function(){ onFiles(f); }, function(){ note('Librairie Excel indisponible', 'err'); }); };
     var dz = $('anc-drop');
     dz.ondragover = function(e){ e.preventDefault(); dz.classList.add('over'); };
@@ -500,5 +528,5 @@
   }
   function close() { var o = $('anc-ov'); if (o) o.remove(); }
 
-  window.AnalyseClient = { open: open, close: close, run: run, ia: ia, copy: copy, save: save, showSnap: showSnap };
+  window.AnalyseClient = { openNote: openNote, newNote: newNote, open: open, close: close, run: run, ia: ia, copy: copy, save: save, showSnap: showSnap };
 })();
