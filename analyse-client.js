@@ -19,6 +19,7 @@
   var _res = null;               // analyse affichée
   var _ia = '';                  // commentaire IA
   var _lines = false;            // le fichier contient des lignes produit ?
+  var _rel = [];                 // synthèse des relevés magasin de ce client (module Releves)
 
   function esc(s){ return String(s==null?'':s).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];}); }
   function pad(n){ return (n<10?'0':'')+n; }
@@ -318,6 +319,12 @@
     if (R.tendance != null) L.push('Tendance paniers : ' + Math.round(R.tendance * 100) + ' %');
     if (R.nAvoirs) L.push('Avoirs : ' + R.nAvoirs + ' pour ' + Math.round(R.caAvoirs) + ' €');
     if (R.delaiMoy != null) L.push('Délai livraison moyen ' + R.delaiMoy.toFixed(1) + ' j');
+    _rel.forEach(function(r){
+      L.push('Relevé en magasin ' + r.ensNom + ' du ' + r.date + ' : référencement ' + (r.stats.taux != null ? r.stats.taux + ' %' : 'n/a') + ' (' + r.stats.pres + ' présents, ' + r.stats.abs + ' absents)'
+        + (r.tauxPeers != null ? ', autres magasins ' + r.tauxPeers + ' %' : '') + (r.prevTaux != null ? ', relevé précédent ' + r.prevTaux + ' %' : ''));
+      if (r.toPush.length) L.push('Références absentes mais présentes ailleurs : ' + r.toPush.map(function(p){ return p.l; }).join(', '));
+      if (r.newAbs.length) L.push('Références disparues du rayon : ' + r.newAbs.join(', '));
+    });
     return L.join('\n');
   }
   function ia() {
@@ -342,6 +349,11 @@
     if (R.intervals.length) t.push('Cycle moyen ' + Math.round(R.cycle) + ' j · dernière commande ' + dFr(R.last) + ' · prochaine attendue ' + dFr(R.prochaine));
     if (R.tendance != null) t.push('Tendance des paniers : ' + Math.round(R.tendance * 100) + ' %');
     R.alertes.forEach(function(a){ t.push('- ' + a.m); });
+    _rel.forEach(function(r){
+      t.push('Relevé magasin ' + r.ensNom + ' (' + dFr(r.date) + ') : référencement ' + (r.stats.taux != null ? r.stats.taux + ' %' : '—') + ', ' + r.stats.pres + ' présents / ' + r.stats.abs + ' absents');
+      if (r.toPush.length) t.push('  À pousser : ' + r.toPush.map(function(p){ return p.l; }).join(', '));
+      if (r.newAbs.length) t.push('  Disparus : ' + r.newAbs.join(', '));
+    });
     if (_ia) t.push('', _ia);
     return t.join('\n');
   }
@@ -358,6 +370,7 @@
       cycle: _res.intervals.length ? Math.round(_res.cycle) : null, last: _res.last, prochaine: _res.prochaine || '',
       tendance: _res.tendance != null ? Math.round(_res.tendance * 100) : null,
       alertes: _res.alertes.filter(function(a){ return a.t === 'warn'; }).map(function(a){ return a.m; }).slice(0, 4),
+      releves: _rel.map(function(r){ return { ens: r.ensNom, date: r.date, taux: r.stats.taux, pres: r.stats.pres, abs: r.stats.abs, push: r.toPush.map(function(p){ return p.l; }).slice(0, 5) }; }),
       ia: _ia || ''
     };
     var list = (_c.analyses || []).filter(function(a){ return a.at !== snap.at; });   // 1 photo par jour
@@ -391,8 +404,39 @@
       + kpi(eur0(a.caNet), 'CA net HT') + kpi(a.n, 'commandes') + kpi(eur0(a.panier), 'panier moyen')
       + (a.cycle != null ? kpi(a.cycle + ' j', 'cycle moyen') : '') + (a.tendance != null ? kpi((a.tendance >= 0 ? '+' : '') + a.tendance + ' %', 'tendance paniers', a.tendance <= -20 ? 'warn' : '') : '') + '</div>'
       + '<div class="anc-mut" style="margin-top:8px">Dernière commande ' + dFr(a.last) + (a.prochaine ? ' · prochaine attendue ' + dFr(a.prochaine) : '') + '</div></div>'
+      + (a.releves && a.releves.length ? '<div class="anc-card"><div class="anc-lbl">🏪 Relevés en magasin</div>' + a.releves.map(function(r){ return '<div class="anc-li"><b>' + esc(r.ens) + '</b> · ' + dFr(r.date) + ' : ' + (r.taux != null ? r.taux + ' %' : '—') + ' (' + r.pres + ' présents · ' + r.abs + ' absents)' + (r.push && r.push.length ? '<br><span class="anc-mut">À pousser : ' + r.push.map(esc).join(' · ') + '</span>' : '') + '</div>'; }).join('') + '</div>' : '')
       + (a.alertes && a.alertes.length ? '<div class="anc-card"><div class="anc-lbl">Points d\'attention</div>' + a.alertes.map(function(m){ return '<div class="anc-al warn">⚠️ ' + esc(m) + '</div>'; }).join('') + '</div>' : '')
       + (a.ia ? '<div class="anc-card"><div class="anc-lbl">✨ Lecture commerciale (IA)</div><div class="anc-ia">' + esc(a.ia) + '</div></div>' : '');
+  }
+
+
+  // ── Relevés faits en magasin avec le CRM (module Relevés) ──
+  function relHtml(R) {
+    return R.map(function(r){
+      var s = r.stats, li = [];
+      li.push('<b>' + esc(r.ensNom) + '</b> · relevé du ' + dFr(r.date) + (r.n > 1 ? ' <span class="anc-mut">(' + r.n + ' relevés au total)</span>' : ''));
+      li.push('Référencement : <b>' + (s.taux != null ? s.taux + ' %' : '—') + '</b> (' + s.pres + ' présents · ' + s.abs + ' absents)'
+        + (r.prevTaux != null && s.taux != null ? ' · précédent ' + r.prevTaux + ' % (' + dFr(r.prevDate) + ') <b class="' + (s.taux - r.prevTaux >= 0 ? 'anc-pos' : 'anc-neg') + '">' + (s.taux - r.prevTaux >= 0 ? '+' : '') + (s.taux - r.prevTaux) + ' pts</b>' : '')
+        + (r.tauxPeers != null ? ' · autres magasins ' + r.tauxPeers + ' % (' + r.nPeers + ')' : ''));
+      if (s.moy != null) li.push('Prix relevés : ' + s.prixN + ' (moyenne ' + eur(s.moy) + ')' + (r.ratio != null ? ' · prix rayon ÷ tarif ≈ × ' + r.ratio.toFixed(2).replace('.', ',') : ''));
+      var h = '<div class="anc-card"><div class="anc-lbl">🏪 Relevé en magasin</div>' + li.map(function(x){ return '<div class="anc-li">' + x + '</div>'; }).join('');
+      if (r.toPush.length) h += '<div class="anc-li" style="margin-top:6px"><b>À pousser</b> <span class="anc-mut">(absents ici, présents dans la majorité des autres magasins)</span><br>' + r.toPush.map(function(p){ return esc(p.l) + ' <span class="anc-mut">' + p.seen + '/' + p.tot + '</span>'; }).join(' · ') + '</div>';
+      if (r.newAbs.length) h += '<div class="anc-li"><b class="anc-neg">Disparus depuis le dernier relevé</b><br>' + r.newAbs.map(esc).join(' · ') + '</div>';
+      if (r.newPres.length) h += '<div class="anc-li"><b class="anc-pos">Nouveaux en rayon</b><br>' + r.newPres.map(esc).join(' · ') + '</div>';
+      if (r.ecarts.length) h += '<div class="anc-li"><b>Prix vs autres magasins</b><br>' + r.ecarts.map(function(e){ return esc(e.l) + ' : ' + eur(e.x) + ' <span class="' + (e.pct > 0.03 ? 'anc-neg' : e.pct < -0.03 ? 'anc-pos' : 'anc-mut') + '">(' + (e.pct >= 0 ? '+' : '') + Math.round(e.pct * 100) + ' % / moy. ' + eur(e.avg) + ')</span>'; }).join('<br>') + '</div>';
+      if (r.remarque) h += '<div class="anc-mut" style="margin-top:6px">📝 ' + esc(r.remarque) + '</div>';
+      return h + '</div>';
+    }).join('');
+  }
+  function loadRel() {
+    var box = $('anc-rel'); if (!box || !_c) return;
+    if (typeof Releves === 'undefined' || !Releves.forClient) return;
+    box.innerHTML = '<div class="anc-mut">Recherche des relevés magasin…</div>';
+    Releves.forClient(_c).then(function(R){
+      _rel = R || [];
+      box = $('anc-rel'); if (!box) return;
+      box.innerHTML = _rel.length ? relHtml(_rel) : '<div class="anc-card"><div class="anc-lbl">🏪 Relevé en magasin</div><div class="anc-mut">Aucun relevé enregistré pour ce client. Faites-en un dans <b>Terrain → Relevés</b> en choisissant ce magasin : il apparaîtra ici automatiquement et enrichira l\'analyse.</div></div>';
+    }).catch(function(){ var b = $('anc-rel'); if (b) b.innerHTML = ''; });
   }
 
   // ── Fenêtre ──
@@ -433,7 +477,7 @@
     var c = (typeof cdbContacts !== 'undefined' ? cdbContacts : []).filter(function(x){ return x.id === id; })[0];
     if (!c) { note('Client introuvable', 'err'); return; }
     css();
-    _c = c; _fileRows = []; _cadencier = null; _hist = c.cmdHist || []; _res = null; _ia = ''; _lines = false;
+    _c = c; _fileRows = []; _cadencier = null; _hist = c.cmdHist || []; _res = null; _ia = ''; _lines = false; _rel = [];
     var old = $('anc-ov'); if (old) old.remove();
     var ov = document.createElement('div'); ov.id = 'anc-ov';
     ov.onclick = function(e){ if (e.target === ov) close(); };
@@ -441,12 +485,13 @@
       '<div class="anc-box"><div class="anc-top"><div><b>📈 Analyse client</b><small>' + esc(c.nom || '') + (c.numClient ? ' · ' + esc(c.numClient) : '') + '</small></div><button class="anc-x" onclick="AnalyseClient.close()">✕</button></div>'
       + '<div class="anc-body">'
       +   '<div class="anc-card"><div class="anc-lbl">Analyses enregistrées</div><div id="anc-hist"></div></div>'
+      +   '<div id="anc-rel"></div>'
       +   '<label class="anc-drop" id="anc-drop">📂 Déposez ou choisissez le fichier « Liste des commandes » de ce client<br><span class="anc-mut">(.xlsx — vous pouvez ajouter le cadencier en même temps)</span>'
       +     '<input type="file" id="anc-file" accept=".xlsx,.xls,.csv" multiple style="display:none"></label>'
       +   '<div id="anc-status" class="anc-mut"></div><div id="anc-pick"></div><div id="anc-report"></div>'
       + '</div></div>';
     document.body.appendChild(ov);
-    renderHistory();
+    renderHistory(); loadRel();
     $('anc-file').onchange = function(){ var f = this.files; lazyLoad(LIB_XLSX, function(){ onFiles(f); }, function(){ note('Librairie Excel indisponible', 'err'); }); };
     var dz = $('anc-drop');
     dz.ondragover = function(e){ e.preventDefault(); dz.classList.add('over'); };

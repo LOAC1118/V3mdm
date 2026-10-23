@@ -964,9 +964,61 @@
     persistSoon(); renderRows(); refreshHead(); note(rest.length + ' références marquées absentes', 'ok');
   }
 
+
+  // ── Pour l'analyse client : synthèse des relevés faits dans le magasin d'un client ──
+  var _readyP = null;
+  function ready() {
+    if (_unsub) return Promise.resolve();
+    if (_readyP) return _readyP;
+    _readyP = loadRef().then(function(){ return col().get(); }).then(function(snap){
+      _rel = snap.docs.map(function(d){ var o = d.data(); o.id = d.id; return o; })
+        .sort(function(a,b){ return String(b.date||'').localeCompare(String(a.date||'')) || ((b.updatedAt||0)-(a.updatedAt||0)); });
+    }).catch(function(){ _readyP = null; });
+    return _readyP;
+  }
+  function forClient(c) {
+    return ready().then(function(){
+      var nn = norm(c.nom || '');
+      var mine = _rel.filter(function(r){ return (r.clientId && r.clientId === c.id) || (!r.clientId && nn && norm(r.magasin) === nn); });
+      var byEns = {}; mine.forEach(function(r){ var e = relEns(r); (byEns[e] = byEns[e] || []).push(r); });
+      var out = [];
+      Object.keys(byEns).forEach(function(ens){
+        var L = byEns[ens].sort(function(a,b){ return String(b.date||'').localeCompare(String(a.date||'')); }), r = L[0], prev = L[1] || null, s = stats(r);
+        var peersM = lastPerStore(ens, r.id, null), me = storeKey(r), peers = [];
+        Object.keys(peersM).forEach(function(k){ if (k !== me) peers.push(peersM[k]); });
+        var pm = peers.map(lineMap), pv = prev ? lineMap(prev) : null;
+        var ecarts = [], push = [], newAbs = [], newPres = [], ratios = [];
+        (r.lignes || []).forEach(function(l){
+          if (l.t && l.x != null) ratios.push(l.x / l.t);
+          if (l.x != null) {
+            var px = pm.map(function(m){ return m[l.k] && m[l.k].x; }).filter(function(v){ return v != null; });
+            if (px.length) { var avg = px.reduce(function(a,b){ return a + b; }, 0) / px.length; if (avg > 0) ecarts.push({ l: l.l, x: l.x, avg: avg, n: px.length, pct: (l.x - avg) / avg }); }
+          }
+          if (l.p === false && pm.length >= 2) {
+            var seen = pm.filter(function(m){ return m[l.k] && m[l.k].p === true; }).length, tot = pm.filter(function(m){ return m[l.k] && (m[l.k].p === true || m[l.k].p === false); }).length;
+            if (tot >= 2 && seen / tot >= 0.5) push.push({ l: l.l, seen: seen, tot: tot });
+          }
+          if (pv && pv[l.k]) { if (pv[l.k].p === true && l.p === false) newAbs.push(l.l); if (pv[l.k].p === false && l.p === true) newPres.push(l.l); }
+        });
+        ecarts = ecarts.filter(function(e){ return Math.abs(e.pct) >= 0.02; });
+        ecarts.sort(function(a,b){ return Math.abs(b.pct) - Math.abs(a.pct); });
+        push.sort(function(a,b){ return b.seen / b.tot - a.seen / a.tot; });
+        var ps = prev ? stats(prev) : null, tauxPeers = peers.map(stats).filter(function(x){ return x.taux != null; });
+        out.push({ id: r.id, ens: ens, ensNom: ensNom(ens), date: r.date, n: L.length, stats: s, remarque: r.remarque || '',
+          prevDate: prev ? prev.date : null, prevTaux: ps ? ps.taux : null, newAbs: newAbs.slice(0, 8), newPres: newPres.slice(0, 8),
+          ecarts: ecarts.slice(0, 6), toPush: push.slice(0, 8), nPeers: peers.length,
+          tauxPeers: tauxPeers.length ? Math.round(tauxPeers.reduce(function(a, x){ return a + x.taux; }, 0) / tauxPeers.length) : null,
+          ratio: ratios.length >= 3 ? ratios.reduce(function(a,b){ return a + b; }, 0) / ratios.length : null,
+          dates: L.map(function(x){ return x.date; }) });
+      });
+      out.sort(function(a,b){ return String(b.date).localeCompare(String(a.date)); });
+      return out;
+    });
+  }
+
   function mount() { css(); var first = !_unsub; if (_view === 'edit' && _cur) { render(); return; } _view = 'list'; render(); if (first) loadRef().then(function(){ load(); render(); }); }
 
-  window.Releves = { mount: mount, nouveau: nouveau, ouvrir: ouvrir, retour: retour, supprimer: supprimer, pt: togglePoint, prix: setPrix, nt: setNote, meta: setMeta,
+  window.Releves = { forClient: forClient, mount: mount, nouveau: nouveau, ouvrir: ouvrir, retour: retour, supprimer: supprimer, pt: togglePoint, prix: setPrix, nt: setNote, meta: setMeta,
     dash: function(){ _view = 'dash'; render(); }, dashEns: function(v){ _ensSel = v; renderDash(); },
     addLibre: addLibre, delLibre: delLibre, compare: function(){ _view = 'compare'; render(); }, pdf: pdf, pdfSave: pdfSave, pdfShare: pdfShare, pdfOpen: pdfOpen, pdfCompare: pdfCompare, search: search, filtEns: filtEns, ensChange: ensChange,
     q2: function(v){ _q = v; renderRows(); }, fam: function(v){ _fam = v; renderRows(); }, only: function(){ _only = _only === 'todo' ? 'all' : 'todo'; renderEdit(); },
