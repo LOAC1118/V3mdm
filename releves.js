@@ -83,7 +83,7 @@
     try { if (_unsub) { _unsub(); _unsub = null; } } catch(e){}
     _unsub = col().onSnapshot(function(snap){
       _err = '';
-      _rel = snap.docs.map(function(d){ var o = d.data(); o.id = d.id; return o; })
+      _rel = snap.docs.map(function(d){ var o = d.data(); o.id = d.id; return alignRel(o); })
         .sort(function(a,b){ return String(b.date||'').localeCompare(String(a.date||'')) || ((b.updatedAt||0)-(a.updatedAt||0)); });
       if (_view === 'list' || _view === 'compare') render();
     }, function(e){
@@ -102,6 +102,31 @@
       var k = storeKey(r); if (!m[k]) m[k] = r;
     });
     return m;
+  }
+  // ── Mise en correspondance des anciens relevés avec la liste actuelle d'une enseigne ──
+  // Les lignes sont rattachées à la liste (par clé, sinon par EAN) : les statistiques portent alors sur la liste en vigueur.
+  // Les références qui n'y sont plus mais portent des données sont gardées à part (horsListe) et réécrites telles quelles à l'enregistrement.
+  var ALIGN = { marcel: true };
+  function alignRel(r) {
+    var ens = relEns(r); if (!ALIGN[ens] || !r.lignes) return r;
+    var list = refList(ens); if (!list.length) return r;
+    var byK = {}, byE = {}, used = {}, out = [], hors = (r.horsListe || []).slice();
+    r.lignes.forEach(function(l){
+      if (l.libre) return; byK[l.k] = l;
+      String(l.e || '').split(';').forEach(function(e){ if (e && !byE[e]) byE[e] = l; });
+    });
+    list.forEach(function(x){
+      var l = byK[x.k];
+      if (!l) String(x.e || '').split(';').some(function(e){ if (e && byE[e]) { l = byE[e]; return true; } return false; });
+      if (l && !used[l.k + '|' + l.l]) { used[l.k + '|' + l.l] = 1; var n = {}; for (var p in l) n[p] = l[p]; n.k = x.k; n.c = x.c; n.l = x.l; n.f = x.f; n.e = x.e || l.e || ''; out.push(n); l._used = 1; }
+      else out.push(newLine(x));
+    });
+    r.lignes.forEach(function(l){
+      if (l.libre) { out.push(l); return; }
+      if (!l._used && (l.p === true || l.p === false || l.x != null || l.n)) hors.push(l);
+    });
+    r.lignes.forEach(function(l){ delete l._used; });
+    r.lignes = out; if (hors.length) r.horsListe = hors; return r;
   }
   function lineMap(r){ var m = {}; (r.lignes||[]).forEach(function(l){ m[l.k] = l; }); return m; }
   function stats(r) {
@@ -146,6 +171,7 @@
     if (!_cur) return Promise.resolve();
     _cur.updatedAt = Date.now();
     var d = JSON.parse(JSON.stringify(_cur)); delete d.id;
+    if (d.horsListe) { d.lignes = d.lignes.concat(d.horsListe); delete d.horsListe; }
     // catalogue complet (1 000+ lignes) : on n'enregistre que les lignes renseignées ; la liste est reconstituée à l'ouverture
     if (relEns(_cur) === 'catalogue') d.lignes = d.lignes.filter(function(l){ return l.libre || l.p === true || l.p === false || l.x != null || l.n; });
     setStatus('Enregistrement…');
@@ -972,7 +998,7 @@
     if (_unsub) return Promise.resolve();
     if (_readyP) return _readyP;
     _readyP = loadRef().then(function(){ return col().get(); }).then(function(snap){
-      _rel = snap.docs.map(function(d){ var o = d.data(); o.id = d.id; return o; })
+      _rel = snap.docs.map(function(d){ var o = d.data(); o.id = d.id; return alignRel(o); })
         .sort(function(a,b){ return String(b.date||'').localeCompare(String(a.date||'')) || ((b.updatedAt||0)-(a.updatedAt||0)); });
     }).catch(function(){ _readyP = null; });
     return _readyP;
@@ -1035,5 +1061,5 @@
     cmpFam: function(v){ _cmpFam = v; renderCompare(); }, cmpEnsSet: function(v){ _ensSel = v; _cmpFam = ''; renderCompare(); },
     scanOpen: scanOpen, scanClose: scanClose, scanManual: scanManual, scanOk: scanOk, scanAbs: scanAbs, scanSkip: scanSkip, scanPick: scanPick, scanChoose: scanChoose, scanSearch: scanSearch, scanLibre: scanLibre, scanTorch: scanTorch, scanZoom: scanZoom, scanPhoto: scanPhoto, photoChosen: photoChosen, restAbs: markRestAbsent,
     refEdit: refEdit, refInfo: refInfo, refImport: refImport, refNew: refNew, refReset: refReset, refDel: refDel,
-    _t: { eanOk: eanOk, eanNorm: eanNorm, sim: sim, onCode: function(c){ return onCode(c, true); }, stats: stats, parsePrix: parsePrix, refList: refList, ensList: ensList } };
+    _t: { align: alignRel, eanOk: eanOk, eanNorm: eanNorm, sim: sim, onCode: function(c){ return onCode(c, true); }, stats: stats, parsePrix: parsePrix, refList: refList, ensList: ensList } };
 })();
