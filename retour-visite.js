@@ -87,7 +87,10 @@
   function load() {
     if (!me()) { note('Non connecté', 'err'); return; }
     $('rv-body').innerHTML = '<div class="rv-mut" style="padding:20px">Chargement…</div>';
-    Promise.all([
+    gather().then(render);
+  }
+  function gather() {
+    return Promise.all([
       (window.Notes && Notes.inRange) ? Notes.inRange(_from, _to) : Promise.resolve([]),
       (window.Releves && Releves.inRange) ? Releves.inRange(_from, _to) : Promise.resolve([]),
       loadPhotos()
@@ -100,12 +103,12 @@
       _stores = Object.keys(map).map(function(k){
         var s = map[k];
         if (_edits[k] != null) s.notes = _edits[k];
-        else s.notes = s.noteSrc.map(function(n){ return (n.titre ? n.titre + ' — ' : '') + n.txt; }).filter(Boolean).join('\n\n');
+        else s.notes = s.noteSrc.map(function(n){ return (n.titre ? n.titre + ' — ' : '') + n.txt; }).concat(s.rels.map(function(r){ return r.remarque; })).filter(Boolean).join('\n\n');
         if (prev[k]) s.inc = prev[k].inc;
         s.manual = s.manual || (prev[k] && prev[k].manual);
         return s;
       }).sort(function(a, b){ return a.nom.localeCompare(b.nom, 'fr'); });
-      rebuildPhotos(); render();
+      rebuildPhotos();
     });
   }
 
@@ -156,7 +159,7 @@
     _stores.forEach(function(s){
       var k = s.key;
       h += '<div class="rv-card"><div class="rv-ch"><label class="rv-chk"><input type="checkbox" ' + (s.inc ? 'checked' : '') + ' onchange="RetourVisite.inc(\'' + k + '\',this.checked)"> <b>' + esc(s.nom) + '</b>' + (s.ville ? ' <span class="rv-mut">' + esc(s.ville) + '</span>' : '') + '</label></div>';
-      if (s.rels.length) { h += '<div class="rv-rel">'; s.rels.forEach(function(r){ h += '<div>🏪 ' + esc(relLine(r)) + (r.abs.length ? '<div class="rv-mut">Absents : ' + esc(r.abs.slice(0, 12).join(', ')) + (r.abs.length > 12 ? ' … (+' + (r.abs.length - 12) + ')' : '') + '</div>' : '') + (r.remarque ? '<div class="rv-mut">' + esc(r.remarque) + '</div>' : '') + '</div>'; }); h += '</div>'; }
+      if (s.rels.length) { h += '<div class="rv-rel">'; s.rels.forEach(function(r){ h += '<div>🏪 ' + esc(relLine(r)) + (r.abs.length ? '<div class="rv-mut">Absents : ' + esc(r.abs.slice(0, 12).join(', ')) + (r.abs.length > 12 ? ' … (+' + (r.abs.length - 12) + ')' : '') + '</div>' : '') + '</div>'; }); h += '</div>'; }
       h += '<label class="rv-l">Notes de visite</label><textarea id="rv-n-' + k + '" rows="4" placeholder="Ce qui est à remonter pour ce magasin…">' + esc(_edits[k] != null ? _edits[k] : (s.notes || '')) + '</textarea>';
       h += '<div class="rv-ph">';
       s.photos.forEach(function(p){ h += '<div class="rv-pi"><img src="' + p.data + '" alt=""><input type="text" value="' + esc(p.caption || '') + '" placeholder="Légende" onchange="RetourVisite.cap(\'' + p.id + '\',this.value)"><button class="rv-del" onclick="RetourVisite.delPhoto(\'' + p.id + '\')" aria-label="Supprimer">✕</button></div>'; });
@@ -244,7 +247,6 @@
       x.s.rels.forEach(function(r){
         para('Relevé · ' + relLine(r), 9.5, 'bold', 60);
         if (r.abs.length) para('Références absentes : ' + r.abs.join(', '), 9, 'normal', 90, 3);
-        if (r.remarque) para(r.remarque, 9, 'italic', 90, 3);
       });
       if (x.notes) { y += 1; para(x.notes, 10); }
       if (x.s.photos.length) {
@@ -296,6 +298,36 @@
     } catch(e) { note('Partage impossible', 'err'); }
   }
 
+
+  // ── API pour l'écran Relevés (notes + photos + rapport sur place) ──
+  function metaKey(m){ return keyOf(m.clientId || '', m.nom); }
+  function listPhotos(m) { return loadPhotos().then(function(){ var k = metaKey(m); return _photos.filter(function(p){ return p.key === k && p.date === m.date; }).sort(function(a, b){ return a.createdAt - b.createdAt; }); }); }
+  function addTo(m, input) {
+    var files = Array.prototype.slice.call(input.files || []); input.value = '';
+    var u = me(); if (!u || !files.length) return Promise.resolve();
+    var k = metaKey(m);
+    return loadPhotos().then(function(){
+      return files.reduce(function(p, f){
+        return p.then(function(){ return compress(f).then(function(img){
+          var ref = pcol().doc(), o = { kind: 'retour', owner: u.uid, date: m.date, key: k, clientId: m.clientId || '', nom: m.nom, caption: '', data: img.data, w: img.w, h: img.h, createdAt: Date.now() };
+          return ref.set(o).then(function(){ o.id = ref.id; _photos.push(o); });
+        }); }).catch(function(e){ note('Photo non enregistrée : ' + (e.code || e.message), 'err'); });
+      }, Promise.resolve());
+    });
+  }
+  function removePhoto(id) { pcol().doc(id).delete().catch(function(){}); _photos = (_photos || []).filter(function(p){ return p.id !== id; }); }
+  // Rapport PDF d'une seule visite (relevé + notes + photos), sans passer par l'écran de sélection
+  function quick(m) {
+    if (!me()) { note('Non connecté', 'err'); return; }
+    css(); _from = _to = m.date; _stores = []; _edits = {}; _intro = ''; _actions = ''; _dest = lsGet('rv_dest');
+    var k = metaKey(m); note('Préparation du rapport…');
+    gather().then(function(){
+      _stores.forEach(function(s){ s.inc = (s.key === k); });
+      if (!byKey(k)) { note('Rien à inclure pour ce magasin', 'err'); return; }
+      pdf();
+    });
+  }
+
   // ── Style ──
   function css() {
     if ($('rv-css')) return;
@@ -315,5 +347,5 @@
     document.head.appendChild(st);
   }
 
-  window.RetourVisite = { open: open, close: close, dates: setDates, preset: preset, inc: setInc, addStore: addStore, photos: addPhotos, delPhoto: delPhoto, cap: capPhoto, pdf: pdf, mail: mail, pdfSave: pdfSave, pdfShare: pdfShare, _mailText: mailText, _collect: collect };
+  window.RetourVisite = { list: listPhotos, addTo: addTo, remove: removePhoto, cap: capPhoto, key: metaKey, quick: quick, open: open, close: close, dates: setDates, preset: preset, inc: setInc, addStore: addStore, photos: addPhotos, delPhoto: delPhoto, pdf: pdf, mail: mail, pdfSave: pdfSave, pdfShare: pdfShare, _mailText: mailText, _collect: collect };
 })();
