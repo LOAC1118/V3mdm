@@ -383,7 +383,7 @@
       try {
         var mgrEmails = members.filter(function (m) { return m.role === 'manager' && m.email; })
                                .map(function (m) { return m.email.toLowerCase(); });
-        if (mgrEmails.indexOf('loacdev@outlook.fr') < 0) mgrEmails.push('loacdev@outlook.fr');
+        ['spoto.christophe@gmail.com', 'loacdev@outlook.fr'].forEach(function (e) { if (mgrEmails.indexOf(e) < 0) mgrEmails.push(e); });
         await db.collection('roles').doc('managers').set({
           emails: mgrEmails,
           majAt: (window.firebase && firebase.firestore) ? firebase.firestore.FieldValue.serverTimestamp() : Date.now()
@@ -585,7 +585,7 @@
       await db.collection('equipe').doc(m._id).set({ role: role }, { merge: true });
       m.role = role;
       var mgr = (_roster || []).filter(function (x) { return x.role === 'manager' && x.email; }).map(function (x) { return x.email.toLowerCase(); });
-      ['loacdev@outlook.fr', 'cspoto@moulindesmoines.com'].forEach(function (e) { if (mgr.indexOf(e) < 0) mgr.push(e); });
+      ['spoto.christophe@gmail.com', 'loacdev@outlook.fr', 'cspoto@moulindesmoines.com'].forEach(function (e) { if (mgr.indexOf(e) < 0) mgr.push(e); });
       await db.collection('roles').doc('managers').set({ emails: mgr, majAt: firebase.firestore.FieldValue.serverTimestamp() }, { merge: true });
       if (typeof toast === 'function') toast('Rôle mis à jour : ' + (role === 'manager' ? 'Directeur' : 'Commercial'), 'ok');
       render(host);
