@@ -298,6 +298,7 @@
     h += '<div id="anc-ia">' + (_ia ? iaHtml() : '') + '</div>';
     h += '<div class="anc-act"><button class="anc-b" onclick="AnalyseClient.ia()">✨ Commentaire IA</button>'
       + '<button class="anc-b" onclick="AnalyseClient.copy()">📋 Copier</button>'
+      + '<button class="anc-b" onclick="if(window.RetourVisite)AnalyseClient.retour()">📤 Retour de visite</button>'
       + '<button class="anc-b p" onclick="AnalyseClient.save()">💾 Ajouter au compte client</button></div>';
     box.innerHTML = h;
   }
@@ -464,6 +465,7 @@
     if (typeof Notes === 'undefined' || !Notes.forClient) return;
     Notes.forClient(_c).then(function(L){ _nts = L || []; box = $('anc-nts'); if (box) box.innerHTML = ntsHtml(); }).catch(function(){});
   }
+  function retour() { if (window.RetourVisite && _c) RetourVisite.open(_c.id); }
   function openNote(id) { if (typeof Notes !== 'undefined') Notes.openFrom(id, loadNts); }
   function newNote() { if (typeof Notes !== 'undefined' && _c) Notes.nouvelleFor(_c, loadNts); }
 
@@ -528,5 +530,5 @@
   }
   function close() { var o = $('anc-ov'); if (o) o.remove(); }
 
-  window.AnalyseClient = { openNote: openNote, newNote: newNote, open: open, close: close, run: run, ia: ia, copy: copy, save: save, showSnap: showSnap };
+  window.AnalyseClient = { retour: retour, openNote: openNote, newNote: newNote, open: open, close: close, run: run, ia: ia, copy: copy, save: save, showSnap: showSnap };
 })();

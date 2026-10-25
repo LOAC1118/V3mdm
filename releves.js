@@ -976,6 +976,15 @@
     }).catch(function(){ _readyP = null; });
     return _readyP;
   }
+  // Relevés d'une période — pour le retour de visite
+  function inRange(from, to) {
+    return ready().then(function(){
+      return _rel.filter(function(r){ var d = String(r.date || ''); return d >= from && d <= to; }).map(function(r){
+        var s = stats(r), absL = (r.lignes || []).filter(function(l){ return l.p === false; }).map(function(l){ return l.l; });
+        return { id: r.id, date: r.date, clientId: r.clientId || '', magasin: r.magasin || '', ville: r.ville || '', ens: relEns(r), ensNom: ensNom(relEns(r)), stats: s, abs: absL, remarque: r.remarque || '' };
+      }).sort(function(a, b){ return String(a.date).localeCompare(String(b.date)); });
+    });
+  }
   function forClient(c) {
     return ready().then(function(){
       var nn = norm(c.nom || '');
@@ -1018,7 +1027,7 @@
 
   function mount() { css(); var first = !_unsub; if (_view === 'edit' && _cur) { render(); return; } _view = 'list'; render(); if (first) loadRef().then(function(){ load(); render(); }); }
 
-  window.Releves = { forClient: forClient, mount: mount, nouveau: nouveau, ouvrir: ouvrir, retour: retour, supprimer: supprimer, pt: togglePoint, prix: setPrix, nt: setNote, meta: setMeta,
+  window.Releves = { forClient: forClient, inRange: inRange, mount: mount, nouveau: nouveau, ouvrir: ouvrir, retour: retour, supprimer: supprimer, pt: togglePoint, prix: setPrix, nt: setNote, meta: setMeta,
     dash: function(){ _view = 'dash'; render(); }, dashEns: function(v){ _ensSel = v; renderDash(); },
     addLibre: addLibre, delLibre: delLibre, compare: function(){ _view = 'compare'; render(); }, pdf: pdf, pdfSave: pdfSave, pdfShare: pdfShare, pdfOpen: pdfOpen, pdfCompare: pdfCompare, search: search, filtEns: filtEns, ensChange: ensChange,
     q2: function(v){ _q = v; renderRows(); }, fam: function(v){ _fam = v; renderRows(); }, only: function(){ _only = _only === 'todo' ? 'all' : 'todo'; renderEdit(); },

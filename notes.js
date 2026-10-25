@@ -52,7 +52,7 @@
     var host = $('notes-host'); if (!host) return;
     host.innerHTML =
         '<div class="nt-head"><div><div class="nt-title">Notes</div><div class="nt-sub">Prenez des notes à tout moment — avec ou sans client, à l\'écrit ou à l\'oral</div></div>'
-      + '<button class="nt-new" onclick="Notes.nouvelle()">+ Nouvelle note</button></div>'
+      + '<button class="nt-new" onclick="Notes.nouvelle()">+ Nouvelle note</button> <button class="nt-new" style="background:#fff;color:var(--brand);border:1px solid var(--brand)" onclick="if(window.RetourVisite)RetourVisite.open()">📤 Retour de visite</button></div>'
       + '<div class="nt-bar"><input id="nt-q" class="nt-q" placeholder="Rechercher…" oninput="Notes.search(this.value)">'
       +   '<div class="nt-chips" id="nt-chips"></div></div>'
       + '<div id="nt-list"></div>';
@@ -229,6 +229,14 @@
       _afterClose = after || null; open(ref.id);
     }).catch(function(e){ note('Erreur : ' + (e.code || e.message), 'err'); });
   }
+  // Notes d'une période (YYYY-MM-DD à YYYY-MM-DD) — pour le retour de visite
+  function inRange(from, to) {
+    return ensureLoaded().then(function(){
+      return _notes.filter(function(n){ var d = n.date || ''; return d >= from && d <= to; })
+        .map(function(n){ return { id: n.id, date: n.date || '', titre: n.titre || '', clientId: n.clientId || '', clientNom: n.clientNom || '', txt: String(n.resume || n.cr || n.transcription || '').trim(), at: stamp(n) }; })
+        .sort(function(a, b){ return (a.date || '').localeCompare(b.date || '') || a.at - b.at; });
+    });
+  }
   function openFrom(id, after) { ensureLoaded().then(function(){ _afterClose = after || null; open(id); }); }
   function openAnalyse() {
     var n = byId(_cur); if (!n || !n.clientId) return;
@@ -278,5 +286,5 @@
 
   window.Notes = { mount: mount, nouvelle: nouvelle, open: open, close: close, saveMeta: saveMeta, del: del,
     addToClient: addToClient, search: search, filter: setFilter,
-    forClient: forClient, nouvelleFor: nouvelleFor, openFrom: openFrom, openAnalyse: openAnalyse };
+    forClient: forClient, inRange: inRange, nouvelleFor: nouvelleFor, openFrom: openFrom, openAnalyse: openAnalyse };
 })();

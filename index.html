@@ -14081,6 +14081,7 @@ function cdbShowMenu(anchor, id) {
   var actions = [
     { icon: '🗂️', label: 'Préparer la visite', fn: function(){ if (typeof Fiche360 !== 'undefined') Fiche360.open(id); else toast('Module fiche 360 indisponible','err'); } },
     { icon: '📈', label: 'Analyse client',     fn: function(){ if (typeof AnalyseClient !== 'undefined') AnalyseClient.open(id); else toast('Module analyse indisponible','err'); } },
+    { icon: '📤', label: 'Retour de visite',   fn: function(){ if (typeof RetourVisite !== 'undefined') RetourVisite.open(id); else toast('Module indisponible','err'); } },
     { icon: '✏️', label: 'Modifier la fiche',  fn: function(){ cdbOpenEdit(id); } },
     { icon: '🛒', label: 'Nouveau BDC',        fn: function(){ if(c) cdbNewOrderFromClient(c); } },
     { icon: '📄', label: 'Importer commande PDF', fn: function(){ showSection('bdc',null); setTimeout(function(){ openPdfImport(); }, 200); } },
@@ -16131,10 +16132,11 @@ if ('serviceWorker' in navigator) {
 <script src="radar.js?v=5"></script>
 <script src="agenda.js?v=4"></script>
 <script src="visite.js?v=6"></script>
-<script src="notes.js?v=4"></script>
-<script src="releves.js?v=11"></script>
+<script src="notes.js?v=5"></script>
+<script src="retour-visite.js?v=1"></script>
+<script src="releves.js?v=12"></script>
 <script src="mail.js?v=4"></script>
-<script src="analyse-client.js?v=4"></script>
+<script src="analyse-client.js?v=5"></script>
 <script src="assistant.js?v=5"></script>
 <script src="tournees.js?v=4"></script>
 <script src="visites.js?v=2"></script>
