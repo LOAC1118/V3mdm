@@ -109,6 +109,10 @@
         return s;
       }).sort(function(a, b){ return a.nom.localeCompare(b.nom, 'fr'); });
       rebuildPhotos();
+      if (!String(_actions || '').trim()) {   // actions ouvertes des relevés de la période → « points à retenir »
+        var A = []; _stores.forEach(function(s){ s.rels.forEach(function(r){ (r.actions || []).forEach(function(a){ if (!a.done) A.push('• ' + (_stores.length > 1 ? s.nom + ' : ' : '') + a.t); }); }); });
+        _actions = A.join('\n');
+      }
     });
   }
 
@@ -381,6 +385,8 @@
     (notes || []).forEach(function(n){ if (n.txt) N.push({ d: n.date, t: (n.titre ? n.titre + ' — ' : '') + n.txt }); });
     N.sort(function(a, b){ return String(b.d).localeCompare(String(a.d)); });
     if (N.length) { title('Notes et échanges'); N.slice(0, 10).forEach(function(n){ para(frDate(n.d), 9, 'bold', 90); para(n.t, 10); y += 2; }); }
+    var OA = []; rels.forEach(function(r){ (r.actions || []).forEach(function(a){ if (!a.done) OA.push({ d: r.date, t: a.t }); }); });
+    if (OA.length) { title('Actions en cours'); OA.forEach(function(a){ para('• ' + a.t + '  (' + frDate(a.d) + ')', 10); }); }
     // Photos
     if (photos.length) {
       title('Photos (' + photos.length + (photos.length > 12 ? ', 12 plus récentes' : '') + ')');

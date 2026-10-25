@@ -286,12 +286,13 @@
       + '<div class="rl-bar">' + ensSelect('rl-filt-ens', _ensSel, 'Releves.filtEns(this.value)', true)
       + '<input class="rl-in" placeholder="Rechercher un relevé…" value="' + esc(_q) + '" oninput="Releves.search(this.value)" style="flex:1;min-width:140px">'
       + '<button class="rl-b" onclick="Releves.dash()">📈 Dashboard</button><button class="rl-b" onclick="Releves.compare()">📊 Comparer</button><button class="rl-b" onclick="Releves.refEdit()">⚙️ Listes produits</button></div>'
+      + '<div id="rl-actslist">' + openListHtml() + '</div>'
       + '<div id="rl-list">' + (list.length ? list.map(cardHtml).join('') : '<div class="mut" style="padding:24px;text-align:center">Aucun relevé pour le moment.</div>') + '</div></div>';
   }
   function cardHtml(r) {
     var s = stats(r);
     return '<div class="rl-card"><div style="flex:1;min-width:0;cursor:pointer" onclick="Releves.ouvrir(\'' + r.id + '\')">'
-      + '<div class="t"><span class="rl-tag">' + esc(ensNom(relEns(r))) + '</span>' + esc(r.magasin) + (r.ville ? ' <span class="mut">· ' + esc(r.ville) + '</span>' : '') + '</div>'
+      + '<div class="t"><span class="rl-tag">' + esc(ensNom(relEns(r))) + '</span>' + esc(r.magasin) + (r.fini ? ' <span title="Visite terminée" style="color:#2e9d5b">✓</span>' : '') + (r.ville ? ' <span class="mut">· ' + esc(r.ville) + '</span>' : '') + '</div>'
       + '<div class="s">' + frDate(r.date) + ' · ' + (s.cat ? s.pres + ' / ' + s.total + ' produits de la gamme (' + s.taux + ' %)' : s.pres + ' présents / ' + s.pointed + ' pointés') + (s.moy != null ? ' · prix moyen ' + eur(s.moy) : '') + (r.ownerName ? ' · ' + esc(r.ownerName) : '') + '</div></div>'
       + '<button class="rl-b" onclick="Releves.pdf(\'' + r.id + '\')">📄 PDF</button>'
       + '<button class="rl-b" onclick="Releves.supprimer(\'' + r.id + '\')" title="Supprimer">🗑</button></div>';
@@ -323,7 +324,7 @@
   function visMeta() { return { clientId: _cur.clientId || '', nom: _cur.magasin, ville: _cur.ville || '', date: _cur.date }; }
   function badges() {
     var b = $('rl-bph'); if (b) b.textContent = '🖼️ Photo' + (_nPh ? ' (' + _nPh + ')' : '');
-    var n = $('rl-bnt'); if (n && _cur) n.textContent = '📝 Notes' + ((String(_cur.remarque || '').trim() || (_cur.interloc && _cur.interloc.nom)) ? ' ●' : '');
+    var n = $('rl-bnt'); if (n && _cur) n.textContent = '📝 Notes' + ((String(_cur.remarque || '').trim() || (_cur.interloc && _cur.interloc.nom)) ? ' ●' : '') + (((_cur.actions || []).filter(function(a){ return !a.done; }).length) ? ' ✅' + (_cur.actions || []).filter(function(a){ return !a.done; }).length : '');
   }
   function phRefresh() {
     if (!_cur) return;
@@ -338,6 +339,60 @@
   function phTake() { var i = $('rl-cam'); if (i) i.click(); }
   function phDel(id) { if (!confirm('Supprimer cette photo ?')) return; RetourVisite.remove(id); phRefresh(); }
   function phCap(id, v) { RetourVisite.cap(id, v); }
+  // ── Actions à mener (suivi d'un relevé à l'autre) ──
+  var VERBES = /^(?:[-•*→>]\s*)?((?:relancer|rappeler|appeler|envoyer|demander|pr[ée]voir|commander|apporter|proposer|revoir|voir|passer|faire|confirmer|v[ée]rifier|d[ée]poser|livrer|pr[ée]parer|n[ée]gocier|pr[ée]senter|renvoyer|r[ée]assortir|contacter|recontacter|remplacer|installer|former|mettre)\b.*)$/i;
+  function actId() { return 'a' + Date.now().toString(36) + Math.floor(Math.random() * 1000); }
+  function otherOpen() {
+    if (!_cur) return []; var k = storeKey(_cur), out = [];
+    _rel.forEach(function(r){ if (r.id !== _cur.id && storeKey(r) === k) (r.actions || []).forEach(function(a){ if (!a.done) out.push({ rel: r, a: a }); }); });
+    return out;
+  }
+  function actsHtml() {
+    if (!_cur) return ''; var A = _cur.actions || [], h = '';
+    var prev = otherOpen();
+    if (prev.length) h += '<div class="mut" style="margin:0 0 4px">Restées ouvertes aux visites précédentes :</div>' + prev.map(function(x){ return actRow(x.a, x.rel.id, x.rel.date); }).join('');
+    h += A.map(function(a){ return actRow(a, _cur.id, ''); }).join('');
+    var have = {}; A.concat(prev.map(function(x){ return x.a; })).forEach(function(a){ have[norm(a.t)] = 1; });
+    var sug = []; String(_cur.remarque || '').split('\n').forEach(function(l){ var m = l.trim().match(VERBES); if (m) { var tx = m[1].trim(); if (!have[norm(tx)] && sug.indexOf(tx) === -1) sug.push(tx); } });
+    if (sug.length) h += '<div class="mut" style="margin:8px 0 4px">Repérées dans vos notes (touchez pour ajouter) :</div><div class="rl-bar" style="margin:0">' + sug.slice(0, 6).map(function(s){ return '<button class="rl-b" style="text-align:left" data-t="' + esc(s) + '" onclick="Releves.actAdd(this.getAttribute(\'data-t\'))">＋ ' + esc(s) + '</button>'; }).join('') + '</div>';
+    h += '<div class="rl-bar" style="margin:8px 0 0"><input id="rl-act-in" class="rl-in" placeholder="Nouvelle action (ex. relancer pour la PLV)" style="flex:1;min-width:160px;box-sizing:border-box" onkeydown="if(event.key===\'Enter\')Releves.actAdd()"><button class="rl-b" onclick="Releves.actAdd()">＋</button></div>';
+    return h;
+  }
+  function actRow(a, relId, dt) {
+    return '<div class="rl-bar" style="margin:2px 0;flex-wrap:nowrap"><label style="flex:1;display:flex;gap:8px;align-items:flex-start"><input type="checkbox" ' + (a.done ? 'checked' : '') + ' onchange="Releves.actTick(\'' + relId + '\',\'' + a.id + '\',this.checked)" style="margin-top:3px"><span style="' + (a.done ? 'text-decoration:line-through;color:#888' : '') + '">' + esc(a.t) + (dt ? ' <span class="mut">(' + frDate(dt) + ')</span>' : '') + '</span></label><button class="rl-b" onclick="Releves.actDel(\'' + relId + '\',\'' + a.id + '\')" aria-label="Supprimer">✕</button></div>';
+  }
+  function actsRefresh() { var b = $('rl-acts'); if (b) b.innerHTML = actsHtml(); badges(); }
+  function actAdd(txt) {
+    if (!_cur) return; var inp = $('rl-act-in'); var v = String(txt != null ? txt : (inp ? inp.value : '')).trim(); if (!v) return;
+    _cur.actions = _cur.actions || []; _cur.actions.push({ id: actId(), t: v, done: false, at: Date.now() }); persistSoon(); actsRefresh();
+    var i2 = $('rl-act-in'); if (i2) i2.value = '';
+  }
+  function actFind(relId) { return (_cur && _cur.id === relId) ? _cur : _rel.filter(function(r){ return r.id === relId; })[0]; }
+  function actSave(r) { if (_cur && r.id === _cur.id) { persistSoon(); return; } col().doc(r.id).update({ actions: r.actions, updatedAt: Date.now() }).catch(function(){ note('Enregistrement impossible', 'err'); }); }
+  function actTick(relId, id, v) {
+    var r = actFind(relId); if (!r) return; (r.actions || []).forEach(function(a){ if (a.id === id) { a.done = !!v; a.doneAt = v ? Date.now() : null; } });
+    actSave(r); actsRefresh(); var l = $('rl-actslist'); if (l) l.innerHTML = openListHtml();
+  }
+  function actDel(relId, id) {
+    var r = actFind(relId); if (!r) return; r.actions = (r.actions || []).filter(function(a){ return a.id !== id; });
+    actSave(r); actsRefresh(); var l = $('rl-actslist'); if (l) l.innerHTML = openListHtml();
+  }
+  function openAll() { var out = []; _rel.forEach(function(r){ (r.actions || []).forEach(function(a){ if (!a.done) out.push({ rel: r, a: a }); }); }); out.sort(function(x, y){ return String(y.rel.date).localeCompare(String(x.rel.date)); }); return out; }
+  function openListHtml() {
+    var L = openAll(); if (!L.length) return '';
+    return '<div class="rl-card" style="flex-direction:column;align-items:stretch;gap:2px"><div class="t">✅ Actions en cours (' + L.length + ')</div>' + L.slice(0, 15).map(function(x){
+      return '<div class="rl-bar" style="margin:2px 0;flex-wrap:nowrap"><label style="flex:1;display:flex;gap:8px;align-items:flex-start"><input type="checkbox" onchange="Releves.actTick(\'' + x.rel.id + '\',\'' + x.a.id + '\',this.checked)" style="margin-top:3px"><span>' + esc(x.a.t) + ' <span class="mut">· ' + esc(x.rel.magasin) + ' · ' + frDate(x.rel.date) + '</span></span></label></div>'; }).join('') + (L.length > 15 ? '<div class="mut">… et ' + (L.length - 15) + ' autres</div>' : '') + '</div>';
+  }
+  function terminer() {
+    if (!_cur) return; var miss = [];
+    if (!String(_cur.remarque || '').trim()) miss.push('aucune note');
+    if (!(_cur.interloc && _cur.interloc.nom)) miss.push("pas d'interlocuteur");
+    if (!_nPh) miss.push('aucune photo');
+    if (stats(_cur).pointed === 0) miss.push('aucun produit pointé');
+    if (miss.length && !confirm('Il manque : ' + miss.join(', ') + '.\nTerminer quand même la visite ?')) return;
+    _cur.fini = true; _cur.finiAt = Date.now(); flush(); noteClose();
+    persistNow().then(function(){ note('Visite terminée ✓'); if (window.RetourVisite) RetourVisite.quick(visMeta()); });
+  }
   function interInputs() {
     var I = (_cur && _cur.interloc) || {};
     function f(k, ph, type) { return '<input class="rl-in" style="box-sizing:border-box;width:100%" ' + (type ? 'type="' + type + '" ' : '') + 'placeholder="' + ph + '" value="' + esc(I[k] || '') + '" oninput="Releves.inter(\'' + k + '\',this.value)">'; }
@@ -356,7 +411,7 @@
     return ready().then(function(){
       var nn = norm(m.nom || '');
       return _rel.filter(function(r){ return (m.clientId && r.clientId === m.clientId) || (!r.clientId && nn && norm(r.magasin) === nn); })
-        .map(function(r){ var s = stats(r); return { id: r.id, date: r.date, ens: relEns(r), ensNom: ensNom(relEns(r)), stats: s, remarque: r.remarque || '', interloc: r.interloc || null,
+        .map(function(r){ var s = stats(r); return { id: r.id, date: r.date, ens: relEns(r), ensNom: ensNom(relEns(r)), stats: s, remarque: r.remarque || '', interloc: r.interloc || null, actions: r.actions || [],
           abs: (r.lignes || []).filter(function(l){ return l.p === false; }).map(function(l){ return l.l; }) }; })
         .sort(function(a, b){ return String(b.date).localeCompare(String(a.date)); });
     });
@@ -371,10 +426,12 @@
       + '<div class="mut" style="margin-bottom:6px"><b>👤 Interlocuteur</b>' + (lastInter() ? ' <a href="#" onclick="Releves.interReuse();return false" style="margin-left:8px">↩︎ Reprendre : ' + esc(lastInter().nom) + '</a>' : '') + '</div>'
       + '<div id="rl-inter" style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:12px">' + interInputs() + '</div>'
       + '<div class="mut" style="margin-bottom:6px">Notes de visite (échange avec le magasin, implantation, concurrence, actions…)</div>'
-      + '<textarea id="rl-vnote" class="rl-in" style="width:100%;min-height:120px;box-sizing:border-box" oninput="Releves.meta(\'remarque\',this.value)">' + esc(_cur.remarque || '') + '</textarea>'
+      + '<textarea id="rl-vnote" class="rl-in" style="width:100%;min-height:120px;box-sizing:border-box" oninput="Releves.meta(\'remarque\',this.value)" onblur="Releves.actsRefresh()">' + esc(_cur.remarque || '') + '</textarea>'
       + '<div class="mut" style="margin:12px 0 6px"><b>📷 Photos du magasin</b></div><div id="rl-ph" class="rl-phs"></div>'
       + '<div class="rl-bar" style="margin:8px 0 0"><label class="rl-b p" for="rl-cam">📷 Prendre une photo</label><label class="rl-b" for="rl-gal">🖼️ Galerie</label></div>'
-      + '<div class="rl-bar" style="margin:12px 0 0"><button class="rl-b p" style="flex:1;padding:12px;min-width:200px" onclick="Releves.rapport()">📄 Rapport de visite (PDF)</button><button class="rl-b" style="flex:1;padding:12px;min-width:200px" onclick="Releves.ficheClient()">🗂️ Fiche d\'informations client (PDF)</button></div></div>';
+      + '<div class="mut" style="margin:14px 0 6px"><b>✅ Actions à mener</b></div><div id="rl-acts">' + actsHtml() + '</div>'
+      + '<div class="rl-bar" style="margin:14px 0 0"><button class="rl-b p" style="flex:1;padding:14px;min-width:200px;font-size:1rem" onclick="Releves.terminer()">🏁 Terminer la visite</button></div>'
+      + '<div class="rl-bar" style="margin:8px 0 0"><button class="rl-b p" style="flex:1;padding:12px;min-width:200px" onclick="Releves.rapport()">📄 Rapport de visite (PDF)</button><button class="rl-b" style="flex:1;padding:12px;min-width:200px" onclick="Releves.ficheClient()">🗂️ Fiche d\'informations client (PDF)</button></div></div>';
     document.body.appendChild(ov); phRefresh();
   }
   function noteClose() { var o = $('rl-visov'); if (o) o.remove(); badges(); }
@@ -1081,7 +1138,7 @@
     return ready().then(function(){
       return _rel.filter(function(r){ var d = String(r.date || ''); return d >= from && d <= to; }).map(function(r){
         var s = stats(r), absL = (r.lignes || []).filter(function(l){ return l.p === false; }).map(function(l){ return l.l; });
-        return { id: r.id, date: r.date, clientId: r.clientId || '', magasin: r.magasin || '', ville: r.ville || '', ens: relEns(r), ensNom: ensNom(relEns(r)), stats: s, abs: absL, remarque: r.remarque || '', interloc: r.interloc || null };
+        return { id: r.id, date: r.date, clientId: r.clientId || '', magasin: r.magasin || '', ville: r.ville || '', ens: relEns(r), ensNom: ensNom(relEns(r)), stats: s, abs: absL, remarque: r.remarque || '', interloc: r.interloc || null, actions: r.actions || [] };
       }).sort(function(a, b){ return String(a.date).localeCompare(String(b.date)); });
     });
   }
@@ -1127,7 +1184,7 @@
 
   function mount() { css(); var first = !_unsub; if (_view === 'edit' && _cur) { render(); return; } _view = 'list'; render(); if (first) loadRef().then(function(){ load(); render(); }); }
 
-  window.Releves = { phAdd: phAdd, phTake: phTake, phDel: phDel, phCap: phCap, noteJump: noteJump, inter: setInter, interReuse: interReuse, ficheClient: ficheClient, forStore: forStore, noteClose: noteClose, rapport: rapport, forClient: forClient, inRange: inRange, mount: mount, nouveau: nouveau, ouvrir: ouvrir, retour: retour, supprimer: supprimer, pt: togglePoint, prix: setPrix, nt: setNote, meta: setMeta,
+  window.Releves = { phAdd: phAdd, phTake: phTake, phDel: phDel, phCap: phCap, noteJump: noteJump, actsRefresh: actsRefresh, actAdd: actAdd, actTick: actTick, actDel: actDel, terminer: terminer, inter: setInter, interReuse: interReuse, ficheClient: ficheClient, forStore: forStore, noteClose: noteClose, rapport: rapport, forClient: forClient, inRange: inRange, mount: mount, nouveau: nouveau, ouvrir: ouvrir, retour: retour, supprimer: supprimer, pt: togglePoint, prix: setPrix, nt: setNote, meta: setMeta,
     dash: function(){ _view = 'dash'; render(); }, dashEns: function(v){ _ensSel = v; renderDash(); },
     addLibre: addLibre, delLibre: delLibre, compare: function(){ _view = 'compare'; render(); }, pdf: pdf, pdfSave: pdfSave, pdfShare: pdfShare, pdfOpen: pdfOpen, pdfCompare: pdfCompare, search: search, filtEns: filtEns, ensChange: ensChange,
     q2: function(v){ _q = v; renderRows(); }, fam: function(v){ _fam = v; renderRows(); }, only: function(){ _only = _only === 'todo' ? 'all' : 'todo'; renderEdit(); },
