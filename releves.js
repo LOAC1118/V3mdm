@@ -24,6 +24,7 @@
 
   var _ensCfg = {};        // listes personnalisées : { id: { nom, lignes } }
   var _ensIdx = [];        // ids d'enseignes créées par l'utilisateur
+  var _newEns = '';        // enseigne choisie pour un nouveau relevé (défaut : catalogue = toutes enseignes)
   var _ensSel = '';        // enseigne affichée dans la liste / comparaison
   var _rel = [], _unsub = null;
   var _view = 'list', _cur = null, _fam = '', _only = 'all', _q = '', _saveT = null, _cmpFam = '', _err = '';
@@ -159,7 +160,7 @@
     _cur.lignes.forEach(function(l){ var x = meta[l.k]; if (x) { if (l.t == null && x.t != null) l.t = x.t; if (!l.e && x.e) l.e = x.e; if (!l.m && x.m) l.m = x.m; } });
     render();
   }
-  function retour() { flush(); _view = 'list'; _cur = null; render(); }
+  function retour() { flush(); var vo = $('rl-visov'); if (vo) vo.remove(); _nPh = 0; _view = 'list'; _cur = null; render(); }
   function supprimer(id) {
     if (!confirm('Supprimer définitivement ce relevé ?')) return;
     col().doc(id).delete().then(function(){ note('Relevé supprimé', 'ok'); if (_cur && _cur.id === id) { _view = 'list'; _cur = null; render(); } })
@@ -253,22 +254,24 @@
     renderList();
   }
   function ensSelect(id, sel, onchange, all) {
+    var L = ensList(), nw = (id === 'rl-new-ens');
+    if (nw) L = L.filter(function(e){ return e.id === 'catalogue'; }).concat(L.filter(function(e){ return e.id !== 'catalogue'; }));   // « Toutes enseignes » en premier
     return '<select id="' + id + '" class="rl-in" onchange="' + (onchange || '') + '">' + (all ? '<option value="">Toutes enseignes</option>' : '')
-      + ensList().map(function(e){ return '<option value="' + esc(e.id) + '"' + (e.id === sel ? ' selected' : '') + '>' + esc(e.nom) + '</option>'; }).join('') + '</select>';
+      + L.map(function(e){ return '<option value="' + esc(e.id) + '"' + (e.id === sel ? ' selected' : '') + '>' + esc(nw && e.id === 'catalogue' ? 'Toutes enseignes (catalogue complet)' : e.nom) + '</option>'; }).join('') + '</select>';
   }
   function datalist(ens) {
     var re = new RegExp(norm(ensNom(ens)).split(' ')[0] || 'zzzz', 'i');
     var all = contacts(), a = all.filter(function(c){ return re.test(norm((c.nom||'') + ' ' + (c.enseigne||''))); }), b = all.filter(function(c){ return a.indexOf(c) === -1; });
     return a.concat(b).slice(0, 1500).map(function(c){ return '<option value="' + esc((c.nom||'') + (c.ville ? ' — ' + c.ville : '')) + '">'; }).join('');
   }
-  function ensChange(v) { var d = $('rl-dl'); if (d) d.innerHTML = datalist(v); }
+  function ensChange(v) { _newEns = v; var d = $('rl-dl'); if (d) d.innerHTML = datalist(v); }
 
   function listFiltered() {
     var q = norm(_q);
     return _rel.filter(function(r){ return (!_ensSel || relEns(r) === _ensSel) && (!q || norm(r.magasin + ' ' + (r.ville||'')).indexOf(q) !== -1); });
   }
   function renderList() {
-    var h = host(), list = listFiltered(), first = _ensSel || (ensList()[0] && ensList()[0].id);
+    var h = host(), list = listFiltered(), first = _newEns || 'catalogue';
     h.innerHTML = '<div class="rl">'
       + '<h2>📋 Relevés magasins</h2><div class="mut">Pointez les références et relevez les prix en rayon, magasin par magasin, puis comparez et exportez en PDF.</div>'
       + (_err ? '<div class="rl-err">' + esc(_err) + '</div>' : '')
@@ -297,7 +300,7 @@
     var h = host(), r = _cur, fams = [];
     r.lignes.forEach(function(l){ if (fams.indexOf(l.f) === -1) fams.push(l.f); });
     h.innerHTML = '<div class="rl">'
-      + '<div class="rl-bar" style="margin-top:0"><button class="rl-b" onclick="Releves.retour()">← Relevés</button><span class="mut" id="rl-status"></span><span style="flex:1"></span><button class="rl-b p" onclick="Releves.scanOpen()">📷 Scanner</button><button class="rl-b" onclick="Releves.phTake()" title="Prendre une photo du magasin">🖼️ Photo</button><button class="rl-b" onclick="Releves.noteJump()" title="Notes de visite">📝</button><button class="rl-b" onclick="Releves.pdf()">📄 PDF</button></div>'
+      + '<div class="rl-bar" style="margin-top:0"><button class="rl-b" onclick="Releves.retour()">← Relevés</button><span class="mut" id="rl-status"></span><span style="flex:1"></span><button class="rl-b p" onclick="Releves.scanOpen()">📷 Scanner</button><button class="rl-b" id="rl-bph" onclick="Releves.phTake()" title="Prendre une photo du magasin">🖼️ Photo</button><button class="rl-b" id="rl-bnt" onclick="Releves.noteJump()" title="Notes de visite, photos et rapport">📝 Notes</button><button class="rl-b" onclick="Releves.pdf()">📄 PDF</button></div>'
       + '<h2><span class="rl-tag">' + esc(ensNom(r.enseigne)) + '</span>' + esc(r.magasin) + (r.ville ? ' <span class="mut" style="font:500 .9rem Inter">· ' + esc(r.ville) + '</span>' : '') + '</h2>'
       + '<div class="rl-bar" style="margin:6px 0"><label class="mut">Date <input type="date" class="rl-in" value="' + esc(r.date) + '" onchange="Releves.meta(\'date\',this.value)"></label></div>'
       + '<div class="rl-sticky"><div class="rl-kpi" id="rl-kpi"></div>'
@@ -306,27 +309,45 @@
       + '<button class="rl-b' + (_only === 'todo' ? ' on' : '') + '" onclick="Releves.only()">' + (_only === 'todo' ? 'Restant à pointer' : 'Tout') + '</button><button class="rl-b" onclick="Releves.restAbs()" title="Marquer absents les produits non pointés">✖ Reste = absent</button></div></div>'
       + '<div id="rl-rows"></div>'
       + '<div class="rl-row"><div class="mut" style="margin-bottom:6px"><b>Produit hors liste</b> (concurrent, nouveauté…)</div><div class="rl-bar" style="margin:0"><input id="rl-lib" class="rl-in" placeholder="Produit" style="flex:1;min-width:140px"><input id="rl-lib-prix" class="rl-in rl-px" inputmode="decimal" placeholder="Prix"><button class="rl-b" onclick="Releves.addLibre()">Ajouter</button></div></div>'
-      + '<div class="rl-row" id="rl-visite"><div class="mut" style="margin-bottom:6px"><b>📝 Notes de visite</b> (accueil, implantation, concurrence, contact, actions…)</div><textarea class="rl-in" style="width:100%;min-height:110px" oninput="Releves.meta(\'remarque\',this.value)">' + esc(r.remarque || '') + '</textarea>'
-      + '<div class="mut" style="margin:12px 0 6px"><b>📷 Photos du magasin</b></div><div id="rl-ph" class="rl-phs"></div>'
-      + '<div class="rl-bar" style="margin:8px 0 0"><label class="rl-b p">📷 Prendre une photo<input type="file" accept="image/*" capture="environment" hidden onchange="Releves.phAdd(this)"></label><label class="rl-b">🖼️ Galerie<input type="file" accept="image/*" multiple hidden onchange="Releves.phAdd(this)"></label></div>'
-      + '<div class="rl-bar" style="margin:12px 0 0"><button class="rl-b p" style="flex:1;padding:12px" onclick="Releves.rapport()">📄 Rapport de visite (PDF avec notes et photos)</button></div></div></div>';
+      + '<input id="rl-cam" type="file" accept="image/*" capture="environment" hidden onchange="Releves.phAdd(this)"><input id="rl-gal" type="file" accept="image/*" multiple hidden onchange="Releves.phAdd(this)"></div>';
     renderRows(); refreshHead(); phRefresh();
   }
   // ── Notes de visite, photos et rapport (module RetourVisite) ──
+  // Les notes et photos s'ouvrent dans un panneau flottant (bouton 📝 Notes en haut de l'écran) : pas besoin de descendre dans la liste.
+  var _nPh = 0;
   function visMeta() { return { clientId: _cur.clientId || '', nom: _cur.magasin, ville: _cur.ville || '', date: _cur.date }; }
+  function badges() {
+    var b = $('rl-bph'); if (b) b.textContent = '🖼️ Photo' + (_nPh ? ' (' + _nPh + ')' : '');
+    var n = $('rl-bnt'); if (n && _cur) n.textContent = '📝 Notes' + (String(_cur.remarque || '').trim() ? ' ●' : '');
+  }
   function phRefresh() {
-    var box = $('rl-ph'); if (!box || !_cur) return;
-    if (!window.RetourVisite) { box.innerHTML = '<div class="mut">Module photos indisponible</div>'; return; }
+    if (!_cur) return;
+    if (!window.RetourVisite) { var bx = $('rl-ph'); if (bx) bx.innerHTML = '<div class="mut">Module photos indisponible</div>'; return; }
     RetourVisite.list(visMeta()).then(function(L){
-      box = $('rl-ph'); if (!box) return;
+      _nPh = L.length; badges();
+      var box = $('rl-ph'); if (!box) return;
       box.innerHTML = L.length ? L.map(function(p){ return '<div class="rl-ph"><img src="' + p.data + '" alt=""><input class="rl-in" placeholder="Légende" value="' + esc(p.caption || '') + '" onchange="Releves.phCap(\'' + p.id + '\',this.value)"><button class="rl-phx" onclick="Releves.phDel(\'' + p.id + '\')" aria-label="Supprimer">✕</button></div>'; }).join('') : '<div class="mut">Aucune photo pour cette visite.</div>';
     });
   }
   function phAdd(inp) { if (!_cur || !window.RetourVisite) return; flush(); note('Ajout de la photo…'); RetourVisite.addTo(visMeta(), inp).then(function(){ phRefresh(); note('Photo ajoutée'); }); }
-  function phTake() { var v = $('rl-visite'); if (!v) return; var i = v.querySelector('input[capture]'); if (i) i.click(); }
+  function phTake() { var i = $('rl-cam'); if (i) i.click(); }
   function phDel(id) { if (!confirm('Supprimer cette photo ?')) return; RetourVisite.remove(id); phRefresh(); }
   function phCap(id, v) { RetourVisite.cap(id, v); }
-  function noteJump() { var v = $('rl-visite'); if (v) { v.scrollIntoView({ behavior: 'smooth', block: 'start' }); var t = v.querySelector('textarea'); if (t) setTimeout(function(){ t.focus(); }, 400); } }
+  function noteJump() {
+    if (!_cur) return; var old = $('rl-visov'); if (old) old.remove();
+    var ov = document.createElement('div'); ov.id = 'rl-visov';
+    ov.style.cssText = 'position:fixed;inset:0;z-index:99990;background:rgba(20,18,15,.5);display:flex;align-items:flex-end;justify-content:center';
+    ov.onclick = function(e){ if (e.target === ov) noteClose(); };
+    ov.innerHTML = '<div class="rl" style="background:#fff;border-radius:16px 16px 0 0;width:100%;max-width:640px;max-height:88vh;overflow:auto;padding:14px 16px 20px;box-sizing:border-box">'
+      + '<div class="rl-bar" style="margin:0 0 8px"><b style="font-size:1.05rem">📝 Visite — ' + esc(_cur.magasin) + '</b><span style="flex:1"></span><button class="rl-b p" onclick="Releves.noteClose()">✓ Terminé</button></div>'
+      + '<div class="mut" style="margin-bottom:6px">Notes de visite (accueil, implantation, concurrence, contact, actions…)</div>'
+      + '<textarea id="rl-vnote" class="rl-in" style="width:100%;min-height:120px;box-sizing:border-box" oninput="Releves.meta(\'remarque\',this.value)">' + esc(_cur.remarque || '') + '</textarea>'
+      + '<div class="mut" style="margin:12px 0 6px"><b>📷 Photos du magasin</b></div><div id="rl-ph" class="rl-phs"></div>'
+      + '<div class="rl-bar" style="margin:8px 0 0"><label class="rl-b p" for="rl-cam">📷 Prendre une photo</label><label class="rl-b" for="rl-gal">🖼️ Galerie</label></div>'
+      + '<div class="rl-bar" style="margin:12px 0 0"><button class="rl-b p" style="flex:1;padding:12px" onclick="Releves.rapport()">📄 Rapport de visite (PDF avec notes et photos)</button></div></div>';
+    document.body.appendChild(ov); phRefresh();
+  }
+  function noteClose() { var o = $('rl-visov'); if (o) o.remove(); badges(); }
   function rapport() { if (!_cur || !window.RetourVisite) { note('Module rapport indisponible', 'err'); return; } flush(); persistNow().then(function(){ RetourVisite.quick(visMeta()); }); }
 
   var _ctx = null;
@@ -1076,7 +1097,7 @@
 
   function mount() { css(); var first = !_unsub; if (_view === 'edit' && _cur) { render(); return; } _view = 'list'; render(); if (first) loadRef().then(function(){ load(); render(); }); }
 
-  window.Releves = { phAdd: phAdd, phTake: phTake, phDel: phDel, phCap: phCap, noteJump: noteJump, rapport: rapport, forClient: forClient, inRange: inRange, mount: mount, nouveau: nouveau, ouvrir: ouvrir, retour: retour, supprimer: supprimer, pt: togglePoint, prix: setPrix, nt: setNote, meta: setMeta,
+  window.Releves = { phAdd: phAdd, phTake: phTake, phDel: phDel, phCap: phCap, noteJump: noteJump, noteClose: noteClose, rapport: rapport, forClient: forClient, inRange: inRange, mount: mount, nouveau: nouveau, ouvrir: ouvrir, retour: retour, supprimer: supprimer, pt: togglePoint, prix: setPrix, nt: setNote, meta: setMeta,
     dash: function(){ _view = 'dash'; render(); }, dashEns: function(v){ _ensSel = v; renderDash(); },
     addLibre: addLibre, delLibre: delLibre, compare: function(){ _view = 'compare'; render(); }, pdf: pdf, pdfSave: pdfSave, pdfShare: pdfShare, pdfOpen: pdfOpen, pdfCompare: pdfCompare, search: search, filtEns: filtEns, ensChange: ensChange,
     q2: function(v){ _q = v; renderRows(); }, fam: function(v){ _fam = v; renderRows(); }, only: function(){ _only = _only === 'todo' ? 'all' : 'todo'; renderEdit(); },
