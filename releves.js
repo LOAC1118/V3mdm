@@ -130,11 +130,16 @@
     r.lignes = out; if (hors.length) r.horsListe = hors; return r;
   }
   function lineMap(r){ var m = {}; (r.lignes||[]).forEach(function(l){ m[l.k] = l; }); return m; }
+  // Catalogue complet : le taux est la part des produits de la gamme (marque active) présents dans le magasin, sur TOUS les produits de la gamme
+  function catTotal() { var P = []; try { P = (typeof PRODUCTS !== 'undefined' && PRODUCTS) ? PRODUCTS : []; } catch(e){} return P.length; }
   function stats(r) {
-    var L = r.lignes || [], pointed = L.filter(function(l){ return l.p === true || l.p === false; }).length;
-    var pres = L.filter(function(l){ return l.p === true; }).length, prix = L.filter(function(l){ return l.x != null; });
-    return { total: L.length, pointed: pointed, pres: pres, abs: L.filter(function(l){ return l.p === false; }).length, prixN: prix.length,
-             taux: pointed ? Math.round(100 * pres / pointed) : null, moy: prix.length ? prix.reduce(function(s,l){ return s + l.x; }, 0) / prix.length : null };
+    var L = r.lignes || [], pointed = L.filter(function(l){ return !l.libre && (l.p === true || l.p === false); }).length;
+    var cat = relEns(r) === 'catalogue', N = cat ? catTotal() : 0;
+    var pres = L.filter(function(l){ return l.p === true && !(cat && l.libre); }).length, prix = L.filter(function(l){ return l.x != null; });
+    var total = cat && N ? Math.max(N, pointed) : L.length;
+    return { total: total, pointed: pointed, pres: pres, abs: L.filter(function(l){ return l.p === false; }).length, prixN: prix.length, cat: cat && !!N,
+             taux: cat && N ? Math.round(100 * pres / total) : (pointed ? Math.round(100 * pres / pointed) : null),
+             moy: prix.length ? prix.reduce(function(s,l){ return s + l.x; }, 0) / prix.length : null };
   }
   function newLine(x) { return { k: x.k, c: x.c, l: x.l, f: x.f, e: x.e || '', t: x.t == null ? null : x.t, m: x.m || '', p: null, x: null, n: '' }; }
 
@@ -287,7 +292,7 @@
     var s = stats(r);
     return '<div class="rl-card"><div style="flex:1;min-width:0;cursor:pointer" onclick="Releves.ouvrir(\'' + r.id + '\')">'
       + '<div class="t"><span class="rl-tag">' + esc(ensNom(relEns(r))) + '</span>' + esc(r.magasin) + (r.ville ? ' <span class="mut">· ' + esc(r.ville) + '</span>' : '') + '</div>'
-      + '<div class="s">' + frDate(r.date) + ' · ' + s.pres + ' présents / ' + s.pointed + ' pointés' + (s.moy != null ? ' · prix moyen ' + eur(s.moy) : '') + (r.ownerName ? ' · ' + esc(r.ownerName) : '') + '</div></div>'
+      + '<div class="s">' + frDate(r.date) + ' · ' + (s.cat ? s.pres + ' / ' + s.total + ' produits de la gamme (' + s.taux + ' %)' : s.pres + ' présents / ' + s.pointed + ' pointés') + (s.moy != null ? ' · prix moyen ' + eur(s.moy) : '') + (r.ownerName ? ' · ' + esc(r.ownerName) : '') + '</div></div>'
       + '<button class="rl-b" onclick="Releves.pdf(\'' + r.id + '\')">📄 PDF</button>'
       + '<button class="rl-b" onclick="Releves.supprimer(\'' + r.id + '\')" title="Supprimer">🗑</button></div>';
   }
@@ -397,7 +402,7 @@
   function refreshHead() {
     var s = stats(_cur), k = $('rl-kpi'); if (!k) return;
     k.innerHTML = '<div><b>' + s.pointed + '/' + s.total + '</b><span>pointés</span></div><div><b style="color:#2e9d5b">' + s.pres + '</b><span>présents</span></div>'
-      + '<div><b style="color:#d64545">' + s.abs + '</b><span>absents</span></div><div><b>' + (s.taux != null ? s.taux + ' %' : '—') + '</b><span>référencement</span></div>'
+      + '<div><b style="color:#d64545">' + s.abs + '</b><span>absents</span></div><div><b>' + (s.taux != null ? s.taux + ' %' : '—') + '</b><span>' + (s.cat ? 'de la gamme' : 'référencement') + '</span></div>'
       + '<div><b>' + s.prixN + '</b><span>prix relevés</span></div>' + (s.moy != null ? '<div><b>' + eurP(s.moy) + '</b><span>prix moyen €</span></div>' : '');
   }
 
