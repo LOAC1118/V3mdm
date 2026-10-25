@@ -323,7 +323,7 @@
   function visMeta() { return { clientId: _cur.clientId || '', nom: _cur.magasin, ville: _cur.ville || '', date: _cur.date }; }
   function badges() {
     var b = $('rl-bph'); if (b) b.textContent = '🖼️ Photo' + (_nPh ? ' (' + _nPh + ')' : '');
-    var n = $('rl-bnt'); if (n && _cur) n.textContent = '📝 Notes' + (String(_cur.remarque || '').trim() ? ' ●' : '');
+    var n = $('rl-bnt'); if (n && _cur) n.textContent = '📝 Notes' + ((String(_cur.remarque || '').trim() || (_cur.interloc && _cur.interloc.nom)) ? ' ●' : '');
   }
   function phRefresh() {
     if (!_cur) return;
@@ -338,6 +338,29 @@
   function phTake() { var i = $('rl-cam'); if (i) i.click(); }
   function phDel(id) { if (!confirm('Supprimer cette photo ?')) return; RetourVisite.remove(id); phRefresh(); }
   function phCap(id, v) { RetourVisite.cap(id, v); }
+  function interInputs() {
+    var I = (_cur && _cur.interloc) || {};
+    function f(k, ph, type) { return '<input class="rl-in" style="box-sizing:border-box;width:100%" ' + (type ? 'type="' + type + '" ' : '') + 'placeholder="' + ph + '" value="' + esc(I[k] || '') + '" oninput="Releves.inter(\'' + k + '\',this.value)">'; }
+    return f('nom', 'Nom') + f('fonction', 'Fonction (gérant, resp. épicerie…)') + f('tel', 'Téléphone', 'tel') + f('email', 'E-mail', 'email');
+  }
+  function lastInter() {
+    if (!_cur) return null; var k = storeKey(_cur), best = null;
+    _rel.forEach(function(r){ if (r.id !== _cur.id && storeKey(r) === k && r.interloc && r.interloc.nom && (!best || String(r.date) > String(best.date))) best = r; });
+    return best ? best.interloc : null;
+  }
+  function interReuse() { var l = lastInter(); if (!l || !_cur) return; _cur.interloc = JSON.parse(JSON.stringify(l)); persistSoon(); var b = $('rl-inter'); if (b) b.innerHTML = interInputs(); badges(); }
+  function setInter(f, v) { if (!_cur) return; _cur.interloc = _cur.interloc || {}; _cur.interloc[f] = v; persistSoon(); }
+  function ficheClient() { if (!_cur || !window.RetourVisite) { note('Module indisponible', 'err'); return; } flush(); persistNow().then(function(){ RetourVisite.ficheClient(visMeta()); }); }
+  // Tous les relevés d'un magasin (pour la fiche d'informations client)
+  function forStore(m) {
+    return ready().then(function(){
+      var nn = norm(m.nom || '');
+      return _rel.filter(function(r){ return (m.clientId && r.clientId === m.clientId) || (!r.clientId && nn && norm(r.magasin) === nn); })
+        .map(function(r){ var s = stats(r); return { id: r.id, date: r.date, ens: relEns(r), ensNom: ensNom(relEns(r)), stats: s, remarque: r.remarque || '', interloc: r.interloc || null,
+          abs: (r.lignes || []).filter(function(l){ return l.p === false; }).map(function(l){ return l.l; }) }; })
+        .sort(function(a, b){ return String(b.date).localeCompare(String(a.date)); });
+    });
+  }
   function noteJump() {
     if (!_cur) return; var old = $('rl-visov'); if (old) old.remove();
     var ov = document.createElement('div'); ov.id = 'rl-visov';
@@ -345,11 +368,13 @@
     ov.onclick = function(e){ if (e.target === ov) noteClose(); };
     ov.innerHTML = '<div class="rl" style="background:#fff;border-radius:16px 16px 0 0;width:100%;max-width:640px;max-height:88vh;overflow:auto;padding:14px 16px 20px;box-sizing:border-box">'
       + '<div class="rl-bar" style="margin:0 0 8px"><b style="font-size:1.05rem">📝 Visite — ' + esc(_cur.magasin) + '</b><span style="flex:1"></span><button class="rl-b p" onclick="Releves.noteClose()">✓ Terminé</button></div>'
-      + '<div class="mut" style="margin-bottom:6px">Notes de visite (accueil, implantation, concurrence, contact, actions…)</div>'
+      + '<div class="mut" style="margin-bottom:6px"><b>👤 Interlocuteur</b>' + (lastInter() ? ' <a href="#" onclick="Releves.interReuse();return false" style="margin-left:8px">↩︎ Reprendre : ' + esc(lastInter().nom) + '</a>' : '') + '</div>'
+      + '<div id="rl-inter" style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:12px">' + interInputs() + '</div>'
+      + '<div class="mut" style="margin-bottom:6px">Notes de visite (échange avec le magasin, implantation, concurrence, actions…)</div>'
       + '<textarea id="rl-vnote" class="rl-in" style="width:100%;min-height:120px;box-sizing:border-box" oninput="Releves.meta(\'remarque\',this.value)">' + esc(_cur.remarque || '') + '</textarea>'
       + '<div class="mut" style="margin:12px 0 6px"><b>📷 Photos du magasin</b></div><div id="rl-ph" class="rl-phs"></div>'
       + '<div class="rl-bar" style="margin:8px 0 0"><label class="rl-b p" for="rl-cam">📷 Prendre une photo</label><label class="rl-b" for="rl-gal">🖼️ Galerie</label></div>'
-      + '<div class="rl-bar" style="margin:12px 0 0"><button class="rl-b p" style="flex:1;padding:12px" onclick="Releves.rapport()">📄 Rapport de visite (PDF avec notes et photos)</button></div></div>';
+      + '<div class="rl-bar" style="margin:12px 0 0"><button class="rl-b p" style="flex:1;padding:12px;min-width:200px" onclick="Releves.rapport()">📄 Rapport de visite (PDF)</button><button class="rl-b" style="flex:1;padding:12px;min-width:200px" onclick="Releves.ficheClient()">🗂️ Fiche d\'informations client (PDF)</button></div></div>';
     document.body.appendChild(ov); phRefresh();
   }
   function noteClose() { var o = $('rl-visov'); if (o) o.remove(); badges(); }
@@ -1056,7 +1081,7 @@
     return ready().then(function(){
       return _rel.filter(function(r){ var d = String(r.date || ''); return d >= from && d <= to; }).map(function(r){
         var s = stats(r), absL = (r.lignes || []).filter(function(l){ return l.p === false; }).map(function(l){ return l.l; });
-        return { id: r.id, date: r.date, clientId: r.clientId || '', magasin: r.magasin || '', ville: r.ville || '', ens: relEns(r), ensNom: ensNom(relEns(r)), stats: s, abs: absL, remarque: r.remarque || '' };
+        return { id: r.id, date: r.date, clientId: r.clientId || '', magasin: r.magasin || '', ville: r.ville || '', ens: relEns(r), ensNom: ensNom(relEns(r)), stats: s, abs: absL, remarque: r.remarque || '', interloc: r.interloc || null };
       }).sort(function(a, b){ return String(a.date).localeCompare(String(b.date)); });
     });
   }
@@ -1102,7 +1127,7 @@
 
   function mount() { css(); var first = !_unsub; if (_view === 'edit' && _cur) { render(); return; } _view = 'list'; render(); if (first) loadRef().then(function(){ load(); render(); }); }
 
-  window.Releves = { phAdd: phAdd, phTake: phTake, phDel: phDel, phCap: phCap, noteJump: noteJump, noteClose: noteClose, rapport: rapport, forClient: forClient, inRange: inRange, mount: mount, nouveau: nouveau, ouvrir: ouvrir, retour: retour, supprimer: supprimer, pt: togglePoint, prix: setPrix, nt: setNote, meta: setMeta,
+  window.Releves = { phAdd: phAdd, phTake: phTake, phDel: phDel, phCap: phCap, noteJump: noteJump, inter: setInter, interReuse: interReuse, ficheClient: ficheClient, forStore: forStore, noteClose: noteClose, rapport: rapport, forClient: forClient, inRange: inRange, mount: mount, nouveau: nouveau, ouvrir: ouvrir, retour: retour, supprimer: supprimer, pt: togglePoint, prix: setPrix, nt: setNote, meta: setMeta,
     dash: function(){ _view = 'dash'; render(); }, dashEns: function(v){ _ensSel = v; renderDash(); },
     addLibre: addLibre, delLibre: delLibre, compare: function(){ _view = 'compare'; render(); }, pdf: pdf, pdfSave: pdfSave, pdfShare: pdfShare, pdfOpen: pdfOpen, pdfCompare: pdfCompare, search: search, filtEns: filtEns, ensChange: ensChange,
     q2: function(v){ _q = v; renderRows(); }, fam: function(v){ _fam = v; renderRows(); }, only: function(){ _only = _only === 'todo' ? 'all' : 'todo'; renderEdit(); },

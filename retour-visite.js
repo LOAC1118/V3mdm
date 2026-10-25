@@ -143,6 +143,7 @@
     if (!byKey(k)) _stores.push({ key: k, clientId: c ? c.id : '', nom: c ? c.nom : v, ville: c ? (c.ville || '') : '', inc: true, notes: '', noteSrc: [], rels: [], photos: [], manual: true });
     $('rv-add').value = ''; rebuildPhotos(); render();
   }
+  function interLine(r) { var i = r && r.interloc; if (!i || !i.nom) return ''; return i.nom + (i.fonction ? ' (' + i.fonction + ')' : '') + (i.tel ? ' · ' + i.tel : '') + (i.email ? ' · ' + i.email : ''); }
   function relLine(r) {
     var s = r.stats, t = [r.ensNom || r.ens, frDate(r.date)];
     if (s.taux != null) t.push('référencement ' + s.taux + '% (' + s.pres + '/' + s.pointed + ' pointés)');
@@ -159,7 +160,7 @@
     _stores.forEach(function(s){
       var k = s.key;
       h += '<div class="rv-card"><div class="rv-ch"><label class="rv-chk"><input type="checkbox" ' + (s.inc ? 'checked' : '') + ' onchange="RetourVisite.inc(\'' + k + '\',this.checked)"> <b>' + esc(s.nom) + '</b>' + (s.ville ? ' <span class="rv-mut">' + esc(s.ville) + '</span>' : '') + '</label></div>';
-      if (s.rels.length) { h += '<div class="rv-rel">'; s.rels.forEach(function(r){ h += '<div>🏪 ' + esc(relLine(r)) + (r.abs.length ? '<div class="rv-mut">Absents : ' + esc(r.abs.slice(0, 12).join(', ')) + (r.abs.length > 12 ? ' … (+' + (r.abs.length - 12) + ')' : '') + '</div>' : '') + '</div>'; }); h += '</div>'; }
+      if (s.rels.length) { h += '<div class="rv-rel">'; s.rels.forEach(function(r){ h += '<div>🏪 ' + esc(relLine(r)) + (interLine(r) ? '<div class="rv-mut">👤 ' + esc(interLine(r)) + '</div>' : '') + (r.abs.length ? '<div class="rv-mut">Absents : ' + esc(r.abs.slice(0, 12).join(', ')) + (r.abs.length > 12 ? ' … (+' + (r.abs.length - 12) + ')' : '') + '</div>' : '') + '</div>'; }); h += '</div>'; }
       h += '<label class="rv-l">Notes de visite</label><textarea id="rv-n-' + k + '" rows="4" placeholder="Ce qui est à remonter pour ce magasin…">' + esc(_edits[k] != null ? _edits[k] : (s.notes || '')) + '</textarea>';
       h += '<div class="rv-ph">';
       s.photos.forEach(function(p){ h += '<div class="rv-pi"><img src="' + p.data + '" alt=""><input type="text" value="' + esc(p.caption || '') + '" placeholder="Légende" onchange="RetourVisite.cap(\'' + p.id + '\',this.value)"><button class="rv-del" onclick="RetourVisite.delPhoto(\'' + p.id + '\')" aria-label="Supprimer">✕</button></div>'; });
@@ -191,7 +192,7 @@
     t.push('RETOUR DE VISITE — ' + period(), '');
     L.forEach(function(x){
       t.push('■ ' + x.s.nom + (x.s.ville ? ' (' + x.s.ville + ')' : ''));
-      x.s.rels.forEach(function(r){ t.push('  Relevé : ' + relLine(r)); if (r.abs.length) t.push('  Absents : ' + r.abs.slice(0, 15).join(', ')); });
+      x.s.rels.forEach(function(r){ t.push('  Relevé : ' + relLine(r)); if (interLine(r)) t.push('  Interlocuteur : ' + interLine(r)); if (r.abs.length) t.push('  Absents : ' + r.abs.slice(0, 15).join(', ')); });
       if (x.notes) t.push(x.notes.split('\n').map(function(l){ return '  ' + l; }).join('\n'));
       if (x.s.photos.length) t.push('  📷 ' + x.s.photos.length + ' photo(s) dans le PDF joint');
       t.push('');
@@ -246,6 +247,7 @@
       y += 1;
       x.s.rels.forEach(function(r){
         para('Relevé · ' + relLine(r), 9.5, 'bold', 60);
+        if (interLine(r)) para('Interlocuteur : ' + interLine(r), 9.5, 'normal', 60);
         if (r.abs.length) para('Références absentes : ' + r.abs.join(', '), 9, 'normal', 90, 3);
       });
       if (x.notes) { y += 1; para(x.notes, 10); }
@@ -328,6 +330,77 @@
     });
   }
 
+  // ── Fiche d'informations client : tout ce que les visites ont appris sur un magasin ──
+  function ficheClient(m) {
+    if (!me()) { note('Non connecté', 'err'); return; }
+    css(); note('Préparation de la fiche client…');
+    var c = m.clientId ? cById(m.clientId) : null, key = metaKey(m);
+    var c2 = c || { id: m.clientId || '', nom: m.nom };
+    Promise.all([
+      (window.Releves && Releves.forStore) ? Releves.forStore(m) : Promise.resolve([]),
+      (window.Notes && Notes.forClient) ? Notes.forClient(c2) : Promise.resolve([]),
+      loadPhotos()
+    ]).then(function(R){
+      var go = function(){ try { buildFiche(c, m, R[0], R[1], _photos.filter(function(p){ return p.key === key; }).sort(function(a, b){ return b.createdAt - a.createdAt; })); } catch(e) { console.error(e); note('Erreur PDF : ' + e.message, 'err'); } };
+      if (window.jspdf) go(); else lazyLoad([LIB_JSPDF], go, function(){ note('Chargement du module PDF impossible (connexion ?)', 'err'); });
+    });
+  }
+  function buildFiche(c, m, rels, notes, photos) {
+    var doc = new window.jspdf.jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+    var W = 210, M = 15, CW = W - 2 * M, y = 0, page = 1, today = new Date();
+    function foot() { doc.setFontSize(8); doc.setTextColor(140); doc.text('Fiche client — ' + m.nom + ' — page ' + page, W / 2, 289, { align: 'center' }); doc.setTextColor(0); }
+    function need(h) { if (y + h > 280) { foot(); doc.addPage(); page++; y = 18; } }
+    function para(txt, size, style, color, indent) {
+      doc.setFont('helvetica', style || 'normal'); doc.setFontSize(size || 10); doc.setTextColor(color || 20);
+      doc.splitTextToSize(String(txt), CW - (indent || 0)).forEach(function(l){ need(size * 0.5 + 1); doc.text(l, M + (indent || 0), y); y += size * 0.45 + 1.2; });
+      doc.setTextColor(0);
+    }
+    function title(t) { need(16); y += 3; doc.setDrawColor(200); doc.line(M, y, W - M, y); y += 6; para(t, 12, 'bold', 40); y += 1; }
+    doc.setFillColor(40, 70, 50); doc.rect(0, 0, W, 28, 'F');
+    doc.setTextColor(255); doc.setFont('helvetica', 'bold'); doc.setFontSize(17); doc.text("Fiche d'informations client", M, 12);
+    doc.setFont('helvetica', 'normal'); doc.setFontSize(11); doc.text(m.nom + (m.ville ? ' — ' + m.ville : ''), M, 20);
+    doc.setFontSize(9); doc.text('Établie le ' + frDate(ymd(today)) + (author() ? ' par ' + author() : '') + (brand() ? ' · ' + brand() : ''), M, 25.5);
+    doc.setTextColor(0); y = 38;
+    // Coordonnées
+    var co = []; if (c) { if (c.numClient) co.push('N° client : ' + c.numClient); var ad = [c.adresse, [c.cp, c.ville].filter(Boolean).join(' ')].filter(Boolean).join(', '); if (ad) co.push('Adresse : ' + ad); if (c.telephone) co.push('Téléphone : ' + c.telephone); if (c.email) co.push('E-mail : ' + c.email); if (c.groupe) co.push('Enseigne / groupe : ' + c.groupe); }
+    if (co.length) { title('Le magasin'); co.forEach(function(l){ para(l, 10); }); }
+    // Interlocuteurs
+    var seen = {}, inter = [];
+    rels.forEach(function(r){ var i = r.interloc; if (i && i.nom) { var k = i.nom.trim().toLowerCase(); if (!seen[k]) { seen[k] = 1; inter.push({ i: i, date: r.date }); } } });
+    if (inter.length) { title('Interlocuteurs rencontrés'); inter.forEach(function(x){ para('• ' + interLine({ interloc: x.i }) + '  (vu le ' + frDate(x.date) + ')', 10); }); }
+    // Visites
+    if (rels.length) {
+      title('Historique des relevés (' + rels.length + ')');
+      rels.slice(0, 12).forEach(function(r){ var s = r.stats; para(frDate(r.date) + ' · ' + r.ensNom + ' · ' + (s.cat ? s.pres + '/' + s.total + ' produits de la gamme (' + s.taux + ' %)' : s.pres + '/' + s.pointed + ' pointés' + (s.taux != null ? ' (' + s.taux + ' %)' : '')) + (s.moy != null ? ' · prix moyen ' + s.moy.toFixed(2).replace('.', ',') + ' €' : ''), 9.5); });
+      var last = rels[0];
+      if (last.abs.length) { y += 2; para('Références absentes au dernier relevé (' + frDate(last.date) + ', ' + last.abs.length + ') : ' + last.abs.slice(0, 40).join(', ') + (last.abs.length > 40 ? ' …' : ''), 9, 'normal', 80); }
+    }
+    // Notes et échanges (remarques des relevés + notes libres), du plus récent au plus ancien
+    var N = [];
+    rels.forEach(function(r){ if (String(r.remarque || '').trim()) N.push({ d: r.date, t: r.remarque.trim() }); });
+    (notes || []).forEach(function(n){ if (n.txt) N.push({ d: n.date, t: (n.titre ? n.titre + ' — ' : '') + n.txt }); });
+    N.sort(function(a, b){ return String(b.d).localeCompare(String(a.d)); });
+    if (N.length) { title('Notes et échanges'); N.slice(0, 10).forEach(function(n){ para(frDate(n.d), 9, 'bold', 90); para(n.t, 10); y += 2; }); }
+    // Photos
+    if (photos.length) {
+      title('Photos (' + photos.length + (photos.length > 12 ? ', 12 plus récentes' : '') + ')');
+      var cw = (CW - 6) / 2, col = 0, rowH = 0;
+      photos.slice(0, 12).forEach(function(p){
+        var w = cw, h = w * p.h / p.w; if (h > 80) { h = 80; w = h * p.w / p.h; }
+        if (col === 0) { need(h + 12); rowH = 0; }
+        var xx = M + col * (cw + 6);
+        try { doc.addImage(p.data, 'JPEG', xx, y, w, h); } catch(e){}
+        doc.setFontSize(8); doc.setTextColor(90); doc.text(doc.splitTextToSize(frDate(p.date) + (p.caption ? ' — ' + p.caption : ''), cw)[0], xx, y + h + 4); doc.setTextColor(0);
+        rowH = Math.max(rowH, h + 8); col++;
+        if (col === 2) { y += rowH; col = 0; }
+      });
+      if (col === 1) y += rowH;
+    }
+    if (!co.length && !inter.length && !rels.length && !N.length && !photos.length) para("Aucune information enregistrée pour ce magasin pour l'instant.", 10);
+    foot();
+    out(doc, 'Fiche_client_' + norm(m.nom).replace(/ /g, '_').slice(0, 40) + '_' + ymd(today) + '.pdf');
+  }
+
   // ── Style ──
   function css() {
     if ($('rv-css')) return;
@@ -347,5 +420,5 @@
     document.head.appendChild(st);
   }
 
-  window.RetourVisite = { list: listPhotos, addTo: addTo, remove: removePhoto, cap: capPhoto, key: metaKey, quick: quick, open: open, close: close, dates: setDates, preset: preset, inc: setInc, addStore: addStore, photos: addPhotos, delPhoto: delPhoto, pdf: pdf, mail: mail, pdfSave: pdfSave, pdfShare: pdfShare, _mailText: mailText, _collect: collect };
+  window.RetourVisite = { ficheClient: ficheClient, list: listPhotos, addTo: addTo, remove: removePhoto, cap: capPhoto, key: metaKey, quick: quick, open: open, close: close, dates: setDates, preset: preset, inc: setInc, addStore: addStore, photos: addPhotos, delPhoto: delPhoto, pdf: pdf, mail: mail, pdfSave: pdfSave, pdfShare: pdfShare, _mailText: mailText, _collect: collect };
 })();
