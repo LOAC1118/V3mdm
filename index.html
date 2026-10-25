@@ -2157,7 +2157,8 @@ thead th.ts-active { text-decoration:underline; text-underline-offset:3px; }
   <div id="sec-recherche" class="hidden" style="padding:1.75rem 2rem;overflow-y:auto;flex:1;background:var(--bg);box-sizing:border-box;">
     <div style="margin-bottom:1.25rem;">
       <h2 style="margin:0;font-family:var(--fdisp);font-size:1.35rem;color:var(--g900);">Recherche produit</h2>
-      <p style="margin:.2rem 0 0;font-size:.82rem;color:var(--g600);">Référence, code-barres, colisage, stock et ventes de l’année.</p>
+      <p style="margin:.2rem 0 0;font-size:.82rem;color:var(--g600);">Référence, code-barres, colisage, stock et ventes de l’année. Touchez ℹ️ à côté d'un code-barres pour la fiche complète du site.</p>
+      <button class="btn btn-ghost" style="margin-top:.5rem;font-size:.82rem;" onclick="if(typeof FicheProduit!=='undefined')FicheProduit.search()">🌐 Rechercher dans les fiches du site (ingrédients, allergènes, labels…)</button>
     </div>
     <div id="rch-root"></div>
   </div>
@@ -16143,6 +16144,7 @@ if ('serviceWorker' in navigator) {
 <script src="visites.js?v=2"></script>
 <script src="rgpd.js?v=1"></script>
 <script src="recherche.js?v=4"></script>
+<script src="fiche-produit.js?v=1"></script>
 
 <!-- Nouveaux modules : données partagées + objectifs, assortiment, fiche 360, hors-ligne -->
 <script src="crm-data.js?v=2"></script>
