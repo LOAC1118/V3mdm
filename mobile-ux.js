@@ -45,7 +45,7 @@
   function wrap() {
     if (_wrapped || typeof window.showSection !== 'function') return; _wrapped = true;
     var orig = window.showSection;
-    window.showSection = function (name) { var r = orig.apply(this, arguments); _sec = name; markActive(); sync(); setTimeout(addDashButton, 50); return r; };
+    window.showSection = function (name) { try { if (window.Releves && Releves.scanClose && document.getElementById('rl-scan')) Releves.scanClose(); } catch(e){} var r = orig.apply(this, arguments); _sec = name; markActive(); sync(); var o = document.getElementById('mux-dash-visit'); if (o) o.remove(); return r; };
   }
   // pendant un relevé, les bulles flottantes sont masquées (elles couvraient les boutons de pointage)
   function sync() {
@@ -71,6 +71,7 @@
     return out.slice(0, 40);
   }
   function visit() {
+    try { if (window.Releves && Releves.scanClose && $('rl-scan')) Releves.scanClose(); } catch(e){}
     css(); var old = $('mux-ov'); if (old) old.remove();
     var ov = document.createElement('div'); ov.id = 'mux-ov'; ov.onclick = function(e){ if (e.target === ov) closeVisit(); };
     var ens = (window.Releves && Releves.ensChoices) ? Releves.ensChoices() : [{ id: 'catalogue', nom: 'Toutes enseignes' }];
@@ -148,7 +149,7 @@
     document.head.appendChild(st);
   }
 
-  function boot() { css(); buildTabs(); wrap(); addDashButton(); sync(); if (!document.querySelector('.mux-tabs') || !_wrapped) setTimeout(boot, 800); }
+  function boot() { css(); buildTabs(); wrap(); sync(); if (!document.querySelector('.mux-tabs') || !_wrapped) setTimeout(boot, 800); }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot); else boot();
   window.addEventListener('resize', function(){ buildTabs(); });
 

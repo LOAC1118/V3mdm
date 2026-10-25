@@ -970,15 +970,17 @@
     var ens = relEns(_cur);
     var ov = document.createElement('div'); ov.id = 'rl-scan';
     ov.style.cssText = 'position:fixed;inset:0;z-index:99997;background:#000;display:flex;flex-direction:column';
-    ov.innerHTML = '<div style="display:flex;align-items:center;gap:8px;padding:10px 12px;background:#14120F;color:#fff;font:600 .85rem Inter,sans-serif">'
-      + '<span style="flex:1">📷 Scanner · ' + esc(ensNom(ens)) + '</span><span id="rl-sc-n" style="opacity:.8;font-weight:500"></span>'
+    ov.innerHTML = '<div style="display:flex;align-items:center;flex-wrap:wrap;gap:6px 8px;padding:calc(10px + env(safe-area-inset-top,0px)) 12px 10px;background:#14120F;color:#fff;font:600 .85rem Inter,sans-serif">'
+      + '<button class="rl-b p" onclick="Releves.scanClose()" aria-label="Retour au relevé">← Relevé</button>'
+      + '<span style="flex:1;min-width:90px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">📷 ' + esc(ensNom(ens)) + '</span><span id="rl-sc-n" style="opacity:.8;font-weight:500;font-size:.72rem"></span>'
       + '<button class="rl-b' + (fastOn() ? ' p' : '') + '" id="rl-sc-fast" onclick="Releves.scanFast()" title="Pointe automatiquement les produits reconnus">⚡ Rapide</button><button class="rl-b" id="rl-sc-zoom" style="display:none" onclick="Releves.scanZoom()">🔍 ×1</button><button class="rl-b" id="rl-sc-torch" style="display:none" onclick="Releves.scanTorch()">🔦</button><button class="rl-b" onclick="Releves.scanPhoto()">📸 Photo</button><input type="file" id="rl-sc-file" accept="image/*" capture="environment" style="display:none" onchange="Releves.photoChosen(this)">'
-      + '<button class="rl-b p" onclick="Releves.scanClose()">Terminé</button></div>'
+      + '</div>'
       + '<div style="position:relative;flex:1;min-height:0;background:#000"><video id="rl-sc-v" playsinline muted autoplay style="width:100%;height:100%;object-fit:cover"></video>'
       + '<div style="position:absolute;left:8%;right:8%;top:26%;height:30%;border:2px solid rgba(255,255,255,.85);border-radius:12px;box-shadow:0 0 0 999px rgba(0,0,0,.35);pointer-events:none"></div>'
       + '<div id="rl-sc-banner"></div><div id="rl-sc-st" style="position:absolute;left:0;right:0;top:12px;text-align:center;color:#fff;font:500 .8rem Inter,sans-serif;text-shadow:0 1px 3px #000">Initialisation de la caméra…</div></div>'
       + '<div style="background:#fff;padding:8px 12px;display:flex;gap:8px"><input id="rl-sc-man" class="rl-in" inputmode="numeric" placeholder="ou saisir l\'EAN à la main" style="flex:1"><button class="rl-b" onclick="Releves.scanManual()">OK</button></div>'
       + '<div id="rl-sc-sheet" style="display:none;background:#fff;padding:14px;max-height:62vh;overflow:auto;border-top:3px solid var(--brand)"></div>';
+    try { if (window.innerWidth <= 768 && document.querySelector('.mux-tabs')) ov.style.bottom = 'calc(62px + env(safe-area-inset-bottom,0px))'; } catch(e){}   // la barre du bas reste utilisable
     document.body.appendChild(ov);
     _scan = { ov: ov, stream: null, video: $('rl-sc-v'), reader: null, raf: null, busy: false, last: { c: '', t: 0 }, n: 0, found: 0, hl: 0, torch: false };
     loadEanMap(ens).then(function(){ camStart(); });
