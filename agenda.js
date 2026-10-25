@@ -11,6 +11,13 @@
   var _view = 'month';              // 'month' | 'list'
   var _selDay = null;               // jour sélectionné (YYYY-MM-DD)
   var _mounted = false;
+  var _acts = [];                   // actions de visite à faire (venues des relevés)
+  function loadActs() {
+    try { if (window.Releves && Releves.actionsDue) Releves.actionsDue().then(function(L){ _acts = L || []; render(); updateReminder(); }); } catch(e){}
+  }
+  window.addEventListener('cohor-actions', function(){ setTimeout(loadActs, 50); });
+  function actsDueOn(ds) { return _acts.filter(function(a){ return a.due === ds; }); }
+  function actsLate() { var t = todayStr(); return _acts.filter(function(a){ return a.due && a.due < t; }); }
 
   var TYPES = ['Visite', 'Appel', 'Rendez-vous', 'Relance', 'Livraison', 'Autre'];
   var MOIS = ['janvier','février','mars','avril','mai','juin','juillet','août','septembre','octobre','novembre','décembre'];
@@ -34,6 +41,7 @@
       _rdv.sort(function(a,b){ return (a.date+'T'+(a.heure||'')).localeCompare(b.date+'T'+(b.heure||'')); });
       render();
       updateReminder();
+      if (!_acts.length) setTimeout(loadActs, 2500);
     }, function (err) { console.warn('[Agenda] load', err && err.code); });
   }
 
@@ -43,7 +51,7 @@
     return _rdv.filter(function(r){ return r.date === t; });
   }
   function updateReminder() {
-    var n = todaysRdv().length;
+    var n = todaysRdv().length + actsDueOn(todayStr()).length + actsLate().length;
     // badge sur l'item de navigation Agenda
     document.querySelectorAll('.agenda-navbadge').forEach(function(b){
       if (n>0){ b.textContent = n; b.style.display=''; } else { b.style.display='none'; }
@@ -53,8 +61,13 @@
     if (host) host.innerHTML = renderTodayCard();
   }
   function renderTodayCard() {
-    var list = todaysRdv();
-    if (!list.length) return '';
+    var list = todaysRdv(), aj = actsDueOn(todayStr()), late = actsLate();
+    if (!list.length && !aj.length && !late.length) return '';
+    var actHtml = late.concat(aj).slice(0, 6).map(function(a){
+      var isLate = a.due < todayStr();
+      return '<div style="display:flex;align-items:flex-start;gap:8px;padding:6px 0;border-top:1px solid var(--border);"><input type="checkbox" style="margin-top:3px;width:20px;height:20px" onchange="Agenda.tick(\''+a.relId+'\',\''+a.id+'\',this.checked)">'
+        + '<div style="flex:1" onclick="Agenda.openAct(\''+a.relId+'\')"><div style="font-weight:600;font-size:.82rem;color:#14120F;">'+esc(a.t)+'</div><div style="font-size:.7rem;color:'+(isLate?'#c0392b':'#8A8F86')+';">'+(isLate?'⚠ En retard · ':'')+esc(a.magasin)+(a.ville?' · '+esc(a.ville):'')+' · '+esc(a.due.split('-').reverse().join('/'))+'</div></div></div>';
+    }).join('');
     var items = list.slice(0,5).map(function(r){
       return '<div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-top:1px solid var(--border);">'
         + '<span style="font-family:\'Sora\',sans-serif;font-weight:700;color:var(--brand);min-width:44px;">'+esc(r.heure||'—')+'</span>'
@@ -63,15 +76,18 @@
     }).join('');
     return '<div class="card" style="padding:1rem 1.1rem;margin-bottom:1.25rem;border-radius:16px;">'
       + '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.3rem;">'
-      + '<div style="font-family:\'Sora\',sans-serif;font-weight:600;color:#14120F;">📅 Vos rendez-vous du jour</div>'
+      + '<div style="font-family:\'Sora\',sans-serif;font-weight:600;color:#14120F;">'+(list.length?'📅 Vos rendez-vous du jour':'📅 À faire aujourd\'hui')+'</div>'
       + '<a onclick="showSection(\'agenda\',null,this)" style="font-size:.75rem;color:var(--brand-d);cursor:pointer;">Ouvrir l\'agenda →</a></div>'
-      + items + '</div>';
+      + items + (actHtml ? '<div style="font-size:.72rem;font-weight:700;color:#8A8F86;margin:8px 0 2px">✅ Actions à faire</div>' + actHtml : '') + '</div>';
   }
+  function tick(relId, id, v) { try { Releves.actTick(relId, id, v); } catch(e){} setTimeout(loadActs, 300); }
+  function openAct(relId) { try { Releves.openRel(relId); } catch(e){} }
 
   // ── Rendu principal ──
   function mount() {
     _mounted = true;
     if (!_unsub) load();
+    loadActs();
     render();
   }
 
@@ -96,6 +112,7 @@
     var nbDays = new Date(y, m+1, 0).getDate();
     var byDay = {};
     _rdv.forEach(function(r){ (byDay[r.date]=byDay[r.date]||[]).push(r); });
+    var actDay = {}; _acts.forEach(function(a){ if (a.due) (actDay[a.due]=actDay[a.due]||[]).push(a); });
     var t = todayStr();
 
     var cells = '';
@@ -108,6 +125,7 @@
           + '<b>'+esc(r.heure||'')+'</b> '+esc(r.clientNom||r.objet||'RDV')+'</div>';
       }).join('');
       if (evs.length>3) chips += '<div class="ag-more">+'+(evs.length-3)+'</div>';
+      (actDay[ds]||[]).slice(0,2).forEach(function(a){ chips += '<div class="ag-chip" style="background:#fdeede;color:#a4521b" title="'+esc(a.t+' — '+a.magasin)+'" onclick="event.stopPropagation();Agenda.openAct(\''+a.relId+'\')">✅ '+esc(a.t)+'</div>'; });
       cells += '<div class="ag-cell'+(ds===t?' ag-today':'')+'" onclick="Agenda.openNew(\''+ds+'\')">'
         + '<div class="ag-daynum">'+d+(evs.length?' <span class="ag-cnt">'+evs.length+'</span>':'')+'</div>'+chips+'</div>';
     }
@@ -124,7 +142,15 @@
   function renderList() {
     var t = todayStr();
     var up = _rdv.filter(function(r){ return r.date >= t; });
-    if (!up.length) return '<div class="ag-empty-msg">Aucun rendez-vous à venir. Cliquez « + Nouveau rendez-vous ».</div>';
+    var withDue = _acts.filter(function(a){ return a.due; }).sort(function(a,b){ return a.due.localeCompare(b.due); });
+    var noDue = _acts.length - withDue.length;
+    var ah = '';
+    if (withDue.length) ah = '<div class="ag-list" style="margin-bottom:12px"><div class="ag-li-sub" style="padding:6px 4px;font-weight:700">✅ Actions de visite à faire'+(noDue?' · '+noDue+' sans échéance':'')+'</div>' + withDue.map(function(a){
+      var late = a.due < t, dd = a.due.split('-');
+      return '<div class="ag-li"><input type="checkbox" style="width:22px;height:22px;flex:0 0 auto" onchange="Agenda.tick(\''+a.relId+'\',\''+a.id+'\',this.checked)">'
+        + '<div class="ag-li-main" onclick="Agenda.openAct(\''+a.relId+'\')"><div class="ag-li-cli">'+esc(a.t)+'</div><div class="ag-li-sub" style="'+(late?'color:#c0392b;font-weight:700':'')+'">'+(late?'⚠ En retard · ':'')+dd[2]+'/'+dd[1]+' · '+esc(a.magasin)+(a.ville?' · '+esc(a.ville):'')+'</div></div><div class="ag-li-arr">›</div></div>';
+    }).join('') + '</div>';
+    if (!up.length) return ah + '<div class="ag-empty-msg">Aucun rendez-vous à venir. Cliquez « + Nouveau rendez-vous ».</div>';
     var rows = up.map(function(r){
       var dd = new Date(r.date+'T00:00:00');
       return '<div class="ag-li" onclick="Agenda.openEdit(\''+r.id+'\')">'
@@ -134,7 +160,7 @@
         + (isManager()&&r.ownerEmail?(' · '+esc(r.ownerEmail)):'')+'</div></div>'
         + '<div class="ag-li-arr">›</div></div>';
     }).join('');
-    return '<div class="ag-list">'+rows+'</div>';
+    return ah + '<div class="ag-list">'+rows+'</div>';
   }
 
   // ── Modale création / édition ──
@@ -279,6 +305,6 @@
     mount: mount, setView: setView, move: move, goToday: goToday,
     exportOne: exportOne, exportAll: exportAll,
     openNew: openNew, openEdit: openEdit, save: save, del: del, closeModal: closeModal,
-    updateReminder: updateReminder, load: load
+    updateReminder: updateReminder, load: load, tick: tick, openAct: openAct, loadActs: loadActs
   };
 })();

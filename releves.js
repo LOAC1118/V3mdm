@@ -155,6 +155,39 @@
     _ensSel = ens; _cur = rel; _view = 'edit'; _fam = ''; _only = 'all'; _q = '';
     persistNow(); render();
   }
+  // ── Démarrer une visite (écran d'accueil / barre du bas) ──
+  function ensChoices() { var L = ensList(); return L.filter(function(e){ return e.id === 'catalogue'; }).map(function(e){ return { id: e.id, nom: 'Toutes enseignes (catalogue complet)' }; }).concat(L.filter(function(e){ return e.id !== 'catalogue'; }).map(function(e){ return { id: e.id, nom: e.nom }; })); }
+  function isEditing() { return _view === 'edit' && !!_cur; }
+  function recentStores(n) {
+    return ready().then(function(){
+      var seen = {}, out = [], t = today();
+      _rel.forEach(function(r){
+        var k = r.clientId ? 'c:' + r.clientId : 'n:' + norm(r.magasin); if (seen[k]) { if (r.date === t && !seen[k].today) seen[k].today = true; return; }
+        var o = { clientId: r.clientId || '', nom: r.magasin || '', ville: r.ville || '', ens: relEns(r), ensNom: ensNom(relEns(r)), date: r.date, today: r.date === t,
+          open: (r.actions || []).filter(function(a){ return !a.done; }).length };
+        seen[k] = o; out.push(o);
+      });
+      return out.slice(0, n || 8);
+    });
+  }
+  function demarrer(m) {
+    var u = me(); if (!u) { note('Non connecté', 'err'); return; }
+    return ready().then(function(){
+      var ens = m.ens || 'catalogue'; if (!ensList().some(function(e){ return e.id === ens; })) ens = 'catalogue';
+      var c = m.clientId ? contacts().filter(function(x){ return String(x.id) === String(m.clientId); })[0] : null;
+      if (!c && !m.clientId) c = contacts().filter(function(x){ return norm(x.nom) === norm(m.nom) && (!m.ville || norm(x.ville) === norm(m.ville)); })[0] || null;
+      var nom = c ? c.nom : m.nom, ville = c ? (c.ville || '') : (m.ville || ''), cid = c ? c.id : null, t = today();
+      var ex = _rel.filter(function(r){ return r.date === t && relEns(r) === ens && (cid ? String(r.clientId) === String(cid) : norm(r.magasin) === norm(nom)); })[0];
+      if (ex) { _ensSel = ens; ouvrir(ex.id); }
+      else {
+        var rel = { id: col().doc().id, enseigne: ens, enseigneNom: ensNom(ens), magasin: nom, ville: ville, clientId: cid, date: t, owner: u.uid, ownerName: u.displayName || u.email || '',
+          remarque: '', createdAt: Date.now(), updatedAt: Date.now(), lignes: refList(ens).map(newLine) };
+        _ensSel = ens; _cur = rel; _view = 'edit'; _fam = ''; _only = 'all'; _q = ''; persistNow();
+      }
+      try { showSection('releves', null, null); } catch(e){}
+      render();
+    });
+  }
   function ouvrir(id) {
     var r = _rel.filter(function(x){ return x.id === id; })[0]; if (!r) return;
     _cur = JSON.parse(JSON.stringify(r)); _cur.enseigne = relEns(_cur); _cur.enseigneNom = ensNom(_cur.enseigne);
@@ -181,7 +214,7 @@
     // catalogue complet (1 000+ lignes) : on n'enregistre que les lignes renseignées ; la liste est reconstituée à l'ouverture
     if (relEns(_cur) === 'catalogue') d.lignes = d.lignes.filter(function(l){ return l.libre || l.p === true || l.p === false || l.x != null || l.n; });
     setStatus('Enregistrement…');
-    return col().doc(_cur.id).set(d, { merge: true }).then(function(){ setStatus('✓ Enregistré'); })
+    return col().doc(_cur.id).set(d, { merge: true }).then(function(){ setStatus('✓ Enregistré'); syncActs(); })
       .catch(function(e){ setStatus('⚠ Non enregistré'); note('Enregistrement impossible : ' + ((e && e.code === 'permission-denied') ? 'règles Firestore à publier' : (e.message||e)), 'err'); });
   }
   function persistSoon() { clearTimeout(_saveT); setStatus('…'); _saveT = setTimeout(function(){ _saveT = null; persistNow(); }, 700); }
@@ -232,6 +265,10 @@
       '.rl-kpi{display:flex;gap:8px;flex-wrap:wrap;margin:10px 0}',
       '.rl-kpi div{background:#fff;border:1px solid #e7e3da;border-radius:11px;padding:8px 12px;min-width:84px}',
       '.rl-kpi b{display:block;font:700 1.05rem "IBM Plex Mono",monospace}.rl-kpi span{font-size:.68rem;color:#8a857d}',
+      '@media (max-width:768px){.rl-top{flex-wrap:nowrap;overflow-x:auto;-webkit-overflow-scrolling:touch;gap:6px;padding-bottom:2px}.rl-top .rl-b{white-space:nowrap;flex:0 0 auto;padding:8px 10px}.rl-top .mut{display:none}',
+      '.rl h2{font-size:1.05rem;margin:4px 0}.rl-dt{margin:2px 0 !important}.rl-kpi{flex-wrap:nowrap;overflow-x:auto;gap:6px;margin:6px 0}.rl-kpi div{min-width:68px;padding:6px 9px;flex:0 0 auto}.rl-kpi b{font-size:.95rem}}',
+      '#rl-sc-banner{position:absolute;left:10px;right:10px;bottom:12px;background:#fff;border-radius:14px;padding:10px 12px;box-shadow:0 8px 24px rgba(0,0,0,.4);display:none;font:500 .85rem Inter,sans-serif;color:#1c1a17}',
+      '#rl-sc-banner .bn{font-weight:700;margin-bottom:6px}#rl-sc-banner .rl-b{min-height:40px}',
       '.rl-row{background:#fff;border:1px solid #e7e3da;border-radius:12px;padding:10px 12px;margin-bottom:7px}',
       '.rl-row.ok{border-left:4px solid #2e9d5b}.rl-row.no{border-left:4px solid #d64545;background:#fdf6f5}',
       '.rl-l1{display:flex;gap:8px;align-items:center}.rl-lib{flex:1;min-width:0;font-weight:600;font-size:.86rem;line-height:1.25}',
@@ -254,6 +291,7 @@
   function host() { return $('releves-host'); }
   function render() {
     var h = host(); if (!h) return; css();
+    try { document.body.classList.toggle('rl-editing', _view === 'edit' && !!_cur); } catch(e){}
     if (_view === 'edit' && _cur) return renderEdit();
     if (_view === 'compare') return renderCompare();
     if (_view === 'dash') return renderDash();
@@ -307,9 +345,9 @@
     var h = host(), r = _cur, fams = [];
     r.lignes.forEach(function(l){ if (fams.indexOf(l.f) === -1) fams.push(l.f); });
     h.innerHTML = '<div class="rl">'
-      + '<div class="rl-bar" style="margin-top:0"><button class="rl-b" onclick="Releves.retour()">← Relevés</button><span class="mut" id="rl-status"></span><span style="flex:1"></span><button class="rl-b p" onclick="Releves.scanOpen()">📷 Scanner</button><button class="rl-b" id="rl-bph" onclick="Releves.phTake()" title="Prendre une photo du magasin">🖼️ Photo</button><button class="rl-b" id="rl-bnt" onclick="Releves.noteJump()" title="Notes de visite, photos et rapport">📝 Notes</button><button class="rl-b" onclick="Releves.pdf()">📄 PDF</button></div>'
+      + '<div class="rl-bar rl-top" style="margin-top:0"><button class="rl-b" onclick="Releves.retour()">← Relevés</button><span class="mut" id="rl-status"></span><span style="flex:1"></span><button class="rl-b p" onclick="Releves.scanOpen()">📷 Scanner</button><button class="rl-b" id="rl-bph" onclick="Releves.phTake()" title="Prendre une photo du magasin">🖼️ Photo</button><button class="rl-b" id="rl-bnt" onclick="Releves.noteJump()" title="Notes de visite, photos et rapport">📝 Notes</button><button class="rl-b" onclick="Releves.pdf()">📄 PDF</button></div>'
       + '<h2><span class="rl-tag">' + esc(ensNom(r.enseigne)) + '</span>' + esc(r.magasin) + (r.ville ? ' <span class="mut" style="font:500 .9rem Inter">· ' + esc(r.ville) + '</span>' : '') + '</h2>'
-      + '<div class="rl-bar" style="margin:6px 0"><label class="mut">Date <input type="date" class="rl-in" value="' + esc(r.date) + '" onchange="Releves.meta(\'date\',this.value)"></label></div>'
+      + '<div class="rl-bar rl-dt" style="margin:6px 0"><label class="mut">Date <input type="date" class="rl-in" value="' + esc(r.date) + '" onchange="Releves.meta(\'date\',this.value)"></label></div>'
       + '<div class="rl-sticky"><div class="rl-kpi" id="rl-kpi"></div>'
       + '<div class="rl-bar" style="margin:4px 0"><input class="rl-in" placeholder="Chercher un produit ou un code…" oninput="Releves.q2(this.value)" style="flex:1;min-width:140px">'
       + '<select class="rl-in" onchange="Releves.fam(this.value)"><option value="">Toutes familles</option>' + fams.map(function(f){ return '<option' + (f === _fam ? ' selected' : '') + '>' + esc(f) + '</option>'; }).join('') + '</select>'
@@ -360,7 +398,7 @@
     return h;
   }
   function actRow(a, relId, dt) {
-    return '<div class="rl-bar" style="margin:2px 0;flex-wrap:nowrap"><label style="flex:1;display:flex;gap:8px;align-items:flex-start"><input type="checkbox" ' + (a.done ? 'checked' : '') + ' onchange="Releves.actTick(\'' + relId + '\',\'' + a.id + '\',this.checked)" style="margin-top:3px"><span style="' + (a.done ? 'text-decoration:line-through;color:#888' : '') + '">' + esc(a.t) + (a.due ? ' <span class="mut">· pour le ' + frDate(a.due) + '</span>' : '') + (dt ? ' <span class="mut">(' + frDate(dt) + ')</span>' : '') + '</span></label><button class="rl-b" onclick="Releves.actDel(\'' + relId + '\',\'' + a.id + '\')" aria-label="Supprimer">✕</button></div>';
+    return '<div class="rl-bar" style="margin:2px 0;flex-wrap:nowrap"><label style="flex:1;display:flex;gap:8px;align-items:flex-start"><input type="checkbox" ' + (a.done ? 'checked' : '') + ' onchange="Releves.actTick(\'' + relId + '\',\'' + a.id + '\',this.checked)" style="margin-top:3px"><span style="' + (a.done ? 'text-decoration:line-through;color:#888' : '') + '">' + esc(a.t) + (a.done ? (a.due ? ' <span class="mut">· pour le ' + frDate(a.due) + '</span>' : '') : '<br><span class="mut" style="font-size:.74rem">Échéance</span> <input type="date" class="rl-in rl-ad" value="' + esc(a.due || '') + '" onclick="event.stopPropagation()" onchange="Releves.actDue(\'' + relId + '\',\'' + a.id + '\',this.value)" style="padding:3px 6px;font-size:.78rem;' + (a.due && a.due < today() ? 'color:#c0392b;border-color:#c0392b' : '') + '">') + (dt ? ' <span class="mut">(' + frDate(dt) + ')</span>' : '') + '</span></label><button class="rl-b" onclick="Releves.actDel(\'' + relId + '\',\'' + a.id + '\')" aria-label="Supprimer">✕</button></div>';
   }
   function actsRefresh() { var b = $('rl-acts'); if (b) b.innerHTML = actsHtml(); badges(); }
   function actAdd(txt) {
@@ -369,11 +407,30 @@
     var i2 = $('rl-act-in'); if (i2) i2.value = '';
   }
   function actFind(relId) { return (_cur && _cur.id === relId) ? _cur : _rel.filter(function(r){ return r.id === relId; })[0]; }
-  function actSave(r) { if (_cur && r.id === _cur.id) { persistSoon(); return; } col().doc(r.id).update({ actions: r.actions, updatedAt: Date.now() }).catch(function(){ note('Enregistrement impossible', 'err'); }); }
+  function actSave(r) { if (_cur && r.id === _cur.id) { persistSoon(); syncActs(); return; } col().doc(r.id).update({ actions: r.actions, updatedAt: Date.now() }).catch(function(){ note('Enregistrement impossible', 'err'); }); emitActs(); }
   function actTick(relId, id, v) {
     var r = actFind(relId); if (!r) return; (r.actions || []).forEach(function(a){ if (a.id === id) { a.done = !!v; a.doneAt = v ? Date.now() : null; } });
     actSave(r); actsRefresh(); var l = $('rl-actslist'); if (l) l.innerHTML = openListHtml();
   }
+  function actDue(relId, id, v) {
+    var r = actFind(relId); if (!r) return; (r.actions || []).forEach(function(a){ if (a.id === id) a.due = v || ''; });
+    actSave(r); actsRefresh(); var l = $('rl-actslist'); if (l) l.innerHTML = openListHtml();
+  }
+  function emitActs() { try { window.dispatchEvent(new CustomEvent('cohor-actions')); } catch(e){} }
+  // copie les actions du relevé en cours dans la liste en mémoire (l'agenda s'en sert)
+  function syncActs() {
+    if (!_cur) return; var f = _rel.filter(function(x){ return x.id === _cur.id; })[0];
+    if (f) f.actions = JSON.parse(JSON.stringify(_cur.actions || [])); else if ((_cur.actions || []).length) _rel.unshift(JSON.parse(JSON.stringify(_cur)));
+    emitActs();
+  }
+  function actionsDue() {
+    return ready().then(function(){
+      var out = [];
+      _rel.forEach(function(r){ (r.actions || []).forEach(function(a){ if (!a.done) out.push({ relId: r.id, id: a.id, t: a.t, due: a.due || '', magasin: r.magasin || '', ville: r.ville || '', date: r.date }); }); });
+      return out;
+    });
+  }
+  function openRel(id) { return ready().then(function(){ ouvrir(id); try { showSection('releves', null, null); } catch(e){} render(); }); }
   function actDel(relId, id) {
     var r = actFind(relId); if (!r) return; r.actions = (r.actions || []).filter(function(a){ return a.id !== id; });
     actSave(r); actsRefresh(); var l = $('rl-actslist'); if (l) l.innerHTML = openListHtml();
@@ -915,17 +972,33 @@
     ov.style.cssText = 'position:fixed;inset:0;z-index:99997;background:#000;display:flex;flex-direction:column';
     ov.innerHTML = '<div style="display:flex;align-items:center;gap:8px;padding:10px 12px;background:#14120F;color:#fff;font:600 .85rem Inter,sans-serif">'
       + '<span style="flex:1">📷 Scanner · ' + esc(ensNom(ens)) + '</span><span id="rl-sc-n" style="opacity:.8;font-weight:500"></span>'
-      + '<button class="rl-b" id="rl-sc-zoom" style="display:none" onclick="Releves.scanZoom()">🔍 ×1</button><button class="rl-b" id="rl-sc-torch" style="display:none" onclick="Releves.scanTorch()">🔦</button><button class="rl-b" onclick="Releves.scanPhoto()">📸 Photo</button><input type="file" id="rl-sc-file" accept="image/*" capture="environment" style="display:none" onchange="Releves.photoChosen(this)">'
+      + '<button class="rl-b' + (fastOn() ? ' p' : '') + '" id="rl-sc-fast" onclick="Releves.scanFast()" title="Pointe automatiquement les produits reconnus">⚡ Rapide</button><button class="rl-b" id="rl-sc-zoom" style="display:none" onclick="Releves.scanZoom()">🔍 ×1</button><button class="rl-b" id="rl-sc-torch" style="display:none" onclick="Releves.scanTorch()">🔦</button><button class="rl-b" onclick="Releves.scanPhoto()">📸 Photo</button><input type="file" id="rl-sc-file" accept="image/*" capture="environment" style="display:none" onchange="Releves.photoChosen(this)">'
       + '<button class="rl-b p" onclick="Releves.scanClose()">Terminé</button></div>'
       + '<div style="position:relative;flex:1;min-height:0;background:#000"><video id="rl-sc-v" playsinline muted autoplay style="width:100%;height:100%;object-fit:cover"></video>'
       + '<div style="position:absolute;left:8%;right:8%;top:26%;height:30%;border:2px solid rgba(255,255,255,.85);border-radius:12px;box-shadow:0 0 0 999px rgba(0,0,0,.35);pointer-events:none"></div>'
-      + '<div id="rl-sc-st" style="position:absolute;left:0;right:0;top:12px;text-align:center;color:#fff;font:500 .8rem Inter,sans-serif;text-shadow:0 1px 3px #000">Initialisation de la caméra…</div></div>'
+      + '<div id="rl-sc-banner"></div><div id="rl-sc-st" style="position:absolute;left:0;right:0;top:12px;text-align:center;color:#fff;font:500 .8rem Inter,sans-serif;text-shadow:0 1px 3px #000">Initialisation de la caméra…</div></div>'
       + '<div style="background:#fff;padding:8px 12px;display:flex;gap:8px"><input id="rl-sc-man" class="rl-in" inputmode="numeric" placeholder="ou saisir l\'EAN à la main" style="flex:1"><button class="rl-b" onclick="Releves.scanManual()">OK</button></div>'
       + '<div id="rl-sc-sheet" style="display:none;background:#fff;padding:14px;max-height:62vh;overflow:auto;border-top:3px solid var(--brand)"></div>';
     document.body.appendChild(ov);
     _scan = { ov: ov, stream: null, video: $('rl-sc-v'), reader: null, raf: null, busy: false, last: { c: '', t: 0 }, n: 0, found: 0, hl: 0, torch: false };
     loadEanMap(ens).then(function(){ camStart(); });
   }
+  function fastOn() { try { return localStorage.getItem('rl_fast') === '1'; } catch(e){ return false; } }
+  function scanFast() {
+    var v = !fastOn(); try { localStorage.setItem('rl_fast', v ? '1' : '0'); } catch(e){}
+    var b = $('rl-sc-fast'); if (b) b.classList.toggle('p', v);
+    note(v ? '⚡ Mode rapide : les produits reconnus sont pointés « présent » automatiquement' : 'Mode rapide désactivé', 'ok');
+  }
+  var _bnT = null, _bnUndo = null;
+  function bannerHide() { clearTimeout(_bnT); var b = $('rl-sc-banner'); if (b) b.style.display = 'none'; }
+  function bannerShow(line, prev) {
+    var b = $('rl-sc-banner'); if (!b) return; _bnUndo = { k: line.k, prev: prev };
+    b.innerHTML = '<div class="bn">✅ ' + esc(line.l) + (line.x != null ? ' · ' + eur(line.x) : '') + '</div><div class="rl-bar" style="margin:0"><button class="rl-b" onclick="Releves.fastAbs()">✖ Absent</button><button class="rl-b" onclick="Releves.fastPrix()">€ Prix</button><button class="rl-b" onclick="Releves.fastUndo()">↩︎ Annuler</button></div>';
+    b.style.display = 'block'; clearTimeout(_bnT); _bnT = setTimeout(bannerHide, 3000);
+  }
+  function fastAbs() { if (!_bnUndo) return; var l = lineBy(_bnUndo.k); if (l) { l.p = false; l.x = null; l.s = true; persistSoon(); } bannerHide(); }
+  function fastUndo() { if (!_bnUndo) return; var l = lineBy(_bnUndo.k); if (l) { l.p = _bnUndo.prev.p; l.x = _bnUndo.prev.x; l.s = _bnUndo.prev.s; persistSoon(); } bannerHide(); scanStatus('↩︎ annulé'); }
+  function fastPrix() { if (!_bnUndo || !_scan) return; var l = lineBy(_bnUndo.k); bannerHide(); if (l) { _scan.busy = true; showSheet(l.e || _scan.last.c, l); } }
   function scanStatus(t) { var e = $('rl-sc-st'); if (e) e.textContent = t; }
   function scanCount() { var e = $('rl-sc-n'); if (e && _scan) e.textContent = _scan.n + ' scannés · ' + _scan.found + ' dans la liste'; }
   var LIB_ZXW = 'https://cdn.jsdelivr.net/npm/zxing-wasm@3.1.5/dist/iife/reader/index.js';
@@ -1096,7 +1169,12 @@
     // plusieurs références partagent ce code (ex. deux codes Biocoop pour un même produit) : on demande laquelle
     if (lines.length > 1) { _scan.found++; scanCount(); return showChoice(c, lines); }
     var line = lines[0] || null; if (line) _scan.found++;
-    scanCount(); showSheet(c, line);
+    scanCount();
+    if (line && fastOn() && !manual) {   // mode rapide : présent d'office, on reprend le scan tout de suite
+      var prev = { p: line.p, x: line.x, s: line.s }; line.p = true; line.s = true; if (!line.e) line.e = c;
+      persistSoon(); bannerShow(line, prev); scanStatus('✓ ' + line.l.slice(0, 40)); _scan.busy = false; return;
+    }
+    bannerHide(); showSheet(c, line);
   }
 
   // Fiche affichée après un scan
@@ -1171,7 +1249,7 @@
     _scan.hl++; showSheet(ean, l);
   }
   function scanClose() {
-    var sc = _scan; if (!sc) return; _scan = null;
+    var sc = _scan; if (!sc) return; _scan = null; clearTimeout(_bnT);
     try { clearTimeout(sc.raf); } catch(e){}
     try { if (sc.reader) sc.reader.reset(); } catch(e){}
     try { if (sc.stream) sc.stream.getTracks().forEach(function(t){ t.stop(); }); } catch(e){}
@@ -1252,14 +1330,14 @@
     });
   }
 
-  function mount() { css(); var first = !_unsub; if (_view === 'edit' && _cur) { render(); return; } _view = 'list'; render(); if (first) loadRef().then(function(){ load(); render(); }); }
+  function mount() { css(); var first = !_unsub; if (_view === 'edit' && _cur) { render(); if (first) loadRef().then(function(){ load(); }); return; } _view = 'list'; render(); if (first) loadRef().then(function(){ load(); render(); }); }
 
-  window.Releves = { phAdd: phAdd, phTake: phTake, phDel: phDel, phCap: phCap, noteJump: noteJump, mic: mic, ranger: ranger, rangerUndo: rangerUndo, iaApply: iaApply, iaCancel: iaCancel, iaNotes: function(v){ if (_ia) _ia.notes = v; }, iaInter: function(k, v){ if (_ia) _ia.inter[k] = v; }, iaAct: function(i, v){ if (_ia && _ia.acts[i]) _ia.acts[i].on = !!v; }, actsRefresh: actsRefresh, actAdd: actAdd, actTick: actTick, actDel: actDel, terminer: terminer, inter: setInter, interReuse: interReuse, ficheClient: ficheClient, forStore: forStore, noteClose: noteClose, rapport: rapport, forClient: forClient, inRange: inRange, mount: mount, nouveau: nouveau, ouvrir: ouvrir, retour: retour, supprimer: supprimer, pt: togglePoint, prix: setPrix, nt: setNote, meta: setMeta,
+  window.Releves = { actDue: actDue, actionsDue: actionsDue, openRel: openRel, demarrer: demarrer, recentStores: recentStores, ensChoices: ensChoices, isEditing: isEditing, scanFast: scanFast, fastAbs: fastAbs, fastUndo: fastUndo, fastPrix: fastPrix, phAdd: phAdd, phTake: phTake, phDel: phDel, phCap: phCap, noteJump: noteJump, mic: mic, ranger: ranger, rangerUndo: rangerUndo, iaApply: iaApply, iaCancel: iaCancel, iaNotes: function(v){ if (_ia) _ia.notes = v; }, iaInter: function(k, v){ if (_ia) _ia.inter[k] = v; }, iaAct: function(i, v){ if (_ia && _ia.acts[i]) _ia.acts[i].on = !!v; }, actsRefresh: actsRefresh, actAdd: actAdd, actTick: actTick, actDel: actDel, terminer: terminer, inter: setInter, interReuse: interReuse, ficheClient: ficheClient, forStore: forStore, noteClose: noteClose, rapport: rapport, forClient: forClient, inRange: inRange, mount: mount, nouveau: nouveau, ouvrir: ouvrir, retour: retour, supprimer: supprimer, pt: togglePoint, prix: setPrix, nt: setNote, meta: setMeta,
     dash: function(){ _view = 'dash'; render(); }, dashEns: function(v){ _ensSel = v; renderDash(); },
     addLibre: addLibre, delLibre: delLibre, compare: function(){ _view = 'compare'; render(); }, pdf: pdf, pdfSave: pdfSave, pdfShare: pdfShare, pdfOpen: pdfOpen, pdfCompare: pdfCompare, search: search, filtEns: filtEns, ensChange: ensChange,
     q2: function(v){ _q = v; renderRows(); }, fam: function(v){ _fam = v; renderRows(); }, only: function(){ _only = _only === 'todo' ? 'all' : 'todo'; renderEdit(); },
     cmpFam: function(v){ _cmpFam = v; renderCompare(); }, cmpEnsSet: function(v){ _ensSel = v; _cmpFam = ''; renderCompare(); },
     scanOpen: scanOpen, scanClose: scanClose, scanManual: scanManual, scanOk: scanOk, scanAbs: scanAbs, scanSkip: scanSkip, scanPick: scanPick, scanChoose: scanChoose, scanSearch: scanSearch, scanLibre: scanLibre, scanTorch: scanTorch, scanZoom: scanZoom, scanPhoto: scanPhoto, photoChosen: photoChosen, restAbs: markRestAbsent,
     refEdit: refEdit, refInfo: refInfo, refImport: refImport, refNew: refNew, refReset: refReset, refDel: refDel,
-    _t: { align: alignRel, eanOk: eanOk, eanNorm: eanNorm, sim: sim, onCode: function(c){ return onCode(c, true); }, stats: stats, parsePrix: parsePrix, refList: refList, ensList: ensList } };
+    _t: { align: alignRel, eanOk: eanOk, eanNorm: eanNorm, sim: sim, onCode: function(c, man){ return onCode(c, man === undefined ? true : man); }, stats: stats, parsePrix: parsePrix, refList: refList, ensList: ensList } };
 })();
