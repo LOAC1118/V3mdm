@@ -5092,11 +5092,20 @@ function startListeners() {
       cdbEnrichFromOrders(dashCaRows);
     }
     cdbFsLoaded = true;
+    try { var w = document.getElementById('cdb-warn'); if (w && cdbContacts.length) w.remove(); } catch(e){}
+    try { refreshDashboard(); } catch(e){}
     onLoad();
   }
 
-  if (cdbScopedCommercial()) {
-    // Commercial cloisonné : union de deux abonnements (owner==uid ∪ ownerEmail==email).
+  function cdbWarn(err) {
+    try {
+      var d = document.getElementById('sec-dashboard'); if (!d) return;
+      var b = document.getElementById('cdb-warn');
+      if (!b) { b = document.createElement('div'); b.id = 'cdb-warn'; b.style.cssText = 'background:#fff3cd;border:1px solid #e0b84a;color:#7a5a00;border-radius:12px;padding:10px 12px;margin:0 0 12px;font-size:.82rem'; d.insertBefore(b, d.firstChild); }
+      b.textContent = '⚠ Base clients non chargée (' + ((err && (err.code || err.message)) || 'erreur') + ')' + ((err && err.code === 'permission-denied') ? ' — règles Firestore à publier / compte non reconnu comme manager.' : '.');
+    } catch(e){}
+  }
+  function cdbScopedListen() {
     var _col = bcol('contacts');
     var _mail = (currentUser.email || '').toLowerCase();
     var _mapOwner = {}, _mapEmail = {};
@@ -5109,19 +5118,23 @@ function startListeners() {
     var uOwner = _col.where('owner', '==', currentUser.uid).onSnapshot(function(snap) {
       _mapOwner = {}; snap.forEach(function(d){ var x = d.data(); x.id = d.id; _mapOwner[d.id] = x; });
       _merge();
-    }, function(err){ console.warn('[CDB] scope owner:', err); onLoad(); });
+    }, function(err){ console.warn('[CDB] scope owner:', err); cdbWarn(err); onLoad(); });
     var uEmail = _col.where('ownerEmail', '==', _mail).onSnapshot(function(snap) {
       _mapEmail = {}; snap.forEach(function(d){ var x = d.data(); x.id = d.id; _mapEmail[d.id] = x; });
       _merge();
-    }, function(err){ console.warn('[CDB] scope email:', err); onLoad(); });
+    }, function(err){ console.warn('[CDB] scope email:', err); cdbWarn(err); onLoad(); });
     listeners.push(uOwner); listeners.push(uEmail);
+  }
+  if (cdbScopedCommercial()) {
+    cdbScopedListen();
   } else {
     // Manager / prod : la collection entière.
     var uContacts = bcol('contacts').onSnapshot(function(snap) {
       cdbApply(snap.docs.map(function(d){ var data = d.data(); data.id = d.id; return data; }));
     }, function(err) {
       console.warn('[CDB] onSnapshot erreur:', err);
-      onLoad();
+      cdbWarn(err);
+      if (err && err.code === 'permission-denied') cdbScopedListen(); else onLoad();   // repli : seulement mes contacts
     });
     listeners.push(uContacts);
   }
@@ -16138,7 +16151,7 @@ if ('serviceWorker' in navigator) {
 <script src="notes.js?v=5"></script>
 <script src="retour-visite.js?v=5"></script>
 <script src="releves.js?v=21"></script>
-<script src="mobile-ux.js?v=1"></script>
+<script src="mobile-ux.js?v=2"></script>
 <script src="mail.js?v=4"></script>
 <script src="analyse-client.js?v=6"></script>
 <script src="assistant.js?v=5"></script>

@@ -131,12 +131,12 @@
       '.mux-tabs{display:flex;width:100%;padding-bottom:env(safe-area-inset-bottom,0px)}',
       '.mux-tab{flex:1;border:0;background:none;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;color:#8a857d;font:600 .66rem var(--fd,system-ui,sans-serif);min-height:56px;cursor:pointer;-webkit-tap-highlight-color:transparent}',
       '.mux-tab .mux-ico svg{width:24px;height:24px;display:block}.mux-tab.on{color:var(--brand,#f5511e)}',
-      '.mux-tab.main{margin-top:-14px}.mux-tab.main .mux-ico{background:var(--brand,#f5511e);color:#fff;width:50px;height:50px;border-radius:50%;display:flex;align-items:center;justify-content:center;box-shadow:0 6px 16px -4px rgba(245,81,30,.7)}.mux-tab.main .mux-lbl{color:var(--brand,#f5511e)}',
-      '.main{padding-bottom:150px !important}',
+      '.mux-tab.main{margin-top:-16px;justify-content:flex-start;padding-top:0}.mux-tab.main .mux-ico{background:var(--brand,#f5511e);color:#fff;flex:0 0 50px;width:50px;height:50px;border-radius:50%;display:flex;align-items:center;justify-content:center;box-shadow:0 6px 16px -4px rgba(245,81,30,.7)}.mobile-navbar{overflow:visible !important}.mux-tab.main .mux-lbl{color:var(--brand,#f5511e)}',
+      '.main{padding-bottom:calc(150px + env(safe-area-inset-bottom,0px)) !important}',
       // bulles flottantes : plus petites, au-dessus de la barre ; masquées pendant un relevé
-      '#asst-fab{width:42px !important;height:42px !important;font-size:1.2rem !important;right:12px !important;bottom:140px !important}',
-      '#bot-fab{width:42px !important;height:42px !important;right:12px !important;bottom:88px !important}#bot-fab svg{width:21px !important;height:21px !important}',
-      '#brand-fab{bottom:80px !important;left:10px !important;padding:7px 11px !important;font-size:.72rem !important;opacity:.92}',
+      '#asst-fab{width:42px !important;height:42px !important;font-size:1.2rem !important;right:12px !important;bottom:calc(62px + env(safe-area-inset-bottom,0px) + 62px) !important}',
+      '#bot-fab{width:42px !important;height:42px !important;right:12px !important;bottom:calc(62px + env(safe-area-inset-bottom,0px) + 12px) !important}#bot-fab svg{width:21px !important;height:21px !important}',
+      '#brand-fab{bottom:calc(62px + env(safe-area-inset-bottom,0px) + 12px) !important;left:10px !important;padding:7px 11px !important;font-size:.72rem !important;opacity:.92}',
       'body.rl-editing #asst-fab,body.rl-editing #bot-fab,body.rl-editing #brand-fab{display:none !important}',
       // saisie : 16 px = pas de zoom d\'iOS ; zones tactiles de 44 px
       'input:not([type=checkbox]):not([type=radio]):not([type=file]):not([type=range]),select,textarea{font-size:16px !important}',
