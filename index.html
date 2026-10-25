@@ -2182,6 +2182,7 @@ thead th.ts-active { text-decoration:underline; text-underline-offset:3px; }
       <div style="font-family:var(--fdisp);font-size:.9rem;color:var(--g900);flex:1;min-width:140px;">🌾 Bon de Commande MDM 2026</div>
       <button class="btn btn-ghost" style="font-size:1rem;padding:.34rem .58rem;line-height:1;" onclick="openBdcImport()" title="Importer une commande" aria-label="Importer une commande">📄</button>
       <button class="btn btn-ghost" style="font-size:1rem;padding:.34rem .58rem;line-height:1;color:var(--brand);border-color:rgba(var(--brand-rgb),.35);" onclick="if(typeof BdcSuggest!=='undefined')BdcSuggest.open();" title="Suggérer des produits" aria-label="Suggérer">🧠</button>
+      <button class="btn btn-ghost" style="font-size:1rem;padding:.34rem .58rem;line-height:1;color:var(--brand);border-color:rgba(var(--brand-rgb),.35);" onclick="if(typeof BdcMail!=='undefined')BdcMail.open();" title="Importer une commande (mail, Excel, PDF)" aria-label="Importer une commande">📥</button>
       <button class="btn btn-ghost" style="font-size:1rem;padding:.34rem .58rem;line-height:1;color:var(--brand);border-color:rgba(var(--brand-rgb),.35);" onclick="if(typeof RemisesAccord!=='undefined')RemisesAccord.open();" title="Remises" aria-label="Remises">💰</button>
       <button class="btn btn-ghost" style="font-size:1rem;padding:.34rem .58rem;line-height:1;color:#a78bfa;border-color:rgba(167,139,250,.3);" onclick="boxOpen()" title="Création BOX" aria-label="Création BOX">📦</button>
       <button class="btn btn-ghost" style="font-size:1rem;padding:.34rem .58rem;line-height:1;color:#e8c98a;border-color:rgba(245,158,11,.3);" onclick="openStockImport()" title="Mettre à jour les stocks" aria-label="Mettre à jour les stocks">🔄</button>
@@ -16144,6 +16145,7 @@ if ('serviceWorker' in navigator) {
 <script src="crm-data.js?v=2"></script>
 <script src="assortiment.js?v=1"></script>
 <script src="bdc-suggest.js?v=1"></script>
+<script src="bdc-mail.js?v=2"></script>
 <script src="alertes.js?v=1"></script>
 <script src="paie-sim.js?v=1"></script>
 <script src="remises-accord.js?v=1"></script>
