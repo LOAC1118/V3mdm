@@ -218,6 +218,7 @@
     var s = document.createElement('style'); s.id = 'rl-css';
     s.textContent = [
       '.rl{max-width:900px;margin:0 auto;padding:2px 2px 90px;font-family:"Inter",sans-serif;color:#1c1a17}',
+      '#rl-mic.on{background:var(--brand);color:#fff}',
       '.rl-phs{display:flex;flex-wrap:wrap;gap:8px}.rl-ph{position:relative;width:calc(50% - 4px)}.rl-ph img{width:100%;border-radius:8px;display:block}.rl-ph input{width:100%;margin-top:3px;font-size:.75rem;box-sizing:border-box}',
       '.rl-phx{position:absolute;top:4px;right:4px;border:0;background:rgba(0,0,0,.6);color:#fff;border-radius:50%;width:26px;height:26px;cursor:pointer}',
       '.rl h2{font:600 20px "Fraunces",Georgia,serif;margin:4px 0}.rl .mut{font-size:.78rem;color:#8a857d}',
@@ -359,7 +360,7 @@
     return h;
   }
   function actRow(a, relId, dt) {
-    return '<div class="rl-bar" style="margin:2px 0;flex-wrap:nowrap"><label style="flex:1;display:flex;gap:8px;align-items:flex-start"><input type="checkbox" ' + (a.done ? 'checked' : '') + ' onchange="Releves.actTick(\'' + relId + '\',\'' + a.id + '\',this.checked)" style="margin-top:3px"><span style="' + (a.done ? 'text-decoration:line-through;color:#888' : '') + '">' + esc(a.t) + (dt ? ' <span class="mut">(' + frDate(dt) + ')</span>' : '') + '</span></label><button class="rl-b" onclick="Releves.actDel(\'' + relId + '\',\'' + a.id + '\')" aria-label="Supprimer">✕</button></div>';
+    return '<div class="rl-bar" style="margin:2px 0;flex-wrap:nowrap"><label style="flex:1;display:flex;gap:8px;align-items:flex-start"><input type="checkbox" ' + (a.done ? 'checked' : '') + ' onchange="Releves.actTick(\'' + relId + '\',\'' + a.id + '\',this.checked)" style="margin-top:3px"><span style="' + (a.done ? 'text-decoration:line-through;color:#888' : '') + '">' + esc(a.t) + (a.due ? ' <span class="mut">· pour le ' + frDate(a.due) + '</span>' : '') + (dt ? ' <span class="mut">(' + frDate(dt) + ')</span>' : '') + '</span></label><button class="rl-b" onclick="Releves.actDel(\'' + relId + '\',\'' + a.id + '\')" aria-label="Supprimer">✕</button></div>';
   }
   function actsRefresh() { var b = $('rl-acts'); if (b) b.innerHTML = actsHtml(); badges(); }
   function actAdd(txt) {
@@ -381,7 +382,7 @@
   function openListHtml() {
     var L = openAll(); if (!L.length) return '';
     return '<div class="rl-card" style="flex-direction:column;align-items:stretch;gap:2px"><div class="t">✅ Actions en cours (' + L.length + ')</div>' + L.slice(0, 15).map(function(x){
-      return '<div class="rl-bar" style="margin:2px 0;flex-wrap:nowrap"><label style="flex:1;display:flex;gap:8px;align-items:flex-start"><input type="checkbox" onchange="Releves.actTick(\'' + x.rel.id + '\',\'' + x.a.id + '\',this.checked)" style="margin-top:3px"><span>' + esc(x.a.t) + ' <span class="mut">· ' + esc(x.rel.magasin) + ' · ' + frDate(x.rel.date) + '</span></span></label></div>'; }).join('') + (L.length > 15 ? '<div class="mut">… et ' + (L.length - 15) + ' autres</div>' : '') + '</div>';
+      return '<div class="rl-bar" style="margin:2px 0;flex-wrap:nowrap"><label style="flex:1;display:flex;gap:8px;align-items:flex-start"><input type="checkbox" onchange="Releves.actTick(\'' + x.rel.id + '\',\'' + x.a.id + '\',this.checked)" style="margin-top:3px"><span>' + esc(x.a.t) + (x.a.due ? ' <span class="mut">· pour le ' + frDate(x.a.due) + '</span>' : '') + ' <span class="mut">· ' + esc(x.rel.magasin) + ' · ' + frDate(x.rel.date) + '</span></span></label></div>'; }).join('') + (L.length > 15 ? '<div class="mut">… et ' + (L.length - 15) + ' autres</div>' : '') + '</div>';
   }
   function terminer() {
     if (!_cur) return; var miss = [];
@@ -392,6 +393,74 @@
     if (miss.length && !confirm('Il manque : ' + miss.join(', ') + '.\nTerminer quand même la visite ?')) return;
     _cur.fini = true; _cur.finiAt = Date.now(); flush(); noteClose();
     persistNow().then(function(){ note('Visite terminée ✓'); if (window.RetourVisite) RetourVisite.quick(visMeta()); });
+  }
+  // ── ✨ Ranger mes notes : l'IA met en forme des notes dictées/tapées en vrac (rien n'est appliqué sans validation) ──
+  var _ia = null, _rec = null, _recOn = false, _iaBusy = false;
+  function micOk() { return !!(window.SpeechRecognition || window.webkitSpeechRecognition); }
+  function mic() {
+    var SR = window.SpeechRecognition || window.webkitSpeechRecognition, ta = $('rl-vnote'); if (!SR || !ta) { note('Utilisez le micro 🎤 du clavier', 'err'); return; }
+    if (_recOn && _rec) { try { _rec.stop(); } catch(e){} return; }
+    _rec = new SR(); _rec.lang = 'fr-FR'; _rec.interimResults = false; _rec.continuous = true;
+    _rec.onresult = function(ev){ var s = ''; for (var k = ev.resultIndex; k < ev.results.length; k++) s += ev.results[k][0].transcript; var t2 = $('rl-vnote'); if (t2 && _cur) { t2.value = (t2.value ? t2.value + ' ' : '') + s.trim(); setMeta('remarque', t2.value); } };
+    _rec.onend = function(){ _recOn = false; var b = $('rl-mic'); if (b) b.classList.remove('on'); };
+    _rec.onerror = function(){ _recOn = false; };
+    try { _rec.start(); _recOn = true; var b = $('rl-mic'); if (b) b.classList.add('on'); } catch(e){}
+  }
+  function iaSystem(existing) {
+    var now = new Date(), J = ['dimanche','lundi','mardi','mercredi','jeudi','vendredi','samedi'];
+    return "Tu es l'assistant d'un commercial terrain (alimentaire bio). On te donne des NOTES BRUTES prises en magasin (dictées ou tapées vite, avec fautes, phrases coupées). Date du jour : " + J[now.getDay()] + ' ' + today() + '. '
+      + 'Réponds UNIQUEMENT par un objet JSON : {"notes":"...","interlocuteur":{"nom":"","fonction":"","tel":"","email":""},"actions":[{"t":"...","echeance":"YYYY-MM-DD ou vide"}]}. Règles : '
+      + '1) "notes" = les mêmes informations, rédigées proprement en français, en puces courtes (une idée par ligne, commençant par "- "), orthographe corrigée, noms de produits conservés tels que dits. '
+      + "2) N'INVENTE RIEN : n'ajoute aucune information, aucun chiffre, aucun nom absents des notes brutes. Si une information est ambiguë, garde-la telle quelle. "
+      + '3) "interlocuteur" = la personne du magasin avec qui le commercial a échangé, seulement si elle est citée ; sinon chaînes vides. '
+      + '4) "actions" = ce que le commercial (ou la société) doit FAIRE ensuite (relancer, envoyer, apporter, rappeler, demander…), formulé à l\'infinitif, court. Résous « jeudi », « la semaine prochaine », « dans 15 jours » en date réelle future dans "echeance" ; vide si aucune échéance n\'est dite. '
+      + (existing && existing.length ? 'Actions DÉJÀ enregistrées (ne pas les répéter) : ' + existing.join(' ; ') + '. ' : '')
+      + 'Ne mets pas les actions dans "notes" si elles sont déjà dans "actions".';
+  }
+  function parseJ(txt) {
+    var s = String(txt || '').trim().replace(/^```(?:json)?/i, '').replace(/```$/, '').trim();
+    try { return JSON.parse(s); } catch(e){}
+    var a = s.indexOf('{'), b = s.lastIndexOf('}'); if (a >= 0 && b > a) { try { return JSON.parse(s.slice(a, b + 1)); } catch(e){} }
+    return null;
+  }
+  function ranger() {
+    if (_iaBusy || !_cur) return; var ta = $('rl-vnote'), raw = ta ? ta.value.trim() : '';
+    if (!raw) { note("Écrivez ou dictez d'abord vos notes", 'err'); return; }
+    if (typeof mlAiCall !== 'function') { note('IA indisponible', 'err'); return; }
+    _iaBusy = true; var b = $('rl-rg'); if (b) { b.disabled = true; b.textContent = '✨ …'; }
+    var ex = (_cur.actions || []).map(function(a){ return a.t; }).concat(otherOpen().map(function(x){ return x.a.t; }));
+    var ctxt = 'Magasin : ' + _cur.magasin + (_cur.ville ? ' (' + _cur.ville + ')' : '') + '. Enseigne : ' + ensNom(relEns(_cur)) + '.\nNOTES BRUTES :\n' + raw;
+    mlAiCall(iaSystem(ex), ctxt).then(function(res){
+      var j = parseJ(res); if (!j || typeof j.notes !== 'string') throw new Error('Réponse illisible, réessayez.');
+      _ia = { raw: raw, notes: j.notes.trim(), inter: j.interlocuteur || {}, acts: (j.actions || []).filter(function(a){ return a && a.t; }).map(function(a){ return { t: String(a.t).trim(), due: /^\d{4}-\d{2}-\d{2}$/.test(a.echeance || '') ? a.echeance : '', on: true }; }) };
+      iaRender();
+    }).catch(function(e){ var r = $('rl-ia'); if (r) r.innerHTML = '<div class="rl-err">' + esc(e && e.message === 'no-key' ? 'Aucune clé IA : configurez-la dans « Assistant IA ».' : ((e && e.message) || 'Erreur IA')) + '</div>'; })
+      .then(function(){ _iaBusy = false; var b2 = $('rl-rg'); if (b2) { b2.disabled = false; b2.textContent = '✨ Ranger mes notes'; } });
+  }
+  function iaRender() {
+    var r = $('rl-ia'); if (!r || !_ia) return; var I = _ia.inter || {}, cur = _cur.interloc || {};
+    function f(k, ph) { return '<input class="rl-in" style="box-sizing:border-box;width:100%" placeholder="' + ph + '" value="' + esc(I[k] || '') + '" oninput="Releves.iaInter(\'' + k + '\',this.value)">'; }
+    var hasInter = I.nom || I.fonction || I.tel || I.email;
+    r.innerHTML = '<div style="border:1px solid #d9d2c3;border-radius:12px;padding:10px;margin:8px 0;background:#faf8f4">'
+      + '<div class="mut" style="margin-bottom:4px"><b>✨ Proposition</b> (modifiable — rien n\'est appliqué avant « Appliquer »)</div>'
+      + '<textarea class="rl-in" style="width:100%;min-height:110px;box-sizing:border-box" oninput="Releves.iaNotes(this.value)">' + esc(_ia.notes) + '</textarea>'
+      + (hasInter ? '<div class="mut" style="margin:8px 0 4px">👤 Interlocuteur détecté' + (cur.nom && cur.nom !== I.nom ? ' (remplacera « ' + esc(cur.nom) + ' »)' : '') + '</div><div style="display:grid;grid-template-columns:1fr 1fr;gap:6px">' + f('nom', 'Nom') + f('fonction', 'Fonction') + f('tel', 'Téléphone') + f('email', 'E-mail') + '</div>' : '')
+      + (_ia.acts.length ? '<div class="mut" style="margin:8px 0 4px">✅ Actions détectées</div>' + _ia.acts.map(function(a, i){ return '<label style="display:flex;gap:8px;align-items:flex-start;margin:2px 0"><input type="checkbox" ' + (a.on ? 'checked' : '') + ' onchange="Releves.iaAct(' + i + ',this.checked)" style="margin-top:3px"><span>' + esc(a.t) + (a.due ? ' <span class="mut">(pour le ' + frDate(a.due) + ')</span>' : '') + '</span></label>'; }).join('') : '')
+      + '<div class="rl-bar" style="margin:10px 0 0"><button class="rl-b p" style="flex:1" onclick="Releves.iaApply()">✓ Appliquer</button><button class="rl-b" onclick="Releves.iaCancel()">Annuler</button></div></div>';
+  }
+  function iaApply() {
+    if (!_ia || !_cur) return; var I = _ia.inter || {};
+    _cur.remarqueAvant = _ia.raw; _cur.remarque = _ia.notes;
+    if (I.nom || I.fonction || I.tel || I.email) { if (I.nom && _cur.interloc && _cur.interloc.nom && norm(_cur.interloc.nom) !== norm(I.nom)) _cur.interloc = {}; _cur.interloc = _cur.interloc || {}; ['nom', 'fonction', 'tel', 'email'].forEach(function(k){ if (I[k]) _cur.interloc[k] = I[k]; }); }
+    _cur.actions = _cur.actions || [];
+    var have = {}; _cur.actions.forEach(function(a){ have[norm(a.t)] = 1; });
+    _ia.acts.forEach(function(a){ if (a.on && !have[norm(a.t)]) _cur.actions.push({ id: actId(), t: a.t, due: a.due || '', done: false, at: Date.now() }); });
+    _ia = null; persistSoon(); noteRefresh(); note('Notes rangées ✓');
+  }
+  function iaCancel() { _ia = null; var r = $('rl-ia'); if (r) r.innerHTML = ''; }
+  function rangerUndo() { if (!_cur || !_cur.remarqueAvant) return; _cur.remarque = _cur.remarqueAvant; delete _cur.remarqueAvant; persistSoon(); noteRefresh(); }
+  function noteRefresh() {   // réaffiche le panneau avec les valeurs à jour
+    var ov = $('rl-visov'); if (ov) { noteClose(); noteJump(); } badges();
   }
   function interInputs() {
     var I = (_cur && _cur.interloc) || {};
@@ -425,8 +494,9 @@
       + '<div class="rl-bar" style="margin:0 0 8px"><b style="font-size:1.05rem">📝 Visite — ' + esc(_cur.magasin) + '</b><span style="flex:1"></span><button class="rl-b p" onclick="Releves.noteClose()">✓ Terminé</button></div>'
       + '<div class="mut" style="margin-bottom:6px"><b>👤 Interlocuteur</b>' + (lastInter() ? ' <a href="#" onclick="Releves.interReuse();return false" style="margin-left:8px">↩︎ Reprendre : ' + esc(lastInter().nom) + '</a>' : '') + '</div>'
       + '<div id="rl-inter" style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:12px">' + interInputs() + '</div>'
-      + '<div class="mut" style="margin-bottom:6px">Notes de visite (échange avec le magasin, implantation, concurrence, actions…)</div>'
+      + '<div class="rl-bar" style="margin:0 0 6px"><span class="mut" style="flex:1">Notes de visite (dictez ou tapez en vrac)</span>' + (micOk() ? '<button class="rl-b" id="rl-mic" onclick="Releves.mic()" aria-label="Dicter">🎤</button>' : '') + '<button class="rl-b p" id="rl-rg" onclick="Releves.ranger()">✨ Ranger mes notes</button></div>'
       + '<textarea id="rl-vnote" class="rl-in" style="width:100%;min-height:120px;box-sizing:border-box" oninput="Releves.meta(\'remarque\',this.value)" onblur="Releves.actsRefresh()">' + esc(_cur.remarque || '') + '</textarea>'
+      + '<div id="rl-ia"></div>' + (_cur.remarqueAvant ? '<div class="mut" style="margin-top:4px"><a href="#" onclick="Releves.rangerUndo();return false">↩︎ Revenir à mes notes d\'origine</a></div>' : '')
       + '<div class="mut" style="margin:12px 0 6px"><b>📷 Photos du magasin</b></div><div id="rl-ph" class="rl-phs"></div>'
       + '<div class="rl-bar" style="margin:8px 0 0"><label class="rl-b p" for="rl-cam">📷 Prendre une photo</label><label class="rl-b" for="rl-gal">🖼️ Galerie</label></div>'
       + '<div class="mut" style="margin:14px 0 6px"><b>✅ Actions à mener</b></div><div id="rl-acts">' + actsHtml() + '</div>'
@@ -1184,7 +1254,7 @@
 
   function mount() { css(); var first = !_unsub; if (_view === 'edit' && _cur) { render(); return; } _view = 'list'; render(); if (first) loadRef().then(function(){ load(); render(); }); }
 
-  window.Releves = { phAdd: phAdd, phTake: phTake, phDel: phDel, phCap: phCap, noteJump: noteJump, actsRefresh: actsRefresh, actAdd: actAdd, actTick: actTick, actDel: actDel, terminer: terminer, inter: setInter, interReuse: interReuse, ficheClient: ficheClient, forStore: forStore, noteClose: noteClose, rapport: rapport, forClient: forClient, inRange: inRange, mount: mount, nouveau: nouveau, ouvrir: ouvrir, retour: retour, supprimer: supprimer, pt: togglePoint, prix: setPrix, nt: setNote, meta: setMeta,
+  window.Releves = { phAdd: phAdd, phTake: phTake, phDel: phDel, phCap: phCap, noteJump: noteJump, mic: mic, ranger: ranger, rangerUndo: rangerUndo, iaApply: iaApply, iaCancel: iaCancel, iaNotes: function(v){ if (_ia) _ia.notes = v; }, iaInter: function(k, v){ if (_ia) _ia.inter[k] = v; }, iaAct: function(i, v){ if (_ia && _ia.acts[i]) _ia.acts[i].on = !!v; }, actsRefresh: actsRefresh, actAdd: actAdd, actTick: actTick, actDel: actDel, terminer: terminer, inter: setInter, interReuse: interReuse, ficheClient: ficheClient, forStore: forStore, noteClose: noteClose, rapport: rapport, forClient: forClient, inRange: inRange, mount: mount, nouveau: nouveau, ouvrir: ouvrir, retour: retour, supprimer: supprimer, pt: togglePoint, prix: setPrix, nt: setNote, meta: setMeta,
     dash: function(){ _view = 'dash'; render(); }, dashEns: function(v){ _ensSel = v; renderDash(); },
     addLibre: addLibre, delLibre: delLibre, compare: function(){ _view = 'compare'; render(); }, pdf: pdf, pdfSave: pdfSave, pdfShare: pdfShare, pdfOpen: pdfOpen, pdfCompare: pdfCompare, search: search, filtEns: filtEns, ensChange: ensChange,
     q2: function(v){ _q = v; renderRows(); }, fam: function(v){ _fam = v; renderRows(); }, only: function(){ _only = _only === 'todo' ? 'all' : 'todo'; renderEdit(); },
