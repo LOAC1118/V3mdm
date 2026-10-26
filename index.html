@@ -1765,6 +1765,10 @@ thead th.ts-active { text-decoration:underline; text-underline-offset:3px; }
       </div>
     </div>
 
+    <!-- ── RDV DU JOUR + ACTIONS À MENER (toujours visibles) ── -->
+    <div id="agenda-today-dash"></div>
+    <div id="agenda-actions-dash"></div>
+
     <!-- ═══ RYTHME D'ACHAT + PRIORITÉS (signature maquette) ═══ -->
     <div id="dash-signature" class="dash-sig-grid">
       <div class="dash-panel">
@@ -1808,8 +1812,6 @@ thead th.ts-active { text-decoration:underline; text-underline-offset:3px; }
 
       <div id="dash-ca-content" style="display:none;padding:0 1rem 1rem;">
 
-        <!-- ── RAPPEL RDV DU JOUR ── -->
-        <div id="agenda-today-dash"></div>
 
         <!-- ── SYNTHÈSE DE L'HISTORIQUE ARCHIVÉ ─────────────────── -->
         <div id="dash-archive-summary"></div>
@@ -16146,7 +16148,7 @@ if ('serviceWorker' in navigator) {
 </div>
 <!-- RADAR CLIENTS — module d'alertes commerciales -->
 <script src="radar.js?v=5"></script>
-<script src="agenda.js?v=5"></script>
+<script src="agenda.js?v=6"></script>
 <script src="visite.js?v=6"></script>
 <script src="notes.js?v=5"></script>
 <script src="retour-visite.js?v=5"></script>

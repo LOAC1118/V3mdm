@@ -59,10 +59,12 @@
     // encart dashboard
     var host = document.getElementById('agenda-today-dash');
     if (host) host.innerHTML = renderTodayCard();
+    var ah = document.getElementById('agenda-actions-dash');
+    if (ah) ah.innerHTML = renderActionsCard();
   }
   function renderTodayCard() {
     var list = todaysRdv(), aj = actsDueOn(todayStr()), late = actsLate();
-    if (!list.length && !aj.length && !late.length) return '';
+    if (!list.length) return '';
     var actHtml = late.concat(aj).slice(0, 6).map(function(a){
       var isLate = a.due < todayStr();
       return '<div style="display:flex;align-items:flex-start;gap:8px;padding:6px 0;border-top:1px solid var(--border);"><input type="checkbox" style="margin-top:3px;width:20px;height:20px" onchange="Agenda.tick(\''+a.relId+'\',\''+a.id+'\',this.checked)">'
@@ -78,8 +80,28 @@
       + '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.3rem;">'
       + '<div style="font-family:\'Sora\',sans-serif;font-weight:600;color:#14120F;">'+(list.length?'📅 Vos rendez-vous du jour':'📅 À faire aujourd\'hui')+'</div>'
       + '<a onclick="showSection(\'agenda\',null,this)" style="font-size:.75rem;color:var(--brand-d);cursor:pointer;">Ouvrir l\'agenda →</a></div>'
-      + items + (actHtml ? '<div style="font-size:.72rem;font-weight:700;color:#8A8F86;margin:8px 0 2px">✅ Actions à faire</div>' + actHtml : '') + '</div>';
+      + items + '' + '</div>';
   }
+  // carte « Actions à mener » du tableau de bord : toutes les actions ouvertes, en retard d'abord
+  function renderActionsCard() {
+    if (!_acts.length) return '';
+    var t = todayStr();
+    var L = _acts.slice().sort(function(a, b){ return (a.due ? 0 : 1) - (b.due ? 0 : 1) || String(a.due).localeCompare(String(b.due)); });
+    var late = L.filter(function(a){ return a.due && a.due < t; }).length;
+    var rows = L.slice(0, 6).map(function(a){
+      var isLate = a.due && a.due < t, isToday = a.due === t, dd = a.due ? a.due.split('-').reverse().slice(0, 2).join('/') : '';
+      return '<div style="display:flex;align-items:flex-start;gap:10px;padding:8px 0;border-top:1px solid var(--border);">'
+        + '<input type="checkbox" style="margin-top:2px;width:22px;height:22px;flex:0 0 auto" onchange="Agenda.tick(\''+a.relId+'\',\''+a.id+'\',this.checked)">'
+        + '<div style="flex:1;min-width:0;cursor:pointer" onclick="Agenda.openAct(\''+a.relId+'\')"><div style="font-weight:600;font-size:.86rem;color:#14120F;">'+esc(a.t)+'</div>'
+        + '<div style="font-size:.72rem;color:'+(isLate?'#c0392b':'#8A8F86')+';">'+esc(a.magasin)+(a.ville?' · '+esc(a.ville):'')+' · '+(a.due?(isLate?'⚠ en retard ('+dd+')':isToday?'aujourd\'hui':'pour le '+dd):'sans échéance')+'</div></div></div>';
+    }).join('');
+    return '<div class="card" style="padding:1rem 1.1rem;margin-bottom:1.25rem;border-radius:16px;">'
+      + '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.3rem;">'
+      + '<div style="font-family:\'Sora\',sans-serif;font-weight:600;color:#14120F;">✅ Actions à mener <span style="font-weight:500;color:#8A8F86;font-size:.8rem">('+_acts.length+(late?' · <span style="color:#c0392b">'+late+' en retard</span>':'')+')</span></div>'
+      + '<a onclick="Agenda.showAll()" style="font-size:.75rem;color:var(--brand-d);cursor:pointer;">Tout voir →</a></div>'
+      + rows + (L.length > 6 ? '<div style="font-size:.74rem;color:#8A8F86;padding-top:6px">+ '+(L.length-6)+' autre(s)</div>' : '') + '</div>';
+  }
+  function showAll() { try { _view = 'list'; showSection('agenda', null, null); } catch(e){} setTimeout(render, 120); }
   function tick(relId, id, v) { try { Releves.actTick(relId, id, v); } catch(e){} setTimeout(loadActs, 300); }
   function openAct(relId) { try { Releves.openRel(relId); } catch(e){} }
 
@@ -142,13 +164,13 @@
   function renderList() {
     var t = todayStr();
     var up = _rdv.filter(function(r){ return r.date >= t; });
-    var withDue = _acts.filter(function(a){ return a.due; }).sort(function(a,b){ return a.due.localeCompare(b.due); });
-    var noDue = _acts.length - withDue.length;
+    var withDue = _acts.filter(function(a){ return a.due; }).sort(function(a,b){ return a.due.localeCompare(b.due); }).concat(_acts.filter(function(a){ return !a.due; }));
+    var noDue = 0;
     var ah = '';
     if (withDue.length) ah = '<div class="ag-list" style="margin-bottom:12px"><div class="ag-li-sub" style="padding:6px 4px;font-weight:700">✅ Actions de visite à faire'+(noDue?' · '+noDue+' sans échéance':'')+'</div>' + withDue.map(function(a){
-      var late = a.due < t, dd = a.due.split('-');
+      var late = a.due && a.due < t, dd = a.due ? a.due.split('-') : ['', '', ''];
       return '<div class="ag-li"><input type="checkbox" style="width:22px;height:22px;flex:0 0 auto" onchange="Agenda.tick(\''+a.relId+'\',\''+a.id+'\',this.checked)">'
-        + '<div class="ag-li-main" onclick="Agenda.openAct(\''+a.relId+'\')"><div class="ag-li-cli">'+esc(a.t)+'</div><div class="ag-li-sub" style="'+(late?'color:#c0392b;font-weight:700':'')+'">'+(late?'⚠ En retard · ':'')+dd[2]+'/'+dd[1]+' · '+esc(a.magasin)+(a.ville?' · '+esc(a.ville):'')+'</div></div><div class="ag-li-arr">›</div></div>';
+        + '<div class="ag-li-main" onclick="Agenda.openAct(\''+a.relId+'\')"><div class="ag-li-cli">'+esc(a.t)+'</div><div class="ag-li-sub" style="'+(late?'color:#c0392b;font-weight:700':'')+'">'+(late?'⚠ En retard · ':'')+(a.due ? dd[2]+'/'+dd[1] : 'sans échéance')+' · '+esc(a.magasin)+(a.ville?' · '+esc(a.ville):'')+'</div></div><div class="ag-li-arr">›</div></div>';
     }).join('') + '</div>';
     if (!up.length) return ah + '<div class="ag-empty-msg">Aucun rendez-vous à venir. Cliquez « + Nouveau rendez-vous ».</div>';
     var rows = up.map(function(r){
@@ -305,6 +327,6 @@
     mount: mount, setView: setView, move: move, goToday: goToday,
     exportOne: exportOne, exportAll: exportAll,
     openNew: openNew, openEdit: openEdit, save: save, del: del, closeModal: closeModal,
-    updateReminder: updateReminder, load: load, tick: tick, openAct: openAct, loadActs: loadActs
+    updateReminder: updateReminder, load: load, tick: tick, openAct: openAct, showAll: showAll, loadActs: loadActs
   };
 })();
