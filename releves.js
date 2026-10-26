@@ -259,7 +259,7 @@
       '.rl-b{border:1px solid #d9d5cc;background:#fff;border-radius:99px;padding:9px 15px;font:600 .82rem "Inter",sans-serif;cursor:pointer}',
       '.rl-b.p{background:var(--brand);border-color:var(--brand);color:#fff}.rl-b.on{background:#14120F;border-color:#14120F;color:#fff}',
       '.rl-in{padding:9px 11px;border:1px solid #d9d5cc;border-radius:10px;font:inherit;background:#fff;box-sizing:border-box;max-width:100%}',
-      '.rl-card{background:#fff;border:1px solid #e7e3da;border-radius:13px;padding:12px 14px;margin-bottom:8px;display:flex;gap:10px;align-items:center}',
+      '.rl-card{flex-wrap:wrap;background:#fff;border:1px solid #e7e3da;border-radius:13px;padding:12px 14px;margin-bottom:8px;display:flex;gap:10px;align-items:center}',
       '.rl-card .t{font-weight:700;font-size:.92rem}.rl-card .s{font-size:.76rem;color:#8a857d;margin-top:2px}',
       '.rl-tag{display:inline-block;background:#14120F;color:#fff;border-radius:99px;font-size:.62rem;font-weight:700;padding:2px 8px;margin-right:6px;vertical-align:middle}',
       '.rl-kpi{display:flex;gap:8px;flex-wrap:wrap;margin:10px 0}',
@@ -334,6 +334,7 @@
       + '<div class="t"><span class="rl-tag">' + esc(ensNom(relEns(r))) + '</span>' + esc(r.magasin) + (r.fini ? ' <span title="Visite terminée" style="color:#2e9d5b">✓</span>' : '') + (r.ville ? ' <span class="mut">· ' + esc(r.ville) + '</span>' : '') + '</div>'
       + '<div class="s">' + frDate(r.date) + ' · ' + (s.cat ? s.pres + ' / ' + s.total + ' produits de la gamme (' + s.taux + ' %)' : s.pres + ' présents / ' + s.pointed + ' pointés') + (s.moy != null ? ' · prix moyen ' + eur(s.moy) : '') + (r.ownerName ? ' · ' + esc(r.ownerName) : '') + '</div></div>'
       + '<button class="rl-b" onclick="Releves.pdf(\'' + r.id + '\')">📄 PDF</button>'
+      + '<button class="rl-b" onclick="Releves.fiche(\'' + r.id + '\')" title="Fiche de visite : notes, relevé et photos">📝 Fiche</button>'
       + '<button class="rl-b" onclick="Releves.supprimer(\'' + r.id + '\')" title="Supprimer">🗑</button></div>';
   }
   function search(v) { _q = v; var l = $('rl-list'); if (!l) return renderList(); var list = listFiltered();
@@ -562,6 +563,12 @@
     document.body.appendChild(ov); phRefresh();
   }
   function noteClose() { var o = $('rl-visov'); if (o) o.remove(); badges(); }
+  // fiche de visite (notes + relevé + photos) d'un relevé, depuis la liste
+  function fiche(id) {
+    var r = _rel.filter(function(x){ return x.id === id; })[0]; if (!r) return;
+    if (!window.RetourVisite) { note('Module rapport indisponible', 'err'); return; }
+    RetourVisite.quick({ clientId: r.clientId || '', nom: r.magasin, ville: r.ville || '', date: r.date });
+  }
   function rapport() { if (!_cur || !window.RetourVisite) { note('Module rapport indisponible', 'err'); return; } flush(); persistNow().then(function(){ RetourVisite.quick(visMeta()); }); }
 
   var _ctx = null;
@@ -1334,7 +1341,7 @@
 
   function mount() { css(); var first = !_unsub; if (_view === 'edit' && _cur) { render(); if (first) loadRef().then(function(){ load(); }); return; } _view = 'list'; render(); if (first) loadRef().then(function(){ load(); render(); }); }
 
-  window.Releves = { actDue: actDue, actionsDue: actionsDue, openRel: openRel, demarrer: demarrer, recentStores: recentStores, ensChoices: ensChoices, isEditing: isEditing, scanFast: scanFast, fastAbs: fastAbs, fastUndo: fastUndo, fastPrix: fastPrix, phAdd: phAdd, phTake: phTake, phDel: phDel, phCap: phCap, noteJump: noteJump, mic: mic, ranger: ranger, rangerUndo: rangerUndo, iaApply: iaApply, iaCancel: iaCancel, iaNotes: function(v){ if (_ia) _ia.notes = v; }, iaInter: function(k, v){ if (_ia) _ia.inter[k] = v; }, iaAct: function(i, v){ if (_ia && _ia.acts[i]) _ia.acts[i].on = !!v; }, actsRefresh: actsRefresh, actAdd: actAdd, actTick: actTick, actDel: actDel, terminer: terminer, inter: setInter, interReuse: interReuse, ficheClient: ficheClient, forStore: forStore, noteClose: noteClose, rapport: rapport, forClient: forClient, inRange: inRange, mount: mount, nouveau: nouveau, ouvrir: ouvrir, retour: retour, supprimer: supprimer, pt: togglePoint, prix: setPrix, nt: setNote, meta: setMeta,
+  window.Releves = { fiche: fiche, actDue: actDue, actionsDue: actionsDue, openRel: openRel, demarrer: demarrer, recentStores: recentStores, ensChoices: ensChoices, isEditing: isEditing, scanFast: scanFast, fastAbs: fastAbs, fastUndo: fastUndo, fastPrix: fastPrix, phAdd: phAdd, phTake: phTake, phDel: phDel, phCap: phCap, noteJump: noteJump, mic: mic, ranger: ranger, rangerUndo: rangerUndo, iaApply: iaApply, iaCancel: iaCancel, iaNotes: function(v){ if (_ia) _ia.notes = v; }, iaInter: function(k, v){ if (_ia) _ia.inter[k] = v; }, iaAct: function(i, v){ if (_ia && _ia.acts[i]) _ia.acts[i].on = !!v; }, actsRefresh: actsRefresh, actAdd: actAdd, actTick: actTick, actDel: actDel, terminer: terminer, inter: setInter, interReuse: interReuse, ficheClient: ficheClient, forStore: forStore, noteClose: noteClose, rapport: rapport, forClient: forClient, inRange: inRange, mount: mount, nouveau: nouveau, ouvrir: ouvrir, retour: retour, supprimer: supprimer, pt: togglePoint, prix: setPrix, nt: setNote, meta: setMeta,
     dash: function(){ _view = 'dash'; render(); }, dashEns: function(v){ _ensSel = v; renderDash(); },
     addLibre: addLibre, delLibre: delLibre, compare: function(){ _view = 'compare'; render(); }, pdf: pdf, pdfSave: pdfSave, pdfShare: pdfShare, pdfOpen: pdfOpen, pdfCompare: pdfCompare, search: search, filtEns: filtEns, ensChange: ensChange,
     q2: function(v){ _q = v; renderRows(); }, fam: function(v){ _fam = v; renderRows(); }, only: function(){ _only = _only === 'todo' ? 'all' : 'todo'; renderEdit(); },
