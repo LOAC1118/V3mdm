@@ -1409,7 +1409,7 @@
           }
           if (l.p === false && pm.length >= 2) {
             var seen = pm.filter(function(m){ return m[l.k] && m[l.k].p === true; }).length, tot = pm.filter(function(m){ return m[l.k] && (m[l.k].p === true || m[l.k].p === false); }).length;
-            if (tot >= 2 && seen / tot >= 0.5) push.push({ l: l.l, seen: seen, tot: tot });
+            if (tot >= 2 && seen / tot >= 0.5) push.push({ l: l.l, seen: seen, tot: tot, c: l.c, e: l.e || '', f: l.f || '' });
           }
           if (pv && pv[l.k]) { if (pv[l.k].p === true && l.p === false) newAbs.push(l.l); if (pv[l.k].p === false && l.p === true) newPres.push(l.l); }
         });
@@ -1419,7 +1419,9 @@
         var ps = prev ? stats(prev) : null, tauxPeers = peers.map(stats).filter(function(x){ return x.taux != null; });
         out.push({ id: r.id, ens: ens, ensNom: ensNom(ens), date: r.date, n: L.length, stats: s, remarque: r.remarque || '',
           prevDate: prev ? prev.date : null, prevTaux: ps ? ps.taux : null, newAbs: newAbs.slice(0, 8), newPres: newPres.slice(0, 8),
-          ecarts: ecarts.slice(0, 6), toPush: push.slice(0, 8), nPeers: peers.length,
+          ecarts: ecarts.slice(0, 6), toPush: push.slice(0, 15), nPeers: peers.length,
+          hist: L.slice().reverse().map(function(x){ var sx = stats(x); return { date: x.date, taux: sx.taux, pres: sx.pres, pointed: sx.pointed, total: sx.total }; }),
+          lines: (r.lignes || []).filter(function(l){ return !l.libre && (l.p === true || l.p === false); }).map(function(l){ return { c: l.c, l: l.l, e: l.e || '', p: l.p, f: l.f || '' }; }),
           tauxPeers: tauxPeers.length ? Math.round(tauxPeers.reduce(function(a, x){ return a + x.taux; }, 0) / tauxPeers.length) : null,
           ratio: ratios.length >= 3 ? ratios.reduce(function(a,b){ return a + b; }, 0) / ratios.length : null,
           dates: L.map(function(x){ return x.date; }) });

@@ -418,6 +418,78 @@
 
 
   // ── Relevés faits en magasin avec le CRM (module Relevés) ──
+  // ── Évolution du référencement visite après visite ──
+  function histHtml(r) {
+    var H = (r.hist || []).filter(function(x){ return x.taux != null; });
+    if (H.length < 2) return '<div class="anc-mut" style="margin-top:6px">Évolution : un second relevé permettra de suivre la progression.</div>';
+    var w = 300, hgt = 56, n = H.length, mx = Math.max(100, Math.max.apply(null, H.map(function(x){ return x.taux; })));
+    var pts = H.map(function(x, i){ return { x: (n === 1 ? w / 2 : 8 + i * (w - 16) / (n - 1)), y: hgt - 6 - (x.taux / mx) * (hgt - 14), d: x }; });
+    var line = pts.map(function(q){ return q.x.toFixed(1) + ',' + q.y.toFixed(1); }).join(' ');
+    var svg = '<svg viewBox="0 0 ' + w + ' ' + hgt + '" style="width:100%;height:64px"><polyline points="' + line + '" fill="none" stroke="var(--brand)" stroke-width="2"/>'
+      + pts.map(function(q){ return '<circle cx="' + q.x.toFixed(1) + '" cy="' + q.y.toFixed(1) + '" r="3.5" fill="var(--brand)"><title>' + dFr(q.d.date) + ' : ' + q.d.taux + ' % (' + q.d.pres + ' présents)</title></circle>'; }).join('') + '</svg>';
+    var first = H[0], last = H[H.length - 1], dlt = last.taux - first.taux;
+    var rows = H.slice().reverse().slice(0, 5).map(function(x, i, A){ var nx = A[i + 1], dd = nx ? x.taux - nx.taux : null;
+      return '<tr><td>' + dFr(x.date) + '</td><td><b>' + x.taux + ' %</b></td><td>' + x.pres + ' présents</td><td>' + (dd == null ? '' : '<span class="' + (dd >= 0 ? 'anc-pos' : 'anc-neg') + '">' + (dd >= 0 ? '+' : '') + dd + ' pts</span>') + '</td></tr>'; }).join('');
+    return '<div class="anc-li" style="margin-top:8px"><b>Évolution du référencement</b> <span class="anc-mut">· ' + H.length + ' relevés · depuis le ' + dFr(first.date) + ' : <b class="' + (dlt >= 0 ? 'anc-pos' : 'anc-neg') + '">' + (dlt >= 0 ? '+' : '') + dlt + ' pts</b></span>' + svg
+      + '<table class="anc-t"><tbody>' + rows + '</tbody></table></div>';
+  }
+  // ── Croisement commandes (BDC) × rayon : commandé mais absent, opportunités de référencement ──
+  var _ord = null;
+  function ordersFor(c) {
+    if (!window.CRMData) return Promise.resolve(null);
+    return CRMData.commandes().then(function(L){
+      var k = CRMData._slug(c.nom || ''); if (!k) return [];
+      return L.filter(function(o){ return o.key && (o.key === k || (k.length >= 6 && o.key.length >= 6 && (o.key.indexOf(k) !== -1 || k.indexOf(o.key) !== -1))); });
+    }).catch(function(){ return null; });
+  }
+  function orderIndex(cmds) {
+    var byCode = {}, byEan = {}, cat = (window.CRMData && CRMData.catalogueMap) ? CRMData.catalogueMap() : {};
+    cmds.forEach(function(o){
+      var d = CRMData._date(o.date); if (!d) return; var iso = d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate());
+      o.lignes.forEach(function(l){
+        var rec = function(m, key){ var e = m[key] || (m[key] = { last: '', qty: 0, n: 0 }); if (iso > e.last) e.last = iso; e.qty += l.qte || 1; e.n++; };
+        rec(byCode, String(l.code).trim());
+        var p = cat[String(l.code).trim()]; if (p && p.ean) rec(byEan, String(p.ean).trim());
+      });
+    });
+    return { byCode: byCode, byEan: byEan, n: cmds.length };
+  }
+  function orderOf(ix, x) {
+    if (!ix) return null; var c = String(x.c || '').trim();
+    if (c && ix.byCode[c]) return ix.byCode[c];
+    var es = String(x.e || '').split(';'); for (var i = 0; i < es.length; i++) { var e = es[i].trim(); if (e && ix.byEan[e]) return ix.byEan[e]; }
+    return null;
+  }
+  function oppHtml(R, cmds) {
+    var ix = cmds && cmds.length ? orderIndex(cmds) : null, out = '';
+    R.forEach(function(r){
+      var h = '<div class="anc-card"><div class="anc-lbl">🎯 Commandes × rayon · ' + esc(r.ensNom) + '</div>';
+      if (!cmds) h += '<div class="anc-mut">Commandes indisponibles.</div>';
+      else if (!cmds.length) h += '<div class="anc-mut">Aucun bon de commande trouvé pour « ' + esc(_c.nom || '') + ' » : le croisement « commandé mais absent » n\'est pas possible (nom du client différent dans les commandes ?).</div>';
+      else {
+        var lim = new Date(r.date + 'T00:00:00'); lim.setDate(lim.getDate() - 150); var limIso = lim.getFullYear() + '-' + pad(lim.getMonth() + 1) + '-' + pad(lim.getDate());
+        var miss = [];
+        (r.lines || []).forEach(function(l){ if (l.p !== false) return; var o = orderOf(ix, l); if (o && o.last >= limIso && o.last <= r.date) miss.push({ l: l.l, last: o.last, qty: o.qty }); });
+        miss.sort(function(a, b){ return b.last.localeCompare(a.last); });
+        h += '<div class="anc-li"><b class="' + (miss.length ? 'anc-neg' : 'anc-pos') + '">Commandés mais absents du rayon</b> <span class="anc-mut">(commande dans les 5 mois avant le relevé du ' + dFr(r.date) + ')</span><br>'
+          + (miss.length ? miss.slice(0, 10).map(function(m){ return esc(m.l) + ' <span class="anc-mut">· commandé le ' + dFr(m.last) + ' (' + m.qty + ' u. au total)</span>'; }).join('<br>') + (miss.length > 10 ? '<br><span class="anc-mut">+ ' + (miss.length - 10) + ' autre(s)</span>' : '') + '<div class="anc-hint" style="margin-top:6px">À vérifier à la prochaine visite : rupture, stock en réserve, produit qui ne tourne pas ?</div>' : 'Aucun : tout ce qui a été commandé récemment est en rayon.') + '</div>';
+        var pres = (r.lines || []).filter(function(l){ return l.p === true && !orderOf(ix, l); }).length;
+        if (pres) h += '<div class="anc-li anc-mut">' + pres + ' produit(s) en rayon sans commande directe enregistrée : approvisionnement via un grossiste ou une centrale ?</div>';
+      }
+      if (r.toPush.length) {
+        var P = r.toPush.map(function(p){ var o = ix ? orderOf(ix, p) : null; return { p: p, o: o }; });
+        P.sort(function(a, b){ return (b.p.seen / b.p.tot) - (a.p.seen / a.p.tot) || ((a.o ? 1 : 0) - (b.o ? 1 : 0)); });
+        h += '<div class="anc-li" style="margin-top:8px"><b>Opportunités de référencement</b> <span class="anc-mut">(absents ici, présents chez la majorité des ' + r.nPeers + ' autres magasins ' + esc(r.ensNom) + ')</span><br>'
+          + P.slice(0, 12).map(function(x){ return esc(x.p.l) + ' <span class="anc-mut">· ' + x.p.seen + '/' + x.p.tot + ' magasins' + (ix ? (x.o ? ' · déjà commandé le ' + dFr(x.o.last) : ' · jamais commandé') : '') + '</span>'; }).join('<br>') + '</div>';
+      } else if (r.nPeers < 2) h += '<div class="anc-li anc-mut" style="margin-top:6px">Opportunités : il faut au moins 2 autres magasins relevés dans cette enseigne pour comparer.</div>';
+      out += h + '</div>';
+    });
+    return out;
+  }
+  function loadOpp(R) {
+    var box = $('anc-opp'); if (!box || !_c) return;
+    ordersFor(_c).then(function(cmds){ box = $('anc-opp'); if (box) box.innerHTML = oppHtml(R, cmds); });
+  }
   function relHtml(R) {
     return R.map(function(r){
       var s = r.stats, li = [];
@@ -427,7 +499,7 @@
         + (r.tauxPeers != null ? ' · autres magasins ' + r.tauxPeers + ' % (' + r.nPeers + ')' : ''));
       if (s.moy != null) li.push('Prix relevés : ' + s.prixN + ' (moyenne ' + eur(s.moy) + ')' + (r.ratio != null ? ' · prix rayon ÷ tarif ≈ × ' + r.ratio.toFixed(2).replace('.', ',') : ''));
       var h = '<div class="anc-card"><div class="anc-lbl">🏪 Relevé en magasin</div>' + li.map(function(x){ return '<div class="anc-li">' + x + '</div>'; }).join('');
-      if (r.toPush.length) h += '<div class="anc-li" style="margin-top:6px"><b>À pousser</b> <span class="anc-mut">(absents ici, présents dans la majorité des autres magasins)</span><br>' + r.toPush.map(function(p){ return esc(p.l) + ' <span class="anc-mut">' + p.seen + '/' + p.tot + '</span>'; }).join(' · ') + '</div>';
+      h += histHtml(r);
       if (r.newAbs.length) h += '<div class="anc-li"><b class="anc-neg">Disparus depuis le dernier relevé</b><br>' + r.newAbs.map(esc).join(' · ') + '</div>';
       if (r.newPres.length) h += '<div class="anc-li"><b class="anc-pos">Nouveaux en rayon</b><br>' + r.newPres.map(esc).join(' · ') + '</div>';
       if (r.ecarts.length) h += '<div class="anc-li"><b>Prix vs autres magasins</b><br>' + r.ecarts.map(function(e){ return esc(e.l) + ' : ' + eur(e.x) + ' <span class="' + (e.pct > 0.03 ? 'anc-neg' : e.pct < -0.03 ? 'anc-pos' : 'anc-mut') + '">(' + (e.pct >= 0 ? '+' : '') + Math.round(e.pct * 100) + ' % / moy. ' + eur(e.avg) + ')</span>'; }).join('<br>') + '</div>';
@@ -442,6 +514,7 @@
     Releves.forClient(_c).then(function(R){
       _rel = R || [];
       box = $('anc-rel'); if (!box) return;
+      if (_rel.length) loadOpp(_rel);
       box.innerHTML = _rel.length ? relHtml(_rel) : '<div class="anc-card"><div class="anc-lbl">🏪 Relevé en magasin</div><div class="anc-mut">Aucun relevé enregistré pour ce client. Faites-en un dans <b>Terrain → Relevés</b> en choisissant ce magasin : il apparaîtra ici automatiquement et enrichira l\'analyse.</div></div>';
     }).catch(function(){ var b = $('anc-rel'); if (b) b.innerHTML = ''; });
   }
@@ -518,7 +591,7 @@
       '<div class="anc-box"><div class="anc-top"><div><b>📈 Analyse client</b><small>' + esc(c.nom || '') + (c.numClient ? ' · ' + esc(c.numClient) : '') + '</small></div><button class="anc-x" onclick="AnalyseClient.close()">✕</button></div>'
       + '<div class="anc-body">'
       +   '<div class="anc-card"><div class="anc-lbl">Analyses enregistrées</div><div id="anc-hist"></div></div>'
-      +   '<div id="anc-rel"></div><div id="anc-nts"></div>'
+      +   '<div id="anc-rel"></div><div id="anc-opp"></div><div id="anc-nts"></div>'
       +   '<label class="anc-drop" id="anc-drop">📂 Déposez ou choisissez le fichier « Liste des commandes » de ce client<br><span class="anc-mut">(.xlsx — vous pouvez ajouter le cadencier en même temps)</span>'
       +     '<input type="file" id="anc-file" accept=".xlsx,.xls,.csv" multiple style="display:none"></label>'
       +   '<div id="anc-status" class="anc-mut"></div><div id="anc-pick"></div><div id="anc-report"></div>'
