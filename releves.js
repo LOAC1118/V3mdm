@@ -521,6 +521,16 @@
       return out;
     });
   }
+  // date du dernier relevé par client (id, sinon nom) — pour la liste « clients à revisiter »
+  function lastVisits() {
+    return ready().then(function(){
+      var byId = {}, byName = {}, ensById = {};
+      _rel.forEach(function(r){ var d = String(r.date || ''); if (!d) return;
+        if (r.clientId) { if (!byId[r.clientId] || d > byId[r.clientId]) { byId[r.clientId] = d; ensById[r.clientId] = relEns(r); } }
+        var n = norm(r.magasin); if (n && (!byName[n] || d > byName[n])) byName[n] = d; });
+      return { byId: byId, byName: byName, ensById: ensById };
+    });
+  }
   function openRel(id) { return ready().then(function(){ ouvrir(id); try { showSection('releves', null, null); } catch(e){} render(); }); }
   function actDel(relId, id) {
     var r = actFind(relId); if (!r) return; r.actions = (r.actions || []).filter(function(a){ return a.id !== id; });
@@ -1433,7 +1443,7 @@
 
   function mount() { css(); var first = !_unsub; if (_view === 'edit' && _cur) { render(); if (first) loadRef().then(function(){ load(); }); return; } _view = 'list'; render(); if (first) loadRef().then(function(){ load(); render(); }); }
 
-  window.Releves = { orphOpen: orphOpen, orphClose: orphClose, orphLink: orphLink, orphLinkInput: orphLinkInput, infoOpen: infoOpen, infoClose: infoClose, infoSave: infoSave, fiche: fiche, actDue: actDue, actionsDue: actionsDue, openRel: openRel, demarrer: demarrer, recentStores: recentStores, ensChoices: ensChoices, isEditing: isEditing, scanFast: scanFast, fastAbs: fastAbs, fastUndo: fastUndo, fastPrix: fastPrix, phAdd: phAdd, phTake: phTake, phDel: phDel, phCap: phCap, noteJump: noteJump, mic: mic, ranger: ranger, rangerUndo: rangerUndo, iaApply: iaApply, iaCancel: iaCancel, iaNotes: function(v){ if (_ia) _ia.notes = v; }, iaInter: function(k, v){ if (_ia) _ia.inter[k] = v; }, iaAct: function(i, v){ if (_ia && _ia.acts[i]) _ia.acts[i].on = !!v; }, actsRefresh: actsRefresh, actAdd: actAdd, actTick: actTick, actDel: actDel, terminer: terminer, inter: setInter, interReuse: interReuse, ficheClient: ficheClient, forStore: forStore, noteClose: noteClose, rapport: rapport, forClient: forClient, inRange: inRange, mount: mount, nouveau: nouveau, ouvrir: ouvrir, retour: retour, supprimer: supprimer, pt: togglePoint, prix: setPrix, nt: setNote, meta: setMeta,
+  window.Releves = { lastVisits: lastVisits, orphOpen: orphOpen, orphClose: orphClose, orphLink: orphLink, orphLinkInput: orphLinkInput, infoOpen: infoOpen, infoClose: infoClose, infoSave: infoSave, fiche: fiche, actDue: actDue, actionsDue: actionsDue, openRel: openRel, demarrer: demarrer, recentStores: recentStores, ensChoices: ensChoices, isEditing: isEditing, scanFast: scanFast, fastAbs: fastAbs, fastUndo: fastUndo, fastPrix: fastPrix, phAdd: phAdd, phTake: phTake, phDel: phDel, phCap: phCap, noteJump: noteJump, mic: mic, ranger: ranger, rangerUndo: rangerUndo, iaApply: iaApply, iaCancel: iaCancel, iaNotes: function(v){ if (_ia) _ia.notes = v; }, iaInter: function(k, v){ if (_ia) _ia.inter[k] = v; }, iaAct: function(i, v){ if (_ia && _ia.acts[i]) _ia.acts[i].on = !!v; }, actsRefresh: actsRefresh, actAdd: actAdd, actTick: actTick, actDel: actDel, terminer: terminer, inter: setInter, interReuse: interReuse, ficheClient: ficheClient, forStore: forStore, noteClose: noteClose, rapport: rapport, forClient: forClient, inRange: inRange, mount: mount, nouveau: nouveau, ouvrir: ouvrir, retour: retour, supprimer: supprimer, pt: togglePoint, prix: setPrix, nt: setNote, meta: setMeta,
     dash: function(){ _view = 'dash'; render(); }, dashEns: function(v){ _ensSel = v; renderDash(); },
     addLibre: addLibre, delLibre: delLibre, compare: function(){ _view = 'compare'; render(); }, pdf: pdf, pdfSave: pdfSave, pdfShare: pdfShare, pdfOpen: pdfOpen, pdfCompare: pdfCompare, search: search, filtEns: filtEns, ensChange: ensChange,
     q2: function(v){ _q = v; renderRows(); }, fam: function(v){ _fam = v; renderRows(); }, only: function(){ _only = _only === 'todo' ? 'all' : 'todo'; renderEdit(); },
