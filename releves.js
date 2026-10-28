@@ -357,8 +357,66 @@
       + '<div class="rl-bar">' + ensSelect('rl-filt-ens', _ensSel, 'Releves.filtEns(this.value)', true)
       + '<input class="rl-in" placeholder="Rechercher un relevé…" value="' + esc(_q) + '" oninput="Releves.search(this.value)" style="flex:1;min-width:140px">'
       + '<button class="rl-b" onclick="Releves.dash()">📈 Dashboard</button><button class="rl-b" onclick="Releves.compare()">📊 Comparer</button><button class="rl-b" onclick="Releves.refEdit()">⚙️ Listes produits</button></div>'
+      + '<div id="rl-orphbar">' + orphBar() + '</div>'
       + '<div id="rl-actslist">' + openListHtml() + '</div>'
       + '<div id="rl-list">' + (list.length ? list.map(cardHtml).join('') : '<div class="mut" style="padding:24px;text-align:center">Aucun relevé pour le moment.</div>') + '</div></div>';
+  }
+  // ── Relevés non rattachés à un client de la base (donc absents de l'analyse client) ──
+  function orphans() {
+    var ids = {}; contacts().forEach(function(c){ ids[String(c.id)] = 1; });
+    return _rel.filter(function(r){ return !r.clientId || !ids[String(r.clientId)]; });
+  }
+  function orphBar() {
+    if (!contacts().length) return '';
+    var n = orphans().length; if (!n) return '';
+    return '<div class="rl-card" style="background:#fff8e6;border-color:#e8c870"><div style="flex:1">⚠ <b>' + n + ' relevé' + (n > 1 ? 's' : '') + ' non rattaché' + (n > 1 ? 's' : '') + ' à un client</b><div class="s">Ils n\'apparaissent pas dans l\'analyse client tant qu\'ils ne sont pas reliés.</div></div><button class="rl-b p" onclick="Releves.orphOpen()">Vérifier</button></div>';
+  }
+  function suggest(r) {
+    var toks = norm(r.magasin + ' ' + (r.ville || '')).split(' ').filter(function(t){ return t.length > 2 && ['magasin', 'bio', 'biocoop', 'marcel', 'fils', 'les', 'des', 'the'].indexOf(t) === -1; });
+    var vil = norm(r.ville || ''), out = [];
+    contacts().forEach(function(c){
+      var h = norm((c.nom || '') + ' ' + (c.ville || '')), sc = 0;
+      toks.forEach(function(t){ if (h.indexOf(t) !== -1) sc++; });
+      if (vil && norm(c.ville || '') === vil) sc += 2;
+      if (norm(c.nom) === norm(r.magasin)) sc += 4;
+      if (sc >= 2) out.push({ c: c, sc: sc });
+    });
+    return out.sort(function(a, b){ return b.sc - a.sc; }).slice(0, 3).map(function(x){ return x.c; });
+  }
+  function orphOpen() {
+    var old = $('rl-orph'); if (old) old.remove();
+    var ov = document.createElement('div'); ov.id = 'rl-orph';
+    ov.style.cssText = 'position:fixed;inset:0;z-index:99992;background:rgba(20,18,15,.5);display:flex;align-items:flex-end;justify-content:center';
+    ov.onclick = function(e){ if (e.target === ov) orphClose(); };
+    document.body.appendChild(ov); orphPaint();
+  }
+  function orphClose() { var o = $('rl-orph'); if (o) o.remove(); var b = $('rl-orphbar'); if (b) b.innerHTML = orphBar(); }
+  function orphPaint() {
+    var ov = $('rl-orph'); if (!ov) return; var L = orphans();
+    ov.innerHTML = '<div class="rl" style="background:#fff;border-radius:16px 16px 0 0;width:100%;max-width:640px;max-height:88vh;overflow:auto;padding:14px 16px calc(20px + env(safe-area-inset-bottom,0px));box-sizing:border-box">'
+      + '<div class="rl-bar" style="margin:0 0 8px"><b style="font-size:1.05rem">🔗 Relevés à rattacher (' + L.length + ')</b><span style="flex:1"></span><button class="rl-b p" onclick="Releves.orphClose()">✓ Fermer</button></div>'
+      + (L.length ? L.map(function(r){
+        var S = suggest(r);
+        return '<div style="border-top:1px solid #eee;padding:10px 0"><div><span class="rl-tag">' + esc(ensNom(relEns(r))) + '</span><b>' + esc(r.magasin) + '</b>' + (r.ville ? ' <span class="mut">· ' + esc(r.ville) + '</span>' : '') + ' <span class="mut">· ' + frDate(r.date) + '</span></div>'
+          + '<div class="rl-bar" style="margin:6px 0 0;flex-wrap:wrap">' + (S.length ? S.map(function(c){ return '<button class="rl-b" data-r="' + esc(r.id) + '" data-c="' + esc(c.id) + '" onclick="Releves.orphLink(this.getAttribute(\'data-r\'),this.getAttribute(\'data-c\'))">→ ' + esc(c.nom) + (c.ville ? ' — ' + esc(c.ville) : '') + '</button>'; }).join('') : '<span class="mut">Aucune correspondance proposée.</span>') + '</div>'
+          + '<div class="rl-bar" style="margin:6px 0 0"><input class="rl-in" id="rl-o-' + esc(r.id) + '" list="rl-o-dl" placeholder="Autre client…" style="flex:1;min-width:140px"><button class="rl-b" data-r="' + esc(r.id) + '" onclick="Releves.orphLinkInput(this.getAttribute(\'data-r\'))">Rattacher</button></div></div>';
+      }).join('') + '<datalist id="rl-o-dl">' + contacts().slice(0, 2500).map(function(c){ return '<option value="' + esc((c.nom || '') + (c.ville ? ' — ' + c.ville : '')) + '">'; }).join('') + '</datalist>' : '<div class="mut" style="padding:18px;text-align:center">✅ Tous vos relevés sont rattachés à un client.</div>')
+      + '</div>';
+  }
+  function orphLink(relId, clientId) {
+    var r = _rel.filter(function(x){ return x.id === relId; })[0], c = contacts().filter(function(x){ return String(x.id) === String(clientId); })[0]; if (!r || !c) return;
+    var before = { clientId: r.clientId || '', nom: r.magasin, ville: r.ville || '', date: r.date }, after = { clientId: c.id, nom: c.nom, ville: c.ville || '', date: r.date };
+    r.clientId = c.id; r.magasin = c.nom; r.ville = c.ville || '';
+    var mv = window.RetourVisite && RetourVisite.movePhotos ? RetourVisite.movePhotos(before, after) : Promise.resolve();
+    mv.then(function(){ return col().doc(relId).update({ clientId: c.id, magasin: c.nom, ville: c.ville || '', updatedAt: Date.now() }); })
+      .then(function(){ note('Rattaché à ' + c.nom, 'ok'); orphPaint(); })
+      .catch(function(){ note('Enregistrement impossible', 'err'); });
+    if (_cur && _cur.id === relId) { _cur.clientId = c.id; _cur.magasin = c.nom; _cur.ville = c.ville || ''; }
+  }
+  function orphLinkInput(relId) {
+    var i = $('rl-o-' + relId), v = i ? i.value.trim() : ''; if (!v) { note('Choisissez un client', 'err'); return; }
+    var c = contacts().filter(function(x){ return ((x.nom || '') + (x.ville ? ' — ' + x.ville : '')) === v || x.nom === v; })[0];
+    if (!c) { note('Client introuvable dans la base', 'err'); return; } orphLink(relId, c.id);
   }
   function cardHtml(r) {
     var s = stats(r);
@@ -1373,7 +1431,7 @@
 
   function mount() { css(); var first = !_unsub; if (_view === 'edit' && _cur) { render(); if (first) loadRef().then(function(){ load(); }); return; } _view = 'list'; render(); if (first) loadRef().then(function(){ load(); render(); }); }
 
-  window.Releves = { infoOpen: infoOpen, infoClose: infoClose, infoSave: infoSave, fiche: fiche, actDue: actDue, actionsDue: actionsDue, openRel: openRel, demarrer: demarrer, recentStores: recentStores, ensChoices: ensChoices, isEditing: isEditing, scanFast: scanFast, fastAbs: fastAbs, fastUndo: fastUndo, fastPrix: fastPrix, phAdd: phAdd, phTake: phTake, phDel: phDel, phCap: phCap, noteJump: noteJump, mic: mic, ranger: ranger, rangerUndo: rangerUndo, iaApply: iaApply, iaCancel: iaCancel, iaNotes: function(v){ if (_ia) _ia.notes = v; }, iaInter: function(k, v){ if (_ia) _ia.inter[k] = v; }, iaAct: function(i, v){ if (_ia && _ia.acts[i]) _ia.acts[i].on = !!v; }, actsRefresh: actsRefresh, actAdd: actAdd, actTick: actTick, actDel: actDel, terminer: terminer, inter: setInter, interReuse: interReuse, ficheClient: ficheClient, forStore: forStore, noteClose: noteClose, rapport: rapport, forClient: forClient, inRange: inRange, mount: mount, nouveau: nouveau, ouvrir: ouvrir, retour: retour, supprimer: supprimer, pt: togglePoint, prix: setPrix, nt: setNote, meta: setMeta,
+  window.Releves = { orphOpen: orphOpen, orphClose: orphClose, orphLink: orphLink, orphLinkInput: orphLinkInput, infoOpen: infoOpen, infoClose: infoClose, infoSave: infoSave, fiche: fiche, actDue: actDue, actionsDue: actionsDue, openRel: openRel, demarrer: demarrer, recentStores: recentStores, ensChoices: ensChoices, isEditing: isEditing, scanFast: scanFast, fastAbs: fastAbs, fastUndo: fastUndo, fastPrix: fastPrix, phAdd: phAdd, phTake: phTake, phDel: phDel, phCap: phCap, noteJump: noteJump, mic: mic, ranger: ranger, rangerUndo: rangerUndo, iaApply: iaApply, iaCancel: iaCancel, iaNotes: function(v){ if (_ia) _ia.notes = v; }, iaInter: function(k, v){ if (_ia) _ia.inter[k] = v; }, iaAct: function(i, v){ if (_ia && _ia.acts[i]) _ia.acts[i].on = !!v; }, actsRefresh: actsRefresh, actAdd: actAdd, actTick: actTick, actDel: actDel, terminer: terminer, inter: setInter, interReuse: interReuse, ficheClient: ficheClient, forStore: forStore, noteClose: noteClose, rapport: rapport, forClient: forClient, inRange: inRange, mount: mount, nouveau: nouveau, ouvrir: ouvrir, retour: retour, supprimer: supprimer, pt: togglePoint, prix: setPrix, nt: setNote, meta: setMeta,
     dash: function(){ _view = 'dash'; render(); }, dashEns: function(v){ _ensSel = v; renderDash(); },
     addLibre: addLibre, delLibre: delLibre, compare: function(){ _view = 'compare'; render(); }, pdf: pdf, pdfSave: pdfSave, pdfShare: pdfShare, pdfOpen: pdfOpen, pdfCompare: pdfCompare, search: search, filtEns: filtEns, ensChange: ensChange,
     q2: function(v){ _q = v; renderRows(); }, fam: function(v){ _fam = v; renderRows(); }, only: function(){ _only = _only === 'todo' ? 'all' : 'todo'; renderEdit(); },
