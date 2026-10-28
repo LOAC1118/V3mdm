@@ -2459,6 +2459,7 @@ thead th.ts-active { text-decoration:underline; text-underline-offset:3px; }
     <div class="cohor-filterbar" style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;padding:.7rem 1rem;background:var(--surface2);border-radius:10px;margin-bottom:1rem;">
       <input type="text" id="cdb-search" oninput="cdbRender()" placeholder="🔎 Rechercher (nom, ville, email, code…)" style="flex:1;min-width:220px;font-size:.82rem;"/>
       <select id="cdb-filter-group" onchange="cdbRender()" style="font-size:.78rem;"><option value="">Tous groupes</option></select>
+      <button class="btn btn-ghost" onclick="Grap.open()" style="font-size:.78rem;" title="Rattacher les magasins du réseau GRAP">🏷️ Réseau GRAP</button>
       <select id="cdb-filter-dept"  onchange="cdbRender()" style="font-size:.78rem;"><option value="">Tous départements</option></select>
       <select id="cdb-filter-act"   onchange="cdbRender()" style="font-size:.78rem;">
         <option value="">Toute activité</option>
@@ -16156,6 +16157,7 @@ if ('serviceWorker' in navigator) {
 <script src="releves.js?v=28"></script>
 <script src="mobile-ux.js?v=3"></script>
 <script src="revisiter.js?v=1"></script>
+<script src="grap.js?v=1"></script>
 <script src="mail.js?v=4"></script>
 <script src="analyse-client.js?v=7"></script>
 <script src="assistant.js?v=5"></script>
