@@ -108,9 +108,9 @@
   // Les lignes sont rattachées à la liste (par clé, sinon par EAN) : les statistiques portent alors sur la liste en vigueur.
   // Les références qui n'y sont plus mais portent des données sont gardées à part (horsListe) et réécrites telles quelles à l'enregistrement.
   var ALIGN = { marcel: true };
-  function alignRel(r) {
-    var ens = relEns(r); if (!ALIGN[ens] || !r.lignes) return r;
-    var list = refList(ens); if (!list.length) return r;
+  function alignRel(r) { var ens = relEns(r); if (!ALIGN[ens] || !r.lignes) return r; return alignTo(r, ens); }
+  function alignTo(r, ens) {
+    var list = refList(ens); if (!list.length || !r.lignes) return r;
     var byK = {}, byE = {}, used = {}, out = [], hors = (r.horsListe || []).slice();
     r.lignes.forEach(function(l){
       if (l.libre) return; byK[l.k] = l;
@@ -197,6 +197,38 @@
     var meta = {}; refList(_cur.enseigne).forEach(function(x){ meta[x.k] = x; });
     _cur.lignes.forEach(function(l){ var x = meta[l.k]; if (x) { if (l.t == null && x.t != null) l.t = x.t; if (!l.e && x.e) l.e = x.e; if (!l.m && x.m) l.m = x.m; } });
     render();
+  }
+  // ── Modifier un relevé après la visite : enseigne, magasin, date ──
+  function infoOpen() {
+    if (!_cur) return; var old = $('rl-info'); if (old) old.remove();
+    var r = _cur, ov = document.createElement('div'); ov.id = 'rl-info';
+    ov.style.cssText = 'position:fixed;inset:0;z-index:99992;background:rgba(20,18,15,.5);display:flex;align-items:flex-end;justify-content:center';
+    ov.onclick = function(e){ if (e.target === ov) infoClose(); };
+    ov.innerHTML = '<div class="rl" style="background:#fff;border-radius:16px 16px 0 0;width:100%;max-width:560px;padding:14px 16px calc(20px + env(safe-area-inset-bottom,0px));box-sizing:border-box">'
+      + '<div class="rl-bar" style="margin:0 0 10px"><b style="font-size:1.05rem">✏️ Modifier le relevé</b><span style="flex:1"></span><button class="rl-b" onclick="Releves.infoClose()">✕</button></div>'
+      + '<div class="mut" style="margin:6px 0 3px">Enseigne</div>' + ensSelect('rl-i-ens', relEns(r), '')
+      + '<div class="mut" style="margin:10px 0 3px">Magasin</div><input id="rl-i-nom" class="rl-in" list="rl-i-dl" style="width:100%;box-sizing:border-box" value="' + esc(r.magasin) + (r.ville ? ' — ' + esc(r.ville) : '') + '"><datalist id="rl-i-dl">' + datalist(relEns(r)) + '</datalist>'
+      + '<div class="mut" style="margin:10px 0 3px">Date de la visite</div><input id="rl-i-date" type="date" class="rl-in" value="' + esc(r.date) + '">'
+      + '<div class="mut" style="margin:10px 0 0;font-size:.76rem">Si vous changez d\'enseigne, les produits déjà pointés sont reportés sur la nouvelle liste (par code ou EAN) ; ceux qui n\'existent pas dans la nouvelle liste sont conservés à part. Les photos suivent le magasin et la date.</div>'
+      + '<div class="rl-bar" style="margin:14px 0 0"><button class="rl-b p" style="flex:1" onclick="Releves.infoSave()">💾 Enregistrer</button><button class="rl-b" onclick="Releves.infoClose()">Annuler</button></div></div>';
+    document.body.appendChild(ov);
+  }
+  function infoClose() { var o = $('rl-info'); if (o) o.remove(); }
+  function infoSave() {
+    if (!_cur) return; var r = _cur;
+    var ens = $('rl-i-ens').value, nom = ($('rl-i-nom').value || '').trim(), date = $('rl-i-date').value;
+    if (!nom) { note('Indiquez le magasin', 'err'); return; } if (!date) { note('Indiquez la date', 'err'); return; }
+    var c = contacts().filter(function(x){ return ((x.nom||'') + (x.ville ? ' — ' + x.ville : '')) === nom || x.nom === nom; })[0] || null;
+    var before = { clientId: r.clientId || '', nom: r.magasin, ville: r.ville || '', date: r.date };
+    var after = { clientId: c ? c.id : '', nom: c ? c.nom : nom.replace(/\s+—\s+.*$/, ''), ville: c ? (c.ville || '') : (nom === r.magasin + (r.ville ? ' — ' + r.ville : '') ? (r.ville || '') : ''), date: date };
+    if (!c && nom === r.magasin + (r.ville ? ' — ' + r.ville : '')) { after.nom = r.magasin; after.clientId = r.clientId || ''; }
+    var chEns = ens !== relEns(r);
+    flush();
+    if (chEns) { r.enseigne = ens; r.enseigneNom = ensNom(ens); alignTo(r, ens); _ensSel = ens; }
+    r.magasin = after.nom; r.ville = after.ville; r.clientId = after.clientId || null; r.date = date;
+    var moved = (before.clientId !== after.clientId || norm(before.nom) !== norm(after.nom) || before.date !== after.date) && window.RetourVisite && RetourVisite.movePhotos
+      ? RetourVisite.movePhotos(before, after) : Promise.resolve(0);
+    moved.then(function(){ return persistNow(); }).then(function(){ infoClose(); renderEdit(); note('Relevé modifié' + (chEns ? ' · ' + ensNom(ens) : ''), 'ok'); });
   }
   function retour() { flush(); var vo = $('rl-visov'); if (vo) vo.remove(); _nPh = 0; _view = 'list'; _cur = null; render(); }
   function supprimer(id) {
@@ -346,7 +378,7 @@
     var h = host(), r = _cur, fams = [];
     r.lignes.forEach(function(l){ if (fams.indexOf(l.f) === -1) fams.push(l.f); });
     h.innerHTML = '<div class="rl">'
-      + '<div class="rl-bar rl-top" style="margin-top:0"><button class="rl-b" onclick="Releves.retour()">← Relevés</button><span class="mut" id="rl-status"></span><span style="flex:1"></span><button class="rl-b p" onclick="Releves.scanOpen()">📷 Scanner</button><button class="rl-b" id="rl-bph" onclick="Releves.phTake()" title="Prendre une photo du magasin">🖼️ Photo</button><button class="rl-b" id="rl-bnt" onclick="Releves.noteJump()" title="Notes de visite, photos et rapport">📝 Notes</button><button class="rl-b" onclick="Releves.pdf()">📄 PDF</button></div>'
+      + '<div class="rl-bar rl-top" style="margin-top:0"><button class="rl-b" onclick="Releves.retour()">← Relevés</button><span class="mut" id="rl-status"></span><span style="flex:1"></span><button class="rl-b p" onclick="Releves.scanOpen()">📷 Scanner</button><button class="rl-b" onclick="Releves.infoOpen()" title="Modifier enseigne, magasin ou date">✏️ Modifier</button><button class="rl-b" id="rl-bph" onclick="Releves.phTake()" title="Prendre une photo du magasin">🖼️ Photo</button><button class="rl-b" id="rl-bnt" onclick="Releves.noteJump()" title="Notes de visite, photos et rapport">📝 Notes</button><button class="rl-b" onclick="Releves.pdf()">📄 PDF</button></div>'
       + '<h2><span class="rl-tag">' + esc(ensNom(r.enseigne)) + '</span>' + esc(r.magasin) + (r.ville ? ' <span class="mut" style="font:500 .9rem Inter">· ' + esc(r.ville) + '</span>' : '') + '</h2>'
       + '<div class="rl-bar rl-dt" style="margin:6px 0"><label class="mut">Date <input type="date" class="rl-in" value="' + esc(r.date) + '" onchange="Releves.meta(\'date\',this.value)"></label></div>'
       + '<div class="rl-sticky"><div class="rl-kpi" id="rl-kpi"></div>'
@@ -1341,7 +1373,7 @@
 
   function mount() { css(); var first = !_unsub; if (_view === 'edit' && _cur) { render(); if (first) loadRef().then(function(){ load(); }); return; } _view = 'list'; render(); if (first) loadRef().then(function(){ load(); render(); }); }
 
-  window.Releves = { fiche: fiche, actDue: actDue, actionsDue: actionsDue, openRel: openRel, demarrer: demarrer, recentStores: recentStores, ensChoices: ensChoices, isEditing: isEditing, scanFast: scanFast, fastAbs: fastAbs, fastUndo: fastUndo, fastPrix: fastPrix, phAdd: phAdd, phTake: phTake, phDel: phDel, phCap: phCap, noteJump: noteJump, mic: mic, ranger: ranger, rangerUndo: rangerUndo, iaApply: iaApply, iaCancel: iaCancel, iaNotes: function(v){ if (_ia) _ia.notes = v; }, iaInter: function(k, v){ if (_ia) _ia.inter[k] = v; }, iaAct: function(i, v){ if (_ia && _ia.acts[i]) _ia.acts[i].on = !!v; }, actsRefresh: actsRefresh, actAdd: actAdd, actTick: actTick, actDel: actDel, terminer: terminer, inter: setInter, interReuse: interReuse, ficheClient: ficheClient, forStore: forStore, noteClose: noteClose, rapport: rapport, forClient: forClient, inRange: inRange, mount: mount, nouveau: nouveau, ouvrir: ouvrir, retour: retour, supprimer: supprimer, pt: togglePoint, prix: setPrix, nt: setNote, meta: setMeta,
+  window.Releves = { infoOpen: infoOpen, infoClose: infoClose, infoSave: infoSave, fiche: fiche, actDue: actDue, actionsDue: actionsDue, openRel: openRel, demarrer: demarrer, recentStores: recentStores, ensChoices: ensChoices, isEditing: isEditing, scanFast: scanFast, fastAbs: fastAbs, fastUndo: fastUndo, fastPrix: fastPrix, phAdd: phAdd, phTake: phTake, phDel: phDel, phCap: phCap, noteJump: noteJump, mic: mic, ranger: ranger, rangerUndo: rangerUndo, iaApply: iaApply, iaCancel: iaCancel, iaNotes: function(v){ if (_ia) _ia.notes = v; }, iaInter: function(k, v){ if (_ia) _ia.inter[k] = v; }, iaAct: function(i, v){ if (_ia && _ia.acts[i]) _ia.acts[i].on = !!v; }, actsRefresh: actsRefresh, actAdd: actAdd, actTick: actTick, actDel: actDel, terminer: terminer, inter: setInter, interReuse: interReuse, ficheClient: ficheClient, forStore: forStore, noteClose: noteClose, rapport: rapport, forClient: forClient, inRange: inRange, mount: mount, nouveau: nouveau, ouvrir: ouvrir, retour: retour, supprimer: supprimer, pt: togglePoint, prix: setPrix, nt: setNote, meta: setMeta,
     dash: function(){ _view = 'dash'; render(); }, dashEns: function(v){ _ensSel = v; renderDash(); },
     addLibre: addLibre, delLibre: delLibre, compare: function(){ _view = 'compare'; render(); }, pdf: pdf, pdfSave: pdfSave, pdfShare: pdfShare, pdfOpen: pdfOpen, pdfCompare: pdfCompare, search: search, filtEns: filtEns, ensChange: ensChange,
     q2: function(v){ _q = v; renderRows(); }, fam: function(v){ _fam = v; renderRows(); }, only: function(){ _only = _only === 'todo' ? 'all' : 'todo'; renderEdit(); },

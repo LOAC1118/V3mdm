@@ -321,6 +321,13 @@
       }, Promise.resolve());
     });
   }
+  // déplace les photos d'une visite quand le magasin ou la date du relevé change
+  function movePhotos(a, b) {
+    return listPhotos(a).then(function(L){
+      var u = { key: metaKey(b), date: b.date, clientId: b.clientId || '', nom: b.nom };
+      return Promise.all(L.map(function(p){ for (var k in u) p[k] = u[k]; return pcol().doc(p.id).update(u).catch(function(){}); })).then(function(){ return L.length; });
+    });
+  }
   function removePhoto(id) { pcol().doc(id).delete().catch(function(){}); _photos = (_photos || []).filter(function(p){ return p.id !== id; }); }
   // Rapport PDF d'une seule visite (relevé + notes + photos), sans passer par l'écran de sélection
   function quick(m) {
@@ -426,5 +433,5 @@
     document.head.appendChild(st);
   }
 
-  window.RetourVisite = { ficheClient: ficheClient, list: listPhotos, addTo: addTo, remove: removePhoto, cap: capPhoto, key: metaKey, quick: quick, open: open, close: close, dates: setDates, preset: preset, inc: setInc, addStore: addStore, photos: addPhotos, delPhoto: delPhoto, pdf: pdf, mail: mail, pdfSave: pdfSave, pdfShare: pdfShare, _mailText: mailText, _collect: collect };
+  window.RetourVisite = { movePhotos: movePhotos, ficheClient: ficheClient, list: listPhotos, addTo: addTo, remove: removePhoto, cap: capPhoto, key: metaKey, quick: quick, open: open, close: close, dates: setDates, preset: preset, inc: setInc, addStore: addStore, photos: addPhotos, delPhoto: delPhoto, pdf: pdf, mail: mail, pdfSave: pdfSave, pdfShare: pdfShare, _mailText: mailText, _collect: collect };
 })();
