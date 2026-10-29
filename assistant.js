@@ -239,6 +239,18 @@
     p.style.display = 'flex';
     setTimeout(function(){ var t = $('asst-input'); if (t) t.focus(); }, 50);
   }
+  function tab(w) {
+    var qa = w === 'qa';
+    var a = $('asst-act'), q = $('asst-qa');
+    if (a) a.style.display = qa ? 'none' : 'flex';
+    if (q) q.style.display = qa ? 'flex' : 'none';
+    var ta = $('asst-tab-act'), tq = $('asst-tab-qa');
+    if (ta) ta.className = qa ? '' : 'on'; if (tq) tq.className = qa ? 'on' : '';
+    if (qa) {
+      try { botLoadCloud().then(function(){ if (!botState().length) botPush('ai', botGreeting()); else botRender(); }); } catch(e){}
+      setTimeout(function(){ var t = $('botp-text'); if (t) t.focus(); }, 120);
+    }
+  }
   function close() { var p = $('asst-panel'); if (p) p.style.display = 'none'; }
   function reset() { _actions = []; var t = $('asst-input'); if (t) t.value = ''; var r = $('asst-result'); if (r) r.innerHTML = ''; }
 
@@ -246,8 +258,8 @@
     if ($('asst-fab')) return;
     var css = document.createElement('style');
     css.textContent =
-      '#asst-fab{position:fixed;right:22px;bottom:90px;z-index:9990;width:54px;height:54px;border-radius:50%;border:2px solid var(--brand);background:#1c1a17;color:#fff;font-size:1.5rem;box-shadow:0 6px 20px rgba(0,0,0,.35);cursor:pointer;display:none}'
-      + '@media(max-width:768px){#asst-fab{right:14px;bottom:134px;width:48px;height:48px}}'
+      '#asst-fab{position:fixed;right:22px;bottom:22px;z-index:9990;width:54px;height:54px;border-radius:50%;border:2px solid var(--brand);background:#1c1a17;color:#fff;font-size:1.5rem;box-shadow:0 6px 20px rgba(0,0,0,.35);cursor:pointer;display:none}'
+      + '@media(max-width:768px){#asst-fab{right:14px;bottom:74px;width:48px;height:48px}}'
       + '#asst-panel{position:fixed;inset:0;z-index:99998;background:rgba(20,18,15,.55);display:none;align-items:flex-end;justify-content:center}'
       + '.asst-box{width:100%;max-width:560px;max-height:88vh;background:#fff;color:#1c1a17;border-radius:18px 18px 0 0;display:flex;flex-direction:column;font-family:inherit}'
       + '@media(min-width:700px){#asst-panel{align-items:center}.asst-box{border-radius:18px}}'
@@ -270,7 +282,15 @@
       + '.asst-all{border:0;background:#1c1a17;color:#fff;border-radius:99px;padding:10px;font-weight:600;cursor:pointer}'
       + '.asst-msg{font-size:.85rem;color:#4a463f}.asst-ok{color:#2a7d3f;font-weight:600;font-size:.85rem}'
       + '.asst-warn{font-size:.8rem;color:#a35a00;background:#fff3df;padding:6px 8px;border-radius:8px}'
-      + '.asst-err{font-size:.85rem;color:#b0402f;background:#fdecea;padding:8px;border-radius:8px}';
+      + '.asst-err{font-size:.85rem;color:#b0402f;background:#fdecea;padding:8px;border-radius:8px}'
+      + '#bot-fab,#bot-panel{display:none !important}'
+      + '.asst-tabs{display:flex;gap:6px;padding:8px 16px 0}'
+      + '.asst-tabs button{flex:1;border:1px solid #e6e2da;background:#faf8f4;border-radius:99px;padding:8px;font:inherit;font-weight:600;font-size:.82rem;cursor:pointer;color:#4a463f}'
+      + '.asst-tabs button.on{background:#1c1a17;color:#fff;border-color:#1c1a17}'
+      + '#asst-qa{display:none;flex-direction:column;height:min(62vh,480px);min-height:260px}'
+      + '#asst-qa #botp-msgs{flex:1}'
+      + '.asst-qa-tools{display:flex;justify-content:flex-end;gap:6px;padding:4px 16px 0}'
+      + '.asst-qa-tools button{border:0;background:none;font-size:.74rem;color:#6b665e;cursor:pointer}';
     document.head.appendChild(css);
 
     var fab = document.createElement('button');
@@ -285,7 +305,9 @@
     p.innerHTML =
         '<div class="asst-box">'
       +   '<div class="asst-h"><span>✨ Assistant</span><span><button title="Nouvelle demande" onclick="Assistant.reset()">↺</button><button onclick="Assistant.close()">✕</button></span></div>'
-      +   '<div class="asst-body">'
+      +   '<div class="asst-tabs"><button id="asst-tab-act" class="on" onclick="Assistant.tab(\'act\')">⚡ Agir</button><button id="asst-tab-qa" onclick="Assistant.tab(\'qa\')">💬 Questions</button></div>'
+      +   '<div id="asst-qa"><div class="asst-qa-tools"><button onclick="showSection(\'ia\',null,null);Assistant.close()">⤢ Ouvrir en grand</button><button onclick="botClear()">🗑 Nouvelle conversation</button></div></div>'
+      +   '<div class="asst-body" id="asst-act">'
       +     '<textarea id="asst-input" placeholder="Ex. : « RDV chez Bio Sud jeudi à 14h pour la mise en place des nouveautés » ou « Le téléphone de Dupont est 06 12 34 56 78 »"></textarea>'
       +     '<div class="asst-row">' + (SR ? '<button id="asst-mic" onclick="Assistant.mic()">🎤</button>' : '') + '<span class="asst-hint">' + (SR ? '' : 'Dictée : micro 🎤 du clavier iPhone') + '</span><button id="asst-send" onclick="Assistant.send()">Envoyer</button></div>'
       +     '<div id="asst-result"></div>'
@@ -294,10 +316,15 @@
       + '</div>';
     document.body.appendChild(p);
 
+    // Onglet Questions : on réutilise la conversation de l'ancienne bulle 🤖 (mêmes éléments, même historique)
+    var qa = $('asst-qa');
+    ['botp-msgs','botp-sugg'].forEach(function(id){ var e = $(id); if (e) qa.appendChild(e); });
+    var bi = document.querySelector('#bot-panel .bot-input'); if (bi) qa.appendChild(bi);
+
     // visible seulement une fois connecté
     setInterval(function(){ fab.style.display = me() ? 'block' : 'none'; }, 1500);
   }
 
-  window.Assistant = { open: open, close: close, send: send, pick: pick, skip: skip, run: run, runAll: runAll, mic: mic, reset: reset };
+  window.Assistant = { tab: tab, open: open, close: close, send: send, pick: pick, skip: skip, run: run, runAll: runAll, mic: mic, reset: reset };
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', build); else build();
 })();
