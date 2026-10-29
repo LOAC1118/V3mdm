@@ -353,7 +353,7 @@
       + (_err ? '<div class="rl-err">' + esc(_err) + '</div>' : '')
       + '<div class="rl-bar">' + ensSelect('rl-new-ens', first, 'Releves.ensChange(this.value)')
       + '<input id="rl-new-nom" class="rl-in" list="rl-dl" placeholder="Magasin (tapez pour chercher ou saisir un nom)" style="flex:1;min-width:200px"><datalist id="rl-dl">' + datalist(first) + '</datalist>'
-      + '<button class="rl-b p" onclick="Releves.nouveau()">＋ Nouveau relevé</button></div>'
+      + '<button class="rl-b p" onclick="Releves.nouveau()">＋ Nouveau relevé</button><button class="rl-b" onclick="Releves.impOpen()" title="Créer un relevé à partir d\'un fichier Excel">📥 Importer</button></div>'
       + '<div class="rl-bar">' + ensSelect('rl-filt-ens', _ensSel, 'Releves.filtEns(this.value)', true)
       + '<input class="rl-in" placeholder="Rechercher un relevé…" value="' + esc(_q) + '" oninput="Releves.search(this.value)" style="flex:1;min-width:140px">'
       + '<button class="rl-b" onclick="Releves.dash()">📈 Dashboard</button><button class="rl-b" onclick="Releves.compare()">📊 Comparer</button><button class="rl-b" onclick="Releves.refEdit()">⚙️ Listes produits</button></div>'
@@ -417,6 +417,92 @@
     var i = $('rl-o-' + relId), v = i ? i.value.trim() : ''; if (!v) { note('Choisissez un client', 'err'); return; }
     var c = contacts().filter(function(x){ return ((x.nom || '') + (x.ville ? ' — ' + x.ville : '')) === v || x.nom === v; })[0];
     if (!c) { note('Client introuvable dans la base', 'err'); return; } orphLink(relId, c.id);
+  }
+  // ── Importer un relevé depuis un fichier (Excel / CSV) : liste des références présentes dans un magasin ──
+  var _imp = null;
+  function impOpen() {
+    var old = $('rl-imp'); if (old) old.remove();
+    _imp = { rows: [], fname: '' };
+    var ov = document.createElement('div'); ov.id = 'rl-imp';
+    ov.style.cssText = 'position:fixed;inset:0;z-index:99992;background:rgba(20,18,15,.5);display:flex;align-items:flex-end;justify-content:center';
+    ov.onclick = function(e){ if (e.target === ov) impClose(); };
+    ov.innerHTML = '<div class="rl" style="background:#fff;border-radius:16px 16px 0 0;width:100%;max-width:620px;max-height:90vh;overflow:auto;padding:14px 16px calc(20px + env(safe-area-inset-bottom,0px));box-sizing:border-box">'
+      + '<div class="rl-bar" style="margin:0 0 8px"><b style="font-size:1.05rem">📥 Importer un relevé</b><span style="flex:1"></span><button class="rl-b" onclick="Releves.impClose()">✕</button></div>'
+      + '<div class="mut" style="margin-bottom:8px">Fichier listant les références présentes dans le magasin (colonnes : code-barres EAN, désignation, prix de vente). Les produits sont pointés « présents » avec leur prix.</div>'
+      + '<label class="rl-b p" for="rl-imp-f" style="display:inline-block">📂 Choisir le fichier (.xls, .xlsx, .csv)</label><input id="rl-imp-f" type="file" accept=".xls,.xlsx,.csv" hidden onchange="Releves.impFile(this)"><span class="mut" id="rl-imp-fn" style="margin-left:8px"></span>'
+      + '<div class="mut" style="margin:12px 0 3px">Client (nom ou code client)</div><input id="rl-imp-nom" class="rl-in" list="rl-imp-dl" style="width:100%;box-sizing:border-box" placeholder="ex. 011869 ou Amaranthe"><datalist id="rl-imp-dl">' + datalist('catalogue') + '</datalist>'
+      + '<div class="rl-bar" style="margin:10px 0 0"><div style="flex:1;min-width:140px"><div class="mut" style="margin-bottom:3px">Date de la visite</div><input id="rl-imp-date" type="date" class="rl-in" style="width:100%;box-sizing:border-box" value="' + today() + '"></div>'
+      + '<div style="flex:1;min-width:160px"><div class="mut" style="margin-bottom:3px">Liste de référence</div>' + ensSelect('rl-imp-ens', 'catalogue', 'Releves.impPreview()') + '</div></div>'
+      + '<div id="rl-imp-prev" style="margin-top:12px"></div>'
+      + '<div class="rl-bar" style="margin:14px 0 0"><button class="rl-b p" id="rl-imp-go" style="flex:1" disabled onclick="Releves.impCreate()">Créer le relevé</button><button class="rl-b" onclick="Releves.impClose()">Annuler</button></div></div>';
+    document.body.appendChild(ov);
+  }
+  function impClose() { var o = $('rl-imp'); if (o) o.remove(); _imp = null; }
+  function impFile(inp) {
+    var f = inp.files && inp.files[0]; if (!f) return; $('rl-imp-fn').textContent = f.name;
+    var run = function(){
+      var fr = new FileReader();
+      fr.onload = function(){
+        try {
+          var wb = XLSX.read(new Uint8Array(fr.result), { type: 'array' }), ws = wb.Sheets[wb.SheetNames[0]];
+          _imp.aoa = XLSX.utils.sheet_to_json(ws, { header: 1, raw: true, defval: null }); impParse();
+        } catch(e){ note('Lecture du fichier impossible', 'err'); }
+      };
+      fr.readAsArrayBuffer(f);
+    };
+    if (typeof XLSX !== 'undefined') run(); else if (typeof lazyLoad === 'function' && typeof LIB_XLSX !== 'undefined') lazyLoad(LIB_XLSX, run, function(){ note('Librairie Excel indisponible', 'err'); }); else note('Librairie Excel indisponible', 'err');
+  }
+  function impParse() {
+    var A = _imp.aoa || [], hi = -1, col = {};
+    for (var i = 0; i < Math.min(A.length, 15) && hi < 0; i++) {
+      var H = (A[i] || []).map(function(x){ return norm(x); }), c = {};
+      H.forEach(function(h, j){
+        if (c.e == null && /^(c article|code article|article|ean|gencod|gtin|code barre|code ean)/.test(h)) c.e = j;
+        else if (c.l == null && /(designation|libelle|nom produit|produit)/.test(h)) c.l = j;
+        else if (c.r == null && /ref.{0,3}fourn|^ref/.test(h)) c.r = j;
+        else if (c.x == null && /(vente.*ttc|prix.*(vente|rayon|ttc)|pvc|^prix)/.test(h)) c.x = j;
+      });
+      if (c.e != null && (c.l != null || c.x != null)) { hi = i; col = c; }
+    }
+    if (hi < 0) { $('rl-imp-prev').innerHTML = '<div class="rl-err">Colonnes non reconnues : il faut au moins une colonne code-barres (EAN) et une désignation ou un prix.</div>'; return; }
+    var rows = [];
+    for (var r = hi + 1; r < A.length; r++) {
+      var a = A[r] || [], e = String(a[col.e] == null ? '' : a[col.e]).replace(/\D/g, '');
+      var px = col.x != null ? parsePrix(a[col.x]) : null;
+      if (e.length < 6 || (px == null && e.replace(/^0+/, '').length < 8)) continue;   // lignes de total / vides
+      rows.push({ e: e, l: col.l != null ? String(a[col.l] || '').trim() : '', r: col.r != null ? String(a[col.r] || '').trim() : '', x: col.x != null ? parsePrix(a[col.x]) : null });
+    }
+    _imp.rows = rows; impPreview();
+  }
+  function impMatch(ens) {
+    var list = refList(ens), byE = {}, byC = {};
+    list.forEach(function(x){ eansOf(x.e).forEach(function(e){ if (!byE[e]) byE[e] = x; }); byC[String(x.c).toUpperCase()] = x; });
+    var used = {}, ok = [], hors = [];
+    _imp.rows.forEach(function(r){
+      var n = eanNorm(r.e), x = byE[n] || (r.r && byC[r.r.toUpperCase()]) || null;
+      if (x && !used[x.k]) { used[x.k] = 1; ok.push({ x: x, r: r }); } else if (!x) hors.push(r);
+    });
+    return { ok: ok, hors: hors, n: _imp.rows.length };
+  }
+  function impPreview() {
+    if (!_imp || !_imp.rows) return; var ens = $('rl-imp-ens').value, m = impMatch(ens); _imp.m = m;
+    $('rl-imp-prev').innerHTML = '<div class="rl-kpi"><div><b>' + m.n + '</b><span>lignes lues</span></div><div><b style="color:#2e9d5b">' + m.ok.length + '</b><span>reconnues</span></div><div><b style="color:#c0392b">' + m.hors.length + '</b><span>hors liste</span></div></div>'
+      + (m.hors.length ? '<div class="mut" style="margin-bottom:4px">Produits non reconnus dans « ' + esc(ensNom(ens)) + ' » : ils seront ajoutés « hors liste » avec leur prix.</div><div class="mut" style="font-size:.76rem">' + m.hors.slice(0, 12).map(function(r){ return esc(r.l || r.e); }).join(' · ') + (m.hors.length > 12 ? ' …' : '') + '</div>' : '');
+    $('rl-imp-go').disabled = !m.n;
+  }
+  function impCreate() {
+    var u = me(); if (!u) { note('Non connecté', 'err'); return; } if (!_imp || !_imp.m) return;
+    var ens = $('rl-imp-ens').value, v = ($('rl-imp-nom').value || '').trim(), date = $('rl-imp-date').value;
+    if (!v) { note('Indiquez le client', 'err'); return; } if (!date) { note('Indiquez la date', 'err'); return; }
+    var nzv = function(t){ return String(t).trim().replace(/^0+/, ''); };
+    var c = contacts().filter(function(x){ return ((x.nom || '') + (x.ville ? ' — ' + x.ville : '')) === v || x.nom === v || (x.numClient && nzv(x.numClient) === nzv(v)); })[0] || null;
+    var m = _imp.m, byK = {}; m.ok.forEach(function(o){ byK[o.x.k] = o; });
+    var lignes = refList(ens).map(function(x){ var l = newLine(x), o = byK[x.k]; if (o) { l.p = true; l.s = true; if (o.r.x != null) l.x = o.r.x; if (!l.e) l.e = o.r.e; } return l; });
+    m.hors.forEach(function(r){ lignes.push({ k: 'X|' + r.e, c: '', l: r.l || ('EAN ' + r.e), f: 'HORS LISTE', e: r.e, t: null, m: '', p: true, x: r.x, n: '', libre: true, s: true }); });
+    var rel = { id: col().doc().id, enseigne: ens, enseigneNom: ensNom(ens), magasin: c ? c.nom : v, ville: c ? (c.ville || '') : '', clientId: c ? c.id : null, date: date, owner: u.uid, ownerName: u.displayName || u.email || '',
+      remarque: 'Relevé importé du fichier ' + (($('rl-imp-fn') && $('rl-imp-fn').textContent) || '') + ' (' + m.ok.length + ' références reconnues' + (m.hors.length ? ', ' + m.hors.length + ' hors liste' : '') + ').', createdAt: Date.now(), updatedAt: Date.now(), lignes: lignes };
+    _ensSel = ens; _cur = rel; _view = 'edit'; _fam = ''; _only = 'all'; _q = ''; impClose();
+    persistNow().then(function(){ render(); note('Relevé créé : ' + rel.magasin + ' · ' + frDate(date), 'ok'); });
   }
   function cardHtml(r) {
     var s = stats(r);
@@ -1443,7 +1529,7 @@
 
   function mount() { css(); var first = !_unsub; if (_view === 'edit' && _cur) { render(); if (first) loadRef().then(function(){ load(); }); return; } _view = 'list'; render(); if (first) loadRef().then(function(){ load(); render(); }); }
 
-  window.Releves = { lastVisits: lastVisits, orphOpen: orphOpen, orphClose: orphClose, orphLink: orphLink, orphLinkInput: orphLinkInput, infoOpen: infoOpen, infoClose: infoClose, infoSave: infoSave, fiche: fiche, actDue: actDue, actionsDue: actionsDue, openRel: openRel, demarrer: demarrer, recentStores: recentStores, ensChoices: ensChoices, isEditing: isEditing, scanFast: scanFast, fastAbs: fastAbs, fastUndo: fastUndo, fastPrix: fastPrix, phAdd: phAdd, phTake: phTake, phDel: phDel, phCap: phCap, noteJump: noteJump, mic: mic, ranger: ranger, rangerUndo: rangerUndo, iaApply: iaApply, iaCancel: iaCancel, iaNotes: function(v){ if (_ia) _ia.notes = v; }, iaInter: function(k, v){ if (_ia) _ia.inter[k] = v; }, iaAct: function(i, v){ if (_ia && _ia.acts[i]) _ia.acts[i].on = !!v; }, actsRefresh: actsRefresh, actAdd: actAdd, actTick: actTick, actDel: actDel, terminer: terminer, inter: setInter, interReuse: interReuse, ficheClient: ficheClient, forStore: forStore, noteClose: noteClose, rapport: rapport, forClient: forClient, inRange: inRange, mount: mount, nouveau: nouveau, ouvrir: ouvrir, retour: retour, supprimer: supprimer, pt: togglePoint, prix: setPrix, nt: setNote, meta: setMeta,
+  window.Releves = { impOpen: impOpen, impClose: impClose, impFile: impFile, impPreview: impPreview, impCreate: impCreate, lastVisits: lastVisits, orphOpen: orphOpen, orphClose: orphClose, orphLink: orphLink, orphLinkInput: orphLinkInput, infoOpen: infoOpen, infoClose: infoClose, infoSave: infoSave, fiche: fiche, actDue: actDue, actionsDue: actionsDue, openRel: openRel, demarrer: demarrer, recentStores: recentStores, ensChoices: ensChoices, isEditing: isEditing, scanFast: scanFast, fastAbs: fastAbs, fastUndo: fastUndo, fastPrix: fastPrix, phAdd: phAdd, phTake: phTake, phDel: phDel, phCap: phCap, noteJump: noteJump, mic: mic, ranger: ranger, rangerUndo: rangerUndo, iaApply: iaApply, iaCancel: iaCancel, iaNotes: function(v){ if (_ia) _ia.notes = v; }, iaInter: function(k, v){ if (_ia) _ia.inter[k] = v; }, iaAct: function(i, v){ if (_ia && _ia.acts[i]) _ia.acts[i].on = !!v; }, actsRefresh: actsRefresh, actAdd: actAdd, actTick: actTick, actDel: actDel, terminer: terminer, inter: setInter, interReuse: interReuse, ficheClient: ficheClient, forStore: forStore, noteClose: noteClose, rapport: rapport, forClient: forClient, inRange: inRange, mount: mount, nouveau: nouveau, ouvrir: ouvrir, retour: retour, supprimer: supprimer, pt: togglePoint, prix: setPrix, nt: setNote, meta: setMeta,
     dash: function(){ _view = 'dash'; render(); }, dashEns: function(v){ _ensSel = v; renderDash(); },
     addLibre: addLibre, delLibre: delLibre, compare: function(){ _view = 'compare'; render(); }, pdf: pdf, pdfSave: pdfSave, pdfShare: pdfShare, pdfOpen: pdfOpen, pdfCompare: pdfCompare, search: search, filtEns: filtEns, ensChange: ensChange,
     q2: function(v){ _q = v; renderRows(); }, fam: function(v){ _fam = v; renderRows(); }, only: function(){ _only = _only === 'todo' ? 'all' : 'todo'; renderEdit(); },
