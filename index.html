@@ -2273,6 +2273,7 @@ thead th.ts-active { text-decoration:underline; text-underline-offset:3px; }
             <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" style="width:18px;height:18px;display:block;"><rect x="2" y="4.5" width="16" height="11" rx="2"/><path d="M2.5 6l7.5 5 7.5-5"/></svg>
           </button>
         </div>
+        <button class="btn btn-ghost" style="width:100%;justify-content:center;margin-top:6px;color:#b0402f;border-color:#e8c4bc;" onclick="bdcReset()" title="Effacer client et commande en cours">🔄 Réinitialiser (nouveau magasin)</button>
       </div>
       <!-- Catalogue -->
       <div style="flex:1;display:flex;flex-direction:column;overflow:hidden;">
@@ -9703,6 +9704,69 @@ function bdcBuildText() {
 }
 
 // ── Export du bon de commande en PDF (jsPDF + autotable) ──────────────────
+// ─── Sauvegarde d'un BDC dans l'historique (PDF / mail ouvert / envoi) ───
+var bdcLastSaved = { sig:'', id:null, statut:'' };
+function bdcCollectOrder() {
+  var tN=0, nbRefs=0, lignes=[];
+  PRODUCTS.forEach(function(p){
+    var q=bdcQtys[p.code]||0;
+    if(q>0){
+      var pcb=parseFloat(p.pcb)||1;
+      var ml=parseFloat((bdcPrixNet(p)*q*pcb).toFixed(2));
+      tN+=ml; nbRefs++;
+      var remEff=(bdcRemiseLigne[p.code]!==undefined&&bdcRemiseLigne[p.code]!==null&&bdcRemiseLigne[p.code]!=='')?parseFloat(bdcRemiseLigne[p.code]):bdcRemise;
+      lignes.push({code:p.code,ean:p.ean||'',libelle:p.libelle,qty:q,pu_ht:bdcPrixNet(p),pu_brut:p.pu_ht,remise:remEff,total_ht:ml});
+    }
+  });
+  return { tN:parseFloat(tN.toFixed(2)), nbRefs:nbRefs, lignes:lignes };
+}
+// statut : 'PDF téléchargé' | 'Mail ouvert' | 'Envoyée'. Évite les doublons si on clique plusieurs fois
+// sur la même commande ; un statut 'Envoyée' remplace un statut provisoire.
+function bdcPersistOrder(statut, note) {
+  if (!db || !currentUser) return;
+  var mag=g('bdc-magasin'); if(!mag) return;
+  var o=bdcCollectOrder(); if(!o.nbRefs) return;
+  var sig=mag+'|'+o.tN+'|'+JSON.stringify(o.lignes.map(function(l){return l.code+':'+l.qty;}));
+  var data={
+    clientNom:mag,clientId:null,numClient:g('bdc-numclient')||'',contact:g('bdc-contact')||'',tel:g('bdc-tel')||'',
+    email:g('bdc-email')||'',datelivraison:g('bdc-datelivraison')||'',commentaire:g('bdc-comment')||'',statut:statut,
+    montant:o.tN,nbRefs:o.nbRefs,remise:bdcRemise,lignes:o.lignes,notes:note||'',
+    createdBy:currentUser.uid,owner:currentUser.uid
+  };
+  var done=function(){
+    try { if (typeof CRMData !== 'undefined') CRMData.invalidate('commandes'); } catch(e) {}
+    try { if (document.getElementById('bdc-hist-list')) bdcHistLoad(); } catch(e) {}
+  };
+  if (bdcLastSaved.sig===sig && bdcLastSaved.id) {
+    if (bdcLastSaved.statut==='Envoyée' || bdcLastSaved.statut===statut) return;
+    var id=bdcLastSaved.id; bdcLastSaved.statut=statut;
+    bcol('commandes').doc(id).update({statut:statut,notes:note||'',email:data.email,
+      updatedAt:firebase.firestore.FieldValue.serverTimestamp()}).then(done).catch(function(e){console.warn('BDC update',e);});
+    return;
+  }
+  data.createdAt=firebase.firestore.FieldValue.serverTimestamp();
+  bdcLastSaved={sig:sig,id:null,statut:statut};
+  bcol('commandes').add(data).then(function(ref){
+    bdcLastSaved.id=ref.id;
+    logActivite('BDC '+statut.toLowerCase()+' — '+mag+' — '+bdcFmt(o.tN)+' ('+o.nbRefs+' réf.)','blue');
+    done();
+  }).catch(function(e){ bdcLastSaved={sig:'',id:null,statut:''}; console.warn('BDC save',e); });
+}
+
+function bdcReset(silent) {
+  var has = Object.keys(bdcQtys).some(function(k){return bdcQtys[k]>0;}) || ['bdc-magasin','bdc-numclient','bdc-contact','bdc-tel','bdc-datelivraison','bdc-comment'].some(function(i){var e=document.getElementById(i);return e&&e.value;});
+  if (!silent && has && !confirm('Effacer les infos client et la commande en cours ?')) return;
+  bdcQtys={}; bdcRemiseLigne={}; bdcRemise=0;
+  bdcLastSaved={sig:'',id:null,statut:''};
+  ['bdc-magasin','bdc-numclient','bdc-contact','bdc-tel','bdc-datelivraison','bdc-comment'].forEach(function(i){var e=document.getElementById(i); if(e) e.value='';});
+  var rc=document.getElementById('bdc-remise-custom'); if(rc) rc.value='';
+  var r0=document.querySelector('#bdc-remise-btns button'); try { bdcSetRemise(0, r0); } catch(e) {}
+  try { bdcClearLocal(); } catch(e) {}
+  try { buildTable(); bdcUpdateTotals(); } catch(e) {}
+  var m=document.getElementById('bdc-magasin'); if(m) m.focus();
+  if (typeof toast==='function') toast('Nouveau bon de commande prêt','ok');
+}
+
 function bdcExportPdf() {
   var mag = g('bdc-magasin');
   var hasOrder = Object.keys(bdcQtys).some(function(k){ return bdcQtys[k] > 0; });
@@ -9766,7 +9830,8 @@ function bdcExportPdf() {
 
       var safe = String(mag).replace(/[^a-zA-Z0-9]+/g,'_').slice(0,30);
       doc.save('BDC_' + safe + '_' + new Date().toISOString().slice(0,10) + '.pdf');
-      toast('📄 PDF du bon de commande généré', 'ok');
+      bdcPersistOrder('PDF téléchargé','BDC téléchargé en PDF');
+      toast('📄 PDF généré et enregistré dans l\'historique', 'ok');
     } catch(e) { toast('Erreur PDF : ' + (e.message || e), 'err'); }
   }, function(){ toast('Chargement du module PDF impossible', 'err'); });
 }
@@ -9791,6 +9856,7 @@ function bdcOpenOutlook() {
   var mailtoUrl = 'mailto:' + encodeURIComponent('commande@moulindesmoines.com')
     + '?subject=' + encodeURIComponent(subject);
 
+  bdcPersistOrder('Mail ouvert','BDC préparé pour envoi par mail');
   // Ouvrir eM Client de façon SYNCHRONE (dans le geste utilisateur direct)
   var _a = document.createElement('a');
   _a.href = mailtoUrl;
@@ -9852,20 +9918,8 @@ function bdcSendOrder() {
   };
   if(mail.toLowerCase()!=='cspoto@moulindesmoines.com') payload._replyto=mail;
 
-  // Sauvegarder dans Firebase (sans await)
-  if(db && currentUser){
-    var nc=g('bdc-numclient'),ct=g('bdc-contact'),tel=g('bdc-tel'),dl=g('bdc-datelivraison'),com=g('bdc-comment');
-    bcol('commandes').add({
-      clientNom:mag,clientId:null,numClient:nc||'',contact:ct||'',tel:tel||'',
-      email:mail,datelivraison:dl||'',commentaire:com||'',statut:'Envoyée',
-      montant:tN,nbRefs:nbRefs,remise:bdcRemise,lignes:lignes,
-      notes:'BDC envoyé par '+mail,
-      createdBy:currentUser.uid,owner:currentUser.uid,createdAt:firebase.firestore.FieldValue.serverTimestamp()
-    }).then(function(){
-      logActivite('BDC envoyé — '+mag+' — '+bdcFmt(tN)+' ('+nbRefs+' réf.)','blue');
-      try { if (typeof CRMData !== 'undefined') CRMData.invalidate('commandes'); } catch(e) {}
-    }).catch(function(e){ console.warn('Firebase save error',e); });
-  }
+  // Sauvegarder dans Firebase (met à jour un brouillon PDF/mail identique si présent)
+  bdcPersistOrder('Envoyée','BDC envoyé par '+mail);
 
   // Envoi email via Web3Forms
   payload.access_key = 'c25bd306-bfaf-4a71-ac6d-36658c0df2ed';
