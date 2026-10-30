@@ -2679,7 +2679,7 @@ thead th.ts-active { text-decoration:underline; text-underline-offset:3px; }
     </div>
   </div></div>
 
-  <div id="sec-visitestats" class="hidden"><div id="vs-page"></div></div>
+  <div id="sec-visitestats" class="hidden"><div id="vs-page"><div class="card" style="padding:1rem;margin:1rem;border-radius:16px;">⏳ Chargement des statistiques…<div id="vs-miss" style="display:none;color:#b0402f;margin-top:.5rem;font-size:.85rem;">⚠️ Le fichier <b>visites-stats.js</b> n'est pas chargé : dépose-le sur GitHub à côté d'index.html, puis recharge la page.</div></div></div></div>
   <div id="sec-reglages" class="hidden"><div id="reglages-host"></div></div>
 
   <!-- ACCORDS COMMERCIAUX -->
@@ -16286,6 +16286,7 @@ if ('serviceWorker' in navigator) {
 <script src="revisiter.js?v=1"></script>
 <script src="reglages.js?v=1"></script>
 <script src="visites-stats.js?v=2"></script>
+<script>setTimeout(function(){ if(!window.VisitesStats){ var m=document.getElementById("vs-miss"); if(m) m.style.display="block"; } },4000);</script>
 <script src="mail.js?v=4"></script>
 <script src="analyse-client.js?v=7"></script>
 <script src="assistant.js?v=6"></script>
