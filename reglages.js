@@ -20,6 +20,8 @@
       ['radar', '📡', 'Radar', 'Radar clients'],
       ['top100', '🏆', 'Top 100 produits', 'Meilleures ventes'],
       ['commissions', '💶', 'Commissions', 'Commission en cours et détail'],
+      ['statsdetail', '📈', 'Statistiques (CA)', 'Page détaillée du CA et carte « CA du mois » du tableau de bord'],
+      ['visitestats', '🧭', 'Statistiques de visites', 'Page détaillée et carte « Mes visites » du tableau de bord'],
       ['assortiment', '🧩', 'Assortiment', 'Analyse de gamme'],
       ['alertes', '🔔', 'Alertes', 'Alertes commerciales']] },
     { t: 'Outils', items: [
