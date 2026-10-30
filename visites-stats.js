@@ -117,8 +117,9 @@
   function open() { try { showSection('visitestats', null, null); } catch(e){} }
   function openRel(id) { if (window.Releves && Releves.openRel) Releves.openRel(id); }
   function load() {
-    if (!(window.Releves && Releves.all)) return;
-    Releves.all().then(function(d){ _d = d; renderAll(); }).catch(function(){});
+    var pg = document.getElementById('vs-page');
+    if (!(window.Releves && Releves.all)) { if (pg && !_d) pg.innerHTML = '<div class="card" style="padding:1rem;margin:1rem;border-radius:16px;color:#b0402f">⚠️ <b>releves.js</b> n\'est pas à jour sur GitHub (version 31 attendue). Remplace-le puis recharge la page.</div>'; return; }
+    Releves.all().then(function(d){ _d = d; renderAll(); }).catch(function(e){ if (pg && !_d) pg.innerHTML = '<div class="card" style="padding:1rem;margin:1rem;border-radius:16px;color:#b0402f">⚠️ Impossible de lire les relevés (' + esc(e && e.message || e) + '). Vérifie la connexion puis recharge.</div>'; });
     if (window.CRMData && CRMData.commandes) CRMData.commandes().then(function(c){ _cmds = c; renderAll(); }).catch(function(){});
   }
   function boot() {
